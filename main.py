@@ -3,6 +3,10 @@ import pandas as pd
 from datetime import date
 import pandas.errors
 import csv
+import sys
+
+from PySide6.QtCore import QRect
+from PySide6.QtWidgets import *
 
 alumnat = 'dades/alumnat.csv'
 categories = 'dades/categories.csv'
@@ -12,6 +16,7 @@ al_seguiment = ""
 cat_seguiment = ""
 
 
+# Definim funcions d'arrencada (llistes i bbdd):
 def lectura_dades():
     global alumnat
     global categories
@@ -19,7 +24,8 @@ def lectura_dades():
     global cat_seguiment
     try:
         with open(alumnat, "r") as file:
-            al_seguiment = pd.read_csv(file)
+            dades_csv_al = pd.read_csv(file)
+            al_seguiment = dades_csv_al["Alumnat"].values.tolist()
             file.close()
     except FileNotFoundError:
         alumnes = ["Alumnat"]
@@ -32,7 +38,8 @@ def lectura_dades():
 
     try:
         with open(categories) as file:
-            cat_seguiment = pd.read_csv(file)
+            dades_csv_cat = pd.read_csv(file)
+            cat_seguiment = dades_csv_cat["Motius"].values.tolist()
             file.close()
     except FileNotFoundError:
         print("Llistat de categories buit, es torna a crear")
@@ -58,10 +65,47 @@ def bbdd_conn():
     # conn.close()
 
 
-lectura_dades()
-bbdd_conn()
-avui_real = date.today()
-avui_format = avui_real.strftime("%d/%m/%Y")
+def arrencada():
+    lectura_dades()
+    bbdd_conn()
+
+
+class MainWin(QWidget):
+    def __init__(self, parent=None):
+        super().__init__()
+
+        self.resize(300, 200)
+        arrencada()
+        avui_real = date.today()
+        avui_format = avui_real.strftime("%d/%m/%Y")
+        # Configurem bloc d'alumnes:
+        desplegable_al = QComboBox()
+        desplegable_al.addItems(al_seguiment)
+        alumnes_etiqueta = QLabel("Alumne: ")
+        # Configurem bloc de motius:
+        categories_etiqueta = QLabel("Motiu: ")
+        desplegable_cat = QComboBox()
+        desplegable_cat.addItems(cat_seguiment)
+        # Afegim data
+        selector_data = QDateEdit(date=avui_real)
+        selector_data.setDisplayFormat(u"dd/MM/yyyy")
+        selector_data.setCalendarPopup(True)
+        # Configurem disposició general
+        conjunt = QFormLayout()
+        conjunt.addWidget(alumnes_etiqueta)
+        conjunt.addWidget(desplegable_al)
+        conjunt.addWidget(categories_etiqueta)
+        conjunt.addWidget(desplegable_cat)
+        conjunt.addWidget(selector_data)
+        self.setLayout(conjunt)
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    programa = MainWin()
+    programa.setWindowTitle("Seguiment d'alumnes")
+    programa.show()
+    sys.exit(app.exec())
+
 # print(avui_format)
 # print(al_seguiment)
 # print(cat_seguiment)

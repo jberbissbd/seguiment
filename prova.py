@@ -1,16 +1,36 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import sys
+from PySide6.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QMessageBox, QTabWidget
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def dialog():
+    mbox = QMessageBox()
+
+    mbox.setText("Your allegiance has been noted")
+    mbox.setDetailedText("You are now a disciple and subject of the all-knowing Guru")
+    mbox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+    mbox.exec_()
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = QWidget()
+    w.resize(300, 300)
+    w.setWindowTitle('Guru99')
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    label = QLabel(w)
+    label.setText("Behold the Guru, Guru99")
+    label.move(100, 130)
+    label.show()
+
+    btn = QPushButton(w)
+    btn.setText('Beheld')
+    btn.move(110, 150)
+    btn.show()
+    btn.clicked.connect(dialog)
+
+    a = QTabWidget(w)
+    a.move(200,100)
+    a.show()
+    w.show()
+    sys.exit(app.exec())
