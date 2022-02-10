@@ -87,16 +87,15 @@ class MainWin(QWidget):
         desplegable_cat = QComboBox()
         desplegable_cat.addItems(cat_seguiment)
         # Afegim data
+        data_etiqueta = QLabel("Data:")
         selector_data = QDateEdit(date=avui_real)
         selector_data.setDisplayFormat(u"dd/MM/yyyy")
         selector_data.setCalendarPopup(True)
         # Configurem disposició general
         conjunt = QFormLayout()
-        conjunt.addWidget(alumnes_etiqueta)
-        conjunt.addWidget(desplegable_al)
-        conjunt.addWidget(categories_etiqueta)
-        conjunt.addWidget(desplegable_cat)
-        conjunt.addWidget(selector_data)
+        conjunt.addRow(alumnes_etiqueta,desplegable_al)
+        conjunt.addRow(categories_etiqueta, desplegable_cat)
+        conjunt.addRow(data_etiqueta,selector_data)
         self.setLayout(conjunt)
 
 if __name__ == "__main__":
