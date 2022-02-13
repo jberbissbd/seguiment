@@ -5,8 +5,11 @@ import pandas.errors
 import csv
 import sys
 
-from PySide6.QtCore import QRect
+from PySide6 import QtGui
 from PySide6.QtWidgets import *
+
+# TODO: Consultar https://realpython.com/python-pyqt-layout/
+
 
 alumnat = 'dades/alumnat.csv'
 categories = 'dades/categories.csv'
@@ -72,6 +75,7 @@ def arrencada():
 
 class MainWin(QWidget):
     def __init__(self, parent=None):
+        # TODO: Arreglar càrrega de fitxer
         super().__init__()
 
         self.resize(300, 200)
@@ -91,12 +95,33 @@ class MainWin(QWidget):
         selector_data = QDateEdit(date=avui_real)
         selector_data.setDisplayFormat(u"dd/MM/yyyy")
         selector_data.setCalendarPopup(True)
-        # Configurem disposició general
-        conjunt = QFormLayout()
-        conjunt.addRow(alumnes_etiqueta,desplegable_al)
-        conjunt.addRow(categories_etiqueta, desplegable_cat)
-        conjunt.addRow(data_etiqueta,selector_data)
-        self.setLayout(conjunt)
+        # Configurem disposició:
+        disp_general = QVBoxLayout()
+
+        # Configurem part formulari:
+        form_dist = QFormLayout()
+        form_dist.addRow(alumnes_etiqueta, desplegable_al)
+        form_dist.addRow(categories_etiqueta, desplegable_cat)
+        form_dist.addRow(data_etiqueta, selector_data)
+
+        # Configurem text i botons:
+        tbot = QGridLayout()
+        qdesc_et = QLabel("Descripció:")
+        qdesc = QTextEdit()
+        regbot = QPushButton("Registrar")
+        expbot = QPushButton("Exportar informe")
+        bot_dist = QHBoxLayout()
+        bot_dist.addWidget(regbot)
+        bot_dist.addWidget(expbot)
+        tbot.addWidget(qdesc_et,0,0)
+        tbot.addWidget(qdesc,0,1)
+        tbot.addLayout(bot_dist,1,0,1,2)
+        # Configuració final de la part general:
+        disp_general.addLayout(form_dist)
+        disp_general.addLayout(tbot)
+
+        self.setLayout(disp_general)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
