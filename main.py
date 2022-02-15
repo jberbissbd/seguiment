@@ -1,22 +1,26 @@
-import sqlite3
-import pandas as pd
-from datetime import date
-import pandas.errors
 import csv
+import sqlite3
 import sys
+from datetime import date
 
-from PySide6 import QtGui
+import pandas as pd
+import pandas.errors
 from PySide6.QtWidgets import *
 
-# TODO: Consultar https://realpython.com/python-pyqt-layout/
+# TODO: Registrar valors a la base de dades
+# TODO: Afegir dades de trimestre
+# TODO: Crear informe i exportar a Excel
 
 
-alumnat = 'dades/alumnat.csv'
-categories = 'dades/categories.csv'
+alumnat = "dades/alumnat.csv"
+categories = "dades/categories.csv"
 arxiubbdd = "dades/registre.db"
 
 al_seguiment = ""
 cat_seguiment = ""
+al_registre: str = ""
+cat_registre: str = ""
+data_registre: str = ""
 
 
 # Definim funcions d'arrencada (llistes i bbdd):
@@ -73,28 +77,50 @@ def arrencada():
     bbdd_conn()
 
 
+def traspas_alumnes(text):
+    global al_registre
+    al_registre = text
+
+
+def traspas_categoria(text):
+    global cat_registre
+    cat_registre = text
+
+
+def traspas_data(text):
+    global data_registre
+    data_python = text.toPython()
+    data_registre = data_python
+    print(data_registre)
+
+
 class MainWin(QWidget):
-    def __init__(self, parent=None):
-        # TODO: Arreglar càrrega de fitxer
+    def __init__(self):
         super().__init__()
 
         self.resize(300, 200)
         arrencada()
-        avui_real = date.today()
-        avui_format = avui_real.strftime("%d/%m/%Y")
+        global al_registre
+        global cat_registre
+        global data_registre
         # Configurem bloc d'alumnes:
         desplegable_al = QComboBox()
         desplegable_al.addItems(al_seguiment)
+        al_registre = desplegable_al.currentText()
+        desplegable_al.currentTextChanged.connect(traspas_alumnes)
         alumnes_etiqueta = QLabel("Alumne: ")
         # Configurem bloc de motius:
         categories_etiqueta = QLabel("Motiu: ")
         desplegable_cat = QComboBox()
         desplegable_cat.addItems(cat_seguiment)
+        cat_registre = desplegable_cat.currentText()
+        desplegable_cat.currentTextChanged.connect(traspas_categoria)
         # Afegim data
         data_etiqueta = QLabel("Data:")
-        selector_data = QDateEdit(date=avui_real)
+        selector_data = QDateEdit(date=date.today())
         selector_data.setDisplayFormat(u"dd/MM/yyyy")
         selector_data.setCalendarPopup(True)
+        selector_data.dateChanged.connect(traspas_data)
         # Configurem disposició:
         disp_general = QVBoxLayout()
 
@@ -113,13 +139,12 @@ class MainWin(QWidget):
         bot_dist = QHBoxLayout()
         bot_dist.addWidget(regbot)
         bot_dist.addWidget(expbot)
-        tbot.addWidget(qdesc_et,0,0)
-        tbot.addWidget(qdesc,0,1)
-        tbot.addLayout(bot_dist,1,0,1,2)
+        tbot.addWidget(qdesc_et, 0, 0)
+        tbot.addWidget(qdesc, 0, 1)
+        tbot.addLayout(bot_dist, 1, 0, 1, 2)
         # Configuració final de la part general:
         disp_general.addLayout(form_dist)
         disp_general.addLayout(tbot)
-
         self.setLayout(disp_general)
 
 
@@ -129,7 +154,3 @@ if __name__ == "__main__":
     programa.setWindowTitle("Seguiment d'alumnes")
     programa.show()
     sys.exit(app.exec())
-
-# print(avui_format)
-# print(al_seguiment)
-# print(cat_seguiment)
