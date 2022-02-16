@@ -1,9 +1,6 @@
-import csv
 import sys
 from datetime import date
-from funcions import bbdd_conn as bbdd_conn
-import pandas as pd
-import pandas.errors
+from funcions import bbdd_conn, lectura_dades
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
     QApplication, QVBoxLayout, QTextEdit, QPushButton
 
@@ -23,43 +20,12 @@ cat_registre: str = ""
 data_registre: str = ""
 
 
-# Definim funcions d'arrencada (llistes i bbdd):
-def lectura_dades():
-    global alumnat
-    global categories
+def arrencada():
     global al_seguiment
     global cat_seguiment
-    try:
-        with open(alumnat, "r") as file:
-            dades_csv_al = pd.read_csv(file)
-            al_seguiment = dades_csv_al["Alumnat"].values.tolist()
-            file.close()
-    except FileNotFoundError:
-        alumnes = ["Alumnat"]
-        print("Arxiu no trobat")
-        with open(alumnat, "w") as file:
-            writer = csv.writer(file)
-            writer.writerow(alumnes)
-    except pandas.errors.EmptyDataError:
-        print("Sense dades d'alumnes, no es pot seguir")
-
-    try:
-        with open(categories) as file:
-            dades_csv_cat = pd.read_csv(file)
-            cat_seguiment = dades_csv_cat["Motius"].values.tolist()
-            file.close()
-    except FileNotFoundError:
-        print("Llistat de categories buit, es torna a crear")
-        motius_llista = ["Motius"]
-        with open(categories, "w") as file:
-            writer = csv.writer(file)
-            writer.writerow(motius_llista)
-    except pandas.errors.EmptyDataError:
-        print("Sense categories, no es pot seguir")
-
-
-def arrencada():
-    lectura_dades()
+    dades = lectura_dades()
+    al_seguiment = dades[0]
+    cat_seguiment = dades[1]
     bbdd_conn()
 
 
@@ -67,12 +33,14 @@ def traspas_alumnes(text):
     """Captura el nom de l'alumne seleccionat com a variable de python"""
     global al_registre
     al_registre = text
+    print(al_registre)
 
 
 def traspas_categoria(text):
     """Captura la categoria seleccionada com a variable de python"""
     global cat_registre
     cat_registre = text
+    print(cat_registre)
 
 
 def traspas_data(text):
@@ -109,6 +77,7 @@ class MainWin(QWidget):
         selector_data = QDateEdit(date=date.today())
         selector_data.setDisplayFormat(u"dd/MM/yyyy")
         selector_data.setCalendarPopup(True)
+        data_registre = selector_data.date()
         selector_data.dateChanged.connect(traspas_data)
         # Configurem disposició:
         disp_general = QVBoxLayout()
