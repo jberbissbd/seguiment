@@ -1,20 +1,20 @@
 import csv
-import sqlite3
 import sys
 from datetime import date
-
+from funcions import bbdd_conn as bbdd_conn
 import pandas as pd
 import pandas.errors
-from PySide6.QtWidgets import *
+from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
+    QApplication, QVBoxLayout, QTextEdit, QPushButton
 
 # TODO: Registrar valors a la base de dades
 # TODO: Afegir dades de trimestre
 # TODO: Crear informe i exportar a Excel
+# TODO: Moure funcions a arxiu funcions.
 
 
 alumnat = "dades/alumnat.csv"
 categories = "dades/categories.csv"
-arxiubbdd = "dades/registre.db"
 
 al_seguiment = ""
 cat_seguiment = ""
@@ -58,36 +58,25 @@ def lectura_dades():
         print("Sense categories, no es pot seguir")
 
 
-def bbdd_conn():
-    global arxiubbdd
-    arxiubbdd = "dades/registre.db"
-    try:
-        conn = sqlite3.connect(arxiubbdd)
-        conn.cursor()
-        conn.close()
-
-    except sqlite3.OperationalError:
-        print("error")
-
-    # conn.close()
-
-
 def arrencada():
     lectura_dades()
     bbdd_conn()
 
 
 def traspas_alumnes(text):
+    """Captura el nom de l'alumne seleccionat com a variable de python"""
     global al_registre
     al_registre = text
 
 
 def traspas_categoria(text):
+    """Captura la categoria seleccionada com a variable de python"""
     global cat_registre
     cat_registre = text
 
 
 def traspas_data(text):
+    """Captura la data seleccionada i la transforma a python"""
     global data_registre
     data_python = text.toPython()
     data_registre = data_python
