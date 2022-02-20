@@ -75,9 +75,11 @@ def registre_dades(nalumne, ncategoria, dregistre, tregistre):
 def consulta_alumnes():
     """Funció per a obtenir el llistat d'alumnes que tenen algun registre"""
     ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM registres ORDER BY nom_alumne'
+    global l_alumnes_cons
     try:
         conn = sqlite3.connect(arxiubbdd)
         conn.cursor()
+        l_alumnes_cons = []
         l_alumnes = conn.execute(ordre_consulta_sql)
         for row in l_alumnes:
             l_alumnes_cons.append(row[0])
