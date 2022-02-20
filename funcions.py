@@ -57,6 +57,13 @@ def bbdd_conn():
         conn.close()
 
 
+def demostracio_dades(nalumne, ncategoria, dregistre, trgistre):
+    print(nalumne)
+    print(ncategoria)
+    print(dregistre)
+    print(trgistre)
+
+
 def registre_dades(nalumne, ncategoria, dregistre, tregistre):
     """Funció per a inserir el registre a la taula de la BBDD i, si no existeix, crear-la"""
     try:
