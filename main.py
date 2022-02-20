@@ -1,7 +1,6 @@
 import sys
 from datetime import date
 
-import main
 from funcions import bbdd_conn, lectura_dades, demostracio_dades
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
@@ -34,25 +33,6 @@ def arrencada():
     bbdd_conn()
 
 
-def traspas_alumnes(text):
-    """Captura el nom de l'alumne seleccionat com a variable de python"""
-    global al_registre
-    al_registre = text
-
-
-def traspas_categoria(text):
-    """Captura la categoria seleccionada com a variable de python"""
-    global cat_registre
-    cat_registre = text
-
-
-def traspas_data(text):
-    """Captura la data seleccionada i la transforma a python"""
-    global data_registre
-    data_python = text.toPython()
-    data_registre = data_python
-
-
 def registre_apretat():
     global al_registre
     global cat_registre
@@ -78,19 +58,19 @@ class MainWindow(QMainWindow):
         self.desplegable_al = QComboBox()
         self.desplegable_al.addItems(al_seguiment)
         al_registre = self.desplegable_al.currentText()
-        self.desplegable_al.currentTextChanged.connect(traspas_alumnes)
+        self.desplegable_al.currentTextChanged.connect(self.traspas_alumnes)
         # Configurem bloc de motius:
         self.categories_etiqueta = QLabel("Motiu: ")
         self.desplegable_cat = QComboBox()
         self.desplegable_cat.addItems(cat_seguiment)
         cat_registre = self.desplegable_cat.currentText()
-        self.desplegable_cat.currentTextChanged.connect(traspas_categoria)
+        self.desplegable_cat.currentTextChanged.connect(self.traspas_categoria)
         # Afegim data
         self.data_etiqueta = QLabel("Data:")
         self.selector_data = QDateEdit(date=date.today())
         self.selector_data.setDisplayFormat(u"dd/MM/yyyy")
         self.selector_data.setCalendarPopup(True)
-        self.selector_data.dateChanged.connect(traspas_data)
+        self.selector_data.dateChanged.connect(self.traspas_data)
         # Configurem disposició:
         self.disp_general = QVBoxLayout()
         # Configurem part formulari:
@@ -124,6 +104,7 @@ class MainWindow(QMainWindow):
         if t_actual == "":
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Registre buit")
+            dlg.setIcon(QMessageBox.Warning)
             dlg.setText("No s'ha proporcionat cap descripció")
             boto = dlg.exec()
             if boto == QMessageBox.Ok:
@@ -131,6 +112,7 @@ class MainWindow(QMainWindow):
         elif len(t_actual) > 350:
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Text massa llarg")
+            dlg.setIcon(QMessageBox.Warning)
             dlg.setText("La descripció introduïda excedeix els 350 caràcters")
             boto = dlg.exec()
             if boto == QMessageBox.Ok:
@@ -138,6 +120,23 @@ class MainWindow(QMainWindow):
         else:
             t_registre = t_actual
             registre_apretat()
+
+    def traspas_alumnes(self):
+        """Captura el nom de l'alumne seleccionat com a variable de python"""
+        global al_registre
+        al_registre = self.desplegable_al.currentText()
+
+    def traspas_categoria(self):
+        """Captura la categoria seleccionada com a variable de python"""
+        global cat_registre
+        cat_registre = self.desplegable_cat.currentText()
+
+    def traspas_data(self):
+        """Captura la data seleccionada i la transforma a python"""
+        global data_registre
+        data_qt = self.selector_data.date()
+        data_python = data_qt.toPython()
+        data_registre = data_python
 
 
 app = QApplication(sys.argv)
