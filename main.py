@@ -1,12 +1,11 @@
 import sys
 from datetime import date
 
-from funcions import bbdd_conn, lectura_dades, demostracio_dades
+from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
     QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox
 
-# TODO: Registrar valors a la base de dades
 # TODO: Afegir dades de trimestre
 # TODO: Crear informe i exportar a Excel
 
@@ -60,7 +59,7 @@ class MainWindow(QMainWindow):
         self.desplegable_cat.addItems(cat_seguiment)
         cat_registre = self.desplegable_cat.currentText()
         self.desplegable_cat.currentTextChanged.connect(self.traspas_categoria)
-        # Configurem bloc descripció:
+        # Configurem bloc de descripció:
         self.qdesc_et = QLabel("Descripció:")
         self.qdesc_et.setFixedSize(100, 30)
         self.qdesc = QTextEdit()
@@ -92,6 +91,7 @@ class MainWindow(QMainWindow):
         self.regbot = QPushButton("Registrar")
         self.regbot.clicked.connect(self.boto_registre)
         self.expbot = QPushButton("Exportar informe")
+        self.expbot.clicked.connect(self.boto_exportar)
         self.bot_dist = QHBoxLayout()
         self.bot_dist.addWidget(self.regbot)
         self.bot_dist.addWidget(self.expbot)
@@ -133,7 +133,7 @@ class MainWindow(QMainWindow):
                 pass
         else:
             t_registre = t_actual
-            demostracio_dades(al_registre, cat_registre, data_registre, t_registre)
+            registre_dades(al_registre, cat_registre, data_registre, t_registre)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Èxit")
             dlg.setIcon(QMessageBox.Information)
@@ -144,6 +144,9 @@ class MainWindow(QMainWindow):
                 pass
             else:
                 pass
+
+    def boto_exportar(self):
+        consulta_alumnes()
 
     def traspas_alumnes(self):
         """Captura el nom de l'alumne seleccionat com a variable de python"""

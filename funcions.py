@@ -6,7 +6,7 @@ import csv
 arxiubbdd = "dades/registre.db"
 alumnat = "dades/alumnat.csv"
 categories = "dades/categories.csv"
-
+l_alumnes_cons = []
 
 def lectura_dades():
     """Lectura dels arxius csv sobre alumnes i categories de seguiment"""
@@ -48,9 +48,9 @@ def bbdd_conn():
     conn = sqlite3.connect(arxiubbdd)
     try:
         conn.cursor()
-        # conn.execute('CREATE TABLE registres (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne TEXT, categoria TEXT, '
-        # 'data INTEGER DATE, descripcio TEXT)')
-        # conn.commit()
+        conn.execute('CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne CHAR('
+                     '50), categoria CHAR(20), data INTEGER DATE, descripcio CHAR(200))')
+        conn.commit()
         conn.close()
     except sqlite3.OperationalError:
         print("error")
@@ -66,14 +66,34 @@ def demostracio_dades(nalumne, ncategoria, dregistre, trgistre):
 
 def registre_dades(nalumne, ncategoria, dregistre, tregistre):
     """Funció per a inserir el registre a la taula de la BBDD i, si no existeix, crear-la"""
+    ordre_inserir_sql = 'INSERT INTO registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
+    dades_a_registrar = (nalumne, ncategoria, dregistre, tregistre)
     try:
         conn = sqlite3.connect(arxiubbdd)
         conn.cursor()
+        conn.execute(ordre_inserir_sql, dades_a_registrar)
+        conn.commit()
+        conn.close()
+    except sqlite3.OperationalError:
+        print("ERROR")
 
+
+def consulta_alumnes():
+    """Funció per a obtenir el llistat d'alumnes que tenen algun registre"""
+    ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM registres ORDER BY nom_alumne'
+    try:
+        conn = sqlite3.connect(arxiubbdd)
+        conn.cursor()
+        l_alumnes = conn.execute(ordre_consulta_sql)
+        for row in l_alumnes:
+            l_alumnes_cons.append(row[0])
+        conn.close()
+        print(l_alumnes_cons)
     except sqlite3.OperationalError:
         print("ERROR")
 
 
 def consulta_dades():
     """Funció per a efectuar la consulta per nom d'alumne a la BBDD"""
+    ordre_consulta_sql = 'SELECT FROM registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
     pass
