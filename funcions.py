@@ -8,6 +8,7 @@ alumnat = "dades/alumnat.csv"
 categories = "dades/categories.csv"
 l_alumnes_cons = []
 
+
 def lectura_dades():
     """Lectura dels arxius csv sobre alumnes i categories de seguiment"""
     global alumnat
@@ -57,13 +58,6 @@ def bbdd_conn():
         conn.close()
 
 
-def demostracio_dades(nalumne, ncategoria, dregistre, trgistre):
-    print(nalumne)
-    print(ncategoria)
-    print(dregistre)
-    print(trgistre)
-
-
 def registre_dades(nalumne, ncategoria, dregistre, tregistre):
     """Funció per a inserir el registre a la taula de la BBDD i, si no existeix, crear-la"""
     ordre_inserir_sql = 'INSERT INTO registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
@@ -88,7 +82,7 @@ def consulta_alumnes():
         for row in l_alumnes:
             l_alumnes_cons.append(row[0])
         conn.close()
-        print(l_alumnes_cons)
+        return l_alumnes_cons
     except sqlite3.OperationalError:
         print("ERROR")
 

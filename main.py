@@ -21,6 +21,7 @@ data_registre: str = date.isoformat(date.today())
 t_registre: str = ""
 n_caracters_total = 0
 lim_caracters = 200
+alumnes_registrats = []
 
 
 def arrencada():
@@ -146,7 +147,21 @@ class MainWindow(QMainWindow):
                 pass
 
     def boto_exportar(self):
-        consulta_alumnes()
+        global alumnes_registrats
+        dades = consulta_alumnes()
+        if not dades:
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Sense dades")
+            dlg.setIcon(QMessageBox.Warning)
+            dlg.setText("No existeix cap alumne amb registres")
+            boto = dlg.exec()
+            if boto == QMessageBox.Ok:
+                pass
+            else:
+                pass
+        else:
+            alumnes_registrats = dades
+            print(alumnes_registrats)
 
     def traspas_alumnes(self):
         """Captura el nom de l'alumne seleccionat com a variable de python"""
