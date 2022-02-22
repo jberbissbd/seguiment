@@ -1,10 +1,12 @@
 import sys
 from datetime import date
 
-from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
     QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox
+
+from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades
 
 # TODO: Afegir dades de trimestre
 # TODO: Crear informe i exportar a Excel
@@ -22,6 +24,7 @@ t_registre: str = ""
 n_caracters_total = 0
 lim_caracters = 200
 alumnes_registrats = []
+al_seleccionat = ''
 
 
 def arrencada():
@@ -37,6 +40,7 @@ def arrencada():
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
         arrencada()
         global al_registre
         global cat_registre
@@ -76,9 +80,9 @@ class MainWindow(QMainWindow):
         self.disp_general = QVBoxLayout()
         # Configurem part formulari:
         self.form_dist = QFormLayout()
-        self.form_dist.setVerticalSpacing(2)
-        self.form_dist.setHorizontalSpacing(5)
-        self.form_dist.setRowWrapPolicy(self.form_dist.WrapLongRows)
+        self.form_dist.setVerticalSpacing(0)
+        self.form_dist.setHorizontalSpacing(0)
+        self.form_dist.setContentsMargins(1, 1, 1, 1)
 
         self.form_dist.addRow(self.alumnes_etiqueta, self.desplegable_al)
         self.form_dist.addRow(self.categories_etiqueta, self.desplegable_cat)
@@ -161,7 +165,8 @@ class MainWindow(QMainWindow):
                 pass
         else:
             alumnes_registrats = dades
-            print(alumnes_registrats)
+            self.fin = FinestraExport()
+            self.fin.show()
 
     def traspas_alumnes(self):
         """Captura el nom de l'alumne seleccionat com a variable de python"""
@@ -179,6 +184,51 @@ class MainWindow(QMainWindow):
         data_qt = self.selector_data.date()
         data_python = data_qt.toPython()
         data_registre = data_python
+
+
+class FinestraExport(QWidget):
+    def __init__(self):
+        super().__init__()
+        global al_seleccionat
+        # Creació dels elements de la finestra:
+        self.disposicio = QGridLayout()
+        self.disposicio.setColumnStretch(2, 2)
+        self.setWindowTitle("Creació d'informe")
+        self.resize(300, 100)
+        self.alumne_etiqueta = QLabel("Alumne: ")
+        self.alumne_seleccio = QComboBox()
+        self.alumne_seleccio.addItems(alumnes_registrats)
+        al_seleccionat = self.alumne_seleccio.currentText()
+        self.alumne_seleccio.currentTextChanged.connect(self.canvi_alumne)
+        self.desti = QLabel("Destí: ")
+        self.desti_seleccio = QPushButton()
+        self.desti_seleccio.setIcon(QIcon("icones/folder.png"))
+        self.boto_ok = QPushButton("D'acord")
+        self.boto_ok.clicked.connect(self.executa)
+        self.boto_cancela = QPushButton("Cancel·la")
+        self.boto_cancela.clicked.connect(self.cancela)
+        # Distribuïm els elements:
+        self.setLayout(self.disposicio)
+        self.disposicio.addWidget(self.alumne_etiqueta, 0, 0)
+        self.disposicio.addWidget(self.alumne_seleccio, 0, 1)
+        self.disposicio.addWidget(self.desti, 1, 0)
+        self.disposicio.addWidget(self.desti_seleccio, 1, 1)
+        self.disposicio.addWidget(self.boto_ok, 2, 0)
+        self.disposicio.addWidget(self.boto_cancela, 2, 1)
+
+    def executa(self):
+        global al_seleccionat
+        a = consulta_dades(al_seleccionat)
+        print(type(a))
+        for fila in a:
+            print(fila)
+
+    def cancela(self):
+        self.close()
+
+    def canvi_alumne(self):
+        global al_seleccionat
+        al_seleccionat = self.alumne_seleccio.currentText()
 
 
 app = QApplication(sys.argv)

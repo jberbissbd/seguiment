@@ -89,7 +89,15 @@ def consulta_alumnes():
         print("ERROR")
 
 
-def consulta_dades():
+def consulta_dades(alumne):
     """Funció per a efectuar la consulta per nom d'alumne a la BBDD"""
-    ordre_consulta_sql = 'SELECT FROM registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
-    pass
+    consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
+    conn = sqlite3.connect(arxiubbdd)
+    try:
+        conn.cursor()
+        resultat_consulta = conn.execute(consulta).fetchall()
+        return resultat_consulta
+    except sqlite3.OperationalError:
+        pass
+    finally:
+        conn.close()
