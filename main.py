@@ -1,12 +1,12 @@
 import sys
 from datetime import date
 
-from PySide6.QtCore import QSize,QDate
+import PySide6.QtCore
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
     QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox
 
-from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades
+from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades, pandes_prova
 
 # TODO: Afegir dades de trimestre
 # TODO: Crear informe i exportar a Excel
@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
         global n_caracters_total
         global lim_caracters
         self.setWindowTitle("Seguiment alumnes")
-        self.setFixedSize(QSize(300, 400))
+        self.setFixedSize(PySide6.QtCore.QSize(300, 400))
         # Configurem bloc d'alumnes:
         self.wcentral = QWidget()
         self.alumnes_etiqueta = QLabel("Alumne: ")
@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         self.qdesc.textChanged.connect(self.limit_caracters)
         # Afegim data
         self.data_etiqueta = QLabel("Data:")
-        avui = QDate.currentDate()
+        avui = PySide6.QtCore.QDate.currentDate()
         self.selector_data = QDateEdit(avui)
         self.selector_data.setDisplayFormat(u"dd/MM/yyyy")
         self.selector_data.setCalendarPopup(True)
@@ -189,9 +189,10 @@ class MainWindow(QMainWindow):
 
 def executa():
     global al_seleccionat
-    a = consulta_dades(al_seleccionat)
-    for fila in a:
-        print(fila)
+
+    # for fila in a:
+    #     print(fila)
+    pandes_prova(al_seleccionat)
 
 
 class FinestraExport(QWidget):

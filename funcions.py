@@ -101,3 +101,14 @@ def consulta_dades(alumne):
         pass
     finally:
         conn.close()
+
+
+def pandes_prova(alumne):
+    conn = sqlite3.connect(arxiubbdd)
+    consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
+    resultat_pandas = pd.read_sql_query(consulta, conn)
+    conn.close()
+    resultat_agrupat = resultat_pandas.groupby('categoria').apply(print)
+    print(resultat_pandas)
+    print(resultat_agrupat)
+
