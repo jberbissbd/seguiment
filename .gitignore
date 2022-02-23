@@ -12,3 +12,4 @@ vscode
 .gitignore!/.vscode/
 !/.vscode/launch.json
 !/README.md
+!/.vscode/
