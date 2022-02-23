@@ -8,3 +8,7 @@ out
 gen
 __pycache__/funcions.cpython-38.pyc
 __pycache__/main.cpython-38.pyc
+vscode
+.gitignore!/.vscode/
+!/.vscode/launch.json
+!/README.md
