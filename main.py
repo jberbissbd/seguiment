@@ -1,7 +1,7 @@
 import sys
 from datetime import date
 
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize,QDate
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
     QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox
@@ -71,7 +71,8 @@ class MainWindow(QMainWindow):
         self.qdesc.textChanged.connect(self.limit_caracters)
         # Afegim data
         self.data_etiqueta = QLabel("Data:")
-        self.selector_data = QDateEdit(date=date.today())
+        avui = QDate.currentDate()
+        self.selector_data = QDateEdit(avui)
         self.selector_data.setDisplayFormat(u"dd/MM/yyyy")
         self.selector_data.setCalendarPopup(True)
         self.selector_data.dateChanged.connect(self.traspas_data)

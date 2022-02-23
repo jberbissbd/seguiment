@@ -58,10 +58,10 @@ def bbdd_conn():
         conn.close()
 
 
-def registre_dades(nalumne, ncategoria, dregistre, tregistre):
+def registre_dades(nom_alumne, nom_categoria, data_registre, text_registre):
     """Funció per a inserir el registre a la taula de la BBDD i, si no existeix, crear-la"""
     ordre_inserir_sql = 'INSERT INTO registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
-    dades_a_registrar = (nalumne, ncategoria, dregistre, tregistre)
+    dades_a_registrar = (nom_alumne, nom_categoria, data_registre, text_registre)
     try:
         conn = sqlite3.connect(arxiubbdd)
         conn.cursor()
