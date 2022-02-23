@@ -186,6 +186,13 @@ class MainWindow(QMainWindow):
         data_registre = data_python
 
 
+def executa():
+    global al_seleccionat
+    a = consulta_dades(al_seleccionat)
+    for fila in a:
+        print(fila)
+
+
 class FinestraExport(QWidget):
     def __init__(self):
         super().__init__()
@@ -204,7 +211,7 @@ class FinestraExport(QWidget):
         self.desti_seleccio = QPushButton()
         self.desti_seleccio.setIcon(QIcon("icones/folder.png"))
         self.boto_ok = QPushButton("D'acord")
-        self.boto_ok.clicked.connect(self.executa)
+        self.boto_ok.clicked.connect(executa)
         self.boto_cancela = QPushButton("Cancel·la")
         self.boto_cancela.clicked.connect(self.cancela)
         # Distribuïm els elements:
@@ -215,13 +222,6 @@ class FinestraExport(QWidget):
         self.disposicio.addWidget(self.desti_seleccio, 1, 1)
         self.disposicio.addWidget(self.boto_ok, 2, 0)
         self.disposicio.addWidget(self.boto_cancela, 2, 1)
-
-    def executa(self):
-        global al_seleccionat
-        a = consulta_dades(al_seleccionat)
-        print(type(a))
-        for fila in a:
-            print(fila)
 
     def cancela(self):
         self.close()
