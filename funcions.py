@@ -1,7 +1,12 @@
+import datetime
 import sqlite3
+from datetime import datetime
+import dateutil.parser
 import pandas as pd
 import pandas.errors
 import csv
+import numpy as np
+from dateutil.parser import *
 
 arxiubbdd = "dades/registre.db"
 alumnat = "dades/alumnat.csv"
@@ -106,9 +111,22 @@ def consulta_dades(alumne):
 def pandes_prova(alumne):
     conn = sqlite3.connect(arxiubbdd)
     consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
-    resultat_pandas = pd.read_sql_query(consulta, conn)
+    resultat_pandas = pd.read_sql_query(consulta, conn, parse_dates='data')
     conn.close()
-    resultat_agrupat = resultat_pandas.groupby('categoria').apply(print)
-    print(resultat_pandas)
-    print(resultat_agrupat)
 
+    def determinacio_trimsetre(data_cons):
+        data_registre = data_cons['data']
+        d1ertrim = datetime.strptime('2021-12-15', '%Y-%m-%d')
+        d2ontrim = datetime.strptime('2022-03-11', '%Y-%m-%d')
+        if data_registre <= d1ertrim:
+            return 1
+        elif data_registre < d2ontrim:
+            return 2
+        else:
+            return 3
+
+    resultat_pandas['Trimestre'] = resultat_pandas.apply(lambda row: determinacio_trimsetre(row), axis=1
+                                                         , result_type='expand')
+    resultat_pandas = resultat_pandas.reindex(columns=['Trimestre', 'categoria', 'descripcio'])
+    # resultat_pandas = resultat_pandas.pivot(index=resultat_pandas.index, columns='categoria')['Trimestre', 'descripcio']
+    print(resultat_pandas)
