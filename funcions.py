@@ -134,9 +134,7 @@ def pandes_prova(alumne):
     taula_pivotada = pd.pivot_table(taula_pandas, index='Trimestre', columns='categoria', values='descripcio',
                                     fill_value="", aggfunc=funcions_agregació, dropna=False).reindex(columns=noms_columnes)
     taula_pivotada.reset_index()
-    for columna in taula_pivotada.columns:
-        prova = taula_pivotada.explode(columna)
-        # prova.fillna("")
+    taula_pivotada.explode(noms_columnes,ignore_index=True).reset_index()
 
-    print(prova)
+    print(taula_pivotada)
     # prova.to_excel('prova.xlsx')
