@@ -7,12 +7,12 @@ import pandas.errors
 import csv
 import numpy as np
 from dateutil.parser import *
+import openpyxl
 
 arxiubbdd = "dades/registre.db"
 alumnat = "dades/alumnat.csv"
 categories = "dades/categories.csv"
 l_alumnes_cons = []
-
 
 def lectura_dades():
     """Lectura dels arxius csv sobre alumnes i categories de seguiment"""
@@ -111,7 +111,7 @@ def consulta_dades(alumne):
 def pandes_prova(alumne):
     conn = sqlite3.connect(arxiubbdd)
     consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
-    resultat_pandas = pd.read_sql_query(consulta, conn, parse_dates='data')
+    taula_pandas = pd.read_sql_query(consulta, conn, parse_dates='data')
     conn.close()
 
     def determinacio_trimsetre(data_cons):
@@ -125,8 +125,18 @@ def pandes_prova(alumne):
         else:
             return 3
 
-    resultat_pandas['Trimestre'] = resultat_pandas.apply(lambda row: determinacio_trimsetre(row), axis=1
-                                                         , result_type='expand')
-    resultat_pandas = resultat_pandas.reindex(columns=['Trimestre', 'categoria', 'descripcio'])
-    # resultat_pandas = resultat_pandas.pivot(index=resultat_pandas.index, columns='categoria')['Trimestre', 'descripcio']
-    print(resultat_pandas)
+    taula_pandas['Trimestre'] = taula_pandas.apply(lambda row: determinacio_trimsetre(row), axis=1
+                                                   , result_type='expand')
+    taula_pandas['Trimestre'].astype('category')
+    taula_pandas['categoria'].astype('category')
+    funcions_agregació = {'descripcio': np.unique}
+    noms_columnes = lectura_dades()[1]
+    taula_pivotada = pd.pivot_table(taula_pandas, index='Trimestre', columns='categoria', values='descripcio',
+                                    fill_value="", aggfunc=funcions_agregació, dropna=False).reindex(columns=noms_columnes)
+    taula_pivotada.reset_index()
+    for columna in taula_pivotada.columns:
+        prova = taula_pivotada.explode(columna)
+        # prova.fillna("")
+
+    print(prova)
+    # prova.to_excel('prova.xlsx')
