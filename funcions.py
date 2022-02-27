@@ -14,6 +14,7 @@ alumnat = "dades/alumnat.csv"
 categories = "dades/categories.csv"
 l_alumnes_cons = []
 
+
 def lectura_dades():
     """Lectura dels arxius csv sobre alumnes i categories de seguiment"""
     global alumnat
@@ -132,9 +133,10 @@ def pandes_prova(alumne):
     funcions_agregació = {'descripcio': np.unique}
     noms_columnes = lectura_dades()[1]
     taula_pivotada = pd.pivot_table(taula_pandas, index='Trimestre', columns='categoria', values='descripcio',
-                                    fill_value="", aggfunc=funcions_agregació, dropna=False).reindex(columns=noms_columnes)
+                                    fill_value="", aggfunc=funcions_agregació, dropna=False) \
+        .reindex(columns=noms_columnes)
     taula_pivotada.reset_index()
-    taula_pivotada.explode(noms_columnes,ignore_index=True).reset_index()
+    taula_pivotada.explode(noms_columnes, ignore_index=True).reset_index()
 
     print(taula_pivotada)
     # prova.to_excel('prova.xlsx')
