@@ -8,7 +8,6 @@ from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayo
 
 from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades, pandes_prova
 
-# TODO: Afegir dades de trimestre
 # TODO: Crear informe i exportar a Excel
 
 
@@ -17,12 +16,11 @@ categories = "dades/categories.csv"
 
 al_seguiment = ""
 cat_seguiment = ""
-al_registre: str = ""
-cat_registre: str = ""
-data_registre: str = date.isoformat(date.today())
+
+
 t_registre: str = ""
 n_caracters_total = 0
-lim_caracters = 200
+
 alumnes_registrats = []
 al_seleccionat = ''
 
@@ -38,16 +36,16 @@ def arrencada():
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
+
     def __init__(self):
         super().__init__()
-
+        self.lim_caracters = 200
         arrencada()
-        global al_registre
-        global cat_registre
-        global data_registre
+        self.al_registre: str = ""
+        self.cat_registre: str = ""
         global t_registre
         global n_caracters_total
-        global lim_caracters
+        self.data_registre: str = date.isoformat(date.today())
         self.setWindowTitle("Seguiment alumnes")
         self.setFixedSize(PySide6.QtCore.QSize(300, 400))
         # Configurem bloc d'alumnes:
@@ -56,13 +54,13 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.wcentral)
         self.desplegable_al = QComboBox()
         self.desplegable_al.addItems(al_seguiment)
-        al_registre = self.desplegable_al.currentText()
+        self.al_registre = self.desplegable_al.currentText()
         self.desplegable_al.currentTextChanged.connect(self.traspas_alumnes)
         # Configurem bloc de motius:
         self.categories_etiqueta = QLabel("Motiu: ")
         self.desplegable_cat = QComboBox()
         self.desplegable_cat.addItems(cat_seguiment)
-        cat_registre = self.desplegable_cat.currentText()
+        self.cat_registre = self.desplegable_cat.currentText()
         self.desplegable_cat.currentTextChanged.connect(self.traspas_categoria)
         # Configurem bloc de descripció:
         self.qdesc_et = QLabel("Descripció:")
@@ -93,7 +91,7 @@ class MainWindow(QMainWindow):
         # Configurem text i botons:
         self.tbot = QGridLayout()
 
-        self.carrest_et = QLabel(str(lim_caracters - n_caracters_total) + " caràcters restants ")
+        self.carrest_et = QLabel(str(self.lim_caracters - n_caracters_total) + " caràcters restants ")
         self.regbot = QPushButton("Registrar")
         self.regbot.clicked.connect(self.boto_registre)
         self.expbot = QPushButton("Exportar informe")
@@ -112,7 +110,7 @@ class MainWindow(QMainWindow):
         global n_caracters_total
         text_escrit = self.qdesc.toPlainText()
         n_caracters_total = len(text_escrit)
-        self.carrest_et.setText(str(lim_caracters - n_caracters_total) + " caràcters restants ")
+        self.carrest_et.setText(str(self.lim_caracters - n_caracters_total) + " caràcters restants ")
 
     def boto_registre(self):
         global t_registre
@@ -127,11 +125,11 @@ class MainWindow(QMainWindow):
                 pass
             else:
                 pass
-        elif len(t_actual) > lim_caracters:
+        elif len(t_actual) > self.lim_caracters:
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Text massa llarg")
             dlg.setIcon(QMessageBox.Warning)
-            dlg.setText('La descripció introduïda excedeix els ' + str(lim_caracters) + ' caràcters')
+            dlg.setText('La descripció introduïda excedeix els ' + str(self.lim_caracters) + ' caràcters')
             boto = dlg.exec()
             if boto == QMessageBox.Ok:
                 pass
@@ -139,7 +137,7 @@ class MainWindow(QMainWindow):
                 pass
         else:
             t_registre = t_actual
-            registre_dades(al_registre, cat_registre, data_registre, t_registre)
+            registre_dades(self.al_registre, self.cat_registre, self.data_registre, t_registre)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Èxit")
             dlg.setIcon(QMessageBox.Information)
@@ -171,20 +169,17 @@ class MainWindow(QMainWindow):
 
     def traspas_alumnes(self):
         """Captura el nom de l'alumne seleccionat com a variable de python"""
-        global al_registre
-        al_registre = self.desplegable_al.currentText()
+        self.al_registre = self.desplegable_al.currentText()
 
     def traspas_categoria(self):
         """Captura la categoria seleccionada com a variable de python"""
-        global cat_registre
-        cat_registre = self.desplegable_cat.currentText()
+        self.cat_registre = self.desplegable_cat.currentText()
 
     def traspas_data(self):
         """Captura la data seleccionada i la transforma a python"""
-        global data_registre
         data_qt = self.selector_data.date()
         data_python = data_qt.toPython()
-        data_registre = data_python
+        self.data_registre = data_python
 
 
 def executa():
