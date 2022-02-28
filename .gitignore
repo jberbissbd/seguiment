@@ -15,3 +15,6 @@ vscode
 !/.vscode/
 !/seguiment_proves.zip
 
+!/dist/
+!/build/
+!/main.spec

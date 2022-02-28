@@ -12,6 +12,7 @@ import openpyxl
 arxiubbdd = "dades/registre.db"
 alumnat = "dades/alumnat.csv"
 categories = "dades/categories.csv"
+dates = "dades/dates.csv"
 l_alumnes_cons = []
 
 
@@ -35,7 +36,7 @@ def lectura_dades():
         print("Sense dades d'alumnes, no es pot seguir")
 
     try:
-        with open(categories) as file:
+        with open(categories, "r") as file:
             dades_csv_cat = pd.read_csv(file)
             cat_seguiment: object = dades_csv_cat["Motius"].values.tolist()
             file.close()
@@ -47,7 +48,16 @@ def lectura_dades():
             writer.writerow(motius_llista)
     except pandas.errors.EmptyDataError:
         print("Sense categories, no es pot seguir")
-    return al_seguiment, cat_seguiment
+
+    try:
+        with open(dates, "r") as file:
+            dades_csv_trim = pd.read_csv(file)
+            dates_trimestres = dades_csv_trim["Dates"].values.tolist()
+            file.close()
+            pass
+    except pandas.errors.EmptyDataError:
+        print("Error en les dates")
+    return al_seguiment, cat_seguiment, dates_trimestres
 
 
 def bbdd_conn():
@@ -109,7 +119,7 @@ def consulta_dades(alumne):
         conn.close()
 
 
-def pandes_prova(alumne):
+def exportar_xlsx(alumne):
     conn = sqlite3.connect(arxiubbdd)
     consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
     taula_pandas = pd.read_sql_query(consulta, conn, parse_dates='data')
@@ -117,8 +127,8 @@ def pandes_prova(alumne):
 
     def determinacio_trimsetre(data_cons):
         data_registre = data_cons['data']
-        d1ertrim = datetime.strptime('2021-12-15', '%Y-%m-%d')
-        d2ontrim = datetime.strptime('2022-03-11', '%Y-%m-%d')
+        d1ertrim = datetime.strptime(lectura_dades()[2][0], '%Y-%m-%d')
+        d2ontrim = datetime.strptime(lectura_dades()[2][1], '%Y-%m-%d')
         if data_registre <= d1ertrim:
             return 1
         elif data_registre < d2ontrim:
@@ -138,4 +148,4 @@ def pandes_prova(alumne):
     for columna_expandir in noms_columnes:
         taula_pivotada = taula_pivotada.explode(column=columna_expandir)
     print(taula_pivotada)
-    taula_pivotada.to_excel(f'{alumne}.xlsx', merge_cells=True,startcol=1,startrow=1)
+    taula_pivotada.to_excel(f'{alumne}.xlsx', merge_cells=True, startcol=1, startrow=1)

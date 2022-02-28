@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
     QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox
 
-from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades, pandes_prova
+from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades, exportar_xlsx
 
 # TODO: Crear informe i exportar a Excel
 
@@ -16,7 +16,6 @@ categories = "dades/categories.csv"
 
 al_seguiment = ""
 cat_seguiment = ""
-
 
 t_registre: str = ""
 n_caracters_total = 0
@@ -187,7 +186,7 @@ def executa():
 
     # for fila in a:
     #     print(fila)
-    pandes_prova(al_seleccionat)
+    exportar_xlsx(al_seleccionat)
 
 
 class FinestraExport(QWidget):
