@@ -120,12 +120,15 @@ def consulta_dades(alumne):
 
 
 def exportar_xlsx(alumne):
+    """Fa la consulta a l'arxiu sqlite a partir del nom de l'alumne, modifica el format i l'exporta a format Excel."""
+    # Fem la connexió amb la base de dades:
     conn = sqlite3.connect(arxiubbdd)
     consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
     taula_pandas = pd.read_sql_query(consulta, conn, parse_dates='data')
     conn.close()
 
     def determinacio_trimestre(data_cons):
+        """Assigna el trimestre segons la data del registre"""
         data_registre = data_cons['data']
         d1ertrim = datetime.strptime(lectura_dades()[2][0], '%Y-%m-%d')
         d2ontrim = datetime.strptime(lectura_dades()[2][1], '%Y-%m-%d')
@@ -136,15 +139,22 @@ def exportar_xlsx(alumne):
         else:
             return 3
 
+    # Apliquem la funció de determinació de trimestre:
     taula_pandas['Trimestre'] = taula_pandas.apply(lambda row: determinacio_trimestre(row), axis=1
                                                    , result_type='expand')
+    # Classifiquem trimestre i categoria com a categories del pandas per a evitar problemes amb la repetició de valors
     taula_pandas['Trimestre'].astype('category')
     taula_pandas['categoria'].astype('category')
+    # Definim com s'han d'agrupar les dades a la taula de sota:
     funcions_agregacio = {'descripcio': np.unique}
+    # Executem la funció de lectura_dades per a obtenir les categories a tenir en compte a la taula, independentment
+    # dels registres:
     noms_columnes = lectura_dades()[1]
+    # Canviem l'orientació de la taula:
     taula_pivotada = pd.pivot_table(taula_pandas, index='Trimestre', columns='categoria', values='descripcio',
                                     fill_value="", aggfunc=funcions_agregacio, dropna=False) \
         .reindex(columns=noms_columnes)
+    # Expandim els registres amb una llista com a valor (per exemple, dos registres el mateix dia)
     for columna_expandir in noms_columnes:
         taula_pivotada = taula_pivotada.explode(column=columna_expandir)
     print(taula_pivotada)
