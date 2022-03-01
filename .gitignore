@@ -4,6 +4,7 @@
 # IntelliJ project files
 .idea
 *.iml
+*.xlsx
 out
 gen
 __pycache__/funcions.cpython-38.pyc
@@ -18,4 +19,4 @@ vscode
 !/dist/
 !/build/
 !/main.spec
-!/de prova 1, Alumne.xlsx
+

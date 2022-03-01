@@ -106,7 +106,7 @@ def consulta_alumnes():
 
 
 def consulta_dades(alumne):
-    """Funció per a efectuar la consulta per nom d'alumne a la BBDD"""
+    """Funció per a efectuar la consulta per nom d’alumne a la base de dades"""
     consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
     conn = sqlite3.connect(arxiubbdd)
     try:
@@ -125,7 +125,7 @@ def exportar_xlsx(alumne):
     taula_pandas = pd.read_sql_query(consulta, conn, parse_dates='data')
     conn.close()
 
-    def determinacio_trimsetre(data_cons):
+    def determinacio_trimestre(data_cons):
         data_registre = data_cons['data']
         d1ertrim = datetime.strptime(lectura_dades()[2][0], '%Y-%m-%d')
         d2ontrim = datetime.strptime(lectura_dades()[2][1], '%Y-%m-%d')
@@ -136,14 +136,14 @@ def exportar_xlsx(alumne):
         else:
             return 3
 
-    taula_pandas['Trimestre'] = taula_pandas.apply(lambda row: determinacio_trimsetre(row), axis=1
+    taula_pandas['Trimestre'] = taula_pandas.apply(lambda row: determinacio_trimestre(row), axis=1
                                                    , result_type='expand')
     taula_pandas['Trimestre'].astype('category')
     taula_pandas['categoria'].astype('category')
-    funcions_agregació = {'descripcio': np.unique}
+    funcions_agregacio = {'descripcio': np.unique}
     noms_columnes = lectura_dades()[1]
     taula_pivotada = pd.pivot_table(taula_pandas, index='Trimestre', columns='categoria', values='descripcio',
-                                    fill_value="", aggfunc=funcions_agregació, dropna=False) \
+                                    fill_value="", aggfunc=funcions_agregacio, dropna=False) \
         .reindex(columns=noms_columnes)
     for columna_expandir in noms_columnes:
         taula_pivotada = taula_pivotada.explode(column=columna_expandir)

@@ -167,11 +167,11 @@ class MainWindow(QMainWindow):
             self.fin.show()
 
     def traspas_alumnes(self):
-        """Captura el nom de l'alumne seleccionat com a variable de python"""
+        """Captura el nom de l’alumne seleccionat com a variable de python"""
         self.al_registre = self.desplegable_al.currentText()
 
     def traspas_categoria(self):
-        """Captura la categoria seleccionada com a variable de python"""
+        """Captura la categoria seleccionada cóm a variable de python"""
         self.cat_registre = self.desplegable_cat.currentText()
 
     def traspas_data(self):
