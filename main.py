@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayo
 
 from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades, exportar_xlsx
 
-# TODO: Crear informe i exportar a Excel
+# TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
 
 alumnat = "dades/alumnat.csv"
