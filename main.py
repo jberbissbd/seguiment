@@ -4,7 +4,7 @@ from datetime import date
 import PySide6.QtCore
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
-    QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox
+    QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox, QCheckBox
 
 from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades, exportar_xlsx
 
@@ -148,7 +148,6 @@ class MainWindow(QMainWindow):
                 pass
 
     def boto_exportar(self):
-        global alumnes_registrats
         dades = consulta_alumnes()
         if not dades:
             dlg = QMessageBox(self)
@@ -161,7 +160,7 @@ class MainWindow(QMainWindow):
             else:
                 pass
         else:
-            alumnes_registrats = dades
+            self.alumnes_registrats = dades
             self.fin = FinestraExport()
             self.fin.show()
 
@@ -180,18 +179,15 @@ class MainWindow(QMainWindow):
         self.data_registre = data_python
 
 
-def executa():
-    global al_seleccionat
-
-    # for fila in a:
-    #     print(fila)
-    exportar_xlsx(al_seleccionat)
+def executa(alumne):
+    exportar_xlsx(alumne)
 
 
 class FinestraExport(QWidget):
     def __init__(self):
         super().__init__()
-        global al_seleccionat
+        self.al_seleccionat: str = ''
+        self.alumnes_registrats = consulta_alumnes()
         # Creació dels elements de la finestra:
         self.disposicio = QGridLayout()
         self.disposicio.setColumnStretch(2, 2)
@@ -199,31 +195,80 @@ class FinestraExport(QWidget):
         self.resize(300, 100)
         self.alumne_etiqueta = QLabel("Alumne: ")
         self.alumne_seleccio = QComboBox()
-        self.alumne_seleccio.addItems(alumnes_registrats)
-        al_seleccionat = self.alumne_seleccio.currentText()
+        self.alumne_seleccio.addItems(self.alumnes_registrats)
+        self.tots_etiqueta = QLabel("Exportar informes de\ntots els alumnes? ")
+        self.tots_check = QCheckBox()
+        self.tots_check.clicked.connect(self.tots_seleccionat)
+        self.tots_check.setTristate(False)
+        self.al_seleccionat = self.alumne_seleccio.currentText()
         self.alumne_seleccio.currentTextChanged.connect(self.canvi_alumne)
         self.desti = QLabel("Destí: ")
         self.desti_seleccio = QPushButton()
         self.desti_seleccio.setIcon(QIcon("icones/folder.png"))
         self.boto_ok = QPushButton("D'acord")
-        self.boto_ok.clicked.connect(executa)
+        self.boto_ok.clicked.connect(self.exportar_informacio)
         self.boto_cancela = QPushButton("Cancel·la")
         self.boto_cancela.clicked.connect(self.cancela)
         # Distribuïm els elements:
         self.setLayout(self.disposicio)
         self.disposicio.addWidget(self.alumne_etiqueta, 0, 0)
         self.disposicio.addWidget(self.alumne_seleccio, 0, 1)
-        self.disposicio.addWidget(self.desti, 1, 0)
-        self.disposicio.addWidget(self.desti_seleccio, 1, 1)
-        self.disposicio.addWidget(self.boto_ok, 2, 0)
-        self.disposicio.addWidget(self.boto_cancela, 2, 1)
+        self.disposicio.addWidget(self.tots_etiqueta, 1, 0)
+        self.disposicio.addWidget(self.tots_check)
+        self.disposicio.addWidget(self.desti, 2, 0)
+        self.disposicio.addWidget(self.desti_seleccio, 2, 1)
+        self.disposicio.addWidget(self.boto_ok, 3, 0)
+        self.disposicio.addWidget(self.boto_cancela, 3, 1)
 
     def cancela(self):
         self.close()
 
     def canvi_alumne(self):
-        global al_seleccionat
-        al_seleccionat = self.alumne_seleccio.currentText()
+        self.al_seleccionat = self.alumne_seleccio.currentText()
+
+    def tots_seleccionat(self):
+        if self.tots_check.isChecked():
+            self.alumne_seleccio.setEnabled(False)
+        else:
+            self.alumne_seleccio.setEnabled(True)
+
+    def exportar_informacio(self):
+        if self.tots_check.isChecked():
+            for alumne in self.alumnes_registrats:
+                exportar_xlsx(alumne)
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Èxit")
+            dlg.setIcon(QMessageBox.Information)
+            dlg.setText("Informes exportats")
+            boto = dlg.exec()
+            if boto == QMessageBox.Ok:
+                dlg.close()
+                self.close()
+            else:
+                pass
+
+        elif self.tots_check.isChecked() is False:
+            exportar_xlsx(self.al_seleccionat)
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Èxit")
+            dlg.setIcon(QMessageBox.Information)
+            dlg.setText("Informes exportats")
+            boto = dlg.exec()
+            if boto == QMessageBox.Ok:
+                dlg.close()
+                self.close()
+            else:
+                pass
+        else:
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Sense dades")
+            dlg.setIcon(QMessageBox.Warning)
+            dlg.setText("No existeix cap alumne amb registres")
+            boto = dlg.exec()
+            if boto == QMessageBox.Ok:
+                pass
+            else:
+                pass
 
 
 app = QApplication(sys.argv)

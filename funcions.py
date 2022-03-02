@@ -23,7 +23,7 @@ def lectura_dades():
     global categories
 
     try:
-        with open(alumnat,encoding='UTF8') as file:
+        with open(alumnat, encoding='UTF8') as file:
             dades_csv_al = pd.read_csv(file)
             al_seguiment = dades_csv_al["Alumnat"].values.tolist()
             file.close()
@@ -37,7 +37,7 @@ def lectura_dades():
         print("Sense dades d'alumnes, no es pot seguir")
 
     try:
-        with open(categories,encoding='UTF8') as file:
+        with open(categories, encoding='UTF8') as file:
             dades_csv_cat = pd.read_csv(file)
             cat_seguiment: object = dades_csv_cat["Motius"].values.tolist()
             file.close()
@@ -51,7 +51,7 @@ def lectura_dades():
         print("Sense categories, no es pot seguir")
 
     try:
-        with open(dates,encoding='UTF8') as file:
+        with open(dates, encoding='UTF8') as file:
             dades_csv_trim = pd.read_csv(file)
             dates_trimestres = dades_csv_trim["Dates"].values.tolist()
             file.close()
@@ -158,5 +158,7 @@ def exportar_xlsx(alumne):
     # Expandim els registres amb una llista com a valor (per exemple, dos registres el mateix dia)
     for columna_expandir in noms_columnes:
         taula_pivotada = taula_pivotada.explode(column=columna_expandir)
-    print(taula_pivotada)
-    taula_pivotada.to_excel(f'{alumne}.xlsx', merge_cells=True, startcol=1, startrow=1)
+    ruta_exportar = ".vscode/"
+    nom_arxiu_exportar = f'{alumne}.xlsx'
+    nom_complet = ruta_exportar + nom_arxiu_exportar
+    taula_pivotada.to_excel(nom_complet, merge_cells=True, startcol=1, startrow=1)
