@@ -33,7 +33,6 @@ def arrencada():
     bbdd_conn()
 
 
-# Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
 
     def __init__(self):

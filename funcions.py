@@ -6,6 +6,7 @@ import pandas as pd
 import pandas.errors
 import csv
 import numpy as np
+
 from dateutil.parser import *
 import openpyxl
 
@@ -22,7 +23,7 @@ def lectura_dades():
     global categories
 
     try:
-        with open(alumnat, "r") as file:
+        with open(alumnat,encoding='UTF8') as file:
             dades_csv_al = pd.read_csv(file)
             al_seguiment = dades_csv_al["Alumnat"].values.tolist()
             file.close()
@@ -36,7 +37,7 @@ def lectura_dades():
         print("Sense dades d'alumnes, no es pot seguir")
 
     try:
-        with open(categories, "r") as file:
+        with open(categories,encoding='UTF8') as file:
             dades_csv_cat = pd.read_csv(file)
             cat_seguiment: object = dades_csv_cat["Motius"].values.tolist()
             file.close()
@@ -50,7 +51,7 @@ def lectura_dades():
         print("Sense categories, no es pot seguir")
 
     try:
-        with open(dates, "r") as file:
+        with open(dates,encoding='UTF8') as file:
             dades_csv_trim = pd.read_csv(file)
             dates_trimestres = dades_csv_trim["Dates"].values.tolist()
             file.close()
