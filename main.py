@@ -3,10 +3,14 @@ from datetime import date
 
 import PySide6.QtCore
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
-    QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox, QCheckBox, QDialog,QDialogButtonBox, QFileDialog
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
+                               QDialog, QDialogButtonBox, QFileDialog,
+                               QFormLayout, QGridLayout, QHBoxLayout, QLabel,
+                               QMainWindow, QMessageBox, QPushButton,
+                               QTextEdit, QVBoxLayout, QWidget)
 
-from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, exportar_xlsx
+from funcions import (bbdd_conn, consulta_alumnes, exportar_xlsx,
+                      lectura_dades, registre_dades)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
@@ -209,7 +213,7 @@ class FinestraExport(QWidget):
         self.desti_seleccio.setIcon(QIcon("icones/folder.png"))
         self.desti_seleccio.clicked.connect(self.seleccio_desti)
         self.boto_ok = QPushButton("D'acord")
-        self.boto_ok.clicked.connect(self.exportar_informacio)
+        self.boto_ok.clicked.connect(self.informe_global)
         self.boto_cancela = QPushButton("Cancel·la")
         self.boto_cancela.clicked.connect(self.cancela)
         # Distribuïm els elements:
@@ -246,7 +250,7 @@ class FinestraExport(QWidget):
         else:
             self.alumne_seleccio.setEnabled(True)
 
-    def exportar_informacio(self):
+    def informe_global(self):
         if self.tots_check.isChecked():
             for alumne in self.alumnes_registrats:
                 exportar_xlsx(alumne)
