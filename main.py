@@ -4,9 +4,9 @@ from datetime import date
 import PySide6.QtCore
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QLabel, QWidget, QHBoxLayout, QGridLayout, QFormLayout, QDateEdit, \
-    QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox, QCheckBox
+    QApplication, QVBoxLayout, QTextEdit, QPushButton, QMainWindow, QMessageBox, QCheckBox, QDialog,QDialogButtonBox, QFileDialog
 
-from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, consulta_dades, exportar_xlsx
+from funcions import bbdd_conn, lectura_dades, registre_dades, consulta_alumnes, exportar_xlsx
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
@@ -187,6 +187,8 @@ class FinestraExport(QWidget):
     def __init__(self):
         super().__init__()
         self.al_seleccionat: str = ''
+        self.carpeta_desti: str = ''
+        self.arxiu_desti: str = ''
         self.alumnes_registrats = consulta_alumnes()
         # Creació dels elements de la finestra:
         self.disposicio = QGridLayout()
@@ -205,6 +207,7 @@ class FinestraExport(QWidget):
         self.desti = QLabel("Destí: ")
         self.desti_seleccio = QPushButton()
         self.desti_seleccio.setIcon(QIcon("icones/folder.png"))
+        self.desti_seleccio.clicked.connect(self.seleccio_desti)
         self.boto_ok = QPushButton("D'acord")
         self.boto_ok.clicked.connect(self.exportar_informacio)
         self.boto_cancela = QPushButton("Cancel·la")
@@ -219,6 +222,17 @@ class FinestraExport(QWidget):
         self.disposicio.addWidget(self.desti_seleccio, 2, 1)
         self.disposicio.addWidget(self.boto_ok, 3, 0)
         self.disposicio.addWidget(self.boto_cancela, 3, 1)
+
+    def seleccio_desti(self):
+        sel = QFileDialog()
+        sel.AcceptSave = True
+        sel.LookIn = True
+        sel.FileName = True
+        sel.setFileMode(QFileDialog.AnyFile)
+        sel.setNameFilter("Excel (*.xlsx)")
+        self.arxiu_desti = sel.getOpenFileName(self,filter=("Open Image"), selectedFilter=("Image Files (*.png *.jpg *.bmp)"))
+        sel.exec()
+
 
     def cancela(self):
         self.close()

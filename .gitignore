@@ -20,3 +20,5 @@ vscode
 !/build/
 !/main.spec
 
+!/cli.spec
+!/main.spec
