@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QTextEdit, QVBoxLayout, QWidget)
 
-from funcions import (bbdd_conn, consulta_alumnes, exportar_xlsx,
+from funcions import (bbdd_conn, consulta_alumnes, export_global,export_escoltam,
                       lectura_dades, registre_dades)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
 
 
 def executa(alumne):
-    exportar_xlsx(alumne)
+    export_global(alumne)
 
 
 class FinestraExport(QWidget):
@@ -213,7 +213,7 @@ class FinestraExport(QWidget):
         self.desti_seleccio.setIcon(QIcon("icones/folder.png"))
         self.desti_seleccio.clicked.connect(self.seleccio_desti)
         self.boto_ok = QPushButton("D'acord")
-        self.boto_ok.clicked.connect(self.informe_global)
+        self.boto_ok.clicked.connect(export_escoltam)
         self.boto_cancela = QPushButton("Cancel·la")
         self.boto_cancela.clicked.connect(self.cancela)
         # Distribuïm els elements:
@@ -234,9 +234,9 @@ class FinestraExport(QWidget):
         sel.FileName = True
         sel.setFileMode(QFileDialog.AnyFile)
         sel.setNameFilter("Excel (*.xlsx)")
-        self.arxiu_desti = sel.getOpenFileName(self,filter=("Open Image"), selectedFilter=("Image Files (*.png *.jpg *.bmp)"))
+        self.arxiu_desti = sel.getOpenFileName(self, filter=("Open Image"),
+                                               selectedFilter=("Image Files (*.png *.jpg *.bmp)"))
         sel.exec()
-
 
     def cancela(self):
         self.close()
@@ -253,7 +253,7 @@ class FinestraExport(QWidget):
     def informe_global(self):
         if self.tots_check.isChecked():
             for alumne in self.alumnes_registrats:
-                exportar_xlsx(alumne)
+                export_global(alumne)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Èxit")
             dlg.setIcon(QMessageBox.Information)
@@ -266,7 +266,7 @@ class FinestraExport(QWidget):
                 pass
 
         elif self.tots_check.isChecked() is False:
-            exportar_xlsx(self.al_seleccionat)
+            export_global(self.al_seleccionat)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Èxit")
             dlg.setIcon(QMessageBox.Information)

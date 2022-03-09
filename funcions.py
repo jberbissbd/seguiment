@@ -120,12 +120,35 @@ def consulta_dades(alumne):
         conn.close()
 
 
-def exportar_xlsx(alumne):
+def export_escoltam():
+    conn = sqlite3.connect(arxiubbdd)
+    noms_mesos = ['Setembre', 'Octubre', 'Novembre', 'Desembre', 'Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny']
+    cat_filtre = "Escolta'm"
+    consulta = f"SELECT data, categoria,  descripcio, nom_alumne FROM registres WHERE categoria = \"{cat_filtre}\" ORDER BY data"
+    taula_escoltam = pd.read_sql_query(consulta, conn, parse_dates='data')
+    conn.close()
+    # Formategem deixant tan sols el mes, començant en majuscules:
+    taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: str(row['data'].strftime('%B')), axis=1,
+                                                 result_type='expand')
+    taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: row['Mes'][3:len(row['Mes'])], axis=1,
+                                                 result_type='expand')
+    taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: row['Mes'].capitalize(), axis=1, result_type='expand')
+    taula_escoltam['Mes'].astype('category')
+    funcions_agregacio = {'nom_alumne': np.unique}
+    taula_escoltam_pivot = pd.pivot_table(taula_escoltam, index='Mes', values='nom_alumne', fill_value="",
+                                          aggfunc=funcions_agregacio).reindex(index=noms_mesos)
+    for columna_text in taula_escoltam_pivot:
+        taula_escoltam_pivot = taula_escoltam_pivot.explode(column=columna_text)
+    taula_escoltam_pivot.fillna(value="")
+    print(taula_escoltam_pivot)
+
+
+def export_global(alumne):
     """Fa la consulta a l'arxiu sqlite a partir del nom de l'alumne, modifica el format i l'exporta a format Excel."""
     # Fem la connexió amb la base de dades:
     conn = sqlite3.connect(arxiubbdd)
     consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
-    taula_pandas = pd.read_sql_query(consulta, conn, parse_dates='data')
+    taula_global = pd.read_sql_query(consulta, conn, parse_dates='data')
     conn.close()
 
     def determinacio_trimestre(data_cons):
@@ -141,18 +164,18 @@ def exportar_xlsx(alumne):
             return 3
 
     # Apliquem la funció de determinació de trimestre:
-    taula_pandas['Trimestre'] = taula_pandas.apply(lambda row: determinacio_trimestre(row), axis=1
+    taula_global['Trimestre'] = taula_global.apply(lambda row: determinacio_trimestre(row), axis=1
                                                    , result_type='expand')
     # Classifiquem trimestre i categoria com a categories del pandas per a evitar problemes amb la repetició de valors
-    taula_pandas['Trimestre'].astype('category')
-    taula_pandas['categoria'].astype('category')
+    taula_global['Trimestre'].astype('category')
+    taula_global['categoria'].astype('category')
     # Definim com s'han d'agrupar les dades a la taula de sota:
     funcions_agregacio = {'descripcio': np.unique}
     # Executem la funció de lectura_dades per a obtenir les categories a tenir en compte a la taula, independentment
     # dels registres:
     noms_columnes = lectura_dades()[1]
     # Canviem l'orientació de la taula:
-    taula_pivotada = pd.pivot_table(taula_pandas, index='Trimestre', columns='categoria', values='descripcio',
+    taula_pivotada = pd.pivot_table(taula_global, index='Trimestre', columns='categoria', values='descripcio',
                                     fill_value="", aggfunc=funcions_agregacio, dropna=False) \
         .reindex(columns=noms_columnes)
     # Expandim els registres amb una llista com a valor (per exemple, dos registres el mateix dia)
