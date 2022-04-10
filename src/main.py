@@ -4,12 +4,12 @@ from datetime import date
 import PySide6.QtCore
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
-                               QDialog, QDialogButtonBox, QFileDialog,
+                               QFileDialog,
                                QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
                                QTextEdit, QVBoxLayout, QWidget)
 
-from funcions import (bbdd_conn, consulta_alumnes, export_global,export_escoltam,
+from funcions import (bbdd_conn, consulta_alumnes, export_global, export_escoltam,
                       lectura_dades, registre_dades)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
