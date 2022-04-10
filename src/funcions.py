@@ -1,14 +1,11 @@
+import csv
 import datetime
 import sqlite3
 from datetime import datetime
-import dateutil.parser
+
+import numpy as np
 import pandas as pd
 import pandas.errors
-import csv
-import numpy as np
-
-from dateutil.parser import *
-import openpyxl
 
 arxiubbdd = "dades/registre.db"
 alumnat = "dades/alumnat.csv"
