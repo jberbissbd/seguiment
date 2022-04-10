@@ -7,10 +7,10 @@ import numpy as np
 import pandas as pd
 import pandas.errors
 
-arxiubbdd = "dades/registre.db"
-alumnat = "dades/alumnat.csv"
-categories = "dades/categories.csv"
-dates = "dades/dates.csv"
+arxiubbdd = 'src/dades/registre.db'
+alumnat = 'src/dades/alumnat.csv'
+categories = 'src/dades/categories.csv'
+dates = 'src/dades/dates.csv'
 l_alumnes_cons = []
 
 

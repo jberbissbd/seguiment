@@ -15,8 +15,8 @@ from funcions import (bbdd_conn, consulta_alumnes, export_global, export_escolta
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
 
-alumnat = "dades/alumnat.csv"
-categories = "dades/categories.csv"
+alumnat = 'src/dades/alumnat.csv'
+categories = 'src/dades/categories.csv'
 
 al_seguiment = ""
 cat_seguiment = ""
