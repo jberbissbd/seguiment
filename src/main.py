@@ -228,12 +228,14 @@ class FinestraExport(QWidget):
         self.disposicio.addWidget(self.boto_cancela, 3, 1)
 
     def seleccio_desti(self):
+    # TODO: Obtenir retorn del directory seleccionat.
+    # TODO: Dialeg s'executa dues vegades: deixar buit per a cancl·lar i directory seleccionat per a Ok.
         sel = QFileDialog()
         sel.AcceptSave = True
         sel.LookIn = True
         sel.FileName = True
-        sel.setFileMode(QFileDialog.AnyFile)
-        sel.setNameFilter("Excel (*.xlsx)")
+        sel.setFileMode(QFileDialog.Directory)
+        # sel.setNameFilter("Excel (*.xlsx)")
         self.arxiu_desti = sel.getOpenFileName(self, filter=("Open Image"),
                                                selectedFilter=("Image Files (*.png *.jpg *.bmp)"))
         sel.exec()
