@@ -187,6 +187,12 @@ def executa(alumne):
     export_global(alumne)
 
 
+class Dialeg_Seleccio(QFileDialog):
+    def __init__(self):
+        super().__init__()
+        pass
+
+
 class FinestraExport(QWidget):
     def __init__(self):
         super().__init__()
@@ -233,10 +239,9 @@ class FinestraExport(QWidget):
         sel = QFileDialog()
         # sel.setFileMode(QFileDialog.AnyFile)
         # sel.setNameFilter("Excel (*.xlsx)")
-        nom_arxiu = sel.getOpenFileName(self,"Open Image", "/home/jordi", "Image Files (*.png *.jpg *.bmp)")
+        nom_arxiu = sel.getOpenFileName(self, "Open Image", "/home/jordi", "Image Files (*.png *.jpg *.bmp)")
         sel.exec()
         return nom_arxiu
-
 
     def cancela(self):
         self.close()

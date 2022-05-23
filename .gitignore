@@ -10,3 +10,6 @@
 
 /.vscode/
 /venv/
+/lib/
+/__pycache__
+/src/__pycache__
