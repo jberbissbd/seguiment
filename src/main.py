@@ -4,7 +4,7 @@ from datetime import date
 import PySide6.QtCore
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
-                               QFileDialog,
+                               QFileDialog, QToolBar,
                                QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
                                QTextEdit, QVBoxLayout, QWidget)
@@ -50,6 +50,9 @@ class MainWindow(QMainWindow):
         self.data_registre: str = date.isoformat(date.today())
         self.setWindowTitle("Seguiment alumnes")
         self.setFixedSize(PySide6.QtCore.QSize(300, 400))
+        # Configurem barra d'eines:
+        barra_eines = QToolBar("Hola")
+        self.addToolBar(barra_eines)
         # Configurem bloc d'alumnes:
         self.wcentral = QWidget()
         self.alumnes_etiqueta = QLabel("Alumne: ")
