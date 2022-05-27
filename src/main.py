@@ -2,7 +2,7 @@ import sys
 from datetime import date
 
 import PySide6.QtCore
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar,
                                QFormLayout, QGridLayout, QHBoxLayout, QLabel,
@@ -51,8 +51,18 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Seguiment alumnes")
         self.setFixedSize(PySide6.QtCore.QSize(300, 400))
         # Configurem barra d'eines:
-        barra_eines = QToolBar("Hola")
+        # TODO: Crear funcions per a les accions corresponents.
+        barra_eines = QToolBar(self)
+        barra_eines.setFloatable = False
+        barra_eines.setMovable = False
+        barra_eines.isFloating = False
         self.addToolBar(barra_eines)
+        sortir_accio = QAction(self, icon=QIcon("src/icones/cross-button.png"))
+        editar_accio = QAction(self,icon=QIcon("src/icones/user--pencil.png"))
+        purga_accio = QAction(self,icon= QIcon("src/icones/bomb.png"))
+        barra_eines.addAction(editar_accio)
+        barra_eines.addAction(purga_accio)
+        barra_eines.addAction(sortir_accio)
         # Configurem bloc d'alumnes:
         self.wcentral = QWidget()
         self.alumnes_etiqueta = QLabel("Alumne: ")
