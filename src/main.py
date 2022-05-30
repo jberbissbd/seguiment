@@ -68,9 +68,9 @@ class MainWindow(QMainWindow):
         self.editar_alumnes.setToolTip("Editar alumnes")
         self.edicio_dates = QAction(self, icon=QIcon("src/icones/office-calendar-symbolic.svg"))
         self.edicio_dates.setToolTip("Editar dates de trimestre")
-        self.exportar_accio = QAction(self, icon=QIcon("src/icones/extract-archive-symbolic.svg"))
+        self.exportar_accio = QAction(self, icon=QIcon("src/icones/application-exit-symbolic.svg"))
         self.exportar_accio.setToolTip("Exportar informes")
-        self.sortir_accio = QAction(self, icon=QIcon("src/icones/application-exit-symbolic.svg"))
+        self.sortir_accio = QAction(self, icon=QIcon("src/icones/system-shutdown-symbolic.svg"))
         self.sortir_accio.setToolTip("Sortir del programa")
         self.purga_accio = QAction(self, icon=QIcon("src/icones/mail-mark-junk-symbolic.svg"))
         self.purga_accio.setToolTip("Eliminar registres")
@@ -138,20 +138,7 @@ class MainWindow(QMainWindow):
             dlg.setIcon(QMessageBox.Warning)
             dlg.setText("No s'ha proporcionat cap descripció")
             boto = dlg.exec()
-            if boto == QMessageBox.Ok:
-                pass
-            else:
-                pass
-        elif len(t_actual) > self.lim_caracters:
-            dlg = QMessageBox(self)
-            dlg.setWindowTitle("Text massa llarg")
-            dlg.setIcon(QMessageBox.Warning)
-            dlg.setText('La descripció introduïda excedeix els ' + str(self.lim_caracters) + ' caràcters')
-            boto = dlg.exec()
-            if boto == QMessageBox.Ok:
-                pass
-            else:
-                pass
+
         else:
             t_registre = t_actual
             registre_dades(self.al_registre, self.cat_registre, self.data_registre, t_registre)
@@ -161,10 +148,7 @@ class MainWindow(QMainWindow):
             dlg.setText("Registre introduït")
             boto = dlg.exec()
             self.qdesc.clear()
-            if boto == QMessageBox.Ok:
-                pass
-            else:
-                pass
+
 
     def boto_exportar(self):
         dades = consulta_alumnes()
