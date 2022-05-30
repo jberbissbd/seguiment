@@ -1,6 +1,7 @@
 import sys
 from datetime import date
 
+from PySide6.QtCore import QSize
 import PySide6.QtCore
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
@@ -50,19 +51,6 @@ class MainWindow(QMainWindow):
         self.data_registre: str = date.isoformat(date.today())
         self.setWindowTitle("Seguiment alumnes")
         self.setFixedSize(PySide6.QtCore.QSize(300, 400))
-        # Configurem barra d'eines:
-        # TODO: Crear funcions per a les accions corresponents.
-        barra_eines = QToolBar(self)
-        barra_eines.setFloatable = False
-        barra_eines.setMovable = False
-        barra_eines.isFloating = False
-        self.addToolBar(barra_eines)
-        sortir_accio = QAction(self, icon=QIcon("src/icones/cross-button.png"))
-        editar_accio = QAction(self,icon=QIcon("src/icones/user--pencil.png"))
-        purga_accio = QAction(self,icon= QIcon("src/icones/bomb.png"))
-        barra_eines.addAction(editar_accio)
-        barra_eines.addAction(purga_accio)
-        barra_eines.addAction(sortir_accio)
         # Configurem bloc d'alumnes:
         self.wcentral = QWidget()
         self.alumnes_etiqueta = QLabel("Alumne: ")
@@ -71,6 +59,29 @@ class MainWindow(QMainWindow):
         self.desplegable_al.addItems(al_seguiment)
         self.al_registre = self.desplegable_al.currentText()
         self.desplegable_al.currentTextChanged.connect(self.traspas_alumnes)
+        # Configurem barra d'eines:
+        # TODO: Crear funcions per a les accions corresponents.
+        self.barra_eines = QToolBar(self)
+        self.barra_eines.setFloatable(False)
+        self.barra_eines.setMovable(False)
+        
+        self.addToolBar(self.barra_eines)
+
+        self.editar_accio = QAction(self, icon=QIcon("src/icones/system-switch-user-symbolic.svg"))
+        self.editar_accio.setToolTip("Editar alumnes")
+        self.exportar_accio = QAction(self, icon=QIcon("src/icones/extract-archive-symbolic.svg"))
+        self.exportar_accio.setToolTip("Exportar informes")
+        self.sortir_accio = QAction(self, icon=QIcon("src/icones/application-exit-symbolic.svg"))
+        self.sortir_accio.setToolTip("Sortir del programa")
+        self.purga_accio = QAction(self, icon=QIcon("src/icones/mail-mark-junk-symbolic.svg"))
+        self.purga_accio.setToolTip("Eliminar registres")
+        self.barra_eines.addAction(self.editar_accio)
+        self.barra_eines.addAction(self.exportar_accio)
+        self.barra_eines.addAction(self.sortir_accio)
+        self.barra_eines.addSeparator()
+        self.barra_eines.addAction(self.purga_accio)
+        self.barra_eines.setIconSize(QSize(32,32))
+        self.sortir_accio.triggered.connect(self.sortir)
         # Configurem bloc de motius:
         self.categories_etiqueta = QLabel("Motiu: ")
         self.desplegable_cat = QComboBox()
@@ -126,6 +137,9 @@ class MainWindow(QMainWindow):
         text_escrit = self.qdesc.toPlainText()
         n_caracters_total = len(text_escrit)
         self.carrest_et.setText(str(self.lim_caracters - n_caracters_total) + " caràcters restants ")
+
+    def sortir(self):
+        app.quit()
 
     def boto_registre(self):
         global t_registre
