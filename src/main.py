@@ -23,7 +23,6 @@ al_seguiment = ""
 cat_seguiment = ""
 
 t_registre: str = ""
-n_caracters_total = 0
 
 alumnes_registrats = []
 al_seleccionat = ''
@@ -82,6 +81,7 @@ class MainWindow(QMainWindow):
         self.barra_eines.addAction(self.purga_accio)
         self.barra_eines.setIconSize(QSize(32,32))
         self.sortir_accio.triggered.connect(self.sortir)
+        self.exportar_accio.triggered.connect(self.boto_exportar)
         # Configurem bloc de motius:
         self.categories_etiqueta = QLabel("Motiu: ")
         self.desplegable_cat = QComboBox()
@@ -92,7 +92,6 @@ class MainWindow(QMainWindow):
         self.qdesc_et = QLabel("Descripció:")
         self.qdesc_et.setFixedSize(100, 30)
         self.qdesc = QTextEdit()
-        self.qdesc.textChanged.connect(self.limit_caracters)
         # Afegim data
         self.data_etiqueta = QLabel("Data:")
         avui = PySide6.QtCore.QDate.currentDate()
@@ -116,27 +115,15 @@ class MainWindow(QMainWindow):
 
         # Configurem text i botons:
         self.tbot = QGridLayout()
-
-        self.carrest_et = QLabel(str(self.lim_caracters - n_caracters_total) + " caràcters restants ")
         self.regbot = QPushButton("Registrar")
         self.regbot.clicked.connect(self.boto_registre)
-        self.expbot = QPushButton("Exportar informe")
-        self.expbot.clicked.connect(self.boto_exportar)
         self.bot_dist = QHBoxLayout()
         self.bot_dist.addWidget(self.regbot)
-        self.bot_dist.addWidget(self.expbot)
-        self.tbot.addWidget(self.carrest_et, 0, 0)
         self.tbot.addLayout(self.bot_dist, 1, 0, 1, 2)
         # Configuració final de la part general:
         self.disp_general.addLayout(self.form_dist)
         self.disp_general.addLayout(self.tbot)
         self.wcentral.setLayout(self.disp_general)
-
-    def limit_caracters(self):
-        global n_caracters_total
-        text_escrit = self.qdesc.toPlainText()
-        n_caracters_total = len(text_escrit)
-        self.carrest_et.setText(str(self.lim_caracters - n_caracters_total) + " caràcters restants ")
 
     def sortir(self):
         app.quit()
