@@ -59,22 +59,23 @@ class MainWindow(QMainWindow):
         self.al_registre = self.desplegable_al.currentText()
         self.desplegable_al.currentTextChanged.connect(self.traspas_alumnes)
         # Configurem barra d'eines:
-        # TODO: Crear funcions per a les accions corresponents.
+        # TODO: Crear funcions per a editar llista alumnes i netejar dades previes.
         self.barra_eines = QToolBar(self)
         self.barra_eines.setFloatable(False)
         self.barra_eines.setMovable(False)
-        
         self.addToolBar(self.barra_eines)
-
-        self.editar_accio = QAction(self, icon=QIcon("src/icones/system-switch-user-symbolic.svg"))
-        self.editar_accio.setToolTip("Editar alumnes")
+        self.editar_alumnes = QAction(self, icon=QIcon("src/icones/system-switch-user-symbolic.svg"))
+        self.editar_alumnes.setToolTip("Editar alumnes")
+        self.edicio_dates = QAction(self, icon=QIcon("src/icones/office-calendar-symbolic.svg"))
+        self.edicio_dates.setToolTip("Editar dates de trimestre")
         self.exportar_accio = QAction(self, icon=QIcon("src/icones/extract-archive-symbolic.svg"))
         self.exportar_accio.setToolTip("Exportar informes")
         self.sortir_accio = QAction(self, icon=QIcon("src/icones/application-exit-symbolic.svg"))
         self.sortir_accio.setToolTip("Sortir del programa")
         self.purga_accio = QAction(self, icon=QIcon("src/icones/mail-mark-junk-symbolic.svg"))
         self.purga_accio.setToolTip("Eliminar registres")
-        self.barra_eines.addAction(self.editar_accio)
+        self.barra_eines.addAction(self.editar_alumnes)
+        self.barra_eines.addAction(self.edicio_dates)
         self.barra_eines.addAction(self.exportar_accio)
         self.barra_eines.addAction(self.sortir_accio)
         self.barra_eines.addSeparator()
@@ -94,8 +95,8 @@ class MainWindow(QMainWindow):
         self.qdesc = QTextEdit()
         # Afegim data
         self.data_etiqueta = QLabel("Data:")
-        avui = PySide6.QtCore.QDate.currentDate()
-        self.selector_data = QDateEdit(avui)
+        self.avui = PySide6.QtCore.QDate.currentDate()
+        self.selector_data = QDateEdit(self.avui)
         self.selector_data.setDisplayFormat(u"dd/MM/yyyy")
         self.selector_data.setCalendarPopup(True)
         self.selector_data.dateChanged.connect(self.traspas_data)

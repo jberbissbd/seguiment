@@ -57,6 +57,7 @@ def lectura_dades():
         print("Error en les dates")
     return al_seguiment, cat_seguiment, dates_trimestres
 
+# TODO: refactoritzar per a substituir arxius csv per lectura BBDD
 
 def bbdd_conn():
     global arxiubbdd
@@ -64,7 +65,7 @@ def bbdd_conn():
     try:
         conn.cursor()
         conn.execute('CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne CHAR('
-                     '50), categoria CHAR(20), data INTEGER DATE, descripcio CHAR(200))')
+                     '50), categoria CHAR(20), data INTEGER DATE, descripcio BLOB)')
         conn.commit()
         conn.close()
     except sqlite3.OperationalError:
