@@ -41,12 +41,10 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.lim_caracters = 200
         arrencada()
         self.al_registre: str = ""
         self.cat_registre: str = ""
         global t_registre
-        global n_caracters_total
         self.data_registre: str = date.isoformat(date.today())
         self.setWindowTitle("Seguiment alumnes")
         self.setFixedSize(PySide6.QtCore.QSize(300, 400))
@@ -80,7 +78,7 @@ class MainWindow(QMainWindow):
         self.barra_eines.addAction(self.sortir_accio)
         self.barra_eines.addSeparator()
         self.barra_eines.addAction(self.purga_accio)
-        self.barra_eines.setIconSize(QSize(32,32))
+        self.barra_eines.setIconSize(QSize(32, 32))
         self.sortir_accio.triggered.connect(self.sortir)
         self.exportar_accio.triggered.connect(self.boto_exportar)
         # Configurem bloc de motius:
@@ -117,7 +115,7 @@ class MainWindow(QMainWindow):
         # Configurem text i botons:
         self.tbot = QGridLayout()
         self.regbot = QPushButton("Registrar")
-        self.regbot.clicked.connect(self.boto_registre)
+        self.regbot.clicked.connect(self.registrar)
         self.bot_dist = QHBoxLayout()
         self.bot_dist.addWidget(self.regbot)
         self.tbot.addLayout(self.bot_dist, 1, 0, 1, 2)
@@ -129,39 +127,33 @@ class MainWindow(QMainWindow):
     def sortir(self):
         app.quit()
 
-    def boto_registre(self):
-        global t_registre
-        t_actual = self.qdesc.toPlainText()
-        if t_actual == "":
+    def registrar(self):
+        descripcio = self.qdesc.toPlainText()
+        if descripcio == "":
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Registre buit")
             dlg.setIcon(QMessageBox.Warning)
             dlg.setText("No s'ha proporcionat cap descripció")
-            boto = dlg.exec()
-
+            dlg.exec()
         else:
-            t_registre = t_actual
-            registre_dades(self.al_registre, self.cat_registre, self.data_registre, t_registre)
+            registre_dades(self.al_registre, self.cat_registre, self.data_registre, descripcio)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Èxit")
             dlg.setIcon(QMessageBox.Information)
             dlg.setText("Registre introduït")
-            boto = dlg.exec()
+            dlg.exec()
             self.qdesc.clear()
 
-
     def boto_exportar(self):
+        '''Comprova si hi han registres previs i activa el diàleg per a exportar si n'hi han'''
         dades = consulta_alumnes()
         if not dades:
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Sense dades")
             dlg.setIcon(QMessageBox.Warning)
             dlg.setText("No existeix cap alumne amb registres")
-            boto = dlg.exec()
-            if boto == QMessageBox.Ok:
-                pass
-            else:
-                pass
+            dlg.exec()
+
         else:
             self.alumnes_registrats = dades
             self.fin = FinestraExport()
@@ -286,11 +278,7 @@ class FinestraExport(QWidget):
             dlg.setWindowTitle("Sense dades")
             dlg.setIcon(QMessageBox.Warning)
             dlg.setText("No existeix cap alumne amb registres")
-            boto = dlg.exec()
-            if boto == QMessageBox.Ok:
-                pass
-            else:
-                pass
+            dlg.exec()
 
 
 app = QApplication(sys.argv)
