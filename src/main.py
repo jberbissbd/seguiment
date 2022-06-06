@@ -1,7 +1,7 @@
 import sys
 from datetime import date
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, QAbstractTableModel
 import PySide6.QtCore
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView)
 from PySide6.QtSql import QSqlTableModel
 
-from funcions import (bbdd_conn, consulta_alumnes, export_global, export_escoltam,
-                      lectura_dades, registre_dades)
+from funcions import (bbdd_conn, alumnes_registrats, export_global, export_escoltam,
+                      lectura_dades, registre_dades, llistat_alumnes)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
@@ -149,7 +149,7 @@ class MainWindow(QMainWindow):
 
     def crear_informes(self):
         '''Comprova si hi han registres previs i activa el diàleg per a exportar si n'hi han'''
-        dades = consulta_alumnes()
+        dades = alumnes_registrats()
         if not dades:
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Sense dades")
@@ -186,6 +186,7 @@ class MainWindow(QMainWindow):
         self.editor_dates = DatesTrimestre()
         self.editor_dates.show()
 
+
 def executa(alumne):
     export_global(alumne)
 
@@ -196,11 +197,40 @@ class Dialeg_Seleccio(QFileDialog):
         pass
 
 
+class TableModel(QAbstractTableModel):
+    def __init__(self, data):
+        super(TableModel, self).__init__()
+        self._data = data
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            # See below for the nested-list data structure.
+            # .row() indexes into the outer list,
+            # .column() indexes into the sub-list
+            return self._data[index.row()][index.column()]
+
+    def rowCount(self, index):
+        # The length of the outer list.
+        return len(self._data)
+
+    def columnCount(self, index):
+        # The following takes the first sub-list, and returns
+        # the length (only works if all rows are an equal length)
+        return len(self._data[0])
+
+
 class DadesAlumnes(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Alumnes")
         self.resize(300, 200)
+        self.taula_alumnes = QTableView()
+        self.alumnes = llistat_alumnes()
+        self.model = TableModel(self.alumnes)
+        self.taula_alumnes.setModel(self.model)
+        self.distribucio = QGridLayout()
+        self.distribucio.addWidget(self.taula_alumnes)
+        self.setLayout(self.distribucio)
 
 
 class DatesTrimestre(QWidget):
@@ -210,14 +240,13 @@ class DatesTrimestre(QWidget):
         self.resize(300, 200)
 
 
-
 class FinestraExport(QWidget):
     def __init__(self):
         super().__init__()
         self.al_seleccionat: str = ''
         self.carpeta_desti: str = ''
         self.arxiu_desti: str = ''
-        self.alumnes_registrats = consulta_alumnes()
+        self.alumnes_registrats = alumnes_registrats()
         # Creació dels elements de la finestra:
         self.disposicio = QGridLayout()
         self.disposicio.setColumnStretch(2, 2)

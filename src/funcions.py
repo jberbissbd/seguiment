@@ -57,6 +57,7 @@ def lectura_dades():
         print("Error en les dates")
     return al_seguiment, cat_seguiment, dates_trimestres
 
+
 # TODO: refactoritzar per a substituir arxius csv per lectura BBDD
 
 def bbdd_conn():
@@ -89,7 +90,20 @@ def registre_dades(nom_alumne, nom_categoria, data_registre, text_registre):
         print("ERROR")
 
 
-def consulta_alumnes():
+def llistat_alumnes():
+    """Consulta els noms dels alumnes a la taula de noms"""
+    ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM alumnes ORDER BY nom_alumne'
+    try:
+        conn = sqlite3.connect(arxiubbdd)
+        conn.cursor()
+        l_alumnes = []
+        l_alumnes = conn.execute(ordre_consulta_sql).fetchall()
+        return l_alumnes
+    finally:
+        conn.close()
+
+
+def alumnes_registrats():
     """Funció per a obtenir el llistat d'alumnes que tenen algun registre"""
     ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM registres ORDER BY nom_alumne'
     global l_alumnes_cons
