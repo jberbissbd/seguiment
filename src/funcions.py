@@ -66,6 +66,8 @@ def bbdd_conn():
         conn.cursor()
         conn.execute('CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne CHAR('
                      '50), categoria CHAR(20), data INTEGER DATE, descripcio BLOB)')
+        conn.execute('CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB)')
+        conn.execute('CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data INTEGER DATE)')
         conn.commit()
         conn.close()
     except sqlite3.OperationalError:

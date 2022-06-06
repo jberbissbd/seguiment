@@ -1,14 +1,15 @@
 import sys
 from datetime import date
 
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, Qt
 import PySide6.QtCore
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
-                               QFileDialog, QToolBar,
+                               QFileDialog, QToolBar, QTableView,
                                QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
-                               QTextEdit, QVBoxLayout, QWidget)
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView)
+from PySide6.QtSql import QSqlTableModel
 
 from funcions import (bbdd_conn, consulta_alumnes, export_global, export_escoltam,
                       lectura_dades, registre_dades)
@@ -79,8 +80,10 @@ class MainWindow(QMainWindow):
         self.barra_eines.addSeparator()
         self.barra_eines.addAction(self.purga_accio)
         self.barra_eines.setIconSize(QSize(32, 32))
+        self.editar_alumnes.triggered.connect(self.edicio_alumnes)
+        self.edicio_dates.triggered.connect(self.editar_dates)
         self.sortir_accio.triggered.connect(self.sortir)
-        self.exportar_accio.triggered.connect(self.boto_exportar)
+        self.exportar_accio.triggered.connect(self.crear_informes)
         # Configurem bloc de motius:
         self.categories_etiqueta = QLabel("Motiu: ")
         self.desplegable_cat = QComboBox()
@@ -144,7 +147,7 @@ class MainWindow(QMainWindow):
             dlg.exec()
             self.qdesc.clear()
 
-    def boto_exportar(self):
+    def crear_informes(self):
         '''Comprova si hi han registres previs i activa el diàleg per a exportar si n'hi han'''
         dades = consulta_alumnes()
         if not dades:
@@ -173,6 +176,15 @@ class MainWindow(QMainWindow):
         data_python = data_qt.toPython()
         self.data_registre = data_python
 
+    def edicio_alumnes(self):
+        """Permet editar els alumnes en seguiment"""
+        self.editor = DadesAlumnes()
+        self.editor.show()
+
+    def editar_dates(self):
+        """Permet modificar les dates dels trimestre"""
+        self.editor_dates = DatesTrimestre()
+        self.editor_dates.show()
 
 def executa(alumne):
     export_global(alumne)
@@ -182,6 +194,21 @@ class Dialeg_Seleccio(QFileDialog):
     def __init__(self):
         super().__init__()
         pass
+
+
+class DadesAlumnes(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Alumnes")
+        self.resize(300, 200)
+
+
+class DatesTrimestre(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Trimestre")
+        self.resize(300, 200)
+
 
 
 class FinestraExport(QWidget):
