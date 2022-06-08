@@ -222,14 +222,30 @@ class TableModel(QAbstractTableModel):
 class DadesAlumnes(QWidget):
     def __init__(self):
         super().__init__()
+        self.configinterficie()
+
+    def configinterficie(self):
         self.setWindowTitle("Alumnes")
         self.resize(300, 200)
+        # Configurem la taula:
         self.taula_alumnes = QTableView()
         self.alumnes = llistat_alumnes()
         self.model = TableModel(self.alumnes)
         self.taula_alumnes.setModel(self.model)
+        self.taula_alumnes.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.taula_alumnes.resizeColumnsToContents()
+        # Configurem els botons:
+        self.afegirBoto = QPushButton("Afegir")
+        self.esborrarBoto = QPushButton("Esborrar")
+        self.tornarBoto = QPushButton("Tornar")
+        self.distribucio_botons = QVBoxLayout()
+        self.distribucio_botons.addWidget(self.afegirBoto)
+        self.distribucio_botons.addWidget(self.esborrarBoto)
+        self.distribucio_botons.addWidget(self.tornarBoto)
+        # Configurem la interficie:
         self.distribucio = QGridLayout()
-        self.distribucio.addWidget(self.taula_alumnes)
+        self.distribucio.addWidget(self.taula_alumnes,0,0)
+        self.distribucio.addLayout(self.distribucio_botons,0,1)
         self.setLayout(self.distribucio)
 
 
