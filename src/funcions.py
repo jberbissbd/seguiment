@@ -134,6 +134,19 @@ def consulta_dades(alumne):
         conn.close()
 
 
+def lectura_trimestres(self):
+    consulta = "SELECT ALL data FROM dates"
+    conn=sqlite3.connect(arxiubbdd)
+    try:
+        conn.cursor()
+        datestrim = []
+        datestrim = conn.execute(consulta).fetchall()
+        return datestrim
+        print(datestrim)
+    finally:
+        conn.close()
+
+
 def export_escoltam():
     conn = sqlite3.connect(arxiubbdd)
     noms_mesos = ['Setembre', 'Octubre', 'Novembre', 'Desembre', 'Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny']

@@ -1,5 +1,5 @@
 import sys
-from datetime import date
+from datetime import date,timedelta
 
 from PySide6.QtCore import QSize, Qt, QAbstractTableModel
 import PySide6.QtCore
@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
 from PySide6.QtSql import QSqlTableModel
 
 from funcions import (bbdd_conn, alumnes_registrats, export_global, export_escoltam,
-                      lectura_dades, registre_dades, llistat_alumnes)
+                      lectura_dades, registre_dades, llistat_alumnes, lectura_trimestres)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
@@ -237,23 +237,101 @@ class DadesAlumnes(QWidget):
         # Configurem els botons:
         self.afegirBoto = QPushButton("Afegir")
         self.esborrarBoto = QPushButton("Esborrar")
-        self.tornarBoto = QPushButton("Tornar")
+        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"),text= "Tornar")
         self.distribucio_botons = QVBoxLayout()
         self.distribucio_botons.addWidget(self.afegirBoto)
         self.distribucio_botons.addWidget(self.esborrarBoto)
         self.distribucio_botons.addWidget(self.tornarBoto)
+        self.distribucio_botons.setAlignment(Qt.AlignTop)
+        self.distribucio_botons.setSpacing(10)
+        # Especifiquem les opcions de cada boto:
+        self.tornarBoto.clicked.connect(self.retornar)
         # Configurem la interficie:
         self.distribucio = QGridLayout()
-        self.distribucio.addWidget(self.taula_alumnes,0,0)
-        self.distribucio.addLayout(self.distribucio_botons,0,1)
+        self.distribucio.addWidget(self.taula_alumnes, 0, 0)
+        self.distribucio.addLayout(self.distribucio_botons, 0, 1)
+        self.distribucio.setAlignment(Qt.AlignTop)
         self.setLayout(self.distribucio)
+
+    def retornar(self):
+        DadesAlumnes.close(self)
 
 
 class DatesTrimestre(QWidget):
     def __init__(self):
         super().__init__()
+        self.data2ntrimestre = ""
+        self.data3rtrimestre = ""
+        self.avui = PySide6.QtCore.QDate.currentDate()
+        self.dema = self.avui.addDays(1)
+        self.trimconfiginterficie()
+
+
+    def trimconfiginterficie(self):
+        # Establim parametres generals de la finestra:
         self.setWindowTitle("Trimestre")
-        self.resize(300, 200)
+        self.resize(300, 100)
+        # Definim els elements que formaran part de la finestra:
+        self.editdata2ntrim = QDateEdit(lectura_trimestres[0])
+        self.editdata2ntrim.setDisplayFormat(u"dd/MM/yyyy")
+        self.editdata2ntrim.setCalendarPopup(True)
+        self.etiq2ntrim = QLabel("Inici 2n trimestre:")
+        self.editdata3rtrim = QDateEdit(lectura_trimestres[1])
+        self.editdata3rtrim.setDisplayFormat(u"dd/MM/yyyy")
+        self.editdata3rtrim.setCalendarPopup(True)
+        self.etiq3rtrim = QLabel("Inici tercer trimestre:")
+        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"),text= "Tornar")
+        self.desarBoto = QPushButton(icon=QIcon("src/icones/document-save-symbolic.svg"), text= "Desar")
+        # Explicitem les funcions dels botonos i dels controls:
+        self.tornarBoto.clicked.connect(self.retornar)
+        self.desarBoto.clicked.connect(self.desar)
+        self.editdata2ntrim.dateChanged.connect(self.data2ntrim)
+        self.editdata3rtrim.dateChanged.connect(self.data3ertrim)
+        # Definim la distribucio:
+        self.distform = QFormLayout()
+        self.distform.addRow(self.etiq2ntrim,self.editdata2ntrim)
+        self.distform.addRow(self.etiq3rtrim, self.editdata3rtrim)
+        self.dist_boto = QHBoxLayout()
+        self.dist_boto.addWidget(self.tornarBoto)
+        self.dist_boto.addWidget(self.desarBoto)
+        self.dist_gen = QVBoxLayout()
+        self.dist_gen.setSpacing(10)
+        self.dist_gen.setAlignment(Qt.AlignTop)
+        self.dist_gen.addLayout(self.distform)
+        self.dist_gen.addLayout(self.dist_boto)
+        self.setLayout(self.dist_gen)
+
+    def retornar(self):
+        DatesTrimestre.close(self)
+
+    def desar(self):
+        pass
+
+
+    def data2ntrim(self):
+        if self.editdata2ntrim.date() < self.editdata3rtrim.date():
+            data_qt = self.editdata2ntrim.date()
+            data_python = data_qt.toPython()
+            self.data2ntrimestre = data_python
+            self.data3rtrimestre = self.editdata3rtrim.date()
+        else:
+            canvi3ertrim = self.editdata2ntrim.date()
+            canvi3ertrim = canvi3ertrim.addDays(1)
+            self.editdata3rtrim.setDate(canvi3ertrim)
+            self.data2ntrimestre = self.editdata2ntrim.date()
+            self.data3rtrimestre = canvi3ertrim.toPython()
+
+    def data3ertrim(self):
+        if self.editdata2ntrim.date() < self.editdata3rtrim.date():
+            data_qt = self.editdata3rtrim.date()
+            data_python = data_qt.toPython()
+            self.data3rtrimestre = data_python
+        else:
+            canvi2ntrim = self.editdata3rtrim.date().toPython()
+            canvi2ntrim = canvi2ntrim - timedelta(1)
+            self.editdata2ntrim.setDate(canvi2ntrim)
+            self.data3rtrimestre = self.editdata3rtrim.date().toPython()
+            self.data2ntrimestre = canvi2ntrim
 
 
 class FinestraExport(QWidget):
