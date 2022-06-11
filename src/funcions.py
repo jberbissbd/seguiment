@@ -134,15 +134,14 @@ def consulta_dades(alumne):
         conn.close()
 
 
-def lectura_trimestres(self):
-    consulta = "SELECT ALL data FROM dates"
+def lectura_trimestres():
+    consulta = 'SELECT ALL data FROM dates'
     conn=sqlite3.connect(arxiubbdd)
     try:
         conn.cursor()
-        datestrim = []
         datestrim = conn.execute(consulta).fetchall()
         return datestrim
-        print(datestrim)
+        # print(type(datestrim))
     finally:
         conn.close()
 

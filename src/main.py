@@ -1,7 +1,7 @@
 import sys
 from datetime import date,timedelta
 
-from PySide6.QtCore import QSize, Qt, QAbstractTableModel
+from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
 import PySide6.QtCore
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
@@ -260,8 +260,9 @@ class DadesAlumnes(QWidget):
 class DatesTrimestre(QWidget):
     def __init__(self):
         super().__init__()
-        self.data2ntrimestre = ""
-        self.data3rtrimestre = ""
+        # A continuacio llegim les dates de la BBDD i la passem a format QT, especificant que estan en format ISO:
+        self.data2ntrimestre = QDate.fromString(lectura_trimestres()[0][0],Qt.DateFormat.ISODate)
+        self.data3rtrimestre = QDate.fromString(lectura_trimestres()[1][0],Qt.DateFormat.ISODate)
         self.avui = PySide6.QtCore.QDate.currentDate()
         self.dema = self.avui.addDays(1)
         self.trimconfiginterficie()
@@ -272,11 +273,11 @@ class DatesTrimestre(QWidget):
         self.setWindowTitle("Trimestre")
         self.resize(300, 100)
         # Definim els elements que formaran part de la finestra:
-        self.editdata2ntrim = QDateEdit(lectura_trimestres[0])
+        self.editdata2ntrim = QDateEdit(self.data2ntrimestre)
         self.editdata2ntrim.setDisplayFormat(u"dd/MM/yyyy")
         self.editdata2ntrim.setCalendarPopup(True)
         self.etiq2ntrim = QLabel("Inici 2n trimestre:")
-        self.editdata3rtrim = QDateEdit(lectura_trimestres[1])
+        self.editdata3rtrim = QDateEdit(self.data3rtrimestre)
         self.editdata3rtrim.setDisplayFormat(u"dd/MM/yyyy")
         self.editdata3rtrim.setCalendarPopup(True)
         self.etiq3rtrim = QLabel("Inici tercer trimestre:")
