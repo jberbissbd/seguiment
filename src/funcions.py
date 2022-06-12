@@ -12,7 +12,7 @@ alumnat = 'src/dades/alumnat.csv'
 categories = 'src/dades/categories.csv'
 dates = 'src/dades/dates.csv'
 l_alumnes_cons = []
-
+# TODO: Modificar alumnes i dates de trimestre per a funcionar amb BBDD enlloc de amb arxiu csv
 
 def lectura_dades():
     """Lectura dels arxius csv sobre alumnes i categories de seguiment"""
@@ -134,14 +134,26 @@ def consulta_dades(alumne):
         conn.close()
 
 
-def lectura_trimestres():
+def dates_lectura():
     consulta = 'SELECT ALL data FROM dates'
-    conn=sqlite3.connect(arxiubbdd)
+    conn = sqlite3.connect(arxiubbdd)
     try:
         conn.cursor()
         datestrim = conn.execute(consulta).fetchall()
         return datestrim
         # print(type(datestrim))
+    finally:
+        conn.close()
+
+
+def dates_actualitzacio(data1, data2):
+    ordre = 'UPDATE dates SET data=? WHERE id = ?'
+    conn = sqlite3.connect(arxiubbdd)
+    dates_posicio = [(data1, 1), (data2, 2)]
+    try:
+        conn.cursor()
+        conn.executemany(ordre, dates_posicio)
+        conn.commit()
     finally:
         conn.close()
 

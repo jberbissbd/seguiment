@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
 from PySide6.QtSql import QSqlTableModel
 
 from funcions import (bbdd_conn, alumnes_registrats, export_global, export_escoltam,
-                      lectura_dades, registre_dades, llistat_alumnes, lectura_trimestres)
+                      lectura_dades, registre_dades, llistat_alumnes, dates_lectura,dates_actualitzacio)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
@@ -261,8 +261,8 @@ class DatesTrimestre(QWidget):
     def __init__(self):
         super().__init__()
         # A continuacio llegim les dates de la BBDD i la passem a format QT, especificant que estan en format ISO:
-        self.data2ntrimestre = QDate.fromString(lectura_trimestres()[0][0],Qt.DateFormat.ISODate)
-        self.data3rtrimestre = QDate.fromString(lectura_trimestres()[1][0],Qt.DateFormat.ISODate)
+        self.data2ntrimestre = QDate.fromString(dates_lectura()[0][0], Qt.DateFormat.ISODate)
+        self.data3rtrimestre = QDate.fromString(dates_lectura()[1][0], Qt.DateFormat.ISODate)
         self.avui = PySide6.QtCore.QDate.currentDate()
         self.dema = self.avui.addDays(1)
         self.trimconfiginterficie()
@@ -285,9 +285,10 @@ class DatesTrimestre(QWidget):
         self.desarBoto = QPushButton(icon=QIcon("src/icones/document-save-symbolic.svg"), text= "Desar")
         # Explicitem les funcions dels botonos i dels controls:
         self.tornarBoto.clicked.connect(self.retornar)
-        self.desarBoto.clicked.connect(self.desar)
         self.editdata2ntrim.dateChanged.connect(self.data2ntrim)
         self.editdata3rtrim.dateChanged.connect(self.data3ertrim)
+        self.desarBoto.clicked.connect(self.desar)
+
         # Definim la distribucio:
         self.distform = QFormLayout()
         self.distform.addRow(self.etiq2ntrim,self.editdata2ntrim)
@@ -306,15 +307,21 @@ class DatesTrimestre(QWidget):
         DatesTrimestre.close(self)
 
     def desar(self):
-        pass
+        data2n = self.data2ntrimestre
+        data3r = self.data3rtrimestre
+        dates_actualitzacio(data2n,data3r)
 
 
     def data2ntrim(self):
+        """Comprova la data del segon trimestre i la reajusta per a que com a minim
+                sigui un dia menys que la del segon trimestre.
+                """
+
         if self.editdata2ntrim.date() < self.editdata3rtrim.date():
-            data_qt = self.editdata2ntrim.date()
-            data_python = data_qt.toPython()
-            self.data2ntrimestre = data_python
-            self.data3rtrimestre = self.editdata3rtrim.date()
+            data_qt2n = self.editdata2ntrim.date()
+            self.data2ntrimestre = data_qt2n.toPython()
+            data_qt3r = self.editdata3rtrim.date()
+            self.data3rtrimestre = data_qt3r.toPython()
         else:
             canvi3ertrim = self.editdata2ntrim.date()
             canvi3ertrim = canvi3ertrim.addDays(1)
@@ -323,10 +330,15 @@ class DatesTrimestre(QWidget):
             self.data3rtrimestre = canvi3ertrim.toPython()
 
     def data3ertrim(self):
+        """Comprova la data del tercer trimestre i la reajusta per a que com a minim
+        sigui un dia mes que la del segon trimestre.
+        """
+
         if self.editdata2ntrim.date() < self.editdata3rtrim.date():
-            data_qt = self.editdata3rtrim.date()
-            data_python = data_qt.toPython()
-            self.data3rtrimestre = data_python
+            data_qt2n = self.editdata2ntrim.date()
+            self.data2ntrimestre = data_qt2n.toPython()
+            data_qt3r = self.editdata3rtrim.date()
+            self.data3rtrimestre = data_qt3r.toPython()
         else:
             canvi2ntrim = self.editdata3rtrim.date().toPython()
             canvi2ntrim = canvi2ntrim - timedelta(1)
