@@ -197,7 +197,7 @@ def executa(alumne):
 class DialegSeleccioCarpeta(QFileDialog):
     def __init__(self):
         super().__init__()
-        pass
+
 
 
 class TableModel(QAbstractTableModel):
@@ -401,8 +401,8 @@ class FinestraExport(QWidget):
         # TODO: Obtenir retorn del directory seleccionat.
         # TODO: Dialeg s'executa dues vegades: deixar buit per a cancl·lar i directory seleccionat per a Ok.
         sel = QFileDialog()
-        # sel.setFileMode(QFileDialog.AnyFile)
-        # sel.setNameFilter("Excel (*.xlsx)")
+        sel.setFileMode(QFileDialog.AnyFile)
+        sel.setNameFilter("Excel (*.xlsx)")
         nom_arxiu = sel.getOpenFileName(self, "Open Image", "/home/jordi", "Image Files (*.png *.jpg *.bmp)")
         sel.exec()
         return nom_arxiu
@@ -431,8 +431,7 @@ class FinestraExport(QWidget):
             if boto == QMessageBox.Ok:
                 dlg.close()
                 self.close()
-            else:
-                pass
+
 
         elif self.tots_check.isChecked() is False:
             export_global(self.al_seleccionat)
@@ -444,8 +443,7 @@ class FinestraExport(QWidget):
             if boto == QMessageBox.Ok:
                 dlg.close()
                 self.close()
-            else:
-                pass
+
         else:
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Sense dades")

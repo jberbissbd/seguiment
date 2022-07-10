@@ -20,8 +20,8 @@ l_alumnes_cons = []
 class Lector:
     """Classe que llegeix les dades de la BBDD"""
 
-    def __init__(self) -> object:
-        self.arxiubbdd = 'src/dades/registre.db'
+    def __init__(self):
+        self.arxiubbdd = arxiubbdd
 
     @staticmethod
     def llista_alumnes():
@@ -93,9 +93,10 @@ class Lector:
 
 
 class Escriptor:
-    def __init__(self) -> object:
-        self.arxiubbdd = 'src/dades/registre.db'
+    def __init__(self):
+        self.arxiubbdd = arxiubbdd
 
+    @staticmethod
     def registre_dades(nom_alumne, nom_categoria, data_registre, text_registre):
         """Funció per a inserir el registre a la taula de la BBDD i, si no existeix, crear-la"""
         ordre_inserir_sql = 'INSERT INTO registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
@@ -109,6 +110,7 @@ class Escriptor:
         except sqlite3.OperationalError:
             print("ERROR")
 
+    @staticmethod
     def actualitzacio_dates(data1, data2):
         ordre = 'UPDATE dates SET data=? WHERE id = ?'
         conn = sqlite3.connect(arxiubbdd)
@@ -119,6 +121,7 @@ class Escriptor:
             conn.commit()
         finally:
             conn.close()
+
 
 def lectura_dades():
     """Lectura dels arxius csv sobre alumnes i categories de seguiment"""
@@ -198,9 +201,6 @@ def bbdd_conn():
     conn.close()
 
 
-
-
-
 def consulta_dades(alumne):
     """Funció per a efectuar la consulta per nom d’alumne a la base de dades"""
     consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
@@ -227,12 +227,12 @@ def dates_lectura():
         conn.close()
 
 
-
 def export_escoltam():
     conn = sqlite3.connect(arxiubbdd)
     noms_mesos = ['Setembre', 'Octubre', 'Novembre', 'Desembre', 'Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny']
     cat_filtre = "Escolta'm"
-    consulta = f"SELECT data, categoria,  descripcio, nom_alumne FROM registres WHERE categoria = \"{cat_filtre}\" ORDER BY data"
+    consulta = f"SELECT data, categoria,  descripcio, nom_alumne FROM registres WHERE categoria = \"{cat_filtre}\" " \
+               f"ORDER BY data "
     taula_escoltam = pd.read_sql_query(consulta, conn, parse_dates='data')
     conn.close()
     # Formategem deixant tan sols el mes, començant en majuscules:
