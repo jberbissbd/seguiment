@@ -12,7 +12,85 @@ alumnat = 'src/dades/alumnat.csv'
 categories = 'src/dades/categories.csv'
 dates = 'src/dades/dates.csv'
 l_alumnes_cons = []
+
+
 # TODO: Modificar alumnes i dates de trimestre per a funcionar amb BBDD enlloc de amb arxiu csv
+
+
+class Lector:
+    """Classe que llegeix les dades de la BBDD"""
+
+    def __init__(self) -> object:
+        self.arxiubbdd = 'src/dades/registre.db'
+
+    @staticmethod
+    def llista_alumnes():
+        """Consulta els noms dels alumnes a la taula de noms"""
+        ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM alumnes ORDER BY nom_alumne'
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            r_alumnes = conn.execute(ordre_consulta_sql).fetchall()
+            l_alumnes = [alumne for alumne in r_alumnes]
+            return l_alumnes
+        finally:
+            conn.close()
+
+    @staticmethod
+    def llista_alumnes_desplegable():
+        """Consulta els noms dels alumnes a la taula de noms"""
+        ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM alumnes ORDER BY nom_alumne'
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            r_alumnes = conn.execute(ordre_consulta_sql).fetchall()
+            l_alumnes = [alumne[0] for alumne in r_alumnes]
+            return l_alumnes
+        finally:
+            conn.close()
+
+    @staticmethod
+    def llista_alumnes_registres():
+        """Funció per a obtenir el llistat d'alumnes que tenen algun registre"""
+        ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM registres ORDER BY nom_alumne'
+        global l_alumnes_cons
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            l_alumnes_cons = []
+            l_alumnes = conn.execute(ordre_consulta_sql)
+            l_alumnes_cons = [alumne[0] for alumne in l_alumnes]
+            conn.close()
+            return l_alumnes_cons
+        except sqlite3.OperationalError:
+            print("ERROR")
+
+    @staticmethod
+    def llista_categories():
+        """Consulta els noms de les categories a la taula de categories"""
+        ordre_consulta_sql = 'SELECT DISTINCT categoria FROM categories ORDER BY categoria'
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            r_categories = conn.execute(ordre_consulta_sql).fetchall()
+            l_categories = [categoria[0] for categoria in r_categories]
+            return l_categories
+        finally:
+            conn.close()
+
+    @staticmethod
+    def llista_dates():
+        """Consulta les dates de la taula de dates"""
+        ordre_consulta_sql = 'SELECT DISTINCT data FROM dates ORDER BY data'
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            r_dates = conn.execute(ordre_consulta_sql).fetchall()
+            l_dates = [date[0] for date in r_dates]
+            return l_dates
+        finally:
+            conn.close()
+
 
 def lectura_dades():
     """Lectura dels arxius csv sobre alumnes i categories de seguiment"""
@@ -52,7 +130,7 @@ def lectura_dades():
             dades_csv_trim = pd.read_csv(file)
             dates_trimestres = dades_csv_trim["Dates"].values.tolist()
             file.close()
-            pass
+
     except pandas.errors.EmptyDataError:
         print("Error en les dates")
     return al_seguiment, cat_seguiment, dates_trimestres
@@ -63,17 +141,33 @@ def lectura_dades():
 def bbdd_conn():
     global arxiubbdd
     conn = sqlite3.connect(arxiubbdd)
+
     try:
         conn.cursor()
         conn.execute('CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne CHAR('
                      '50), categoria CHAR(20), data INTEGER DATE, descripcio BLOB)')
         conn.execute('CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB)')
         conn.execute('CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data INTEGER DATE)')
+        conn.execute('CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB)')
         conn.commit()
-        conn.close()
+
     except sqlite3.OperationalError:
         print("error")
         conn.close()
+    conn.cursor()
+    comprovacio_motius = "SELECT * FROM categories"
+    ecat = conn.execute(comprovacio_motius).fetchall()
+    if len(ecat) == 0:
+        try:
+            insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
+            motius = ["Informació acadèmica", "Incidències", "Famílies (reunions)", "Escolta'm", "Observacions"]
+            for motiu in motius:
+                conn.execute(insercio_categories, (motiu,))
+            conn.commit()
+        except sqlite3.Error as e:
+            print(e)
+            conn.close()
+    conn.close()
 
 
 def registre_dades(nom_alumne, nom_categoria, data_registre, text_registre):
@@ -86,36 +180,6 @@ def registre_dades(nom_alumne, nom_categoria, data_registre, text_registre):
         conn.execute(ordre_inserir_sql, dades_a_registrar)
         conn.commit()
         conn.close()
-    except sqlite3.OperationalError:
-        print("ERROR")
-
-
-def llistat_alumnes():
-    """Consulta els noms dels alumnes a la taula de noms"""
-    ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM alumnes ORDER BY nom_alumne'
-    try:
-        conn = sqlite3.connect(arxiubbdd)
-        conn.cursor()
-        l_alumnes = []
-        l_alumnes = conn.execute(ordre_consulta_sql).fetchall()
-        return l_alumnes
-    finally:
-        conn.close()
-
-
-def alumnes_registrats():
-    """Funció per a obtenir el llistat d'alumnes que tenen algun registre"""
-    ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM registres ORDER BY nom_alumne'
-    global l_alumnes_cons
-    try:
-        conn = sqlite3.connect(arxiubbdd)
-        conn.cursor()
-        l_alumnes_cons = []
-        l_alumnes = conn.execute(ordre_consulta_sql)
-        for row in l_alumnes:
-            l_alumnes_cons.append(row[0])
-        conn.close()
-        return l_alumnes_cons
     except sqlite3.OperationalError:
         print("ERROR")
 

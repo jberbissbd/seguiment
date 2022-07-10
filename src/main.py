@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView)
 from PySide6.QtSql import QSqlTableModel
 
-from funcions import (bbdd_conn, alumnes_registrats, export_global, export_escoltam,
-                      lectura_dades, registre_dades, llistat_alumnes, dates_lectura,dates_actualitzacio)
+from funcions import (bbdd_conn, export_global, export_escoltam,
+                      lectura_dades, registre_dades, dates_actualitzacio, Lector)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
@@ -43,6 +43,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         arrencada()
+        self.consultor = Lector()
         self.al_registre: str = ""
         self.cat_registre: str = ""
         global t_registre
@@ -54,11 +55,10 @@ class MainWindow(QMainWindow):
         self.alumnes_etiqueta = QLabel("Alumne: ")
         self.setCentralWidget(self.wcentral)
         self.desplegable_al = QComboBox()
-        self.desplegable_al.addItems(al_seguiment)
+        self.desplegable_al.addItems(self.consultor.llista_alumnes_desplegable())
         self.al_registre = self.desplegable_al.currentText()
         self.desplegable_al.currentTextChanged.connect(self.traspas_alumnes)
         # Configurem barra d'eines:
-        # TODO: Crear funcions per a editar llista alumnes i netejar dades previes.
         self.barra_eines = QToolBar(self)
         self.barra_eines.setFloatable(False)
         self.barra_eines.setMovable(False)
@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
         # Configurem bloc de motius:
         self.categories_etiqueta = QLabel("Motiu: ")
         self.desplegable_cat = QComboBox()
-        self.desplegable_cat.addItems(cat_seguiment)
+        self.desplegable_cat.addItems(self.consultor.llista_categories())
         self.cat_registre = self.desplegable_cat.currentText()
         self.desplegable_cat.currentTextChanged.connect(self.traspas_categoria)
         # Configurem bloc de descripció:
@@ -147,9 +147,11 @@ class MainWindow(QMainWindow):
             dlg.exec()
             self.qdesc.clear()
 
+
+
     def crear_informes(self):
         '''Comprova si hi han registres previs i activa el diàleg per a exportar si n'hi han'''
-        dades = alumnes_registrats()
+        dades = self.consultor.llista_alumnes_registres()
         if not dades:
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Sense dades")
@@ -191,7 +193,7 @@ def executa(alumne):
     export_global(alumne)
 
 
-class Dialeg_Seleccio(QFileDialog):
+class DialegSeleccioCarpeta(QFileDialog):
     def __init__(self):
         super().__init__()
         pass
@@ -222,14 +224,17 @@ class TableModel(QAbstractTableModel):
 class DadesAlumnes(QWidget):
     def __init__(self):
         super().__init__()
+        self.consultor_alumnes = Lector()
         self.configinterficie()
+
+
 
     def configinterficie(self):
         self.setWindowTitle("Alumnes")
         self.resize(300, 200)
         # Configurem la taula:
         self.taula_alumnes = QTableView()
-        self.alumnes = llistat_alumnes()
+        self.alumnes = self.consultor_alumnes.llista_alumnes()
         self.model = TableModel(self.alumnes)
         self.taula_alumnes.setModel(self.model)
         self.taula_alumnes.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -259,10 +264,11 @@ class DadesAlumnes(QWidget):
 
 class DatesTrimestre(QWidget):
     def __init__(self):
+        self.consultordates = Lector()
         super().__init__()
         # A continuacio llegim les dates de la BBDD i la passem a format QT, especificant que estan en format ISO:
-        self.data2ntrimestre = QDate.fromString(dates_lectura()[0][0], Qt.DateFormat.ISODate)
-        self.data3rtrimestre = QDate.fromString(dates_lectura()[1][0], Qt.DateFormat.ISODate)
+        self.data2ntrimestre = QDate.fromString(self.consultordates.llista_dates()[0], Qt.DateFormat.ISODate)
+        self.data3rtrimestre = QDate.fromString(self.consultordates.llista_dates()[1], Qt.DateFormat.ISODate)
         self.avui = PySide6.QtCore.QDate.currentDate()
         self.dema = self.avui.addDays(1)
         self.trimconfiginterficie()
@@ -350,10 +356,12 @@ class DatesTrimestre(QWidget):
 class FinestraExport(QWidget):
     def __init__(self):
         super().__init__()
+        self.consultorexport= Lector()
+
         self.al_seleccionat: str = ''
         self.carpeta_desti: str = ''
         self.arxiu_desti: str = ''
-        self.alumnes_registrats = alumnes_registrats()
+        self.alumnes_registrats =self.consultorexport.llista_alumnes_registres()
         # Creació dels elements de la finestra:
         self.disposicio = QGridLayout()
         self.disposicio.setColumnStretch(2, 2)
