@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView)
 from PySide6.QtSql import QSqlTableModel
 
-from funcions import (bbdd_conn, export_global, export_escoltam,
-                      lectura_dades, registre_dades, dates_actualitzacio, Lector)
+from funcions import (bbdd_conn, export_global, export_escoltam,Escriptor,
+                      lectura_dades, Lector)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         arrencada()
         self.consultor = Lector()
+        self.registrador = Escriptor()
         self.al_registre: str = ""
         self.cat_registre: str = ""
         global t_registre
@@ -139,7 +140,7 @@ class MainWindow(QMainWindow):
             dlg.setText("No s'ha proporcionat cap descripció")
             dlg.exec()
         else:
-            registre_dades(self.al_registre, self.cat_registre, self.data_registre, descripcio)
+            self.registrador.registre_dades(self.al_registre, self.cat_registre, self.data_registre, descripcio)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Èxit")
             dlg.setIcon(QMessageBox.Information)
@@ -265,6 +266,7 @@ class DadesAlumnes(QWidget):
 class DatesTrimestre(QWidget):
     def __init__(self):
         self.consultordates = Lector()
+        self.registradodates = Escriptor()
         super().__init__()
         # A continuacio llegim les dates de la BBDD i la passem a format QT, especificant que estan en format ISO:
         self.data2ntrimestre = QDate.fromString(self.consultordates.llista_dates()[0], Qt.DateFormat.ISODate)
@@ -315,7 +317,7 @@ class DatesTrimestre(QWidget):
     def desar(self):
         data2n = self.data2ntrimestre
         data3r = self.data3rtrimestre
-        dates_actualitzacio(data2n,data3r)
+        self.registradodates.actualitzacio_dates(data2n, data3r)
 
 
     def data2ntrim(self):
