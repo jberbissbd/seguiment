@@ -168,37 +168,56 @@ def lectura_dades():
 
 
 # TODO: refactoritzar per a substituir arxius csv per lectura BBDD
+class Iniciador:
+    def __init__(self):
+        self.arxiubbdd = arxiubbdd
 
-def bbdd_conn():
-    global arxiubbdd
-    conn = sqlite3.connect(arxiubbdd)
+    def creadortaules(self):
 
-    try:
-        conn.cursor()
-        conn.execute('CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne CHAR('
-                     '50), categoria CHAR(20), data INTEGER DATE, descripcio BLOB)')
-        conn.execute('CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB)')
-        conn.execute('CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data INTEGER DATE)')
-        conn.execute('CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB)')
-        conn.commit()
+        conn = sqlite3.connect(self.arxiubbdd)
 
-    except sqlite3.OperationalError:
-        print("error")
-        conn.close()
-    conn.cursor()
-    comprovacio_motius = "SELECT * FROM categories"
-    ecat = conn.execute(comprovacio_motius).fetchall()
-    if len(ecat) == 0:
         try:
-            insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
-            motius = ["Informació acadèmica", "Incidències", "Famílies (reunions)", "Escolta'm", "Observacions"]
-            for motiu in motius:
-                conn.execute(insercio_categories, (motiu,))
+            conn.cursor()
+            conn.execute('CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne CHAR('
+                         '50), categoria CHAR(20), data INTEGER DATE, descripcio BLOB)')
+            conn.execute('CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB)')
+            conn.execute('CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data INTEGER DATE)')
+            conn.execute('CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB)')
             conn.commit()
-        except sqlite3.Error as e:
-            print(e)
+
+        except sqlite3.OperationalError:
+            print("error")
             conn.close()
-    conn.close()
+        conn.cursor()
+        comprovacio_motius = "SELECT * FROM categories"
+        ecat = conn.execute(comprovacio_motius).fetchall()
+        if len(ecat) == 0:
+            try:
+                insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
+                motius = ["Informació acadèmica", "Incidències", "Famílies (reunions)", "Escolta'm", "Observacions"]
+                for motiu in motius:
+                    conn.execute(insercio_categories, (motiu,))
+                conn.commit()
+            except sqlite3.Error as e:
+                print(e)
+                conn.close()
+        conn.close()
+
+    def comprovadorinicicurs(self):
+        """Comprova si la BBDD existeix i, si no, la crea"""
+        cons_alumnes = "SELECT * FROM alumnes"
+        cons_dates = "SELECT * FROM dates"
+        conn = sqlite3.connect(self.arxiubbdd)
+        conn.cursor()
+        con_alumnes = conn.execute(cons_alumnes)
+        con_dates = conn.execute(cons_dates)
+
+        if len(con_alumnes.fetchall()) == 0 and len(con_dates.fetchall()) == 0:
+            conn.close()
+            return True
+        else:
+            conn.close()
+            return False
 
 
 def consulta_dades(alumne):

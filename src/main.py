@@ -1,5 +1,5 @@
 import sys
-from datetime import date,timedelta
+from datetime import date, timedelta
 
 from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
 import PySide6.QtCore
@@ -8,11 +8,11 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView,
                                QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView)
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard)
 from PySide6.QtSql import QSqlTableModel
 
-from funcions import (bbdd_conn, export_global, export_escoltam,Escriptor,
-                      lectura_dades, Lector)
+from funcions import (export_global, export_escoltam, Escriptor,
+                      lectura_dades, Lector, Iniciador)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
@@ -29,26 +29,26 @@ alumnes_registrats = []
 al_seleccionat = ''
 
 
-def arrencada():
-    global al_seguiment
-    global cat_seguiment
-    dades = lectura_dades()
-    al_seguiment = dades[0]
-    cat_seguiment = dades[1]
-    bbdd_conn()
+
 
 
 class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        arrencada()
+        self.arrencador = Iniciador()
         self.consultor = Lector()
         self.registrador = Escriptor()
+        self.arrencador.creadortaules()
         self.al_registre: str = ""
         self.cat_registre: str = ""
         global t_registre
         self.data_registre: str = date.isoformat(date.today())
+        self.configurar_interficie()
+        if self.arrencador.comprovadorinicicurs():
+            AssistentInicial.show()
+
+    def configurar_interficie(self):
         self.setWindowTitle("Seguiment alumnes")
         self.setFixedSize(PySide6.QtCore.QSize(300, 400))
         # Configurem bloc d'alumnes:
@@ -148,8 +148,6 @@ class MainWindow(QMainWindow):
             dlg.exec()
             self.qdesc.clear()
 
-
-
     def crear_informes(self):
         '''Comprova si hi han registres previs i activa el diàleg per a exportar si n'hi han'''
         dades = self.consultor.llista_alumnes_registres()
@@ -199,7 +197,6 @@ class DialegSeleccioCarpeta(QFileDialog):
         super().__init__()
 
 
-
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
@@ -225,10 +222,11 @@ class TableModel(QAbstractTableModel):
 class DadesAlumnes(QWidget):
     def __init__(self):
         super().__init__()
+        self.model = None
+        self.alumnes = None
+        self.taula_alumnes = None
         self.consultor_alumnes = Lector()
         self.configinterficie()
-
-
 
     def configinterficie(self):
         self.setWindowTitle("Alumnes")
@@ -243,7 +241,7 @@ class DadesAlumnes(QWidget):
         # Configurem els botons:
         self.afegirBoto = QPushButton("Afegir")
         self.esborrarBoto = QPushButton("Esborrar")
-        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"),text= "Tornar")
+        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"), text="Tornar")
         self.distribucio_botons = QVBoxLayout()
         self.distribucio_botons.addWidget(self.afegirBoto)
         self.distribucio_botons.addWidget(self.esborrarBoto)
@@ -275,7 +273,6 @@ class DatesTrimestre(QWidget):
         self.dema = self.avui.addDays(1)
         self.trimconfiginterficie()
 
-
     def trimconfiginterficie(self):
         # Establim parametres generals de la finestra:
         self.setWindowTitle("Trimestre")
@@ -289,8 +286,8 @@ class DatesTrimestre(QWidget):
         self.editdata3rtrim.setDisplayFormat(u"dd/MM/yyyy")
         self.editdata3rtrim.setCalendarPopup(True)
         self.etiq3rtrim = QLabel("Inici tercer trimestre:")
-        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"),text= "Tornar")
-        self.desarBoto = QPushButton(icon=QIcon("src/icones/document-save-symbolic.svg"), text= "Desar")
+        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"), text="Tornar")
+        self.desarBoto = QPushButton(icon=QIcon("src/icones/document-save-symbolic.svg"), text="Desar")
         # Explicitem les funcions dels botonos i dels controls:
         self.tornarBoto.clicked.connect(self.retornar)
         self.editdata2ntrim.dateChanged.connect(self.data2ntrim)
@@ -299,7 +296,7 @@ class DatesTrimestre(QWidget):
 
         # Definim la distribucio:
         self.distform = QFormLayout()
-        self.distform.addRow(self.etiq2ntrim,self.editdata2ntrim)
+        self.distform.addRow(self.etiq2ntrim, self.editdata2ntrim)
         self.distform.addRow(self.etiq3rtrim, self.editdata3rtrim)
         self.dist_boto = QHBoxLayout()
         self.dist_boto.addWidget(self.tornarBoto)
@@ -318,7 +315,6 @@ class DatesTrimestre(QWidget):
         data2n = self.data2ntrimestre
         data3r = self.data3rtrimestre
         self.registradodates.actualitzacio_dates(data2n, data3r)
-
 
     def data2ntrim(self):
         """Comprova la data del segon trimestre i la reajusta per a que com a minim
@@ -358,12 +354,12 @@ class DatesTrimestre(QWidget):
 class FinestraExport(QWidget):
     def __init__(self):
         super().__init__()
-        self.consultorexport= Lector()
+        self.consultorexport = Lector()
 
         self.al_seleccionat: str = ''
         self.carpeta_desti: str = ''
         self.arxiu_desti: str = ''
-        self.alumnes_registrats =self.consultorexport.llista_alumnes_registres()
+        self.alumnes_registrats = self.consultorexport.llista_alumnes_registres()
         # Creació dels elements de la finestra:
         self.disposicio = QGridLayout()
         self.disposicio.setColumnStretch(2, 2)
@@ -450,6 +446,17 @@ class FinestraExport(QWidget):
             dlg.setIcon(QMessageBox.Warning)
             dlg.setText("No existeix cap alumne amb registres")
             dlg.exec()
+
+
+class AssistentInicial(QWizard):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Assistent d'inicialització")
+        self.setPage(0, DadesAlumnes())
+        self.setPage(1, DatesTrimestre())
+        self.setWindowModality(Qt.ApplicationModal)
+        self.show()
+        self.exec()
 
 
 app = QApplication(sys.argv)
