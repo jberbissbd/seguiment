@@ -8,28 +8,17 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView,
                                QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard)
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage)
 from PySide6.QtSql import QSqlTableModel
 
-from funcions import (export_global, export_escoltam, Escriptor,
-                      lectura_dades, Lector, Iniciador)
+from funcions import (export_global, export_escoltam, Escriptor, Lector, Iniciador)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
-
-
-alumnat = 'src/dades/alumnat.csv'
-categories = 'src/dades/categories.csv'
-
-al_seguiment = ""
-cat_seguiment = ""
 
 t_registre: str = ""
 
 alumnes_registrats = []
 al_seleccionat = ''
-
-
-
 
 
 class MainWindow(QMainWindow):
@@ -45,8 +34,10 @@ class MainWindow(QMainWindow):
         global t_registre
         self.data_registre: str = date.isoformat(date.today())
         self.configurar_interficie()
-        if self.arrencador.comprovadorinicicurs():
-            AssistentInicial.show()
+        # if self.arrencador.comprovadorinicicurs():
+        #    AssistentInicial.show()
+        self.asi = AssistentInicial()
+        self.asi.show()
 
     def configurar_interficie(self):
         self.setWindowTitle("Seguiment alumnes")
@@ -128,7 +119,8 @@ class MainWindow(QMainWindow):
         self.disp_general.addLayout(self.tbot)
         self.wcentral.setLayout(self.disp_general)
 
-    def sortir(self):
+    @staticmethod
+    def sortir():
         app.quit()
 
     def registrar(self):
@@ -428,7 +420,6 @@ class FinestraExport(QWidget):
                 dlg.close()
                 self.close()
 
-
         elif self.tots_check.isChecked() is False:
             export_global(self.al_seleccionat)
             dlg = QMessageBox(self)
@@ -452,12 +443,51 @@ class AssistentInicial(QWizard):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Assistent d'inicialització")
-        self.setPage(0, DadesAlumnes())
-        self.setPage(1, DatesTrimestre())
-        self.setWindowModality(Qt.ApplicationModal)
-        self.show()
-        self.exec()
+        self.setWizardStyle(QWizard.ModernStyle)
+        self.setMinimumSize(QSize(600, 400))
+        self.configpagines()
+        self.addPage(self.paginainicial)
+        self.addPage(self.paginaalumnes)
+        self.addPage(self.paginafinal)
+        self.button(QWizard.CancelButton).setText("Cancel·lar")
 
+    def configpagines(self):
+        # Afegim les pàgines:
+        # Afegim pagina inicial:
+        self.paginainicial = QWizardPage()
+        self.paginainicial.setTitle("Inicialització")
+        self.paginainicial.setSubTitle("Inicialització de l'aplicació")
+        paginainicialdistr = QVBoxLayout()
+        self.paginicdesc = QLabel("Aquesta aplicació serveix per a la gestió dels alumnes tutoritzats.\n"
+                                  "S'ha detectat que no consten noms d'alumnes, registres previs ni dates de trimestre.\n"
+                                  "A continuacio s'us demanra que introduiu aquestes dades.")
+        self.paginicdesc.setWordWrap(True)
+        paginainicialdistr.addWidget(self.paginicdesc)
+        self.paginainicial.setLayout(paginainicialdistr)
+
+        # Afegim i configurem pagina alumnes:
+
+        dadesalumnesassist = DadesAlumnes()
+        dadesalumnesassist.esborrarBoto.setEnabled(False)
+        dadesalumnesassist.esborrarBoto.setVisible(False)
+        dadesalumnesassist.tornarBoto.setEnabled(False)
+        dadesalumnesassist.tornarBoto.setVisible(False)
+        self.paginaalumnes = QWizardPage()
+        paginaaldist = QVBoxLayout()
+        paginaaldist.addWidget(dadesalumnesassist)
+        self.paginaalumnes.setLayout(paginaaldist)
+        # Afegim pagina final:
+        datestrimestreassist = DatesTrimestre()
+        datestrimestreassist.tornarBoto.setEnabled(False)
+        datestrimestreassist.tornarBoto.setVisible(False)
+        self.paginafinal = QWizardPage()
+        paginafinaldist = QVBoxLayout()
+        self.paginafinal.setLayout(paginafinaldist)
+        paginafinaldist.addWidget(datestrimestreassist)
+
+
+    def cancela(self):
+        app.quit()
 
 app = QApplication(sys.argv)
 
