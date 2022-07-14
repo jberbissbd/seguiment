@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView,
                                QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage)
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage,
+                               QTabWidget)
 from PySide6.QtSql import QSqlTableModel
 
 from funcions import (export_global, export_escoltam, Escriptor, Lector, Iniciador)
@@ -152,7 +153,7 @@ class MainWindow(QMainWindow):
 
         else:
             self.alumnes_registrats = dades
-            self.fin = FinestraExport()
+            self.fin = Exportacio()
             self.fin.show()
 
     def traspas_alumnes(self):
@@ -439,9 +440,52 @@ class FinestraExport(QWidget):
             dlg.exec()
 
 
+class Exportacio(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.consultorexport = Lector()
+        self.exportadorinformes = Escriptor()
+        self.setWindowTitle("Creació d'informe")
+        self.resize(300, 100)
+        self.exportaciodisposicio = QGridLayout()
+        self.setLayout(self.exportaciodisposicio)
+        self.alumne_etiqueta = QLabel("Alumne: ")
+        self.alumne_etiqueta.setMaximumWidth(50)
+        self.alumne_seleccio = QComboBox()
+        self.alumnes_registrats = self.consultorexport.llista_alumnes_registres()
+        self.alumne_seleccio.addItems(self.alumnes_registrats)
+        self.al_seleccionat: str = ''
+        self.carpeta_desti: str = ''
+        self.arxiu_desti: str = ''
+        # Definim pestanya escolta'm:
+        self.disposicio_escoltam = QGridLayout()
+        self.disposicio_escoltam.setColumnStretch(2, 2)
+        self.escoltamwidget = QWidget()
+        self.escoltamwidget.setLayout(self.disposicio_escoltam)
+
+
+        # Configurem pestanya informe global:
+        self.informetutorial = QWidget()
+        self.disp_informetutorial = QGridLayout()
+        self.informetutorial.setLayout(self.disp_informetutorial)
+
+        # Situem pestanyes:
+        self.pestanyes = QTabWidget()
+        self.pestanyes.addTab(self.informetutorial, "Informe seguiment")
+        self.pestanyes.addTab(self.escoltamwidget, "Escolta'm")
+        # Situem els altres elements:
+        self.exportaciodisposicio.setHorizontalSpacing(2)
+        self.exportaciodisposicio.addWidget(self.alumne_etiqueta, 0, 0)
+        self.exportaciodisposicio.addWidget(self.alumne_seleccio, 0, 1)
+        self.exportaciodisposicio.addWidget(self.pestanyes, 1, 0, 1, 2)
+
+
 class AssistentInicial(QWizard):
     def __init__(self):
         super().__init__()
+        self.paginainicial = QWizardPage()
+        self.paginaalumnes = QWizardPage()
+        self.paginafinal = QWizardPage()
         self.setWindowTitle("Assistent d'inicialització")
         self.setWizardStyle(QWizard.ModernStyle)
         self.setMinimumSize(QSize(600, 400))
@@ -450,16 +494,19 @@ class AssistentInicial(QWizard):
         self.addPage(self.paginaalumnes)
         self.addPage(self.paginafinal)
         self.button(QWizard.CancelButton).setText("Cancel·lar")
+        self.acciocancela = QAction(app.quit())
+        self.acciotanca = QAction(self.cancela())
+        self.button(QWizard.CancelButton).addActions([self.acciocancela, self.acciotanca])
 
     def configpagines(self):
         # Afegim les pàgines:
         # Afegim pagina inicial:
-        self.paginainicial = QWizardPage()
         self.paginainicial.setTitle("Inicialització")
         self.paginainicial.setSubTitle("Inicialització de l'aplicació")
         paginainicialdistr = QVBoxLayout()
         self.paginicdesc = QLabel("Aquesta aplicació serveix per a la gestió dels alumnes tutoritzats.\n"
-                                  "S'ha detectat que no consten noms d'alumnes, registres previs ni dates de trimestre.\n"
+                                  "S'ha detectat que no consten noms d'alumnes, registres previs ni dates de "
+                                  "trimestre.\n "
                                   "A continuacio s'us demanra que introduiu aquestes dades.")
         self.paginicdesc.setWordWrap(True)
         paginainicialdistr.addWidget(self.paginicdesc)
@@ -472,7 +519,7 @@ class AssistentInicial(QWizard):
         dadesalumnesassist.esborrarBoto.setVisible(False)
         dadesalumnesassist.tornarBoto.setEnabled(False)
         dadesalumnesassist.tornarBoto.setVisible(False)
-        self.paginaalumnes = QWizardPage()
+
         paginaaldist = QVBoxLayout()
         paginaaldist.addWidget(dadesalumnesassist)
         self.paginaalumnes.setLayout(paginaaldist)
@@ -480,14 +527,14 @@ class AssistentInicial(QWizard):
         datestrimestreassist = DatesTrimestre()
         datestrimestreassist.tornarBoto.setEnabled(False)
         datestrimestreassist.tornarBoto.setVisible(False)
-        self.paginafinal = QWizardPage()
+
         paginafinaldist = QVBoxLayout()
         self.paginafinal.setLayout(paginafinaldist)
         paginafinaldist.addWidget(datestrimestreassist)
 
-
     def cancela(self):
         app.quit()
+
 
 app = QApplication(sys.argv)
 
