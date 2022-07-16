@@ -107,13 +107,30 @@ class Escriptor:
     def actualitzacio_dates(data1, data2):
         ordre = 'UPDATE dates SET data=? WHERE id = ?'
         conn = sqlite3.connect(arxiubbdd)
-        dates_posicio = [(data1, 1), (data2, 2)]
+        conn.cursor()
+        ultim_id_data_consulta = 'SELECT MAX(id) FROM dates'
+        ultim_id_data = conn.execute(ultim_id_data_consulta).fetchone()[0]
+        dates_posicio = [(data1, ultim_id_data - 1), (data2, ultim_id_data)]
         try:
             conn.cursor()
             conn.executemany(ordre, dates_posicio)
             conn.commit()
         finally:
             conn.close()
+
+    @staticmethod
+    def eliminar_registres():
+        """Funció per a eliminar un registre de la taula de la base de dades"""
+        ordre_eliminar_sql = 'DELETE FROM registres; DELETE FROM dates; DELETE FROM alumnes'
+
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            conn.execute(ordre_eliminar_sql)
+            conn.commit()
+            conn.close()
+        except sqlite3.OperationalError:
+            print("ERROR")
 
 
 class Iniciador:
@@ -168,121 +185,100 @@ class Iniciador:
             return False
 
 
-def consulta_dades(alumne):
-    """Funció per a efectuar la consulta per nom d’alumne a la base de dades"""
-    consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
-    conn = sqlite3.connect(arxiubbdd)
-    try:
-        conn.cursor()
-        resultat_consulta = conn.execute(consulta).fetchall()
-        return resultat_consulta
-    except sqlite3.OperationalError:
-        pass
-    finally:
+class Exportador:
+    def __init__(self):
+        self.arxiubbdd = arxiubbdd
+
+    def export_escolta_m(self):
+        conn = sqlite3.connect(self.arxiubbdd)
+        noms_mesos = ['Setembre', 'Octubre', 'Novembre', 'Desembre', 'Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny']
+        cat_filtre = "Escolta'm"
+        consulta = f"SELECT data, categoria,  descripcio, nom_alumne FROM registres WHERE categoria = \"{cat_filtre}\" " \
+                   f"ORDER BY data "
+        taula_escoltam = pd.read_sql_query(consulta, conn, parse_dates='data')
+        conn.close()
+        # Formategem deixant tan sols el mes, començant en majuscules:
+        taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: str(row['data'].strftime('%B')), axis=1,
+                                                     result_type='expand')
+        taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: row['Mes'][3:len(row['Mes'])], axis=1,
+                                                     result_type='expand')
+        taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: row['Mes'].capitalize(), axis=1, result_type='expand')
+        taula_escoltam['Mes'].astype('category')
+        funcions_agregacio = {'nom_alumne': np.unique}
+        taula_escoltam_pivot = pd.pivot_table(taula_escoltam, index='Mes', values='nom_alumne', fill_value="",
+                                              aggfunc=funcions_agregacio).reindex(index=noms_mesos)
+        for columna_text in taula_escoltam_pivot:
+            taula_escoltam_pivot = taula_escoltam_pivot.explode(column=columna_text)
+        taula_escoltam_pivot.fillna(value="")
+        print(taula_escoltam_pivot)
+
+    def export_informes_seguiment(self, alumne, destinacio):
+        """Fa la consulta a l'arxiu sqlite a partir del nom de l'alumne, modifica el format i l'exporta a format
+        Excel. """
+        # Fem la connexió amb la base de dades:
+
+        conn = sqlite3.connect(arxiubbdd)
+        consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
+        taula_global = pd.read_sql_query(consulta, conn, parse_dates='data')
         conn.close()
 
+        def llista_dates():
+            """Consulta les dates de la taula de dates"""
+            ordre_consulta_sql = 'SELECT DISTINCT data FROM dates ORDER BY data'
+            conn = sqlite3.connect(self.arxiubbdd)
+            try:
+                conn.cursor()
+                r_dates = conn.execute(ordre_consulta_sql).fetchall()
+                l_dates = [date[0] for date in r_dates]
+                return l_dates
+            finally:
+                conn.close()
 
-def dates_lectura():
-    consulta = 'SELECT ALL data FROM dates'
-    conn = sqlite3.connect(arxiubbdd)
-    try:
-        conn.cursor()
-        datestrim = conn.execute(consulta).fetchall()
-        return datestrim
-        # print(type(datestrim))
-    finally:
-        conn.close()
+        def llista_categories():
+            """Consulta els noms de les categories a la taula de categories"""
+            ordre_consulta_sql = 'SELECT DISTINCT categoria FROM categories ORDER BY categoria'
+            conn = sqlite3.connect(self.arxiubbdd)
+            try:
 
+                conn.cursor()
+                r_categories = conn.execute(ordre_consulta_sql).fetchall()
+                l_categories = [categoria[0] for categoria in r_categories]
+                return l_categories
+            finally:
+                conn.close()
 
-def export_escoltam():
-    conn = sqlite3.connect(arxiubbdd)
-    noms_mesos = ['Setembre', 'Octubre', 'Novembre', 'Desembre', 'Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny']
-    cat_filtre = "Escolta'm"
-    consulta = f"SELECT data, categoria,  descripcio, nom_alumne FROM registres WHERE categoria = \"{cat_filtre}\" " \
-               f"ORDER BY data "
-    taula_escoltam = pd.read_sql_query(consulta, conn, parse_dates='data')
-    conn.close()
-    # Formategem deixant tan sols el mes, començant en majuscules:
-    taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: str(row['data'].strftime('%B')), axis=1,
-                                                 result_type='expand')
-    taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: row['Mes'][3:len(row['Mes'])], axis=1,
-                                                 result_type='expand')
-    taula_escoltam['Mes'] = taula_escoltam.apply(lambda row: row['Mes'].capitalize(), axis=1, result_type='expand')
-    taula_escoltam['Mes'].astype('category')
-    funcions_agregacio = {'nom_alumne': np.unique}
-    taula_escoltam_pivot = pd.pivot_table(taula_escoltam, index='Mes', values='nom_alumne', fill_value="",
-                                          aggfunc=funcions_agregacio).reindex(index=noms_mesos)
-    for columna_text in taula_escoltam_pivot:
-        taula_escoltam_pivot = taula_escoltam_pivot.explode(column=columna_text)
-    taula_escoltam_pivot.fillna(value="")
-    print(taula_escoltam_pivot)
+        def determinacio_trimestre(data_cons):
+            """Assigna el trimestre segons la data del registre"""
+            data_registre = data_cons['data']
+            d1ertrim = datetime.strptime(llista_dates()[0], '%Y-%m-%d')
+            d2ontrim = datetime.strptime(llista_dates()[1], '%Y-%m-%d')
+            if data_registre <= d1ertrim:
+                return 1
+            elif data_registre < d2ontrim:
+                return 2
+            else:
+                return 3
 
-
-def export_global(alumne):
-    """Fa la consulta a l'arxiu sqlite a partir del nom de l'alumne, modifica el format i l'exporta a format Excel."""
-    # Fem la connexió amb la base de dades:
-
-    conn = sqlite3.connect(arxiubbdd)
-    consulta = f"SELECT data, categoria,  descripcio FROM registres WHERE nom_alumne = \'{alumne}\' ORDER BY data"
-    taula_global = pd.read_sql_query(consulta, conn, parse_dates='data')
-    conn.close()
-
-    def llista_dates():
-        """Consulta les dates de la taula de dates"""
-        ordre_consulta_sql = 'SELECT DISTINCT data FROM dates ORDER BY data'
-        conn = sqlite3.connect(arxiubbdd)
-        try:
-            conn.cursor()
-            r_dates = conn.execute(ordre_consulta_sql).fetchall()
-            l_dates = [date[0] for date in r_dates]
-            return l_dates
-        finally:
-            conn.close()
-
-    def llista_categories():
-        """Consulta els noms de les categories a la taula de categories"""
-        ordre_consulta_sql = 'SELECT DISTINCT categoria FROM categories ORDER BY categoria'
-        conn = sqlite3.connect(arxiubbdd)
-        try:
-
-            conn.cursor()
-            r_categories = conn.execute(ordre_consulta_sql).fetchall()
-            l_categories = [categoria[0] for categoria in r_categories]
-            return l_categories
-        finally:
-            conn.close()
-
-    def determinacio_trimestre(data_cons):
-        """Assigna el trimestre segons la data del registre"""
-        data_registre = data_cons['data']
-        d1ertrim = datetime.strptime(llista_dates()[0], '%Y-%m-%d')
-        d2ontrim = datetime.strptime(llista_dates()[1], '%Y-%m-%d')
-        if data_registre <= d1ertrim:
-            return 1
-        elif data_registre < d2ontrim:
-            return 2
-        else:
-            return 3
-
-    # Apliquem la funció de determinació de trimestre:
-    taula_global['Trimestre'] = taula_global.apply(lambda row: determinacio_trimestre(row), axis=1
-                                                   , result_type='expand')
-    # Classifiquem trimestre i categoria com a categories del pandas per a evitar problemes amb la repetició de valors
-    taula_global['Trimestre'].astype('category')
-    taula_global['categoria'].astype('category')
-    # Definim com s'han d'agrupar les dades a la taula de sota:
-    funcions_agregacio = {'descripcio': np.unique}
-    # Executem la funció de lectura de dades per a obtenir les categories a tindre en compte a la taula, independentment
-    # dels registres:
-    noms_columnes = llista_categories()
-    # Canviem l'orientació de la taula:
-    taula_pivotada = pd.pivot_table(taula_global, index='Trimestre', columns='categoria', values='descripcio',
-                                    fill_value="", aggfunc=funcions_agregacio, dropna=False) \
-        .reindex(columns=noms_columnes)
-    # Expandim els registres amb una llista com a valor (per exemple, dos registres el mateix dia)
-    for columna_expandir in noms_columnes:
-        taula_pivotada = taula_pivotada.explode(column=columna_expandir)
-    ruta_exportar = ".vscode/"
-    nom_arxiu_exportar = f'{alumne}.xlsx'
-    nom_complet = ruta_exportar + nom_arxiu_exportar
-    taula_pivotada.to_excel(nom_complet, merge_cells=True, startcol=1, startrow=1)
+        # Apliquem la funció de determinació de trimestre:
+        taula_global['Trimestre'] = taula_global.apply(lambda row: determinacio_trimestre(row), axis=1
+                                                       , result_type='expand')
+        # Classifiquem trimestre i categoria com a categories del pandas per a evitar problemes amb la repetició de
+        # valors
+        taula_global['Trimestre'].astype('category')
+        taula_global['categoria'].astype('category')
+        # Definim com s'han d'agrupar les dades a la taula de sota:
+        funcions_agregacio = {'descripcio': np.unique}
+        # Executem la funció de lectura de dades per a obtenir les categories a tindre en compte a la taula,
+        # independentment dels registres:
+        noms_columnes = llista_categories()
+        # Canviem l'orientació de la taula:
+        taula_pivotada = pd.pivot_table(taula_global, index='Trimestre', columns='categoria', values='descripcio',
+                                        fill_value="", aggfunc=funcions_agregacio, dropna=False) \
+            .reindex(columns=noms_columnes)
+        # Expandim els registres amb una llista com a valor (per exemple, dos registres el mateix dia)
+        for columna_expandir in noms_columnes:
+            taula_pivotada = taula_pivotada.explode(column=columna_expandir)
+        ruta_exportar = destinacio
+        nom_arxiu_exportar = f'{alumne}.xlsx'
+        nom_complet = ruta_exportar + nom_arxiu_exportar
+        taula_pivotada.to_excel(nom_complet, merge_cells=True, startcol=1, startrow=1)

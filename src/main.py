@@ -1,70 +1,128 @@
 import sys
 from datetime import date, timedelta
+from typing import List, Any
 
-from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
 import PySide6.QtCore
+import PySide6.QtGui
+from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
-                               QFileDialog, QToolBar, QTableView,
-                               QFormLayout, QGridLayout, QHBoxLayout, QLabel,
+                               QFileDialog, QToolBar, QTableView, QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage,
-                               QTabWidget)
-from PySide6.QtSql import QSqlTableModel
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QDialog)
 
-from funcions import (export_global, export_escoltam, Escriptor, Lector, Iniciador)
+from funcions import (Escriptor, Lector, Iniciador, Exportador)
 
 # TODO: Reestructurar segons https://realpython.com/pyinstaller-python/
 
-t_registre: str = ""
+literal_alumnes = "Alumne: "
 
-alumnes_registrats = []
-al_seleccionat = ''
+
+class MissatgeInfor(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.dialeginfo = QWidget()
+        self.setWindowTitle("Llicencies")
+        self.resize(300, 200)
+        self.setMinimumWidth(300)
+        self.dialeg_info_dist = QGridLayout()
+        self.dialeg_info_dist.setAlignment(Qt.AlignTop)
+        self.setLayout(self.dialeg_info_dist)
+        self.nom_llicencia = QLabel("Programa per a fer el\nseguiment de l'alumnat.\nLlicencia: ")
+        self.nom_llicencia.setWordWrap(True)
+        self.link_llicencia = QLabel("<a href='https://www.gnu.org/licenses/gpl-3.0.ca.html'>GPLv3</a>")
+        self.nom_autor = QLabel("Jordi Berbis")
+        self.correu = QLabel("<a href='mailto:jberbis@xtec.cat'>jberbis@xtec.cat</a> ")
+        self.correu.setOpenExternalLinks(True)
+        self.text_icones = QLabel("Icones (GPLv3):")
+        self.url_icones = QLabel(
+            "<a href='https://github.com/PapirusDevelopmentTeam/papirus-icon-theme/'>Papirus Icon Theme</a>")
+        self.url_icones.setOpenExternalLinks(True)
+        self.url_icones.setTextFormat(Qt.RichText)
+        self.icones_llicencia = "Papirus icon theme"
+        self.dialeg_info_dist.addWidget(self.nom_llicencia, 0, 0)
+        self.dialeg_info_dist.addWidget(self.link_llicencia, 0, 1, Qt.AlignBottom)
+        self.dialeg_info_dist.addWidget(self.nom_autor)
+        self.dialeg_info_dist.addWidget(self.correu)
+        self.dialeg_info_dist.addWidget(self.text_icones)
+        self.dialeg_info_dist.addWidget(self.url_icones)
 
 
 class MainWindow(QMainWindow):
+    alumnes_registrats: List[Any]
 
     def __init__(self):
         super().__init__()
+        self.avui = PySide6.QtCore.QDate.currentDate()
+        self.fin = Exportacio()
+        self.editor = DadesAlumnes()
+        self.editor_dates = DatesTrimestre()
+        self.sobre = MissatgeInfor()
+        self.bot_dist = QHBoxLayout()
+        self.regbot = QPushButton("Registrar")
+        self.tbot = QGridLayout()
+        self.form_dist = QFormLayout()
+        self.disp_general = QVBoxLayout()
+        self.selector_data = QDateEdit(self.avui)
+        self.desplegable_cat = QComboBox()
+        self.categories_etiqueta = QLabel("Motiu: ")
+        self.barra_eines = QToolBar(self)
+        self.wcentral = QWidget()
+        self.menu = self.menuBar()
+        self.arxiu_menu = self.menu.addMenu("&Fitxer")
+        self.sobre_accio = QAction(text="Sobre")
+        self.purga_accio = QAction(self, icon=QIcon("src/icones/mail-mark-junk-symbolic.svg"))
+        self.sortir_accio_text = QAction(self, icon=QIcon("src/icones/system-shutdown-symbolic.svg"), text="Sortir")
+        self.sortir_accio = QAction(self, icon=QIcon("src/icones/system-shutdown-symbolic.svg"))
+        self.exportar_accio = QAction(self, icon=QIcon("src/icones/application-exit-symbolic.svg"))
+        self.edicio_dates = None
+        self.editar_alumnes = None
+        self.avui = PySide6.QtCore.QDate.currentDate()
+        self.data_etiqueta = QLabel("Data:")
+        self.qdesc = QTextEdit()
+        self.qdesc_et = QLabel("Descripció:")
+        self.desplegable_al = None
+        self.alumnes_etiqueta = None
         self.arrencador = Iniciador()
         self.consultor = Lector()
         self.registrador = Escriptor()
         self.arrencador.creadortaules()
         self.al_registre: str = ""
         self.cat_registre: str = ""
-        global t_registre
         self.data_registre: str = date.isoformat(date.today())
         self.configurar_interficie()
-        # if self.arrencador.comprovadorinicicurs():
-        #    AssistentInicial.show()
-        self.asi = AssistentInicial()
-        self.asi.show()
+        if self.arrencador.comprovadorinicicurs():
+            self.asi = AssistentInicial()
+            self.asi.show()
 
     def configurar_interficie(self):
         self.setWindowTitle("Seguiment alumnes")
         self.setFixedSize(PySide6.QtCore.QSize(300, 400))
+        # Definim accions:
+        self.editar_alumnes = QAction(self, icon=QIcon("src/icones/system-switch-user-symbolic.svg"))
+        self.editar_alumnes.setToolTip("Editar alumnes")
+        self.edicio_dates = QAction(self, icon=QIcon("src/icones/office-calendar-symbolic.svg"))
+        self.edicio_dates.setToolTip("Editar dates de trimestre")
+        self.exportar_accio.setToolTip("Exportar informes")
+        self.sortir_accio.setToolTip("Sortir del programa")
+        # Configurem menu:
+        self.menu.setNativeMenuBar(False)
+        self.menu.setFont(PySide6.QtGui.QFont("Arial", 10))
+        self.arxiu_menu.addAction(self.sortir_accio_text)
+        self.sortir_accio_text.triggered.connect(self.sortir)
+        self.menu.addAction(self.sobre_accio)
+        self.sobre_accio.triggered.connect(self.llicencia)
         # Configurem bloc d'alumnes:
-        self.wcentral = QWidget()
-        self.alumnes_etiqueta = QLabel("Alumne: ")
+        self.alumnes_etiqueta = QLabel(literal_alumnes)
         self.setCentralWidget(self.wcentral)
         self.desplegable_al = QComboBox()
         self.desplegable_al.addItems(self.consultor.llista_alumnes_desplegable())
         self.al_registre = self.desplegable_al.currentText()
         self.desplegable_al.currentTextChanged.connect(self.traspas_alumnes)
         # Configurem barra d'eines:
-        self.barra_eines = QToolBar(self)
         self.barra_eines.setFloatable(False)
         self.barra_eines.setMovable(False)
         self.addToolBar(self.barra_eines)
-        self.editar_alumnes = QAction(self, icon=QIcon("src/icones/system-switch-user-symbolic.svg"))
-        self.editar_alumnes.setToolTip("Editar alumnes")
-        self.edicio_dates = QAction(self, icon=QIcon("src/icones/office-calendar-symbolic.svg"))
-        self.edicio_dates.setToolTip("Editar dates de trimestre")
-        self.exportar_accio = QAction(self, icon=QIcon("src/icones/application-exit-symbolic.svg"))
-        self.exportar_accio.setToolTip("Exportar informes")
-        self.sortir_accio = QAction(self, icon=QIcon("src/icones/system-shutdown-symbolic.svg"))
-        self.sortir_accio.setToolTip("Sortir del programa")
-        self.purga_accio = QAction(self, icon=QIcon("src/icones/mail-mark-junk-symbolic.svg"))
         self.purga_accio.setToolTip("Eliminar registres")
         self.barra_eines.addAction(self.editar_alumnes)
         self.barra_eines.addAction(self.edicio_dates)
@@ -77,42 +135,28 @@ class MainWindow(QMainWindow):
         self.edicio_dates.triggered.connect(self.editar_dates)
         self.sortir_accio.triggered.connect(self.sortir)
         self.exportar_accio.triggered.connect(self.crear_informes)
+        self.purga_accio.triggered.connect(self.purga_registres)
         # Configurem bloc de motius:
-        self.categories_etiqueta = QLabel("Motiu: ")
-        self.desplegable_cat = QComboBox()
         self.desplegable_cat.addItems(self.consultor.llista_categories())
         self.cat_registre = self.desplegable_cat.currentText()
         self.desplegable_cat.currentTextChanged.connect(self.traspas_categoria)
         # Configurem bloc de descripció:
-        self.qdesc_et = QLabel("Descripció:")
         self.qdesc_et.setFixedSize(100, 30)
-        self.qdesc = QTextEdit()
         # Afegim data
-        self.data_etiqueta = QLabel("Data:")
-        self.avui = PySide6.QtCore.QDate.currentDate()
-        self.selector_data = QDateEdit(self.avui)
         self.selector_data.setDisplayFormat(u"dd/MM/yyyy")
         self.selector_data.setCalendarPopup(True)
         self.selector_data.dateChanged.connect(self.traspas_data)
-
-        # Configurem disposició:
-        self.disp_general = QVBoxLayout()
         # Configurem part formulari:
-        self.form_dist = QFormLayout()
         self.form_dist.setVerticalSpacing(0)
         self.form_dist.setHorizontalSpacing(0)
         self.form_dist.setContentsMargins(1, 1, 1, 1)
-
         self.form_dist.addRow(self.alumnes_etiqueta, self.desplegable_al)
         self.form_dist.addRow(self.categories_etiqueta, self.desplegable_cat)
         self.form_dist.addRow(self.data_etiqueta, self.selector_data)
         self.form_dist.addRow(self.qdesc_et, self.qdesc)
 
         # Configurem text i botons:
-        self.tbot = QGridLayout()
-        self.regbot = QPushButton("Registrar")
         self.regbot.clicked.connect(self.registrar)
-        self.bot_dist = QHBoxLayout()
         self.bot_dist.addWidget(self.regbot)
         self.tbot.addLayout(self.bot_dist, 1, 0, 1, 2)
         # Configuració final de la part general:
@@ -123,6 +167,9 @@ class MainWindow(QMainWindow):
     @staticmethod
     def sortir():
         app.quit()
+
+    def llicencia(self):
+        self.sobre.show()
 
     def registrar(self):
         descripcio = self.qdesc.toPlainText()
@@ -142,7 +189,7 @@ class MainWindow(QMainWindow):
             self.qdesc.clear()
 
     def crear_informes(self):
-        '''Comprova si hi han registres previs i activa el diàleg per a exportar si n'hi han'''
+        """Comprova si hi ha registres previs i activa el diàleg d'exportació si n'hi han"""
         dades = self.consultor.llista_alumnes_registres()
         if not dades:
             dlg = QMessageBox(self)
@@ -153,7 +200,6 @@ class MainWindow(QMainWindow):
 
         else:
             self.alumnes_registrats = dades
-            self.fin = Exportacio()
             self.fin.show()
 
     def traspas_alumnes(self):
@@ -172,22 +218,41 @@ class MainWindow(QMainWindow):
 
     def edicio_alumnes(self):
         """Permet editar els alumnes en seguiment"""
-        self.editor = DadesAlumnes()
         self.editor.show()
 
     def editar_dates(self):
-        """Permet modificar les dates dels trimestre"""
-        self.editor_dates = DatesTrimestre()
+        """Permet modificar les dates dels trimestres"""
         self.editor_dates.show()
 
-
-def executa(alumne):
-    export_global(alumne)
-
+    def purga_registres(self):
+        """Permet eliminar registres"""
+        dialeg_purga = QMessageBox(self)
+        dialeg_purga.addButton("Si", QMessageBox.ApplyRole)
+        dialeg_purga.addButton("No", QMessageBox.RejectRole)
+        dialeg_purga.setIcon(QMessageBox.Critical)
+        dialeg_purga.setWindowTitle("ATENCIO")
+        dialeg_purga.setText("Voleu eliminar els registres?")
+        dialeg_purga.show()
+        resultat = dialeg_purga.exec()
+        if resultat == 0:
+            self.registrador.eliminar_registres()
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Èxit")
+            dlg.setIcon(QMessageBox.Information)
+            dlg.setText("Registres purgats")
+            dlg.exec()
+            app.quit()
+        elif resultat == 1:
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Cancel·lat")
+            dlg.setIcon(QMessageBox.Information)
+            dlg.setText("Purga cancel·lada")
+            dlg.exec()
 
 class DialegSeleccioCarpeta(QFileDialog):
     def __init__(self):
         super().__init__()
+        self.setFileMode(QFileDialog.Directory)
 
 
 class TableModel(QAbstractTableModel):
@@ -215,6 +280,11 @@ class TableModel(QAbstractTableModel):
 class DadesAlumnes(QWidget):
     def __init__(self):
         super().__init__()
+        self.distribucio = QGridLayout()
+        self.distribucio_botons = QVBoxLayout()
+        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"), text="Tornar")
+        self.esborrarBoto = QPushButton("Esborrar")
+        self.afegirBoto = QPushButton("Afegir")
         self.model = None
         self.alumnes = None
         self.taula_alumnes = None
@@ -232,10 +302,6 @@ class DadesAlumnes(QWidget):
         self.taula_alumnes.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.taula_alumnes.resizeColumnsToContents()
         # Configurem els botons:
-        self.afegirBoto = QPushButton("Afegir")
-        self.esborrarBoto = QPushButton("Esborrar")
-        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"), text="Tornar")
-        self.distribucio_botons = QVBoxLayout()
         self.distribucio_botons.addWidget(self.afegirBoto)
         self.distribucio_botons.addWidget(self.esborrarBoto)
         self.distribucio_botons.addWidget(self.tornarBoto)
@@ -244,7 +310,6 @@ class DadesAlumnes(QWidget):
         # Especifiquem les opcions de cada boto:
         self.tornarBoto.clicked.connect(self.retornar)
         # Configurem la interficie:
-        self.distribucio = QGridLayout()
         self.distribucio.addWidget(self.taula_alumnes, 0, 0)
         self.distribucio.addLayout(self.distribucio_botons, 0, 1)
         self.distribucio.setAlignment(Qt.AlignTop)
@@ -256,12 +321,21 @@ class DadesAlumnes(QWidget):
 
 class DatesTrimestre(QWidget):
     def __init__(self):
-        self.consultordates = Lector()
-        self.registradodates = Escriptor()
         super().__init__()
+        self.consultor_dates = Lector()
+        self.registradodates = Escriptor()
+        self.dist_gen = QVBoxLayout()
+        self.dist_boto = QHBoxLayout()
+        self.distform = QFormLayout()
+        self.data2ntrimestre = QDate.fromString(self.consultor_dates.llista_dates()[0], Qt.DateFormat.ISODate)
+        self.data3rtrimestre = QDate.fromString(self.consultor_dates.llista_dates()[1], Qt.DateFormat.ISODate)
+        self.desarBoto = QPushButton(icon=QIcon("src/icones/document-save-symbolic.svg"), text="Desar")
+        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"), text="Tornar")
+        self.etiq3rtrim = QLabel("Inici tercer trimestre:")
+        self.editdata3rtrim = QDateEdit(self.data3rtrimestre)
+        self.etiq2ntrim = QLabel("Inici 2n trimestre:")
+        self.editdata2ntrim = QDateEdit(self.data2ntrimestre)
         # A continuacio llegim les dates de la BBDD i la passem a format QT, especificant que estan en format ISO:
-        self.data2ntrimestre = QDate.fromString(self.consultordates.llista_dates()[0], Qt.DateFormat.ISODate)
-        self.data3rtrimestre = QDate.fromString(self.consultordates.llista_dates()[1], Qt.DateFormat.ISODate)
         self.avui = PySide6.QtCore.QDate.currentDate()
         self.dema = self.avui.addDays(1)
         self.trimconfiginterficie()
@@ -271,30 +345,20 @@ class DatesTrimestre(QWidget):
         self.setWindowTitle("Trimestre")
         self.resize(300, 100)
         # Definim els elements que formaran part de la finestra:
-        self.editdata2ntrim = QDateEdit(self.data2ntrimestre)
         self.editdata2ntrim.setDisplayFormat(u"dd/MM/yyyy")
         self.editdata2ntrim.setCalendarPopup(True)
-        self.etiq2ntrim = QLabel("Inici 2n trimestre:")
-        self.editdata3rtrim = QDateEdit(self.data3rtrimestre)
         self.editdata3rtrim.setDisplayFormat(u"dd/MM/yyyy")
         self.editdata3rtrim.setCalendarPopup(True)
-        self.etiq3rtrim = QLabel("Inici tercer trimestre:")
-        self.tornarBoto = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"), text="Tornar")
-        self.desarBoto = QPushButton(icon=QIcon("src/icones/document-save-symbolic.svg"), text="Desar")
-        # Explicitem les funcions dels botonos i dels controls:
+        # Explicitem les funcions dels botons i dels controls:
         self.tornarBoto.clicked.connect(self.retornar)
         self.editdata2ntrim.dateChanged.connect(self.data2ntrim)
         self.editdata3rtrim.dateChanged.connect(self.data3ertrim)
         self.desarBoto.clicked.connect(self.desar)
-
         # Definim la distribucio:
-        self.distform = QFormLayout()
         self.distform.addRow(self.etiq2ntrim, self.editdata2ntrim)
         self.distform.addRow(self.etiq3rtrim, self.editdata3rtrim)
-        self.dist_boto = QHBoxLayout()
         self.dist_boto.addWidget(self.tornarBoto)
         self.dist_boto.addWidget(self.desarBoto)
-        self.dist_gen = QVBoxLayout()
         self.dist_gen.setSpacing(10)
         self.dist_gen.setAlignment(Qt.AlignTop)
         self.dist_gen.addLayout(self.distform)
@@ -310,7 +374,7 @@ class DatesTrimestre(QWidget):
         self.registradodates.actualitzacio_dates(data2n, data3r)
 
     def data2ntrim(self):
-        """Comprova la data del segon trimestre i la reajusta per a que com a minim
+        """Comprova la data del segon trimestre i la reajusta perquè com a minim
                 sigui un dia menys que la del segon trimestre.
                 """
 
@@ -347,18 +411,18 @@ class DatesTrimestre(QWidget):
 class FinestraExport(QWidget):
     def __init__(self):
         super().__init__()
-        self.consultorexport = Lector()
-
+        self.consultor_exportar = Lector()
+        self.informador = Exportador()
         self.al_seleccionat: str = ''
         self.carpeta_desti: str = ''
         self.arxiu_desti: str = ''
-        self.alumnes_registrats = self.consultorexport.llista_alumnes_registres()
+        self.alumnes_registrats = self.consultor_exportar.llista_alumnes_registres()
         # Creació dels elements de la finestra:
         self.disposicio = QGridLayout()
         self.disposicio.setColumnStretch(2, 2)
         self.setWindowTitle("Creació d'informe")
         self.resize(300, 100)
-        self.alumne_etiqueta = QLabel("Alumne: ")
+        self.alumne_etiqueta = QLabel(literal_alumnes)
         self.alumne_seleccio = QComboBox()
         self.alumne_seleccio.addItems(self.alumnes_registrats)
         self.tots_etiqueta = QLabel("Exportar informes de\ntots els alumnes? ")
@@ -372,7 +436,7 @@ class FinestraExport(QWidget):
         self.desti_seleccio.setIcon(QIcon("icones/folder.png"))
         self.desti_seleccio.clicked.connect(self.seleccio_desti)
         self.boto_ok = QPushButton("D'acord")
-        self.boto_ok.clicked.connect(export_escoltam)
+        self.boto_ok.clicked.connect(self.informador.export_escolta_m)
         self.boto_cancela = QPushButton("Cancel·la")
         self.boto_cancela.clicked.connect(self.cancela)
         # Distribuïm els elements:
@@ -411,7 +475,7 @@ class FinestraExport(QWidget):
     def informe_global(self):
         if self.tots_check.isChecked():
             for alumne in self.alumnes_registrats:
-                export_global(alumne)
+                self.consultor_exportar.export_global(alumne)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Èxit")
             dlg.setIcon(QMessageBox.Information)
@@ -422,7 +486,7 @@ class FinestraExport(QWidget):
                 self.close()
 
         elif self.tots_check.isChecked() is False:
-            export_global(self.al_seleccionat)
+            self.informador.export_informes_seguiment(self.al_seleccionat)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Èxit")
             dlg.setIcon(QMessageBox.Information)
@@ -443,56 +507,134 @@ class FinestraExport(QWidget):
 class Exportacio(QWidget):
     def __init__(self):
         super().__init__()
-        self.consultorexport = Lector()
-        self.exportadorinformes = Escriptor()
+        self.carpeta_seleccionada = None
+        self.consultor_export = Lector()
+        self.dialeg = DialegSeleccioCarpeta()
+        self.al_seleccionat: str = ''
+        self.exportador_informes = Exportador()
         self.setWindowTitle("Creació d'informe")
         self.resize(300, 100)
-        self.exportaciodisposicio = QGridLayout()
-        self.setLayout(self.exportaciodisposicio)
-        self.alumne_etiqueta = QLabel("Alumne: ")
+        self.exportacio_disposicio = QGridLayout()
+        self.setLayout(self.exportacio_disposicio)
+        self.seleccio_tipus_informe = QLabel("Selecciona un informe: ")
+        self.opcions = ["Informe de seguiment", "Escolta'm"]
+        self.alumne_etiqueta = QLabel(literal_alumnes)
         self.alumne_etiqueta.setMaximumWidth(50)
+        self.tots_etiqueta = QLabel("Exportar informes de\ntots els alumnes? ")
+
+        # Definim botons o elements clickables:
+        self.seleccio_informe = QComboBox()
+        self.seleccio_informe.addItems(self.opcions)
+        self.seleccio_informe.setToolTip("Informe de seguiment de l'alumne")
+        self.seleccio_informe.currentText()
+        self.seleccio_informe.currentTextChanged.connect(self.seleccio_informe_canviat)
         self.alumne_seleccio = QComboBox()
-        self.alumnes_registrats = self.consultorexport.llista_alumnes_registres()
+        self.al_seleccionat = self.alumne_seleccio.currentText()
+        self.alumne_seleccio.currentTextChanged.connect(self.canvi_alumne)
+        self.alumnes_registrats = self.consultor_export.llista_alumnes_registres()
         self.alumne_seleccio.addItems(self.alumnes_registrats)
-        self.al_seleccionat: str = ''
-        self.carpeta_desti: str = ''
-        self.arxiu_desti: str = ''
-        # Definim pestanya escolta'm:
-        self.disposicio_escoltam = QGridLayout()
-        self.disposicio_escoltam.setColumnStretch(2, 2)
-        self.escoltamwidget = QWidget()
-        self.escoltamwidget.setLayout(self.disposicio_escoltam)
+        self.desarBoto = QPushButton(icon=QIcon("src/icones/document-save-symbolic.svg"), text="Desar")
+        self.desarBoto.setEnabled(False)
+        self.boto_seleccio_carpeta = QPushButton(text="Selecciona carpeta")
+        self.tots_check = QCheckBox()
+        self.tots_check.setTristate(False)
+        self.tots_check.clicked.connect(self.tots_seleccionat)
+        self.boto_seleccio_carpeta.clicked.connect(self.seleccio_carpeta)
+        self.boto_tornar = QPushButton(icon=QIcon("src/icones/draw-arrow-back.svg"), text="Torna")
+        self.boto_tornar.clicked.connect(self.tornar)
+        # Situem els elements:
+        self.exportacio_disposicio.setHorizontalSpacing(2)
+        self.exportacio_disposicio.addWidget(self.seleccio_tipus_informe, 0, 0)
+        self.exportacio_disposicio.addWidget(self.seleccio_informe, 0, 1)
+        self.exportacio_disposicio.addWidget(self.tots_etiqueta, 1, 0)
+        self.exportacio_disposicio.addWidget(self.tots_check, 1, 1)
+        self.exportacio_disposicio.addWidget(self.alumne_etiqueta, 2, 0)
+        self.exportacio_disposicio.addWidget(self.alumne_seleccio, 2, 1)
+        self.exportacio_disposicio.addWidget(self.boto_seleccio_carpeta, 3, 0)
+        self.exportacio_disposicio.addWidget(self.desarBoto, 3, 1)
+        self.exportacio_disposicio.addWidget(self.boto_tornar, 4, 0, 1, 2)
 
+    def seleccio_informe_canviat(self):
+        """
+        S'executa quan canvia la selecció de l'informe.
+        """
+        if self.seleccio_informe.currentText() == "Escolta'm":
+            self.seleccio_informe.setToolTip("Genera llistat dels escolta'm fets, per mesos")
+            self.alumne_etiqueta.setEnabled(False)
+            self.alumne_seleccio.setEnabled(False)
+            self.tots_etiqueta.setEnabled(False)
+            self.tots_check.setEnabled(False)
+        elif self.seleccio_informe.currentText() == "Informe de seguiment":
+            self.seleccio_informe.setToolTip("Informe de seguiment de l'alumne")
+            self.alumne_etiqueta.setEnabled(True)
+            self.alumne_seleccio.setEnabled(True)
+            self.tots_etiqueta.setEnabled(True)
+            self.tots_check.setEnabled(True)
 
-        # Configurem pestanya informe global:
-        self.informetutorial = QWidget()
-        self.disp_informetutorial = QGridLayout()
-        self.informetutorial.setLayout(self.disp_informetutorial)
+    def tots_seleccionat(self):
+        """
+        Desactiva controls d'alumne si se selecciona l'opció d'exportar tots els alumnes.
+        :return:
+        """
+        if self.tots_check.isChecked():
+            self.alumne_seleccio.setEnabled(False)
+        else:
+            self.alumne_seleccio.setEnabled(True)
 
-        # Situem pestanyes:
-        self.pestanyes = QTabWidget()
-        self.pestanyes.addTab(self.informetutorial, "Informe seguiment")
-        self.pestanyes.addTab(self.escoltamwidget, "Escolta'm")
-        # Situem els altres elements:
-        self.exportaciodisposicio.setHorizontalSpacing(2)
-        self.exportaciodisposicio.addWidget(self.alumne_etiqueta, 0, 0)
-        self.exportaciodisposicio.addWidget(self.alumne_seleccio, 0, 1)
-        self.exportaciodisposicio.addWidget(self.pestanyes, 1, 0, 1, 2)
+    def tornar(self):
+        """
+        Torna a la finestra anterior.
+        """
+        self.close()
+
+    def canvi_alumne(self):
+        """
+        Modifica el nom de l'alumne seleccionat.
+        :return:
+        """
+        self.al_seleccionat = self.alumne_seleccio.currentText()
+
+    def seleccio_carpeta(self):
+        """
+        Selecciona la carpeta on desar els informes.
+        """
+        self.dialeg.setFileMode(QFileDialog.Directory)
+        self.carpeta_seleccionada = self.dialeg.getExistingDirectory(self, "Selecciona carpeta")
+        self.carpeta_seleccionada = self.carpeta_seleccionada + "/"
+        if self.carpeta_seleccionada is not None:
+            self.desarBoto.setEnabled(True)
+
+    def desar(self):
+        """
+        Desa els informes seleccionats.
+        """
+        if self.seleccio_informe.currentText() == "Escolta'm":
+            self.exportador_informes.export_escolta_m()
+        elif self.seleccio_informe.currentText() == "Informe de seguiment":
+            if self.tots_check.isChecked():
+                for alumne in self.alumnes_registrats:
+                    self.exportador_informes.export_informes_seguiment(alumne, self.carpeta_seleccionada)
+            else:
+                self.exportador_informes.export_informes_seguiment(self.al_seleccionat, self.carpeta_seleccionada)
 
 
 class AssistentInicial(QWizard):
     def __init__(self):
         super().__init__()
-        self.paginainicial = QWizardPage()
-        self.paginaalumnes = QWizardPage()
-        self.paginafinal = QWizardPage()
+        self.paginicdesc = QLabel("Aquesta aplicació serveix per a la gestió dels alumnes tutoritzats.\n"
+                                  "S'ha detectat que no consten noms d'alumnes, registres previs ni dates de "
+                                  "trimestre.\n "
+                                  "A continuacio s'us demanara que introduiu aquestes dades.")
+        self.pagina_inicial = QWizardPage()
+        self.pagina_alumnes = QWizardPage()
+        self.pagina_final = QWizardPage()
         self.setWindowTitle("Assistent d'inicialització")
         self.setWizardStyle(QWizard.ModernStyle)
         self.setMinimumSize(QSize(600, 400))
         self.configpagines()
-        self.addPage(self.paginainicial)
-        self.addPage(self.paginaalumnes)
-        self.addPage(self.paginafinal)
+        self.addPage(self.pagina_inicial)
+        self.addPage(self.pagina_alumnes)
+        self.addPage(self.pagina_final)
         self.button(QWizard.CancelButton).setText("Cancel·lar")
         self.acciocancela = QAction(app.quit())
         self.acciotanca = QAction(self.cancela())
@@ -501,39 +643,31 @@ class AssistentInicial(QWizard):
     def configpagines(self):
         # Afegim les pàgines:
         # Afegim pagina inicial:
-        self.paginainicial.setTitle("Inicialització")
-        self.paginainicial.setSubTitle("Inicialització de l'aplicació")
+        self.pagina_inicial.setTitle("Inicialització")
+        self.pagina_inicial.setSubTitle("Inicialització de l'aplicació")
         paginainicialdistr = QVBoxLayout()
-        self.paginicdesc = QLabel("Aquesta aplicació serveix per a la gestió dels alumnes tutoritzats.\n"
-                                  "S'ha detectat que no consten noms d'alumnes, registres previs ni dates de "
-                                  "trimestre.\n "
-                                  "A continuacio s'us demanra que introduiu aquestes dades.")
         self.paginicdesc.setWordWrap(True)
         paginainicialdistr.addWidget(self.paginicdesc)
-        self.paginainicial.setLayout(paginainicialdistr)
-
+        self.pagina_inicial.setLayout(paginainicialdistr)
         # Afegim i configurem pagina alumnes:
-
         dadesalumnesassist = DadesAlumnes()
         dadesalumnesassist.esborrarBoto.setEnabled(False)
         dadesalumnesassist.esborrarBoto.setVisible(False)
         dadesalumnesassist.tornarBoto.setEnabled(False)
         dadesalumnesassist.tornarBoto.setVisible(False)
-
         paginaaldist = QVBoxLayout()
         paginaaldist.addWidget(dadesalumnesassist)
-        self.paginaalumnes.setLayout(paginaaldist)
+        self.pagina_alumnes.setLayout(paginaaldist)
         # Afegim pagina final:
         datestrimestreassist = DatesTrimestre()
         datestrimestreassist.tornarBoto.setEnabled(False)
         datestrimestreassist.tornarBoto.setVisible(False)
-
         paginafinaldist = QVBoxLayout()
-        self.paginafinal.setLayout(paginafinaldist)
+        self.pagina_final.setLayout(paginafinaldist)
         paginafinaldist.addWidget(datestrimestreassist)
 
     def cancela(self):
-        app.quit()
+        self.close()
 
 
 app = QApplication(sys.argv)
