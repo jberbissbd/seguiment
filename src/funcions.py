@@ -1,6 +1,7 @@
 import datetime
 import sqlite3
-from datetime import datetime
+from datetime import datetime, date
+from dateutil import parser
 
 import numpy as np
 import pandas as pd
@@ -83,6 +84,59 @@ class Lector:
             return l_dates
         finally:
             conn.close()
+
+    @staticmethod
+    def nombre_registres_alumnes():
+        n_registres_alumnes_sql = 'SELECT nom_alumne,COUNT(*) FROM registres GROUP BY nom_alumne'
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            n_registres_alumnes = conn.execute(n_registres_alumnes_sql).fetchall()
+            n_registres_alumnes = [list(registre) for registre in n_registres_alumnes]
+            return n_registres_alumnes
+        except sqlite3.OperationalError:
+            print("ERROR")
+
+    @staticmethod
+    def nombre_registres_categories():
+        n_registres_alumnes_sql = 'SELECT categoria,COUNT(*) FROM registres GROUP BY categoria'
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            n_registres_categoria = conn.execute(n_registres_alumnes_sql).fetchall()
+            n_registres_categoria = [list(registre) for registre in n_registres_categoria]
+            return n_registres_categoria
+
+        except sqlite3.OperationalError:
+            print("ERROR")
+
+    @staticmethod
+    def registres_global():
+        """Consulta els registres d'alumnes"""
+        ordre_consulta_sql = 'SELECT * FROM registres ORDER BY nom_alumne'
+        try:
+            conn = sqlite3.connect(arxiubbdd)
+            conn.cursor()
+            r_registres = conn.execute(ordre_consulta_sql).fetchall()
+            l_registres = [list(registre) for registre in r_registres]
+            return l_registres
+        except sqlite3.OperationalError:
+            print("ERROR")
+
+    def registres_alumne_individual(self, alumne):
+        """Consulta els registres d'un alumne concret'"""
+        ordre_consulta_sql = 'SELECT * FROM registres WHERE nom_alumne = ?'
+        try:
+            conn = sqlite3.connect(self.arxiubbdd)
+            conn.cursor()
+            r_registres = conn.execute(ordre_consulta_sql, (alumne,)).fetchall()
+            l_registres = [list(registre) for registre in r_registres]
+            for registre in l_registres:
+                registre[3] = parser.parse(registre[3])
+
+            return l_registres
+        except sqlite3.OperationalError:
+            print("ERROR")
 
 
 class Escriptor:
@@ -273,8 +327,9 @@ class Exportador:
         noms_columnes = llista_categories()
         # Canviem l'orientació de la taula:
         taula_pivotada = pd.pivot_table(taula_global, index='Trimestre', columns='categoria', values='descripcio',
-                                        fill_value="", aggfunc=funcions_agregacio, dropna=False) \
-            .reindex(columns=noms_columnes)
+                                        fill_value="", aggfunc=funcions_agregacio, dropna=False).reindex(
+            columns=noms_columnes)
+
         # Expandim els registres amb una llista com a valor (per exemple, dos registres el mateix dia)
         for columna_expandir in noms_columnes:
             taula_pivotada = taula_pivotada.explode(column=columna_expandir)

@@ -1,15 +1,17 @@
 import sys
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from typing import List, Any
 
 import PySide6.QtCore
 import PySide6.QtGui
+from PySide6 import QtCharts
 from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView, QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QDialog)
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QDialog,
+                               QTabWidget, QHeaderView)
 
 from funcions import (Escriptor, Lector, Iniciador, Exportador)
 
@@ -48,16 +50,109 @@ class MissatgeInfor(QWidget):
         self.dialeg_info_dist.addWidget(self.url_icones)
 
 
+class Visualitzador(QWidget):
+    """Widget que filtra els registres segons alumne i permet editar-los"""
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Alumnes")
+        self.setWindowIcon(QIcon("src/icones/document-properties-symbolic.svg"))
+        self.resize(300, 200)
+        self.setMinimumWidth(400)
+        self.setMaximumWidth(650)
+
+        self.alumne_seleccionat = ""
+        self.lector_editor_registres = Lector()
+        self.llista_alumnes = self.lector_editor_registres.llista_alumnes_registres()
+        self.escriptor_registres = Escriptor()
+        self.visualitzador_taula = QTableView()
+        self.visualitzador_distribucio = QVBoxLayout()
+        self.visualitzador_distribucio.setAlignment(Qt.AlignTop)
+        self.setLayout(self.visualitzador_distribucio)
+        self.alumne_etiqueta = QLabel("Alumne: ")
+        self.selector_alumnes = QComboBox()
+        self.alumne_seleccionat = self.selector_alumnes.currentText()
+        self.selector_alumnes.currentTextChanged.connect(self.canvi_alumne)
+        self.bloc_seleccio = QHBoxLayout()
+        self.bloc_seleccio.setAlignment(Qt.AlignLeft)
+        self.bloc_seleccio.addWidget(self.alumne_etiqueta)
+        self.bloc_seleccio.addWidget(self.selector_alumnes)
+        self.selector_alumnes.addItems(self.llista_alumnes)
+        self.visualitzador_taula_model = ModelVisualitzacio(self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
+        self.visualitzador_taula.setModel(self.visualitzador_taula_model)
+        self.visualitzador_taula.AdjustToContents
+        self.visualitzador_taula.setSortingEnabled(True)
+        self.visualitzador_taula.setWordWrap(True)
+        self.visualitzador_taula.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.visualitzador_taula.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.visualitzador_taula.setColumnHidden(0, True)
+        self.visualitzador_taula.setColumnHidden(1, True)
+        # self.visualitzador_taula.sizeHintForColumn(100)
+        self.visualitzador_taula.horizontalHeader().setStretchLastSection(True)
+        self.visualitzador_taula.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.visualitzador_taula.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.visualitzador_taula.verticalHeader().setVisible(True)
+        self.visualitzador_distribucio.addLayout(self.bloc_seleccio)
+        self.visualitzador_distribucio.addWidget(self.visualitzador_taula)
+
+    def canvi_alumne(self):
+        self.alumne_seleccionat = self.selector_alumnes.currentText()
+        self.visualitzador_taula_model = ModelVisualitzacio(self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
+        self.visualitzador_taula.setModel(self.visualitzador_taula_model)
+        # self.visualitzador_taula.resizeColumnsToContents()
+        # self.visualitzador_taula.resizeRowsToContents()
+
+    def canvimida(self):
+        self.visualitzador_taula.AdjustToContents()
+
+
+
+
+class Grafics(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Registres per alumne:")
+        self.resize(300, 200)
+        self.consultor_grafics = Lector()
+        self.dades_alumnes = self.consultor_grafics.nombre_registres_alumnes()
+        self.dades_categoria = self.consultor_grafics.nombre_registres_categories()
+        self.grafics_disposicio = QVBoxLayout()
+        self.setLayout(self.grafics_disposicio)
+        self.pestanyes_grafics = QTabWidget()
+        self.pestanyes_grafics.setTabsClosable(False)
+        self.pestanyes_grafics.setMovable(False)
+        self.pestanyes_grafics.setTabPosition(QTabWidget.West)
+        self.pestanyes_grafics.setTabShape(QTabWidget.Rounded)
+        self.pestanya_alumne = QWidget()
+        self.alumne_grafic = QtCharts.QBarSeries()
+        self.alumne_grafic_barres = QtCharts.QBarSet(self.dades_alumnes[0][0])
+        self.alumne_grafic_barres.setColor(Qt.red)
+        self.alumne_grafic.append(self.alumne_grafic_barres)
+        self.alumne_grafic.setName("Alumnes")
+        self.alumne_grafic_vista = QtCharts.QChartView()
+        self.pestanya_alumne.setLayout(QVBoxLayout())
+        self.pestanya_alumne.layout().setAlignment(Qt.AlignTop)
+        self.pestanya_alumne.layout().addWidget(self.alumne_grafic_vista)
+        self.pestanya_motiu = QWidget()
+        self.pestanya_motiu_diposicio = QVBoxLayout()
+        self.pestanya_motiu.setLayout(self.pestanya_motiu_diposicio)
+        self.pestanyes_grafics.addTab(self.pestanya_alumne, "Alumne")
+        self.pestanyes_grafics.addTab(self.pestanya_motiu, "Categories")
+        self.grafics_disposicio.addWidget(self.pestanyes_grafics)
+
+
 class MainWindow(QMainWindow):
     alumnes_registrats: List[Any]
 
     def __init__(self):
         super().__init__()
+        self.grafics = None
         self.avui = PySide6.QtCore.QDate.currentDate()
-        self.fin = Exportacio()
+        self.fin = Exportacio_informes()
         self.editor = DadesAlumnes()
         self.editor_dates = DatesTrimestre()
         self.sobre = MissatgeInfor()
+        self.visor = Visualitzador()
         self.bot_dist = QHBoxLayout()
         self.regbot = QPushButton("Registrar")
         self.tbot = QGridLayout()
@@ -75,6 +170,8 @@ class MainWindow(QMainWindow):
         self.sortir_accio_text = QAction(self, icon=QIcon("src/icones/system-shutdown-symbolic.svg"), text="Sortir")
         self.sortir_accio = QAction(self, icon=QIcon("src/icones/system-shutdown-symbolic.svg"))
         self.exportar_accio = QAction(self, icon=QIcon("src/icones/application-exit-symbolic.svg"))
+        self.taules_accio = QAction(self, icon=QIcon("src/icones/document-properties-symbolic.svg"))
+        self.grafics_accio = QAction(self, icon=QIcon("src/icones/image-filter-symbolic.svg"))
         self.edicio_dates = None
         self.editar_alumnes = None
         self.avui = PySide6.QtCore.QDate.currentDate()
@@ -97,12 +194,13 @@ class MainWindow(QMainWindow):
 
     def configurar_interficie(self):
         self.setWindowTitle("Seguiment alumnes")
-        self.setFixedSize(PySide6.QtCore.QSize(300, 400))
+        self.setFixedSize(PySide6.QtCore.QSize(320, 400))
         # Definim accions:
         self.editar_alumnes = QAction(self, icon=QIcon("src/icones/system-switch-user-symbolic.svg"))
         self.editar_alumnes.setToolTip("Editar alumnes")
         self.edicio_dates = QAction(self, icon=QIcon("src/icones/office-calendar-symbolic.svg"))
         self.edicio_dates.setToolTip("Editar dates de trimestre")
+        self.grafics_accio.setToolTip("Grafics")
         self.exportar_accio.setToolTip("Exportar informes")
         self.sortir_accio.setToolTip("Sortir del programa")
         # Configurem menu:
@@ -126,13 +224,18 @@ class MainWindow(QMainWindow):
         self.purga_accio.setToolTip("Eliminar registres")
         self.barra_eines.addAction(self.editar_alumnes)
         self.barra_eines.addAction(self.edicio_dates)
+        self.barra_eines.addSeparator()
+        self.barra_eines.addAction(self.taules_accio)
+        self.barra_eines.addAction(self.grafics_accio)
         self.barra_eines.addAction(self.exportar_accio)
         self.barra_eines.addAction(self.sortir_accio)
         self.barra_eines.addSeparator()
         self.barra_eines.addAction(self.purga_accio)
         self.barra_eines.setIconSize(QSize(32, 32))
         self.editar_alumnes.triggered.connect(self.edicio_alumnes)
+        self.taules_accio.triggered.connect(self.obrir_visualitzador)
         self.edicio_dates.triggered.connect(self.editar_dates)
+        self.grafics_accio.triggered.connect(self.obrir_grafics)
         self.sortir_accio.triggered.connect(self.sortir)
         self.exportar_accio.triggered.connect(self.crear_informes)
         self.purga_accio.triggered.connect(self.purga_registres)
@@ -167,6 +270,13 @@ class MainWindow(QMainWindow):
     @staticmethod
     def sortir():
         app.quit()
+
+    def obrir_visualitzador(self):
+        self.visor.show()
+
+    def obrir_grafics(self):
+        self.grafics = Grafics()
+        self.grafics.show()
 
     def llicencia(self):
         self.sobre.show()
@@ -249,6 +359,7 @@ class MainWindow(QMainWindow):
             dlg.setText("Purga cancel·lada")
             dlg.exec()
 
+
 class DialegSeleccioCarpeta(QFileDialog):
     def __init__(self):
         super().__init__()
@@ -259,13 +370,19 @@ class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
         self._data = data
+        self.noms = ["Alumne", "Categoria", "Data", "Descripció"]
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
+            value = self._data[index.row()][index.column()]
             # See below for the nested-list data structure.
             # .row() indexes into the outer list,
             # .column() indexes into the sub-list
-            return self._data[index.row()][index.column()]
+            if isinstance(value, datetime):
+                # Render time to YYY-MM-DD.
+                return value.strftime("%d/%m/%Y")
+
+            return value
 
     def rowCount(self, index):
         # The length of the outer list.
@@ -275,6 +392,48 @@ class TableModel(QAbstractTableModel):
         # The following takes the first sub-list, and returns
         # the length (only works if all rows are an equal length)
         return len(self._data[0])
+
+    def headerData(self, section, orientation, role):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return self.noms[section - 1]
+            else:
+                return section
+
+
+class ModelVisualitzacio(QAbstractTableModel):
+    def __init__(self, data):
+        super(ModelVisualitzacio, self).__init__()
+        self._data = data
+        self.noms = ["Alumne", "Categoria", "Data", "Descripció"]
+
+    def data(self, index, role):
+        if role == Qt.ItemDataRole.DisplayRole:
+            value = self._data[index.row()][index.column()]
+            # See below for the nested-list data structure.
+            # .row() indexes into the outer list,
+            # .column() indexes into the sub-list
+            if isinstance(value, datetime):
+                # Render time to YYY-MM-DD.
+                return value.strftime("%d/%m/%Y")
+
+            return value
+
+    def rowCount(self, index):
+        # The length of the outer list.
+        return len(self._data)
+
+    def columnCount(self, index):
+        # The following takes the first sub-list, and returns
+        # the length (only works if all rows are an equal length)
+        return len(self._data[0])
+
+    def headerData(self, section, orientation, role):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return self.noms[section - 1]
+            else:
+                return section
 
 
 class DadesAlumnes(QWidget):
@@ -408,103 +567,7 @@ class DatesTrimestre(QWidget):
             self.data2ntrimestre = canvi2ntrim
 
 
-class FinestraExport(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.consultor_exportar = Lector()
-        self.informador = Exportador()
-        self.al_seleccionat: str = ''
-        self.carpeta_desti: str = ''
-        self.arxiu_desti: str = ''
-        self.alumnes_registrats = self.consultor_exportar.llista_alumnes_registres()
-        # Creació dels elements de la finestra:
-        self.disposicio = QGridLayout()
-        self.disposicio.setColumnStretch(2, 2)
-        self.setWindowTitle("Creació d'informe")
-        self.resize(300, 100)
-        self.alumne_etiqueta = QLabel(literal_alumnes)
-        self.alumne_seleccio = QComboBox()
-        self.alumne_seleccio.addItems(self.alumnes_registrats)
-        self.tots_etiqueta = QLabel("Exportar informes de\ntots els alumnes? ")
-        self.tots_check = QCheckBox()
-        self.tots_check.clicked.connect(self.tots_seleccionat)
-        self.tots_check.setTristate(False)
-        self.al_seleccionat = self.alumne_seleccio.currentText()
-        self.alumne_seleccio.currentTextChanged.connect(self.canvi_alumne)
-        self.desti = QLabel("Destí: ")
-        self.desti_seleccio = QPushButton()
-        self.desti_seleccio.setIcon(QIcon("icones/folder.png"))
-        self.desti_seleccio.clicked.connect(self.seleccio_desti)
-        self.boto_ok = QPushButton("D'acord")
-        self.boto_ok.clicked.connect(self.informador.export_escolta_m)
-        self.boto_cancela = QPushButton("Cancel·la")
-        self.boto_cancela.clicked.connect(self.cancela)
-        # Distribuïm els elements:
-        self.setLayout(self.disposicio)
-        self.disposicio.addWidget(self.alumne_etiqueta, 0, 0)
-        self.disposicio.addWidget(self.alumne_seleccio, 0, 1)
-        self.disposicio.addWidget(self.tots_etiqueta, 1, 0)
-        self.disposicio.addWidget(self.tots_check)
-        self.disposicio.addWidget(self.desti, 2, 0)
-        self.disposicio.addWidget(self.desti_seleccio, 2, 1)
-        self.disposicio.addWidget(self.boto_ok, 3, 0)
-        self.disposicio.addWidget(self.boto_cancela, 3, 1)
-
-    def seleccio_desti(self):
-        # TODO: Obtenir retorn del directory seleccionat.
-        # TODO: Dialeg s'executa dues vegades: deixar buit per a cancl·lar i directory seleccionat per a Ok.
-        sel = QFileDialog()
-        sel.setFileMode(QFileDialog.AnyFile)
-        sel.setNameFilter("Excel (*.xlsx)")
-        nom_arxiu = sel.getOpenFileName(self, "Open Image", "/home/jordi", "Image Files (*.png *.jpg *.bmp)")
-        sel.exec()
-        return nom_arxiu
-
-    def cancela(self):
-        self.close()
-
-    def canvi_alumne(self):
-        self.al_seleccionat = self.alumne_seleccio.currentText()
-
-    def tots_seleccionat(self):
-        if self.tots_check.isChecked():
-            self.alumne_seleccio.setEnabled(False)
-        else:
-            self.alumne_seleccio.setEnabled(True)
-
-    def informe_global(self):
-        if self.tots_check.isChecked():
-            for alumne in self.alumnes_registrats:
-                self.consultor_exportar.export_global(alumne)
-            dlg = QMessageBox(self)
-            dlg.setWindowTitle("Èxit")
-            dlg.setIcon(QMessageBox.Information)
-            dlg.setText("Informes exportats")
-            boto = dlg.exec()
-            if boto == QMessageBox.Ok:
-                dlg.close()
-                self.close()
-
-        elif self.tots_check.isChecked() is False:
-            self.informador.export_informes_seguiment(self.al_seleccionat)
-            dlg = QMessageBox(self)
-            dlg.setWindowTitle("Èxit")
-            dlg.setIcon(QMessageBox.Information)
-            dlg.setText("Informes exportats")
-            boto = dlg.exec()
-            if boto == QMessageBox.Ok:
-                dlg.close()
-                self.close()
-
-        else:
-            dlg = QMessageBox(self)
-            dlg.setWindowTitle("Sense dades")
-            dlg.setIcon(QMessageBox.Warning)
-            dlg.setText("No existeix cap alumne amb registres")
-            dlg.exec()
-
-
-class Exportacio(QWidget):
+class Exportacio_informes(QWidget):
     def __init__(self):
         super().__init__()
         self.carpeta_seleccionada = None
