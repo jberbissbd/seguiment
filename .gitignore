@@ -5,11 +5,7 @@
 .idea/*
 *.iml
 *.xlsx
-
 !/README.md
-Pipfile
-Pipfile.lock
-
 /.vscode/
 /venv/
 /lib/
@@ -17,3 +13,5 @@ Pipfile.lock
 /src/__pycache__
 seguiment.sublime-project
 seguiment.sublime-workspace
+Pipfile
+Pipfile.lock
