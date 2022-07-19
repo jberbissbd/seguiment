@@ -2,7 +2,8 @@
 ### Example user template
 
 # IntelliJ project files
-.idea/*
+/include/.idea
+/.idea/*
 *.iml
 *.xlsx
 !/README.md
