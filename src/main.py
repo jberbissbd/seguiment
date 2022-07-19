@@ -105,8 +105,7 @@ class Visualitzador(QWidget):
         # self.visualitzador_taula.resizeColumnsToContents()
         # self.visualitzador_taula.resizeRowsToContents()
 
-    def canvimida(self):
-        self.visualitzador_taula.AdjustToContents()
+
 
 
 class Grafics(QWidget):
@@ -406,13 +405,18 @@ class TableModel(QAbstractTableModel):
 
 
 class ModelVisualitzacio(QAbstractTableModel):
+    """Model de la taula de visualització i edidico de registres. Seguint:
+     https://www.pythonguis.com/tutorials/pyside6-qtableview-modelviews-numpy-pandas/
+     https://www.pythonguis.com/faq/editing-pyqt-tableview/
+     """
+
     def __init__(self, data):
         super(ModelVisualitzacio, self).__init__()
         self._data = data
         self.noms = ["Alumne", "Categoria", "Data", "Descripció"]
 
     def data(self, index, role):
-        if role == Qt.ItemDataRole.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             value = self._data[index.row()][index.column()]
             # See below for the nested-list data structure.
             # .row() indexes into the outer list,
