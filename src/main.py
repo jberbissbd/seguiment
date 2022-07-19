@@ -78,15 +78,17 @@ class Visualitzador(QWidget):
         self.bloc_seleccio.addWidget(self.alumne_etiqueta)
         self.bloc_seleccio.addWidget(self.selector_alumnes)
         self.selector_alumnes.addItems(self.llista_alumnes)
-        self.visualitzador_taula_model = ModelVisualitzacio(self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
+        self.visualitzador_taula_model = ModelVisualitzacio(
+            self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
         self.visualitzador_taula.setModel(self.visualitzador_taula_model)
-        self.visualitzador_taula.AdjustToContents
+
         self.visualitzador_taula.setSortingEnabled(True)
         self.visualitzador_taula.setWordWrap(True)
         self.visualitzador_taula.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.visualitzador_taula.setSelectionMode(QAbstractItemView.SingleSelection)
         self.visualitzador_taula.setColumnHidden(0, True)
         self.visualitzador_taula.setColumnHidden(1, True)
+
         # self.visualitzador_taula.sizeHintForColumn(100)
         self.visualitzador_taula.horizontalHeader().setStretchLastSection(True)
         self.visualitzador_taula.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -97,15 +99,14 @@ class Visualitzador(QWidget):
 
     def canvi_alumne(self):
         self.alumne_seleccionat = self.selector_alumnes.currentText()
-        self.visualitzador_taula_model = ModelVisualitzacio(self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
+        self.visualitzador_taula_model = ModelVisualitzacio(
+            self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
         self.visualitzador_taula.setModel(self.visualitzador_taula_model)
         # self.visualitzador_taula.resizeColumnsToContents()
         # self.visualitzador_taula.resizeRowsToContents()
 
     def canvimida(self):
         self.visualitzador_taula.AdjustToContents()
-
-
 
 
 class Grafics(QWidget):
@@ -400,6 +401,9 @@ class TableModel(QAbstractTableModel):
             else:
                 return section
 
+    def flags(self, index):
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+
 
 class ModelVisualitzacio(QAbstractTableModel):
     def __init__(self, data):
@@ -434,6 +438,12 @@ class ModelVisualitzacio(QAbstractTableModel):
                 return self.noms[section - 1]
             else:
                 return section
+
+    def flags(self, index):
+        if index.column() != 2:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+        else:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
 
 class DadesAlumnes(QWidget):
