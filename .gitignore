@@ -2,11 +2,13 @@
 ### Example user template
 
 # IntelliJ project files
-.idea
+.idea/*
 *.iml
 *.xlsx
 
 !/README.md
+Pipfile
+Pipfile.lock
 
 /.vscode/
 /venv/

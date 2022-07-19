@@ -1,17 +1,19 @@
+import os
 import sys
 from datetime import date, timedelta, datetime
 from typing import List, Any
 
 import PySide6.QtCore
 import PySide6.QtGui
-from PySide6 import QtCharts
+from PySide6 import QtCharts, QtSql
+from PySide6.QtSql import QSqlTableModel, QSqlDatabase, QSqlDriver
 from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView, QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QDialog,
-                               QTabWidget, QHeaderView)
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QTabWidget,
+                               QHeaderView, QSizePolicy)
 
 from funcions import (Escriptor, Lector, Iniciador, Exportador)
 
@@ -55,56 +57,59 @@ class Visualitzador(QWidget):
 
     def __init__(self):
         super().__init__()
+
         self.setWindowTitle("Alumnes")
         self.setWindowIcon(QIcon("src/icones/document-properties-symbolic.svg"))
         self.resize(300, 200)
         self.setMinimumWidth(400)
         self.setMaximumWidth(650)
-
         self.alumne_seleccionat = ""
-        self.lector_editor_registres = Lector()
-        self.llista_alumnes = self.lector_editor_registres.llista_alumnes_registres()
-        self.escriptor_registres = Escriptor()
-        self.visualitzador_taula = QTableView()
+        self.taula = QTableView()
+        self.taula.setMaximumWidth(600)
         self.visualitzador_distribucio = QVBoxLayout()
-        self.visualitzador_distribucio.setAlignment(Qt.AlignTop)
-        self.setLayout(self.visualitzador_distribucio)
-        self.alumne_etiqueta = QLabel("Alumne: ")
-        self.selector_alumnes = QComboBox()
-        self.alumne_seleccionat = self.selector_alumnes.currentText()
-        self.selector_alumnes.currentTextChanged.connect(self.canvi_alumne)
         self.bloc_seleccio = QHBoxLayout()
+        self.lector_editor_registres = Lector()
+        self.llista_alumnes = self.lector_editor_registres.llista_alumnes_desplegable()
+        self.conexio_base_dades()
+        # Organitzem elements:
+        self.etiqueta_alumne = QLabel("Alumne: ")
+        self.dialeg_alumne = QComboBox()
+        self.dialeg_alumne.addItem("*Tots*")
+        self.dialeg_alumne.addItems(self.llista_alumnes)
+        self.dialeg_alumne.currentTextChanged.connect(self.modificacio_seleccio)
+        self.bloc_seleccio.addWidget(self.etiqueta_alumne)
+        self.bloc_seleccio.addWidget(self.dialeg_alumne)
         self.bloc_seleccio.setAlignment(Qt.AlignLeft)
-        self.bloc_seleccio.addWidget(self.alumne_etiqueta)
-        self.bloc_seleccio.addWidget(self.selector_alumnes)
-        self.selector_alumnes.addItems(self.llista_alumnes)
-        self.visualitzador_taula_model = ModelVisualitzacio(
-            self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
-        self.visualitzador_taula.setModel(self.visualitzador_taula_model)
-
-        self.visualitzador_taula.setSortingEnabled(True)
-        self.visualitzador_taula.setWordWrap(True)
-        self.visualitzador_taula.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.visualitzador_taula.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.visualitzador_taula.setColumnHidden(0, True)
-        self.visualitzador_taula.setColumnHidden(1, True)
-
-        # self.visualitzador_taula.sizeHintForColumn(100)
-        self.visualitzador_taula.horizontalHeader().setStretchLastSection(True)
-        self.visualitzador_taula.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.visualitzador_taula.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.visualitzador_taula.verticalHeader().setVisible(True)
+        self.setLayout(self.visualitzador_distribucio)
         self.visualitzador_distribucio.addLayout(self.bloc_seleccio)
-        self.visualitzador_distribucio.addWidget(self.visualitzador_taula)
+        self.visualitzador_distribucio.addWidget(self.taula)
+        # Esdeveniment si editem un registre:
 
-    def canvi_alumne(self):
-        self.alumne_seleccionat = self.selector_alumnes.currentText()
-        self.visualitzador_taula_model = ModelVisualitzacio(
-            self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
-        self.visualitzador_taula.setModel(self.visualitzador_taula_model)
-        # self.visualitzador_taula.resizeColumnsToContents()
-        # self.visualitzador_taula.resizeRowsToContents()
+    def modificacio_seleccio(self):
+        if self.dialeg_alumne.currentText() !="*Tots*":
+            self.model_visualitzar.setFilter("nom_alumne LIKE '%{}%'".format(self.dialeg_alumne.currentText()))
+            self.taula.hideColumn(1)
+        else:
+            self.model_visualitzar.setFilter("")
+            self.taula.showColumn(1)
 
+    def conexio_base_dades(self):
+        directory_base = os.path.dirname(__file__)
+        carpeta_base_dades = os.path.join(directory_base, "dades/registre.db")
+        base_dades = QSqlDatabase("QSQLITE")
+        base_dades.setDatabaseName(carpeta_base_dades)
+        base_dades.open()
+        if not base_dades.isOpen():
+            print("Error: no s'ha pogut obrir la base de dades")
+            sys.exit(1)
+        self.model_visualitzar = QSqlTableModel(db=base_dades)
+        self.model_visualitzar.setTable("registres")
+        self.model_visualitzar.select()
+        self.taula.setModel(self.model_visualitzar)
+        self.taula.resizeColumnsToContents()
+        self.taula.resizeRowsToContents()
+        self.taula.hideColumn(0)
+        self.taula.setWordWrap(True)
 
 
 
@@ -366,6 +371,19 @@ class DialegSeleccioCarpeta(QFileDialog):
         self.setFileMode(QFileDialog.Directory)
 
 
+class VisualitzadorSQL(QtSql.QSqlTableModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        directory_base = os.path.dirname(__file__)
+        carpeta_base_dades = os.path.join(directory_base, "src/dades/registre.db")
+        base_dades = QSqlDatabase("QSQLITE")
+        base_dades.setDatabaseName(carpeta_base_dades)
+        base_dades.open()
+        model_taula = QSqlTableModel(db = base_dades)
+        model_taula.select()
+
+
+
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
@@ -424,8 +442,15 @@ class ModelVisualitzacio(QAbstractTableModel):
             if isinstance(value, datetime):
                 # Render time to YYY-MM-DD.
                 return value.strftime("%d/%m/%Y")
-
             return value
+        elif role == Qt.ItemDataRole.UserRole:
+            valor_introduit = QAbstractTableModel.data(index)
+            print(self.setData(index, valor_introduit, 2))
+            valor_previ = self._data[index.row()][index.column()]
+            if valor_introduit == valor_previ:
+                return valor_previ
+            else:
+                return valor_introduit
 
     def rowCount(self, index):
         # The length of the outer list.

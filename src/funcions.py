@@ -1,7 +1,7 @@
 import datetime
 import sqlite3
-from datetime import datetime, date
-from dateutil import parser
+from datetime import datetime, date, date, timedelta
+import dateutil
 
 import numpy as np
 import pandas as pd
@@ -132,7 +132,7 @@ class Lector:
             r_registres = conn.execute(ordre_consulta_sql, (alumne,)).fetchall()
             l_registres = [list(registre) for registre in r_registres]
             for registre in l_registres:
-                registre[3] = parser.parse(registre[3])
+                registre[3] = dateutil.parser.parse(registre[3])
 
             return l_registres
         except sqlite3.OperationalError:
