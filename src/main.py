@@ -5,6 +5,7 @@ from typing import List, Any
 
 import PySide6.QtCore
 import PySide6.QtGui
+import dateutil
 from PySide6 import QtCharts, QtSql
 from PySide6.QtSql import QSqlTableModel, QSqlDatabase, QSqlDriver
 from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
@@ -13,7 +14,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView, QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QTabWidget,
-                               QHeaderView, QSizePolicy)
+                               QHeaderView, QSizePolicy, QStyle)
 
 from funcions import (Escriptor, Lector, Iniciador, Exportador)
 
@@ -58,6 +59,7 @@ class Visualitzador(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.model_visualitzar = None
         self.setWindowTitle("Alumnes")
         self.setWindowIcon(QIcon("src/icones/document-properties-symbolic.svg"))
         self.resize(300, 200)
@@ -86,31 +88,40 @@ class Visualitzador(QWidget):
         # Esdeveniment si editem un registre:
 
     def modificacio_seleccio(self):
-        if self.dialeg_alumne.currentText() !="*Tots*":
+        if self.dialeg_alumne.currentText() != "*Tots*":
+            # self.model_visualitzar.refrescar_format()
             self.model_visualitzar.setFilter("nom_alumne LIKE '%{}%'".format(self.dialeg_alumne.currentText()))
             self.taula.hideColumn(1)
+            self.taula.setColumnWidth(4, 150)
+            self.taula.setWordWrap(True)
+            self.taula.resizeColumnsToContents()
+            self.taula.resizeRowsToContents()
+
+
         else:
             self.model_visualitzar.setFilter("")
             self.taula.showColumn(1)
+            self.taula.setColumnWidth(4, 225)
+            self.taula.setWordWrap(True)
+            self.taula.resizeColumnsToContents()
+            self.taula.resizeRowsToContents()
 
     def conexio_base_dades(self):
-        directory_base = os.path.dirname(__file__)
-        carpeta_base_dades = os.path.join(directory_base, "dades/registre.db")
-        base_dades = QSqlDatabase("QSQLITE")
-        base_dades.setDatabaseName(carpeta_base_dades)
-        base_dades.open()
-        if not base_dades.isOpen():
-            print("Error: no s'ha pogut obrir la base de dades")
-            sys.exit(1)
-        self.model_visualitzar = QSqlTableModel(db=base_dades)
-        self.model_visualitzar.setTable("registres")
-        self.model_visualitzar.select()
+        self.model_visualitzar = VisualitzadorSQL("registres").model
+        self.model_visualitzar.setHeaderData(1, Qt.Horizontal, "Alumne")
+        self.model_visualitzar.setHeaderData(2, Qt.Horizontal, "Motiu")
+        self.model_visualitzar.setHeaderData(3, Qt.Horizontal, "Data")
+        self.model_visualitzar.setHeaderData(4, Qt.Horizontal, "Descripcio")
         self.taula.setModel(self.model_visualitzar)
+        self.taula.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.taula.setMaximumWidth(600)
         self.taula.resizeColumnsToContents()
         self.taula.resizeRowsToContents()
+        self.taula.setColumnWidth(4, 225)
+        self.taula.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.taula.setWordWrap(True)
         self.taula.hideColumn(0)
         self.taula.setWordWrap(True)
-
 
 
 class Grafics(QWidget):
@@ -371,17 +382,28 @@ class DialegSeleccioCarpeta(QFileDialog):
         self.setFileMode(QFileDialog.Directory)
 
 
-class VisualitzadorSQL(QtSql.QSqlTableModel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        directory_base = os.path.dirname(__file__)
-        carpeta_base_dades = os.path.join(directory_base, "src/dades/registre.db")
-        base_dades = QSqlDatabase("QSQLITE")
-        base_dades.setDatabaseName(carpeta_base_dades)
-        base_dades.open()
-        model_taula = QSqlTableModel(db = base_dades)
-        model_taula.select()
-
+class VisualitzadorSQL(QSqlTableModel):
+    def __init__(self, taula_consultar):
+        super().__init__()
+        self.taula_consultar = taula_consultar
+        self.directory_base = os.path.dirname(__file__)
+        self.carpeta_base_dades = os.path.join(self.directory_base, "dades/registre.db")
+        self.base_dades = QSqlDatabase("QSQLITE")
+        self.base_dades.setDatabaseName(self.carpeta_base_dades)
+        self.base_dades.open()
+        if not self.base_dades.isOpen():
+            print("Error: no s'ha pogut obrir la base de dades")
+            sys.exit(1)
+        self.model = QSqlTableModel(db=self.base_dades)
+        self.model.setTable(self.taula_consultar)
+        self.model.select()
+        self.model.setEditStrategy(QtSql.QSqlTableModel.OnManualSubmit)
+        # print(self.model.data(self.model.index(0, 3)))
+        # TODO: Aplicar canvi de data a tot el model
+        if self.taula_consultar == "registres":
+            for i in range(self.model.rowCount()):
+                self.item_format = dateutil.parser.parse(self.model.data(self.model.index(i, 3))).strftime("%d/%m/%Y")
+                self.model.setData(self.model.index(i, 3), self.item_format)
 
 
 class TableModel(QAbstractTableModel):
