@@ -89,8 +89,8 @@ class Visualitzador(QWidget):
 
     def modificacio_seleccio(self):
         if self.dialeg_alumne.currentText() != "*Tots*":
-            # self.model_visualitzar.refrescar_format()
             self.model_visualitzar.setFilter("nom_alumne LIKE '%{}%'".format(self.dialeg_alumne.currentText()))
+            self.taula.updateEditorData()
             self.taula.hideColumn(1)
             self.taula.setColumnWidth(4, 150)
             self.taula.setWordWrap(True)
@@ -121,7 +121,6 @@ class Visualitzador(QWidget):
         self.taula.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.taula.setWordWrap(True)
         self.taula.hideColumn(0)
-        self.taula.setWordWrap(True)
 
 
 class Grafics(QWidget):
@@ -398,6 +397,7 @@ class VisualitzadorSQL(QSqlTableModel):
         self.model.setTable(self.taula_consultar)
         self.model.select()
         self.model.setEditStrategy(QtSql.QSqlTableModel.OnManualSubmit)
+
         # print(self.model.data(self.model.index(0, 3)))
         # TODO: Aplicar canvi de data a tot el model
         if self.taula_consultar == "registres":

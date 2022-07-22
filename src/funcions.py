@@ -143,13 +143,12 @@ class Escriptor:
     def __init__(self):
         self.arxiubbdd = arxiubbdd
 
-    @staticmethod
-    def registre_dades(nom_alumne, nom_categoria, data_registre, text_registre):
+    def registre_dades(self, nom_alumne, nom_categoria, data_registre, text_registre):
         """Funció per a inserir el registre a la taula de la base de dades i, si no existeix, crear-la."""
         ordre_inserir_sql = 'INSERT INTO registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
         dades_a_registrar = (nom_alumne, nom_categoria, data_registre, text_registre)
         try:
-            conn = sqlite3.connect(arxiubbdd)
+            conn = sqlite3.connect(self.arxiubbdd)
             conn.cursor()
             conn.execute(ordre_inserir_sql, dades_a_registrar)
             conn.commit()
@@ -157,10 +156,9 @@ class Escriptor:
         except sqlite3.OperationalError:
             print("ERROR")
 
-    @staticmethod
-    def actualitzacio_dates(data1, data2):
+    def actualitzacio_dates(self, data1, data2):
         ordre = 'UPDATE dates SET data=? WHERE id = ?'
-        conn = sqlite3.connect(arxiubbdd)
+        conn = sqlite3.connect(self.arxiubbdd)
         conn.cursor()
         ultim_id_data_consulta = 'SELECT MAX(id) FROM dates'
         ultim_id_data = conn.execute(ultim_id_data_consulta).fetchone()[0]
@@ -172,13 +170,13 @@ class Escriptor:
         finally:
             conn.close()
 
-    @staticmethod
-    def eliminar_registres():
+
+    def eliminar_registres(self):
         """Funció per a eliminar un registre de la taula de la base de dades"""
         ordre_eliminar_sql = 'DELETE FROM registres; DELETE FROM dates; DELETE FROM alumnes'
 
         try:
-            conn = sqlite3.connect(arxiubbdd)
+            conn = sqlite3.connect(self.arxiubbdd)
             conn.cursor()
             conn.execute(ordre_eliminar_sql)
             conn.commit()
