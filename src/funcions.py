@@ -45,7 +45,7 @@ class Lector:
 
     @staticmethod
     def llista_alumnes_registres():
-        """Funció per a obtenir el llistat d'alumnes que tenen algun registre"""
+        """Funció per a obtenir el llistat d'alumnes que tenen algun registre_input"""
         ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM registres ORDER BY nom_alumne'
 
         try:
@@ -144,7 +144,7 @@ class Escriptor:
         self.arxiubbdd = arxiubbdd
 
     def registre_dades(self, nom_alumne, nom_categoria, data_registre, text_registre):
-        """Funció per a inserir el registre a la taula de la base de dades i, si no existeix, crear-la."""
+        """Funció per a inserir el registre_input a la taula de la base de dades i, si no existeix, crear-la."""
         ordre_inserir_sql = 'INSERT INTO registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
         dades_a_registrar = (nom_alumne, nom_categoria, data_registre, text_registre)
         try:
@@ -172,7 +172,7 @@ class Escriptor:
 
 
     def eliminar_registres(self):
-        """Funció per a eliminar un registre de la taula de la base de dades"""
+        """Funció per a eliminar un registre_input de la taula de la base de dades"""
         ordre_eliminar_sql = 'DELETE FROM registres; DELETE FROM dates; DELETE FROM alumnes'
 
         try:
@@ -300,7 +300,7 @@ class Exportador:
                 conn.close()
 
         def determinacio_trimestre(data_cons):
-            """Assigna el trimestre segons la data del registre"""
+            """Assigna el trimestre segons la data del registre_input"""
             data_registre = data_cons['data']
             d1ertrim = datetime.strptime(llista_dates()[0], '%Y-%m-%d')
             d2ontrim = datetime.strptime(llista_dates()[1], '%Y-%m-%d')

@@ -1,7 +1,9 @@
+import datetime
 import pathlib
 import sqlite3
 import os
 import sys
+from sqlite3 import PARSE_DECLTYPES
 
 
 class ModelDao:
@@ -123,9 +125,22 @@ class RegistresBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def crear_registre(self, id_alumne: int, id_categoria: int, data: int, descripcio: str):
-        """Crea un nou registre"""
+    def lectura_alumnes_registrats(self):
+        """Llegeix els alumnes que tinguin algun registre"""
+        parametre: str = "id_alumne"
         conn = sqlite3.connect(self.ruta_bbdd)
+        c = conn.cursor()
+        try:
+            ordre_consultar = f"SELECT DISTINCT {parametre} FROM {self.taula}"
+            consulta = c.execute(ordre_consultar).fetchall()
+            c.close()
+            return consulta
+        except sqlite3.OperationalError:
+            return False
+
+    def crear_registre(self, id_alumne: int, id_categoria: int, data: str, descripcio: str):
+        """Crea un nou registre"""
+        conn = sqlite3.connect("/home/jordi/Documents/Projectes/seguiment/src/dades/registres3.db",detect_types=PARSE_DECLTYPES)
         c = conn.cursor()
         try:
             ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio) VALUES " + \
@@ -134,7 +149,8 @@ class RegistresBbdd(ModelDao):
             conn.commit()
             c.close()
             return True
-        except sqlite3.OperationalError:
+        except sqlite3.OperationalError as e:
+            print(e)
             return False
 
     def actualitzar_registre(self, id_registre: int, id_alumne: int, id_categoria: int, data: int, descripcio: str):
@@ -199,7 +215,7 @@ class CategoriesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def eliminar_categoria(self, num_referencia):
+    def eliminar_categoria(self, num_referencia: int):
         """Elimina una categoria"""
         conn = sqlite3.connect(self.ruta_bbdd)
         c = conn.cursor()
@@ -212,7 +228,7 @@ class CategoriesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def actualitzar_categoria(self, num_referencia, nom_categoria):
+    def actualitzar_categoria(self, num_referencia: int, nom_categoria: str):
         """Actualitza una categoria"""
         conn = sqlite3.connect(self.ruta_bbdd)
         c = conn.cursor()
@@ -288,7 +304,7 @@ class DatesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def actualitzar_data(self, num_referencia, data):
+    def actualitzar_data(self, num_referencia: int, data: str):
         """Actualitza una data"""
         conn = sqlite3.connect(self.ruta_bbdd)
         c = conn.cursor()

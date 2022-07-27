@@ -1,9 +1,17 @@
 from dataclasses import dataclass
+from datetime import date
 
 
 @dataclass
-class Registre:
+class Registre_sortida:
     id: int
+    alumne: str
+    categoria: str
+    data: str
+    descripcio: str
+
+@dataclass
+class Registre_entrada:
     alumne: str
     categoria: str
     data: str
@@ -12,7 +20,6 @@ class Registre:
 
 @dataclass
 class Alumne:
-    id: int
     nom: str
 
 

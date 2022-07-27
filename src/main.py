@@ -85,7 +85,7 @@ class Visualitzador(QWidget):
         self.setLayout(self.visualitzador_distribucio)
         self.visualitzador_distribucio.addLayout(self.bloc_seleccio)
         self.visualitzador_distribucio.addWidget(self.taula)
-        # Esdeveniment si editem un registre:
+        # Esdeveniment si editem un registre_input:
 
     def modificacio_seleccio(self):
         if self.dialeg_alumne.currentText() != "*Tots*":
