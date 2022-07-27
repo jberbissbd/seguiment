@@ -33,7 +33,8 @@ class TableModel(QtCore.QAbstractTableModel):
                 # See below for the nested-list data structure.
                 # .row() indexes into the outer list,
                 # .column() indexes into the sub-list
-                return self._data[index.row()][index.column()]
+                value = self._data[index.row()][index.column()]
+                return value
 
     def rowCount(self, index):
         # The length of the outer list.
@@ -49,6 +50,11 @@ class TableModel(QtCore.QAbstractTableModel):
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         else:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+
+    def setData(self, index, value, role):
+        if role == Qt.EditRole:
+            self._data[index.row()][index.column()] = value
+            return True
 
 
 class MainWindow(QMainWindow):
@@ -241,6 +247,19 @@ class MainWindow(QMainWindow):
             self.eliminar_registres(registres_eliminats)
         if registres_actualitzats:
             self.actualitzar_registres(registres_actualitzats)
+
+    def eliminar_registres(self, registres_eliminats):
+        """Funcio per a eliminar registres de la base de dades."""
+        for registre in registres_eliminats:
+            self.CONTROLADOR.eliminar_registre(registre)
+            self.TAULA_MODEL.eliminar_registre(registre)
+            self.TAULA_MODEL.layoutChanged.emit()
+
+    def actualitzar_registres(self, registres_actualitzats):
+        """Funcio per a actualitzar registres de la base de dades."""
+        for registre in registres_actualitzats:
+            print(registre)
+            # self.TAULA_MODEL.layoutChanged.emit()
 
     def widget_dates(self):
         self.DATES = QWidget()
