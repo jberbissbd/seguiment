@@ -3,7 +3,7 @@ from datetime import date
 
 
 @dataclass
-class Registre_sortida:
+class Registres_gui_input:
     id: int
     alumne: dataclass
     categoria: str
@@ -11,7 +11,7 @@ class Registre_sortida:
     descripcio: str
 
 @dataclass
-class Registre_entrada:
+class Registres_gui_output:
     alumne: dataclass
     categoria: str
     data: str
@@ -19,18 +19,18 @@ class Registre_entrada:
 
 
 @dataclass
-class Alumne:
+class Alumne_gui_input:
     id: int
     nom: str
 
 
 @dataclass
-class Categoria:
+class Categoria_gui_input:
     id: int
     nom: str
 
 
 @dataclass
-class Data:
+class Data_gui_input:
     id: int
     dia: str

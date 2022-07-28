@@ -2,7 +2,7 @@ import os
 import sys
 from datetime import date, timedelta, datetime
 from typing import List, Any, Union
-from src.agents.formats import Data, Registre_entrada, Alumne, Categoria, Registre_sortida
+from src.agents.formats import Data_gui_input, Registres_gui_output, Alumne_gui_input, Categoria_gui_input, Registres_gui_input
 from src.proves_dao.comptable import Comptable, Classificador, Calendaritzador, CapEstudis
 import PySide6.QtCore
 import PySide6.QtGui
@@ -89,14 +89,11 @@ class MainWindow(QMainWindow):
 
     def configuracio_interficie(self):
         self.setWindowTitle("Seguiment d'alumnes")
-        self.resize(600, 500)
+        self.resize(600, 700)
         # Configurem distribucio principal:
         # Configurem Widget principal:
         self.WIDGET_PRINCIPAL = QWidget()
         self.WIDGET_CENTRAL = QStackedWidget()
-        self.WIDGET_BARRA_NOTIFICACIONS = QWidget()
-        self.WIDGET_BARRA_NOTIFICACIONS.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.WIDGET_BARRA_NOTIFICACIONS.setFixedSize(self.height(), 20)
         self.BARRA_NOTIFICACIONS = QStatusBar(self.WIDGET_PRINCIPAL)
         self.BARRA_NOTIFICACIONS.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.BARRA_NOTIFICACIONS.setStyle(QStyleFactory.create("Fusion"))
@@ -108,6 +105,9 @@ class MainWindow(QMainWindow):
         self.BARRA_NOTIFICACIONS.setSizeGripEnabled(True)
         self.setStatusBar(self.BARRA_NOTIFICACIONS)
         DISTRIBUCIO_PRINCIPAL = QVBoxLayout()
+        DISTRIBUCIO_PRINCIPAL.setContentsMargins(5, 5, 5, 5)
+        DISTRIBUCIO_PRINCIPAL.setSpacing(5)
+        DISTRIBUCIO_PRINCIPAL.setAlignment(Qt.AlignTop)
         self.WIDGET_PRINCIPAL.setLayout(DISTRIBUCIO_PRINCIPAL)
         self.setCentralWidget(self.WIDGET_PRINCIPAL)
         self.widget_creacio()
@@ -121,7 +121,6 @@ class MainWindow(QMainWindow):
 
         DISTRIBUCIO_PRINCIPAL.addWidget(self.BARRA_EINES_DISTIBUCIO)
         DISTRIBUCIO_PRINCIPAL.addWidget(self.WIDGET_CENTRAL)
-
         DISTRIBUCIO_PRINCIPAL.addWidget(self.BARRA_NOTIFICACIONS)
 
         # Definim botons i les seves propietats:
@@ -176,7 +175,6 @@ class MainWindow(QMainWindow):
         self.CREACIO = QWidget()
         DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
-        DISTRIBUCIO.setVerticalSpacing(10)
         self.CREACIO.setLayout(DISTRIBUCIO)
         ETIQUETA_ALUMNES = QLabel("Alumnes")
         ETIQUETA_ALUMNES.setMaximumWidth(self.AMPLADA_ETIQUETES)

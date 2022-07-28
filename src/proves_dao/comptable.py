@@ -4,7 +4,7 @@ import dateutil
 
 from src.proves_dao.ModelDao import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd
 from dateutil import parser
-from src.agents.formats import Data, Registre_sortida, Alumne, Categoria, Registre_entrada
+from src.agents.formats import Data_gui_input, Registres_gui_input, Alumne_gui_input, Categoria_gui_input, Registres_gui_output
 import sys
 from datetime import date, timedelta, datetime
 import sqlite3
@@ -39,13 +39,13 @@ class Comptable:
             registres_classes = []
             for registre in registres_formatats:
                 # Obtenim el nom de l'alumne:
-                registre[1] = Alumne(self.info_alumnes[registre[1] - 1][0],self.info_alumnes[registre[1] - 1][1],)
+                registre[1] = Alumne_gui_input(self.info_alumnes[registre[1] - 1][0], self.info_alumnes[registre[1] - 1][1], )
                 # Substituim l'id de la categoria de la llista de registres pel seu nom:
-                registre[2] = Categoria(self.info_categories[registre[2] - 1][0],self.info_categories[registre[2] - 1][1])
+                registre[2] = Categoria_gui_input(self.info_categories[registre[2] - 1][0], self.info_categories[registre[2] - 1][1])
                 # Formatem la data:
                 registre[3] = dateutil.parser.parse(registre[3]).strftime("%d/%m/%Y")
                 registres_classes.append(
-                    Registre_sortida(registre[0], registre[1], registre[2], registre[3], registre[4]))
+                    Registres_gui_input(registre[0], registre[1], registre[2], registre[3], registre[4]))
             return registres_classes
         else:
             return False
@@ -72,7 +72,7 @@ class Comptable:
             return False
 
     def actualitzar_registre(self, registre_input):
-        if not isinstance(registre_input, Registre_sortida):
+        if not isinstance(registre_input, Registres_gui_input):
             raise TypeError("El registre_input no és del tipus correcte.")
         else:
             # Convertim la data a un format que pugui ser llegit per la base de dades:
@@ -97,7 +97,7 @@ class Comptable:
 
     def creacio_registres(self, registre_input):
         """Crea un registre a la base de dades:"""
-        if not isinstance(registre_input, Registre_entrada):
+        if not isinstance(registre_input, Registres_gui_output):
             return False
         else:
             # Convertim la data a un format que pugui ser llegit per la base de dades:
@@ -139,16 +139,16 @@ class Calendaritzador:
 
                 for dia in llista_dies:
                     dia[1] = parser.parse(dia[1]).strftime("%d/%m/%Y")
-                    llista_classes.append(Data(dia[0], dia[1]))
+                    llista_classes.append(Data_gui_input(dia[0], dia[1]))
             return llista_classes
         else:
             return False
 
     def actualitza_dates(self, aniversari):
         """Actualitza la base de dades amb la data subministrada, comprovant si es una data nova o no
-        :type aniversari: Data
+        :type aniversari: Data_gui_input
         """
-        if isinstance(aniversari, Data):
+        if isinstance(aniversari, Data_gui_input):
             num_data = [dia.id for dia in self.dates]
             if aniversari.id not in num_data:
                 return False
@@ -175,7 +175,7 @@ class CapEstudis:
         # Condicio de seguretat per si no hi ha alumnes:
         alumnes_formatats = []
         if self.info_alumnes:
-            alumnes_formatats = [Alumne(alumne[0],alumne[1]) for alumne in self.info_alumnes]
+            alumnes_formatats = [Alumne_gui_input(alumne[0], alumne[1]) for alumne in self.info_alumnes]
             return alumnes_formatats
         else:
             return False
@@ -190,7 +190,7 @@ class CapEstudis:
             for alumne in alumnes_registrats:
                 for nom in noms:
                     if alumne[0] == nom[0]:
-                        alumnes_registrats_formatats.append(Alumne(nom[0],nom[1]))
+                        alumnes_registrats_formatats.append(Alumne_gui_input(nom[0], nom[1]))
 
             return alumnes_registrats_formatats
         else:
@@ -216,7 +216,7 @@ class CapEstudis:
 
     def afegir_alumnes(self, alumne):
         """Afegix un alumne a la base de dades"""
-        if isinstance(alumne, Alumne):
+        if isinstance(alumne, Alumne_gui_input):
             self.alumnes.afegir_alumne(alumne.nom)
             return True
         else:
@@ -224,7 +224,7 @@ class CapEstudis:
 
     def obtenir_id_alumne(self, alumne):
         """Retorna l'id d'un alumne"""
-        if isinstance(alumne, Alumne):
+        if isinstance(alumne, Alumne_gui_input):
             for alumne_bbdd in self.info_alumnes:
                 if alumne_bbdd[1] == alumne.nom:
                     return alumne_bbdd[0]
@@ -245,7 +245,7 @@ class Classificador:
         if self.info_categories:
             categories = [list(categoria) for categoria in self.info_categories]
             for categoria in categories:
-                categories_formatades.append(Categoria(categoria[0], categoria[1]))
+                categories_formatades.append(Categoria_gui_input(categoria[0], categoria[1]))
             return categories_formatades
         else:
             return False
