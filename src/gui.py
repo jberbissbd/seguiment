@@ -15,7 +15,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView, QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton, QStackedLayout, QStackedWidget, QButtonGroup,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QTabWidget,
-                               QHeaderView, QSizePolicy, QStyle, QRadioButton, QGroupBox, QTableWidget)
+                               QHeaderView, QSizePolicy, QStyle, QRadioButton, QGroupBox, QTableWidget, QStatusBar,
+                               QStyleFactory)
 
 
 def sortir():
@@ -46,21 +47,24 @@ class TableModel(QtCore.QAbstractTableModel):
         return len(self._data[0])
 
     def flags(self, index):
-        if index.column() != 2:
+        if 2 != index.column() or 1 != index.column():
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         else:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
     def setData(self, index, value, role):
-        if role == Qt.EditRole:
+        if role == Qt.EditRole | Qt.UserRole | Qt.EditRole and index.column() != 2 or index.column() != 1:
             self._data[index.row()][index.column()] = value
             return True
+        else:
+            return False
 
 
 class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.BARRA_NOTIFICACIONS = None
         self.BOTO_DATES = None
         self.BOTO_INFORMES = None
         self.TAULA_MODEL = None
@@ -90,6 +94,19 @@ class MainWindow(QMainWindow):
         # Configurem Widget principal:
         self.WIDGET_PRINCIPAL = QWidget()
         self.WIDGET_CENTRAL = QStackedWidget()
+        self.WIDGET_BARRA_NOTIFICACIONS = QWidget()
+        self.WIDGET_BARRA_NOTIFICACIONS.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.WIDGET_BARRA_NOTIFICACIONS.setFixedSize(self.height(), 20)
+        self.BARRA_NOTIFICACIONS = QStatusBar(self.WIDGET_PRINCIPAL)
+        self.BARRA_NOTIFICACIONS.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.BARRA_NOTIFICACIONS.setStyle(QStyleFactory.create("Fusion"))
+        self.BARRA_NOTIFICACIONS.setFixedHeight(20)
+        self.BARRA_NOTIFICACIONS.setFixedWidth(20)
+        self.BARRA_NOTIFICACIONS.setContentsMargins(0, 0, 0, 0)
+        self.BARRA_NOTIFICACIONS.setVisible(True)
+        self.BARRA_NOTIFICACIONS.setEnabled(True)
+        self.BARRA_NOTIFICACIONS.setSizeGripEnabled(True)
+        self.setStatusBar(self.BARRA_NOTIFICACIONS)
         DISTRIBUCIO_PRINCIPAL = QVBoxLayout()
         self.WIDGET_PRINCIPAL.setLayout(DISTRIBUCIO_PRINCIPAL)
         self.setCentralWidget(self.WIDGET_PRINCIPAL)
@@ -97,11 +114,15 @@ class MainWindow(QMainWindow):
         self.widget_visualitzacio()
         self.widget_dates()
         self.widget_informes()
+
         # Introduim la barra d'eines:
 
         self.BARRA_EINES_DISTIBUCIO = QToolBar()
+
         DISTRIBUCIO_PRINCIPAL.addWidget(self.BARRA_EINES_DISTIBUCIO)
         DISTRIBUCIO_PRINCIPAL.addWidget(self.WIDGET_CENTRAL)
+
+        DISTRIBUCIO_PRINCIPAL.addWidget(self.BARRA_NOTIFICACIONS)
 
         # Definim botons i les seves propietats:
         self.BOTO_CREAR = QPushButton(self, icon=QIcon("icones/system-switch-user-symbolic.svg"), text="Crear")
@@ -133,9 +154,11 @@ class MainWindow(QMainWindow):
         self.BARRA_EINES_DISTIBUCIO.addWidget(self.BOTO_INFORMES)
         self.BARRA_EINES_DISTIBUCIO.addSeparator()
         self.BARRA_EINES_DISTIBUCIO.addWidget(self.BOTO_SORTIR)
-        # Definim widgets:
+        # Afegim una barra de status:
 
-        # Afegim pestanyes, un widget per cadascuna:
+
+
+        # Afegim stack, un widget per cadascuna:
         self.WIDGET_CENTRAL.addWidget(self.CREACIO)
         self.WIDGET_CENTRAL.addWidget(self.VISUALITZAR_EDITAR)
         self.WIDGET_CENTRAL.addWidget(self.DATES)
@@ -157,32 +180,49 @@ class MainWindow(QMainWindow):
         self.CREACIO.setLayout(DISTRIBUCIO)
         ETIQUETA_ALUMNES = QLabel("Alumnes")
         ETIQUETA_ALUMNES.setMaximumWidth(self.AMPLADA_ETIQUETES)
-        SELECTOR_ALUMNES = QComboBox()
-        SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes())
-        SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.CREACIO_SELECTOR_ALUMNES = QComboBox()
+        self.CREACIO_SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes())
+        self.CREACIO_SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         ETIQUETA_CATEGORIA = QLabel("Motiu:")
         ETIQUETA_CATEGORIA.setMaximumWidth(self.AMPLADA_ETIQUETES)
-        SELECTOR_CATEGORIA = QComboBox()
-        SELECTOR_CATEGORIA.addItems(self.obtenir_categories())
-        SELECTOR_CATEGORIA.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.CREACIO_SELECTOR_CATEGORIA = QComboBox()
+        self.CREACIO_SELECTOR_CATEGORIA.addItems(self.obtenir_categories())
+        self.CREACIO_SELECTOR_CATEGORIA.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         ETIQUETA_DATES = QLabel("Data:")
-        SELECTOR_DATES = QDateEdit()
-        SELECTOR_DATES.setDisplayFormat(u"dd/MM/yyyy")
-        SELECTOR_DATES.setCalendarPopup(True)
-        SELECTOR_DATES.setDate(QDate.currentDate())
-        SELECTOR_DATES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.SELECTOR_DATES = QDateEdit()
+        self.SELECTOR_DATES.setDisplayFormat(u"dd/MM/yyyy")
+        self.SELECTOR_DATES.setCalendarPopup(True)
+        self.SELECTOR_DATES.setDate(QDate.currentDate())
+        self.SELECTOR_DATES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         ETIQUETA_DESCRIPCIO = QLabel("Descripcio: ")
-        EDICIO_DESCRIPCIO = QTextEdit()
-        EDICIO_DESCRIPCIO.setMaximumWidth(300)
-        EDICIO_DESCRIPCIO.setMaximumHeight(350)
+        self.EDICIO_DESCRIPCIO = QTextEdit()
+        BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar")
+        BOTO_DESAR.setIconSize(QSize(24, 24))
+        BOTO_DESAR.setToolTip("Desar")
+        BOTO_DESAR.setFlat(True)
+        BOTO_DESAR.clicked.connect(self.desar_registre)
+        self.EDICIO_DESCRIPCIO.setMaximumWidth(300)
+        self.EDICIO_DESCRIPCIO.setMaximumHeight(350)
         DISTRIBUCIO.addWidget(ETIQUETA_ALUMNES, 0, 0)
-        DISTRIBUCIO.addWidget(SELECTOR_ALUMNES, 0, 1)
+        DISTRIBUCIO.addWidget(self.CREACIO_SELECTOR_ALUMNES, 0, 1)
         DISTRIBUCIO.addWidget(ETIQUETA_CATEGORIA, 1, 0)
-        DISTRIBUCIO.addWidget(SELECTOR_CATEGORIA, 1, 1)
+        DISTRIBUCIO.addWidget(self.CREACIO_SELECTOR_CATEGORIA, 1, 1)
         DISTRIBUCIO.addWidget(ETIQUETA_DATES, 2, 0)
-        DISTRIBUCIO.addWidget(SELECTOR_DATES, 2, 1)
+        DISTRIBUCIO.addWidget(self.SELECTOR_DATES, 2, 1)
         DISTRIBUCIO.addWidget(ETIQUETA_DESCRIPCIO, 3, 0)
-        DISTRIBUCIO.addWidget(EDICIO_DESCRIPCIO, 3, 1)
+        DISTRIBUCIO.addWidget(self.EDICIO_DESCRIPCIO, 3, 1)
+        DISTRIBUCIO.addWidget(BOTO_DESAR, 4, 0, 2, 0)
+
+    def desar_registre(self):
+        # Desar un nou registre:
+        alumne = self.CREACIO_SELECTOR_ALUMNES.currentText()
+        categoria = self.CREACIO_SELECTOR_CATEGORIA.currentText()
+        data = self.SELECTOR_DATES.date().toString("yyyy-MM-dd")
+        descripcio = self.EDICIO_DESCRIPCIO.toPlainText()
+        print(alumne, categoria, data, descripcio)
+        self.statusBar().showMessage("Registre desat correctament", 2000)
+
+
 
     def widget_visualitzacio(self):
         self.VISUALITZAR_EDITAR = QWidget()
@@ -194,18 +234,24 @@ class MainWindow(QMainWindow):
         DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
         DESPLEGABLE_SELECCIO.setMaximumWidth(300)
         BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar canvis")
-        BOTO_DESAR.clicked.connect(self.introduccio_registres)
+        BOTO_DESAR.clicked.connect(self.alteracio_registres)
         self.TAULA_MODEL = TableModel(self.obtenir_llistat_registres())
         self.columnes_model: int = self.TAULA_MODEL.columnCount(1)
         self.files_model: int = self.TAULA_MODEL.rowCount(1)
         self.TAULA = QTableView()
         self.TAULA.setModel(self.TAULA_MODEL)
+        self.TAULA.setColumnHidden(0, True)
+        self.TAULA.model().flags(self.TAULA.model().index(0, 0))
         DISTRIBUCIO.addWidget(DESPLEGABLE_SELECCIO, 0, 0)
         DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 1)
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
 
-    def introduccio_registres(self):
-        """Funcio per a comparar els registres de la taula i gestionar-los, tant si s'eliminen com si s'afegien."""
+
+
+
+    def alteracio_registres(self):
+        """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
+        si s'afegien. """
         model_comparacio = self.TAULA.model()
         dades_originals = self.obtenir_llistat_registres()
         llista_ids_originals: list = [ref[0] for ref in dades_originals]
@@ -251,9 +297,7 @@ class MainWindow(QMainWindow):
     def eliminar_registres(self, registres_eliminats):
         """Funcio per a eliminar registres de la base de dades."""
         for registre in registres_eliminats:
-            self.CONTROLADOR.eliminar_registre(registre)
-            self.TAULA_MODEL.eliminar_registre(registre)
-            self.TAULA_MODEL.layoutChanged.emit()
+            print("eliminar")
 
     def actualitzar_registres(self, registres_actualitzats):
         """Funcio per a actualitzar registres de la base de dades."""
@@ -278,7 +322,6 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO = QVBoxLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.INFORME.setLayout(DISTRIBUCIO)
-
         GRUP_TIPUS = QGroupBox()
         GRUP_TIPUS.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         GRUP_TIPUS.setTitle("Tipus d'informe")
@@ -296,7 +339,7 @@ class MainWindow(QMainWindow):
         GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_global)
         self.SELECTOR_ALUMNES = QComboBox()
         self.SELECTOR_ALUMNES.addItem("* Selecciona un alumne *")
-        self.SELECTOR_ALUMNES.addItems("* Tots *")
+        self.SELECTOR_ALUMNES.addItem("* Tots *")
         self.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         DISTRIBUCIO.addWidget(GRUP_TIPUS)
@@ -351,7 +394,7 @@ class MainWindow(QMainWindow):
         llista_registres = []
         if self.acces_registres.registres:
             for element in self.acces_registres.registres:
-                registre_ind = [element.id, element.alumne, element.categoria, element.data, element.descripcio]
+                registre_ind = [element.id, element.alumne.nom, element.categoria.nom, element.data, element.descripcio]
                 llista_registres.append(registre_ind)
             return llista_registres
         else:

@@ -1,5 +1,7 @@
 from typing import List
 
+import dateutil
+
 from src.proves_dao.ModelDao import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd
 from dateutil import parser
 from src.agents.formats import Data, Registre_sortida, Alumne, Categoria, Registre_entrada
@@ -37,11 +39,11 @@ class Comptable:
             registres_classes = []
             for registre in registres_formatats:
                 # Obtenim el nom de l'alumne:
-                registre[1] = self.info_alumnes[registre[1] - 1][1]
+                registre[1] = Alumne(self.info_alumnes[registre[1] - 1][0],self.info_alumnes[registre[1] - 1][1],)
                 # Substituim l'id de la categoria de la llista de registres pel seu nom:
-                registre[2] = self.info_categories[registre[2] - 1][1]
+                registre[2] = Categoria(self.info_categories[registre[2] - 1][0],self.info_categories[registre[2] - 1][1])
                 # Formatem la data:
-                registre[3] = parser.parse(registre[3]).strftime("%d/%m/%Y")
+                registre[3] = dateutil.parser.parse(registre[3]).strftime("%d/%m/%Y")
                 registres_classes.append(
                     Registre_sortida(registre[0], registre[1], registre[2], registre[3], registre[4]))
             return registres_classes
@@ -173,9 +175,7 @@ class CapEstudis:
         # Condicio de seguretat per si no hi ha alumnes:
         alumnes_formatats = []
         if self.info_alumnes:
-            noms = [alumne[1] for alumne in self.info_alumnes]
-            for nom in noms:
-                alumnes_formatats.append(Alumne(nom))
+            alumnes_formatats = [Alumne(alumne[0],alumne[1]) for alumne in self.info_alumnes]
             return alumnes_formatats
         else:
             return False
@@ -190,7 +190,7 @@ class CapEstudis:
             for alumne in alumnes_registrats:
                 for nom in noms:
                     if alumne[0] == nom[0]:
-                        alumnes_registrats_formatats.append(Alumne(nom[1]))
+                        alumnes_registrats_formatats.append(Alumne(nom[0],nom[1]))
 
             return alumnes_registrats_formatats
         else:

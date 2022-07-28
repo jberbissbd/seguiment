@@ -491,7 +491,7 @@ class ModelVisualitzacio(QAbstractTableModel):
                 return section
 
     def flags(self, index):
-        if index.column() != 2:
+        if not index.column() == 2:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         else:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled

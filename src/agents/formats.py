@@ -5,14 +5,14 @@ from datetime import date
 @dataclass
 class Registre_sortida:
     id: int
-    alumne: str
+    alumne: dataclass
     categoria: str
     data: str
     descripcio: str
 
 @dataclass
 class Registre_entrada:
-    alumne: str
+    alumne: dataclass
     categoria: str
     data: str
     descripcio: str
@@ -20,6 +20,7 @@ class Registre_entrada:
 
 @dataclass
 class Alumne:
+    id: int
     nom: str
 
 
