@@ -1,10 +1,13 @@
+import itertools
 from typing import List
 
 import dateutil
 
 from src.proves_dao.ModelDao import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd
 from dateutil import parser
-from src.agents.formats import Data_gui_input, Registres_gui_input, Alumne_gui_input, Categoria_gui_input, Registres_gui_output
+
+from src.agents.formats import Data_gui_input, Registres_gui_comm, Alumne_comm, Categoria_comm, Registres_gui_nou, \
+    Registres_bbdd_nou
 import sys
 from datetime import date, timedelta, datetime
 import sqlite3
@@ -17,9 +20,9 @@ class Comptable:
         self.info_registres = None
         self.info_alumnes = None
         self.alumnes = AlumnesBbdd()
-        self.registradror = RegistresBbdd()
+        self.registrador = RegistresBbdd()
         self.alumnes.llegir_alumnes()
-        self.registradror.lectura_registres()
+        self.registrador.lectura_registres()
         self.categories = CategoriesBbdd()
         self.categories.lectura_categories()
         self.registres = self.obtenir_registres()
@@ -30,23 +33,31 @@ class Comptable:
         """Retorna una llista de registres convenients per a la presentació: list:
         """
         self.info_alumnes = self.alumnes.llegir_alumnes()
-        self.info_registres = self.registradror.lectura_registres()
+        self.info_registres = self.registrador.lectura_registres()
         self.info_categories = self.categories.lectura_categories()
         # Condicio de seguretat per si no hi ha registres:
         if self.info_registres and self.info_alumnes and self.info_categories:
-            registres_formatats = [list(registre) for registre in self.info_registres]
+            registres_entrada = self.info_registres
+            missatge_registres = []
             # Substituim l'id de l'alumne de la llista de registres pel seu nom:
-            registres_classes = []
-            for registre in registres_formatats:
+
+            for registre in registres_entrada:
+                registre_proces = []
+                registre_proces.append(registre.id)
                 # Obtenim el nom de l'alumne:
-                registre[1] = Alumne_gui_input(self.info_alumnes[registre[1] - 1][0], self.info_alumnes[registre[1] - 1][1], )
+                for alumne in self.info_alumnes:
+                    if alumne.id == registre.alumne:
+                        registre_proces.append(alumne)
                 # Substituim l'id de la categoria de la llista de registres pel seu nom:
-                registre[2] = Categoria_gui_input(self.info_categories[registre[2] - 1][0], self.info_categories[registre[2] - 1][1])
-                # Formatem la data:
-                registre[3] = dateutil.parser.parse(registre[3]).strftime("%d/%m/%Y")
-                registres_classes.append(
-                    Registres_gui_input(registre[0], registre[1], registre[2], registre[3], registre[4]))
-            return registres_classes
+                for categoria in self.info_categories:
+                    if categoria.id == registre.categoria:
+                        registre_proces.append(categoria)
+                registre_proces.append(registre.data)
+                registre_proces.append(registre.descripcio)
+                registre_tractat = Registres_gui_comm(registre_proces[0], registre_proces[1], registre_proces[2],registre_proces[3], registre_proces[4])
+                missatge_registres.append(registre_tractat)
+
+            return missatge_registres
         else:
             return False
 
@@ -55,8 +66,7 @@ class Comptable:
         self.info_alumnes = self.alumnes.llegir_alumnes()
         # Condicio de seguretat per si no hi ha alumnes:
         if self.info_alumnes:
-            noms = [alumne[1] for alumne in self.info_alumnes]
-            self.noms_alumnes = [alumne[1] for alumne in self.info_alumnes]
+            noms = [alumne.nom for alumne in self.info_alumnes]
             return noms
         else:
             return False
@@ -66,13 +76,13 @@ class Comptable:
         self.info_categories = self.categories.lectura_categories()
         # Condicio de seguretat per si no hi ha categories:
         if self.info_categories:
-            categories = [categoria[1] for categoria in self.info_categories]
+            categories = [categoria.nom for categoria in self.info_categories]
             return categories
         else:
             return False
 
     def actualitzar_registre(self, registre_input):
-        if not isinstance(registre_input, Registres_gui_input):
+        if not isinstance(registre_input, Registres_gui_comm):
             raise TypeError("El registre_input no és del tipus correcte.")
         else:
             # Convertim la data a un format que pugui ser llegit per la base de dades:
@@ -95,29 +105,26 @@ class Comptable:
                                                     registrenou[4])
                 return True
 
-    def creacio_registres(self, registre_input):
+    def desar_registre(self, registre_input):
         """Crea un registre a la base de dades:"""
-        if not isinstance(registre_input, Registres_gui_output):
+        if not isinstance(registre_input, list):
             return False
         else:
-            # Convertim la data a un format que pugui ser llegit per la base de dades:
-            registrenou = [registre_input.alumne, registre_input.categoria, registre_input.data,
-                           registre_input.descripcio]
-            # Substituim el nom de la llista de registres pel seu id:
-            for al in self.info_alumnes:
-                if al[1] == registre_input.alumne:
-                    registrenou[0] = al[0]
-            # Substituim el nom de la llista de categories pel seu id:
-            for cat in self.info_categories:
-                if cat[1] == registre_input.categoria:
-                    registrenou[1] = cat[0]
-            # Canviem la data de format:
-            registrenou[2] = date.isoformat(registre_input.data)
-            if not isinstance(registrenou[0], int) or not isinstance(registrenou[1], int):
-                return False
-            print(registrenou[0], registrenou[1], registrenou[2], registrenou[3])
-            self.registradror.crear_registre(registrenou[0], registrenou[1], registrenou[2], registrenou[3])
-            return True
+            missatge_registre_bbddd = []
+            # Processem els registres nous:
+            for info in registre_input:
+                if not isinstance(info, Registres_gui_nou):
+                    return False
+                else:
+                    # Convertim la data a un format que pugui ser llegit per la base de dades:
+                    registrenou = Registres_bbdd_nou(info.alumne.id, info.categoria.id, info.data, info.descripcio)
+                    if not isinstance(registrenou.alumne, int) or not isinstance(registrenou.categoria, int):
+                        return False
+
+                    missatge_registre_bbddd.append(registrenou)
+
+                self.registrador.crear_registre(missatge_registre_bbddd)
+                return True
 
 
 class Calendaritzador:
@@ -175,7 +182,8 @@ class CapEstudis:
         # Condicio de seguretat per si no hi ha alumnes:
         alumnes_formatats = []
         if self.info_alumnes:
-            alumnes_formatats = [Alumne_gui_input(alumne[0], alumne[1]) for alumne in self.info_alumnes]
+            for alumne in self.info_alumnes:
+                alumnes_formatats.append(Alumne_comm(alumne.id, alumne.nom))
             return alumnes_formatats
         else:
             return False
@@ -184,13 +192,15 @@ class CapEstudis:
         """Retorna una llista d'alumnes amb el format Alumne: list:"""
         # Condicio de seguretat per si no hi ha alumnes:
         alumnes_registrats_formatats = []
+
         if self.info_alumnes and self.info_alumnes_registrats:
-            alumnes_registrats = [list(alumne) for alumne in self.info_alumnes_registrats]
-            noms = [list(alumne) for alumne in self.info_alumnes]
+            alumnes_registrats = list(itertools.chain(*self.info_alumnes_registrats))
+            alumnes_registrats_formatats = []
+            persones = self.info_alumnes
             for alumne in alumnes_registrats:
-                for nom in noms:
-                    if alumne[0] == nom[0]:
-                        alumnes_registrats_formatats.append(Alumne_gui_input(nom[0], nom[1]))
+                for persona in persones:
+                    if alumne == persona.id:
+                        alumnes_registrats_formatats.append(Alumne_comm(persona.id, persona.nom))
 
             return alumnes_registrats_formatats
         else:
@@ -215,8 +225,8 @@ class CapEstudis:
             return False
 
     def afegir_alumnes(self, alumne):
-        """Afegix un alumne a la base de dades"""
-        if isinstance(alumne, Alumne_gui_input):
+        """Afegeix un alumne a la base de dades"""
+        if isinstance(alumne, Alumne_comm):
             self.alumnes.afegir_alumne(alumne.nom)
             return True
         else:
@@ -224,7 +234,7 @@ class CapEstudis:
 
     def obtenir_id_alumne(self, alumne):
         """Retorna l'id d'un alumne"""
-        if isinstance(alumne, Alumne_gui_input):
+        if isinstance(alumne, Alumne_comm):
             for alumne_bbdd in self.info_alumnes:
                 if alumne_bbdd[1] == alumne.nom:
                     return alumne_bbdd[0]
@@ -236,16 +246,4 @@ class Classificador:
     def __init__(self):
         self.categories = CategoriesBbdd()
         self.info_categories = self.categories.lectura_categories()
-        self.categories = self.obtenir_categories()
-
-    def obtenir_categories(self):
-        """Retorna una llista de categories amb el format Categoria: list:"""
-        # Condicio de seguretat per si no hi ha categories:
-        categories_formatades = []
-        if self.info_categories:
-            categories = [list(categoria) for categoria in self.info_categories]
-            for categoria in categories:
-                categories_formatades.append(Categoria_gui_input(categoria[0], categoria[1]))
-            return categories_formatades
-        else:
-            return False
+        self.categories = self.info_categories

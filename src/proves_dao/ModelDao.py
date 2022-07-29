@@ -4,6 +4,8 @@ import sqlite3
 import os
 import sys
 from sqlite3 import PARSE_DECLTYPES
+from src.agents.formats import Registres_gui_comm, Registres_bbdd_comm, Registres_gui_nou, Registres_bbdd_nou, \
+    Categoria_comm, Alumne_comm
 
 
 class ModelDao:
@@ -44,13 +46,17 @@ class AlumnesBbdd(ModelDao):
         conn = sqlite3.connect(self.ruta_bbdd)
         c = conn.cursor()
         try:
+            llista_alumnes =[]
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = c.execute(ordre_consultar).fetchall()
             c.close()
+            for i in consulta:
+                persona = Alumne_comm(i[0], i[1])
+                llista_alumnes.append(persona)
         except sqlite3.OperationalError as e:
             print(e)
             return False
-        return consulta
+        return llista_alumnes
 
     def registrar_alumne(self, nom_alumne: str):
         conn = sqlite3.connect(self.ruta_bbdd)
@@ -121,7 +127,10 @@ class RegistresBbdd(ModelDao):
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = c.execute(ordre_consultar).fetchall()
             c.close()
-            return consulta
+            missatge = []
+            for registre in consulta:
+                missatge.append(Registres_bbdd_comm(registre[0], registre[1], registre[2], registre[3], registre[4]))
+            return missatge
         except sqlite3.OperationalError:
             return False
 
@@ -138,20 +147,28 @@ class RegistresBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def crear_registre(self, id_alumne: int, id_categoria: int, data: str, descripcio: str):
+    def crear_registre(self, input_creacio_registre: list):
         """Crea un nou registre"""
-        conn = sqlite3.connect("/home/jordi/Documents/Projectes/seguiment/src/dades/registres3.db",detect_types=PARSE_DECLTYPES)
-        c = conn.cursor()
-        try:
-            ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio) VALUES " + \
-                              f"({id_alumne},{id_categoria},{data},'{descripcio}') "
-            c.execute(ordre_registrar)
-            conn.commit()
-            c.close()
-            return True
-        except sqlite3.OperationalError as e:
-            print(e)
+        if not isinstance(input_creacio_registre, list):
             return False
+        else:
+            for element in input_creacio_registre:
+                if not isinstance(element, Registres_bbdd_nou):
+                    return False
+                else:
+                    conn = sqlite3.connect(self.ruta_bbdd)
+                    c = conn.cursor()
+                    try:
+
+                        ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio) VALUES " + \
+                                          f"({element.alumne},{element.categoria},{element.data},'{element.descripcio}')"
+                        c.execute(ordre_registrar)
+                        conn.commit()
+                        c.close()
+                        return True
+                    except sqlite3.OperationalError as e:
+                        print(e)
+                        return False
 
     def actualitzar_registre(self, id_registre: int, id_alumne: int, id_categoria: int, data: int, descripcio: str):
         """Actualitza un registre"""
@@ -195,10 +212,13 @@ class CategoriesBbdd(ModelDao):
         conn = sqlite3.connect(self.ruta_bbdd)
         c = conn.cursor()
         try:
+            missatge = []
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = c.execute(ordre_consultar).fetchall()
             c.close()
-            return consulta
+            for element in consulta:
+                missatge.append(Categoria_comm(element[0], element[1]))
+            return missatge
         except sqlite3.OperationalError:
             return False
 

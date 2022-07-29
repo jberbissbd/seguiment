@@ -2,7 +2,8 @@ import os
 import sys
 from datetime import date, timedelta, datetime
 from typing import List, Any, Union
-from src.agents.formats import Data_gui_input, Registres_gui_output, Alumne_gui_input, Categoria_gui_input, Registres_gui_input
+from src.agents.formats import Data_gui_input, Registres_gui_nou, Alumne_comm, Categoria_comm, \
+    Registres_gui_comm
 from src.proves_dao.comptable import Comptable, Classificador, Calendaritzador, CapEstudis
 import PySide6.QtCore
 import PySide6.QtGui
@@ -10,7 +11,7 @@ import dateutil
 from PySide6 import QtCharts, QtSql, QtCore
 from PySide6.QtSql import QSqlTableModel, QSqlDatabase, QSqlDriver
 from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
-from PySide6.QtGui import QIcon, QAction
+from PySide6.QtGui import QIcon, QAction, QFont, QPixmap
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView, QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton, QStackedLayout, QStackedWidget, QButtonGroup,
@@ -77,7 +78,7 @@ class MainWindow(QMainWindow):
         self.BOTO_CREAR = None
         self.WIDGET_CENTRAL = None
         self.BOTO_SORTIR = None
-        self.BARRA_EINES_DISTIBUCIO = None
+        self.BARRA_EINES_DISTRIBUCIO = None
         self.WIDGET_PRINCIPAL = None
         self.BOTO_VISUALITZAR = None
         self.crear_registres = None
@@ -89,11 +90,12 @@ class MainWindow(QMainWindow):
 
     def configuracio_interficie(self):
         self.setWindowTitle("Seguiment d'alumnes")
-        self.resize(600, 700)
+        self.resize(600, 500)
         # Configurem distribucio principal:
         # Configurem Widget principal:
         self.WIDGET_PRINCIPAL = QWidget()
         self.WIDGET_CENTRAL = QStackedWidget()
+        # Creem i configurem la barra de notificacions:
         self.BARRA_NOTIFICACIONS = QStatusBar(self.WIDGET_PRINCIPAL)
         self.BARRA_NOTIFICACIONS.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.BARRA_NOTIFICACIONS.setStyle(QStyleFactory.create("Fusion"))
@@ -101,6 +103,7 @@ class MainWindow(QMainWindow):
         self.BARRA_NOTIFICACIONS.setFixedWidth(20)
         self.BARRA_NOTIFICACIONS.setContentsMargins(0, 0, 0, 0)
         self.BARRA_NOTIFICACIONS.setVisible(True)
+        self.BARRA_NOTIFICACIONS.setFont(QFont("Arial", 10))
         self.BARRA_NOTIFICACIONS.setEnabled(True)
         self.BARRA_NOTIFICACIONS.setSizeGripEnabled(True)
         self.setStatusBar(self.BARRA_NOTIFICACIONS)
@@ -114,22 +117,16 @@ class MainWindow(QMainWindow):
         self.widget_visualitzacio()
         self.widget_dates()
         self.widget_informes()
-
         # Introduim la barra d'eines:
-
-        self.BARRA_EINES_DISTIBUCIO = QToolBar()
-
-        DISTRIBUCIO_PRINCIPAL.addWidget(self.BARRA_EINES_DISTIBUCIO)
+        self.BARRA_EINES_DISTRIBUCIO = QToolBar()
+        DISTRIBUCIO_PRINCIPAL.addWidget(self.BARRA_EINES_DISTRIBUCIO)
         DISTRIBUCIO_PRINCIPAL.addWidget(self.WIDGET_CENTRAL)
         DISTRIBUCIO_PRINCIPAL.addWidget(self.BARRA_NOTIFICACIONS)
-
         # Definim botons i les seves propietats:
         self.BOTO_CREAR = QPushButton(self, icon=QIcon("icones/system-switch-user-symbolic.svg"), text="Crear")
-
         self.BOTO_CREAR.setIconSize(QSize(32, 32))
         self.BOTO_CREAR.setToolTip("Crear un nou registre")
         self.BOTO_CREAR.setFlat(True)
-
         self.BOTO_VISUALITZAR = QPushButton(self, icon=QIcon("icones/document-properties-symbolic.svg"),
                                             text="Visualitzar/Editar")
         self.BOTO_VISUALITZAR.setIconSize(QSize(32, 32))
@@ -143,20 +140,15 @@ class MainWindow(QMainWindow):
         self.BOTO_INFORMES.setIconSize(QSize(32, 32))
         self.BOTO_INFORMES.setToolTip("Informes")
         self.BOTO_INFORMES.setFlat(True)
-
         self.BOTO_SORTIR = QPushButton(self, icon=QIcon("icones/application-exit-symbolic.svg"), text="Sortir")
         self.BOTO_SORTIR.setIconSize(QSize(32, 32))
         # Afegim els botons a la barra d'eines:
-        self.BARRA_EINES_DISTIBUCIO.addWidget(self.BOTO_CREAR)
-        self.BARRA_EINES_DISTIBUCIO.addWidget(self.BOTO_VISUALITZAR)
-        self.BARRA_EINES_DISTIBUCIO.addWidget(self.BOTO_DATES)
-        self.BARRA_EINES_DISTIBUCIO.addWidget(self.BOTO_INFORMES)
-        self.BARRA_EINES_DISTIBUCIO.addSeparator()
-        self.BARRA_EINES_DISTIBUCIO.addWidget(self.BOTO_SORTIR)
-        # Afegim una barra de status:
-
-
-
+        self.BARRA_EINES_DISTRIBUCIO.addWidget(self.BOTO_CREAR)
+        self.BARRA_EINES_DISTRIBUCIO.addWidget(self.BOTO_VISUALITZAR)
+        self.BARRA_EINES_DISTRIBUCIO.addWidget(self.BOTO_DATES)
+        self.BARRA_EINES_DISTRIBUCIO.addWidget(self.BOTO_INFORMES)
+        self.BARRA_EINES_DISTRIBUCIO.addSeparator()
+        self.BARRA_EINES_DISTRIBUCIO.addWidget(self.BOTO_SORTIR)
         # Afegim stack, un widget per cadascuna:
         self.WIDGET_CENTRAL.addWidget(self.CREACIO)
         self.WIDGET_CENTRAL.addWidget(self.VISUALITZAR_EDITAR)
@@ -194,13 +186,15 @@ class MainWindow(QMainWindow):
         self.SELECTOR_DATES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         ETIQUETA_DESCRIPCIO = QLabel("Descripcio: ")
         self.EDICIO_DESCRIPCIO = QTextEdit()
-        BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar")
-        BOTO_DESAR.setIconSize(QSize(24, 24))
-        BOTO_DESAR.setToolTip("Desar")
-        BOTO_DESAR.setFlat(True)
-        BOTO_DESAR.clicked.connect(self.desar_registre)
+        self.EDICIO_DESCRIPCIO.textChanged.connect(self.actualitzar_descripcio)
+        self.CREACIO_BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar")
+        self.CREACIO_BOTO_DESAR.setIconSize(QSize(24, 24))
+        self.CREACIO_BOTO_DESAR.setToolTip("Desar")
+        self.CREACIO_BOTO_DESAR.setFlat(True)
+        self.CREACIO_BOTO_DESAR.setEnabled(False)
+        self.CREACIO_BOTO_DESAR.clicked.connect(self.desar_registre)
         self.EDICIO_DESCRIPCIO.setMaximumWidth(300)
-        self.EDICIO_DESCRIPCIO.setMaximumHeight(350)
+        self.EDICIO_DESCRIPCIO.setMaximumHeight(200)
         DISTRIBUCIO.addWidget(ETIQUETA_ALUMNES, 0, 0)
         DISTRIBUCIO.addWidget(self.CREACIO_SELECTOR_ALUMNES, 0, 1)
         DISTRIBUCIO.addWidget(ETIQUETA_CATEGORIA, 1, 0)
@@ -209,7 +203,14 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO.addWidget(self.SELECTOR_DATES, 2, 1)
         DISTRIBUCIO.addWidget(ETIQUETA_DESCRIPCIO, 3, 0)
         DISTRIBUCIO.addWidget(self.EDICIO_DESCRIPCIO, 3, 1)
-        DISTRIBUCIO.addWidget(BOTO_DESAR, 4, 0, 2, 0)
+        DISTRIBUCIO.addWidget(self.CREACIO_BOTO_DESAR, 4, 0, 2, 0)
+
+    def actualitzar_descripcio(self):
+        if self.EDICIO_DESCRIPCIO.toPlainText() == "":
+
+            self.CREACIO_BOTO_DESAR.setEnabled(False)
+        else:
+            self.CREACIO_BOTO_DESAR.setEnabled(True)
 
     def desar_registre(self):
         # Desar un nou registre:
@@ -217,10 +218,19 @@ class MainWindow(QMainWindow):
         categoria = self.CREACIO_SELECTOR_CATEGORIA.currentText()
         data = self.SELECTOR_DATES.date().toString("yyyy-MM-dd")
         descripcio = self.EDICIO_DESCRIPCIO.toPlainText()
-        print(alumne, categoria, data, descripcio)
+        self.EDICIO_DESCRIPCIO.clear()
+        missatge_creacio_output = []
+        registre_individual = [alumne, categoria, data, descripcio]
+        for persona in self.cap.alumnat:
+            if persona.nom == registre_individual[0]:
+                registre_individual[0] = persona
+        for motiu in self.categoritzador.categories:
+            if motiu.nom == registre_individual[1]:
+                registre_individual[1] = motiu
+        registre_individual = Registres_gui_nou(registre_individual[0], registre_individual[1], registre_individual[2], registre_individual[3])
+        missatge_creacio_output.append(registre_individual)
+        self.acces_registres.desar_registre(missatge_creacio_output)
         self.statusBar().showMessage("Registre desat correctament", 2000)
-
-
 
     def widget_visualitzacio(self):
         self.VISUALITZAR_EDITAR = QWidget()
@@ -239,13 +249,29 @@ class MainWindow(QMainWindow):
         self.TAULA = QTableView()
         self.TAULA.setModel(self.TAULA_MODEL)
         self.TAULA.setColumnHidden(0, True)
-        self.TAULA.model().flags(self.TAULA.model().index(0, 0))
+        self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
+        self.TAULA.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.TAULA.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.TAULA.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.TAULA.setColumnWidth(4, self.AMPLADA_DESPLEGABLES)
+        self.TAULA.resizeRowsToContents()
+        self.TAULA.resizeColumnToContents(1)
+        self.TAULA.resizeColumnToContents(2)
+        self.TAULA.resizeColumnToContents(3)
         DISTRIBUCIO.addWidget(DESPLEGABLE_SELECCIO, 0, 0)
         DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 1)
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
+        self.TAULA.doubleClicked.connect(self.editar_registre_taula)
 
-
-
+    def editar_registre_taula(self):
+        # Editar un registre:
+        index = self.TAULA.currentIndex()
+        fila = index.row()
+        columna = index.column()
+        if columna == 1 or columna == 2:
+            self.statusBar().showMessage("No es pot editar aquest camp", 2000)
+        else:
+            self.TAULA.edit(index)
 
     def alteracio_registres(self):
         """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
@@ -340,6 +366,7 @@ class MainWindow(QMainWindow):
         self.SELECTOR_ALUMNES.addItem("* Tots *")
         self.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.SELECTOR_ALUMNES.setVisible(False)
         DISTRIBUCIO.addWidget(GRUP_TIPUS)
         DISTRIBUCIO.addWidget(self.SELECTOR_ALUMNES)
         opcio_global.toggled.connect(self.seleccionar_informe)
@@ -392,7 +419,9 @@ class MainWindow(QMainWindow):
         llista_registres = []
         if self.acces_registres.registres:
             for element in self.acces_registres.registres:
-                registre_ind = [element.id, element.alumne.nom, element.categoria.nom, element.data, element.descripcio]
+                data_formatada = dateutil.parser.parse(element.data).strftime("%d/%m/%Y")
+                registre_ind = [element.id, element.alumne.nom, element.categoria.nom, data_formatada, element.descripcio]
+
                 llista_registres.append(registre_ind)
             return llista_registres
         else:
