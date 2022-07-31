@@ -1,16 +1,12 @@
 import itertools
-from typing import List
 
 import dateutil
 
-from src.proves_dao.ModelDao import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd
+from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd
 from dateutil import parser
 
-from src.agents.formats import Data_gui_input, Registres_gui_comm, Alumne_comm, Categoria_comm, Registres_gui_nou, \
+from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
     Registres_bbdd_nou
-import sys
-from datetime import date, timedelta, datetime
-import sqlite3
 
 
 class Comptable:
@@ -105,7 +101,7 @@ class Comptable:
                                                     registrenou[4])
                 return True
 
-    def desar_registre(self, registre_input):
+    def crear_registre(self, registre_input):
         """Crea un registre a la base de dades:"""
         if not isinstance(registre_input, list):
             return False
@@ -122,7 +118,6 @@ class Comptable:
                         return False
 
                     missatge_registre_bbddd.append(registrenou)
-
                 self.registrador.crear_registre(missatge_registre_bbddd)
                 return True
 
@@ -145,23 +140,23 @@ class Calendaritzador:
                 llista_dies = [list(r) for r in self.info_dates]
 
                 for dia in llista_dies:
-                    dia[1] = parser.parse(dia[1]).strftime("%d/%m/%Y")
-                    llista_classes.append(Data_gui_input(dia[0], dia[1]))
+                    dia[1] = dateutil.parser.parse(dia[1]).strftime("%d/%m/%Y")
+                    llista_classes.append(Data_gui_comm(dia[0], dia[1]))
             return llista_classes
         else:
             return False
 
     def actualitza_dates(self, aniversari):
         """Actualitza la base de dades amb la data subministrada, comprovant si es una data nova o no
-        :type aniversari: Data_gui_input
+        :type aniversari: Data_gui_comm
         """
-        if isinstance(aniversari, Data_gui_input):
+        if isinstance(aniversari, Data_gui_comm):
             num_data = [dia.id for dia in self.dates]
             if aniversari.id not in num_data:
                 return False
             else:
                 # Convertim la data a tipus string per a la base de dades:
-                dia_python = parser.parse(aniversari.dia).strftime("%Y-%m-%d")
+                dia_python = dateutil.parser.parse(aniversari.dia).strftime("%Y-%m-%d")
                 self.datador.actualitza_dates(aniversari.id, dia_python)
                 return True
         else:

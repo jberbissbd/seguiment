@@ -1,4 +1,7 @@
 import datetime
+
+import dateutil
+from dateutil import parser
 import pathlib
 import sqlite3
 import os
@@ -10,6 +13,7 @@ from src.agents.formats import Registres_gui_comm, Registres_bbdd_comm, Registre
 
 class ModelDao:
     def __init__(self):
+        super(ModelDao, self).__init__()
         self.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/src/dades/registre.db"
         self.taula = ""
         self.conn = sqlite3.connect(self.ruta_bbdd)
@@ -22,74 +26,64 @@ class AlumnesBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
-        self.ruta_bbdd = None
-        self.arxiu_bbdd = "registre.db"
-        self.directory_base = os.path.dirname(self.arxiu_bbdd)
-        self.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/src/dades/registre.db"
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula"""
         parametre: str = camp
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
             return consulta
-        except Exception as e:
-            print(e)
+        except sqlite3.OperationalError:
             return False
 
     def llegir_alumnes(self):
         parametre: str = "id,nom_alumne"
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
-            llista_alumnes =[]
+            llista_alumnes = []
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
             for i in consulta:
                 persona = Alumne_comm(i[0], i[1])
                 llista_alumnes.append(persona)
+            self.cursor.close()
         except sqlite3.OperationalError as e:
             print(e)
             return False
         return llista_alumnes
 
     def registrar_alumne(self, nom_alumne: str):
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
-            c.execute(ordre_registrar)
-            conn.commit()
-            c.close()
+            self.cursor.execute(ordre_registrar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False
 
     def eliminar_alumne(self, id_alumne: int):
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_eliminar = f"DELETE FROM {self.taula} WHERE id = {id_alumne}"
-            c.execute(ordre_eliminar)
-            conn.commit()
-            c.close()
+            self.cursor.execute(ordre_eliminar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False
 
     def actualitzar_alumne(self, id_alumne: int, nom_alumne: str):
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"UPDATE {self.taula} SET nom_alumne = '{nom_alumne}' WHERE id = {id_alumne}"
-            c.execute(ordre_consultar)
-            conn.commit()
-            c.close()
+            self.cursor.execute(ordre_consultar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False
@@ -103,17 +97,15 @@ class RegistresBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
-        self.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/src/dades/registre.db"
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula de registres"""
         parametre: str = camp
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.close()
             return consulta
         except sqlite3.OperationalError:
             return False
@@ -121,12 +113,11 @@ class RegistresBbdd(ModelDao):
     def lectura_registres(self):
         """Llegeix tota la taula de registres"""
         parametre: str = "id,id_alumne,id_categoria,data,descripcio"
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
-            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            ordre_consultar = f"SELECT {parametre} FROM {self.taula} ORDER BY data ASC"
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
             missatge = []
             for registre in consulta:
                 missatge.append(Registres_bbdd_comm(registre[0], registre[1], registre[2], registre[3], registre[4]))
@@ -137,12 +128,11 @@ class RegistresBbdd(ModelDao):
     def lectura_alumnes_registrats(self):
         """Llegeix els alumnes que tinguin algun registre"""
         parametre: str = "id_alumne"
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT DISTINCT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
             return consulta
         except sqlite3.OperationalError:
             return False
@@ -156,15 +146,14 @@ class RegistresBbdd(ModelDao):
                 if not isinstance(element, Registres_bbdd_nou):
                     return False
                 else:
-                    conn = sqlite3.connect(self.ruta_bbdd)
-                    c = conn.cursor()
+                    self.cursor = self.conn.cursor()
                     try:
 
                         ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio) VALUES " + \
-                                          f"({element.alumne},{element.categoria},{element.data},'{element.descripcio}')"
-                        c.execute(ordre_registrar)
-                        conn.commit()
-                        c.close()
+                                          f"({element.alumne},{element.categoria},'{element.data}','{element.descripcio}')"
+                        self.cursor.execute(ordre_registrar)
+                        self.conn.commit()
+                        self.cursor.close()
                         return True
                     except sqlite3.OperationalError as e:
                         print(e)
@@ -172,14 +161,13 @@ class RegistresBbdd(ModelDao):
 
     def actualitzar_registre(self, id_registre: int, id_alumne: int, id_categoria: int, data: int, descripcio: str):
         """Actualitza un registre"""
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"UPDATE {self.taula} SET id_alumne = {id_alumne}, id_categoria = {id_categoria}, " + \
-                              f"data = {data}, descripcio = {descripcio} WHERE id = {id_registre}"
-            c.execute(ordre_consultar)
-            conn.commit()
-            c.close()
+                              f"data = '{data}', descripcio = '{descripcio}' WHERE id = {id_registre}"
+            self.cursor.execute(ordre_consultar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False
@@ -188,20 +176,19 @@ class RegistresBbdd(ModelDao):
 class CategoriesBbdd(ModelDao):
     def __init__(self, taula="categories"):
         super().__init__()
+        self.cursor = self.conn.cursor()
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
-        self.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/src/dades/registre.db"
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula de categories"""
         parametre: str = camp
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
             return consulta
         except sqlite3.OperationalError:
             return False
@@ -209,13 +196,11 @@ class CategoriesBbdd(ModelDao):
     def lectura_categories(self):
         """Llegeix tota la taula de categories"""
         parametre: str = "id,categoria"
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
         try:
             missatge = []
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
             for element in consulta:
                 missatge.append(Categoria_comm(element[0], element[1]))
             return missatge
@@ -224,39 +209,36 @@ class CategoriesBbdd(ModelDao):
 
     def crear_categoria(self, nom_categoria: str):
         """Crea una nova categoria"""
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_registrar = f"INSERT INTO {self.taula} (nom_categoria) VALUES ('{nom_categoria}')"
-            c.execute(ordre_registrar)
-            conn.commit()
-            c.close()
+            self.cursor.execute(ordre_registrar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False
 
     def eliminar_categoria(self, num_referencia: int):
         """Elimina una categoria"""
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             eliminar = f"DELETE FROM {self.taula} WHERE id = {num_referencia}"
-            c.execute(eliminar)
-            conn.commit()
-            c.close()
+            self.cursor.execute(eliminar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False
 
     def actualitzar_categoria(self, num_referencia: int, nom_categoria: str):
         """Actualitza una categoria"""
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             actualitzar = f"UPDATE {self.taula} SET nom_categoria = '{nom_categoria}' WHERE id = {num_referencia}"
-            c.execute(actualitzar)
-            conn.commit()
-            c.close()
+            self.cursor.execute(actualitzar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False
@@ -268,17 +250,16 @@ class DatesBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
-        self.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/src/dades/registre.db"
+
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula de dates"""
         parametre: str = camp
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
             return consulta
         except sqlite3.OperationalError:
             return False
@@ -286,25 +267,23 @@ class DatesBbdd(ModelDao):
     def lectura_dates(self):
         """Llegeix tota la taula de dates"""
         parametre: str = "id,data"
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
             return consulta
         except sqlite3.OperationalError:
             return False
 
     def crear_data(self, data: int):
         """Crea una nova data"""
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
-            ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ({data})"
-            c.execute(ordre_registrar)
-            conn.commit()
-            c.close()
+            ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{data}')"
+            self.cursor.execute(ordre_registrar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False
@@ -313,12 +292,11 @@ class DatesBbdd(ModelDao):
         """Retorna l'id de la darrera data
         :int:
         """
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT MAX(id) FROM {self.taula}"
-            consulta = c.execute(ordre_consultar).fetchall()
-            c.close()
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.conn.close()
             consulta = consulta[0][0]
             return consulta
         except sqlite3.OperationalError:
@@ -326,13 +304,12 @@ class DatesBbdd(ModelDao):
 
     def actualitzar_data(self, num_referencia: int, data: str):
         """Actualitza una data"""
-        conn = sqlite3.connect(self.ruta_bbdd)
-        c = conn.cursor()
+        self.cursor = self.conn.cursor()
         try:
-            actualitzar = f"UPDATE {self.taula} SET data = {data} WHERE id = {num_referencia}"
-            c.execute(actualitzar)
-            conn.commit()
-            c.close()
+            actualitzar = f"UPDATE {self.taula} SET data = '{data}' WHERE id = {num_referencia}"
+            self.cursor.execute(actualitzar)
+            self.conn.commit()
+            self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False

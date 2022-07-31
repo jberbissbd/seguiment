@@ -54,7 +54,7 @@ class Categoria_comm:
 
 
 @dataclass(repr=False)
-class Data_gui_input:
+class Data_gui_comm:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a les dates de trimestre ja
     existents """
     id: int

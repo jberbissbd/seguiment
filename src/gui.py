@@ -1,22 +1,16 @@
-import os
 import sys
-from datetime import date, timedelta, datetime
-from typing import List, Any, Union
-from src.agents.formats import Data_gui_input, Registres_gui_nou, Alumne_comm, Categoria_comm, \
-    Registres_gui_comm
-from src.proves_dao.comptable import Comptable, Classificador, Calendaritzador, CapEstudis
-import PySide6.QtCore
-import PySide6.QtGui
-import dateutil
-from PySide6 import QtCharts, QtSql, QtCore
-from PySide6.QtSql import QSqlTableModel, QSqlDatabase, QSqlDriver
-from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
-from PySide6.QtGui import QIcon, QAction, QFont, QPixmap
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
-                               QFileDialog, QToolBar, QTableView, QFormLayout, QGridLayout, QHBoxLayout, QLabel,
-                               QMainWindow, QMessageBox, QPushButton, QStackedLayout, QStackedWidget, QButtonGroup,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QTabWidget,
-                               QHeaderView, QSizePolicy, QStyle, QRadioButton, QGroupBox, QTableWidget, QStatusBar,
+from typing import Union
+from src.agents.formats import Registres_gui_nou
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis
+from dateutil import parser
+from PySide6 import QtCore
+from PySide6.QtCore import QSize, Qt, QDate
+from PySide6.QtGui import QIcon, QFont
+from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
+                               QToolBar, QTableView, QGridLayout, QLabel,
+                               QMainWindow, QPushButton, QStackedWidget, QButtonGroup,
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
+                               QStatusBar,
                                QStyleFactory)
 
 
@@ -59,6 +53,11 @@ class TableModel(QtCore.QAbstractTableModel):
             return True
         else:
             return False
+
+    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            return 'Column {}'.format(section + 1)
+        return super().headerData(section, orientation, role)
 
 
 class MainWindow(QMainWindow):
@@ -229,7 +228,7 @@ class MainWindow(QMainWindow):
                 registre_individual[1] = motiu
         registre_individual = Registres_gui_nou(registre_individual[0], registre_individual[1], registre_individual[2], registre_individual[3])
         missatge_creacio_output.append(registre_individual)
-        self.acces_registres.desar_registre(missatge_creacio_output)
+        self.acces_registres.crear_registre(missatge_creacio_output)
         self.statusBar().showMessage("Registre desat correctament", 2000)
 
     def widget_visualitzacio(self):
@@ -244,6 +243,10 @@ class MainWindow(QMainWindow):
         BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar canvis")
         BOTO_DESAR.clicked.connect(self.alteracio_registres)
         self.TAULA_MODEL = TableModel(self.obtenir_llistat_registres())
+        noms_columnes =["ID","Alumne", "Motiu", "Data", "Descripció"]
+        for nom in noms_columnes:
+            self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
+
         self.columnes_model: int = self.TAULA_MODEL.columnCount(1)
         self.files_model: int = self.TAULA_MODEL.rowCount(1)
         self.TAULA = QTableView()
@@ -258,12 +261,13 @@ class MainWindow(QMainWindow):
         self.TAULA.resizeColumnToContents(1)
         self.TAULA.resizeColumnToContents(2)
         self.TAULA.resizeColumnToContents(3)
+        self.TAULA.setSortingEnabled(True)
         DISTRIBUCIO.addWidget(DESPLEGABLE_SELECCIO, 0, 0)
         DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 1)
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
-        self.TAULA.doubleClicked.connect(self.editar_registre_taula)
+        self.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
 
-    def editar_registre_taula(self):
+    def bloqueig_registre_taula(self):
         # Editar un registre:
         index = self.TAULA.currentIndex()
         fila = index.row()
@@ -271,6 +275,7 @@ class MainWindow(QMainWindow):
         if columna == 1 or columna == 2:
             self.statusBar().showMessage("No es pot editar aquest camp", 2000)
         else:
+
             self.TAULA.edit(index)
 
     def alteracio_registres(self):
@@ -331,14 +336,46 @@ class MainWindow(QMainWindow):
 
     def widget_dates(self):
         self.DATES = QWidget()
-        DISTRIBUCIO = QVBoxLayout()
+        DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
+        DISTRIBUCIO.setHorizontalSpacing(10)
         self.DATES.setLayout(DISTRIBUCIO)
-        DESPLEGABLE_SELECCIO = QComboBox()
-        DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
-        DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
-        DESPLEGABLE_SELECCIO.setMaximumWidth(300)
-        DISTRIBUCIO.addWidget(DESPLEGABLE_SELECCIO)
+        # Definim els editors de dates:
+        self.DATA_SEGON_TRIMESTRE = QDateEdit()
+        self.DATA_SEGON_TRIMESTRE.setDisplayFormat("dd/MM/yyyy")
+        self.DATA_SEGON_TRIMESTRE.setCalendarPopup(True)
+        self.DATA_SEGON_TRIMESTRE.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+
+        self.DATA_TERCER_TRIMESTRE = QDateEdit()
+        self.DATA_TERCER_TRIMESTRE.setDisplayFormat("dd/MM/yyyy")
+        self.DATA_TERCER_TRIMESTRE.setCalendarPopup(True)
+        self.DATA_TERCER_TRIMESTRE.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        # Definim el boto de desar:
+        self.BOTO_DATES_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"),text="Desar")
+
+        # Definim les etiquetes:
+        ETIQUETA_SEGON = QLabel("Inici del segon trimestre")
+        ETIQUETA_SEGON.setMaximumWidth(150)
+        ETIQUETA_TERCER = QLabel("Inici del tercer trimestre")
+        ETIQUETA_TERCER.setMaximumWidth(150)
+        # Donem valors per si no hi han dades:
+        if not self.calendari.dates:
+            self.DATA_SEGON_TRIMESTRE.setDate(QDate.currentDate())
+            self.DATA_TERCER_TRIMESTRE.setDate(QDate.currentDate())
+        else:
+            DATA_2N_FORMATQT = QDate.fromString(self.calendari.dates[0].dia, "dd/MM/yyyy")
+            DATA_3ER_FORMATQT = QDate.fromString(self.calendari.dates[1].dia, "dd/MM/yyyy")
+            self.DATA_SEGON_TRIMESTRE.setDate(DATA_2N_FORMATQT)
+            self.DATA_TERCER_TRIMESTRE.setDate(DATA_3ER_FORMATQT)
+        # Conectem amb la funcio per garantir resultats coherents:
+        self.DATA_SEGON_TRIMESTRE.dateChanged.connect(self.coherencia_dates_trimestre)
+        self.DATA_TERCER_TRIMESTRE.dateChanged.connect(self.coherencia_dates_trimestre)
+        # Determinem els elements que apareixen al widget:
+        DISTRIBUCIO.addWidget(ETIQUETA_SEGON,0,0)
+        DISTRIBUCIO.addWidget(self.DATA_SEGON_TRIMESTRE,0,1)
+        DISTRIBUCIO.addWidget(ETIQUETA_TERCER,1,0)
+        DISTRIBUCIO.addWidget(self.DATA_TERCER_TRIMESTRE,1,1)
+        DISTRIBUCIO.addWidget(self.BOTO_DATES_DESAR,2,0,2,0)
 
     def widget_informes(self):
         self.INFORME = QWidget()
@@ -371,6 +408,16 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO.addWidget(self.SELECTOR_ALUMNES)
         opcio_global.toggled.connect(self.seleccionar_informe)
         opcio_escoltam.toggled.connect(self.seleccionar_informe)
+
+    def coherencia_dates_trimestre(self):
+        """Funcio per garantir que la data del tercer trimestre sempre sigui, com a minim, un dia mes, que la del
+        segon. """
+        if self.DATA_SEGON_TRIMESTRE.date() >= self.DATA_TERCER_TRIMESTRE.date():
+            data_3er = self.DATA_SEGON_TRIMESTRE.date().addDays(1)
+            self.DATA_TERCER_TRIMESTRE.setDate(data_3er)
+        elif self.DATA_TERCER_TRIMESTRE.date() <= self.DATA_SEGON_TRIMESTRE.date():
+            data_2n = self.DATA_TERCER_TRIMESTRE.date().addDays(-1)
+            self.DATA_SEGON_TRIMESTRE.setDate(data_2n)
 
     def seleccionar_informe(self):
 
@@ -419,7 +466,7 @@ class MainWindow(QMainWindow):
         llista_registres = []
         if self.acces_registres.registres:
             for element in self.acces_registres.registres:
-                data_formatada = dateutil.parser.parse(element.data).strftime("%d/%m/%Y")
+                data_formatada = parser.parse(element.data).strftime("%d/%m/%Y")
                 registre_ind = [element.id, element.alumne.nom, element.categoria.nom, data_formatada, element.descripcio]
 
                 llista_registres.append(registre_ind)
