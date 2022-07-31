@@ -196,6 +196,7 @@ class CategoriesBbdd(ModelDao):
     def lectura_categories(self):
         """Llegeix tota la taula de categories"""
         parametre: str = "id,categoria"
+        self.cursor = self.conn.cursor()
         try:
             missatge = []
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
