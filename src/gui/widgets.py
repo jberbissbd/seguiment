@@ -8,7 +8,7 @@ from src.agents.agents_gui import Calendaritzador
 class Editor_Dates(QtWidgets.QWidget):
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
-        self.calendari = Calendaritzador()
+        self.calendari_editor_dates = Calendaritzador()
         self.AMPLADA_ETIQUETES = 75
         self.AMPLADA_DESPLEGABLES = 200
         self.setWindowTitle("Editor_Dates")
@@ -38,12 +38,12 @@ class Editor_Dates(QtWidgets.QWidget):
         ETIQUETA_TERCER = QLabel("Inici del tercer trimestre")
         ETIQUETA_TERCER.setMaximumWidth(150)
         # Donem valors per si no hi han dades:
-        if not self.calendari.dates:
+        if not self.calendari_editor_dates.dates:
             self.DATA_SEGON_TRIMESTRE.setDate(QDate.currentDate())
             self.DATA_TERCER_TRIMESTRE.setDate(QDate.currentDate())
         else:
-            DATA_2N_FORMATQT = QDate.fromString(self.calendari.dates[0].dia, "dd/MM/yyyy")
-            DATA_3ER_FORMATQT = QDate.fromString(self.calendari.dates[1].dia, "dd/MM/yyyy")
+            DATA_2N_FORMATQT = QDate.fromString(self.calendari_editor_dates.dates[0].dia, "dd/MM/yyyy")
+            DATA_3ER_FORMATQT = QDate.fromString(self.calendari_editor_dates.dates[1].dia, "dd/MM/yyyy")
             self.DATA_SEGON_TRIMESTRE.setDate(DATA_2N_FORMATQT)
             self.DATA_TERCER_TRIMESTRE.setDate(DATA_3ER_FORMATQT)
         # Conectem amb la funcio per garantir resultats coherents:

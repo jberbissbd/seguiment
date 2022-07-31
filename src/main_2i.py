@@ -1,6 +1,9 @@
 import sys
 from typing import Union
-from src.agents.formats import Registres_gui_nou
+
+import dateutil.parser
+
+from src.agents.formats import Registres_gui_nou, Registres_gui_comm
 from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis
 from dateutil import parser
 from PySide6 import QtCore
@@ -86,6 +89,7 @@ class MainWindow(QMainWindow):
         self.categoritzador = Classificador()
         self.calendari = Calendaritzador()
         self.acces_registres = Comptable()
+        self.info_alumnes = self.cap.info_alumnes
         self.configuracio_interficie()
 
     def configuracio_interficie(self):
@@ -332,9 +336,29 @@ class MainWindow(QMainWindow):
 
     def actualitzar_registres(self, registres_actualitzats):
         """Funcio per a actualitzar registres de la base de dades."""
+        missatge_actualitzacio =[]
         for registre in registres_actualitzats:
-            print(registre)
-            # self.TAULA_MODEL.layoutChanged.emit()
+            registre_modificat = []
+            # Afegim l'id del registre:
+            registre_modificat.append(registre[0])
+            # Afegim l'alumne:
+            for persona in self.cap.alumnat:
+                if persona.nom == registre[1]:
+                    registre_modificat.append(persona)
+            # Afegim la categoria:
+            for categoria in self.categoritzador.categories:
+                if categoria.nom == registre[2]:
+                    registre_modificat.append(categoria)
+            # Transformem la data:
+            registre[3] = dateutil.parser.parse(registre[3]).isoformat()
+            registre_modificat.append(registre[3])
+            # Afegim la descripcio:
+            registre_modificat.append(registre[4])
+            actualitzacio_registre = Registres_gui_comm(registre_modificat[0],registre_modificat[1],registre_modificat[2],registre[3],registre_modificat[4])
+            missatge_actualitzacio.append(actualitzacio_registre)
+        print(missatge_actualitzacio)
+        # self.acces_registres.actualitzar_registres(missatge_actualitzacio)
+        self.TAULA_MODEL.layoutChanged.emit()
 
     def widget_informes(self):
         self.INFORME = QWidget()

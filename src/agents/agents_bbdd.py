@@ -159,19 +159,43 @@ class RegistresBbdd(ModelDao):
                         print(e)
                         return False
 
-    def actualitzar_registre(self, id_registre: int, id_alumne: int, id_categoria: int, data: int, descripcio: str):
+    def actualitzar_registre(self, missatge_actualitzar: list):
         """Actualitza un registre"""
-        self.cursor = self.conn.cursor()
-        try:
-            ordre_consultar = f"UPDATE {self.taula} SET id_alumne = {id_alumne}, id_categoria = {id_categoria}, " + \
-                              f"data = '{data}', descripcio = '{descripcio}' WHERE id = {id_registre}"
-            self.cursor.execute(ordre_consultar)
-            self.conn.commit()
-            self.cursor.close()
-            return True
-        except sqlite3.OperationalError:
-            return False
+        if not isinstance(missatge_actualitzar, list):
+            raise TypeError("El missatge ha de ser una llista")
+        else:
+            for element in missatge_actualitzar:
+                if not isinstance(element, Registres_bbdd_comm):
+                    raise TypeError("El missatge ha de ser una llista amb el format correcte")
+                else:
+                    self.cursor = self.conn.cursor()
+                    try:
+                        ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}, id_categoria = {element.categoria}, data = '{element.data}', descripcio = '{element.descripcio}' WHERE id = {element.id}"
+                        self.cursor.execute(ordre_actualitzar)
+                        self.conn.commit()
+                        self.cursor.close()
+                        return True
+                    except sqlite3.OperationalError:
+                        return False
 
+    def eliminar_registre(self, missatge_eliminar:list):
+        """Elimina un registre"""
+        if not isinstance(missatge_eliminar, list):
+            raise TypeError("El missatge ha de ser una llista")
+        else:
+            for element in missatge_eliminar:
+                if not isinstance(element, Registres_bbdd_comm):
+                    raise TypeError("El missatge ha de ser una llista amb el format correcte")
+                else:
+                    self.cursor = self.conn.cursor()
+                    try:
+                        ordre_eliminar = f"DELETE FROM {self.taula} WHERE id = {element.id}"
+                        self.cursor.execute(ordre_eliminar)
+                        self.conn.commit()
+                        self.cursor.close()
+                        return True
+                    except sqlite3.OperationalError:
+                        return False
 
 class CategoriesBbdd(ModelDao):
     def __init__(self, taula="categories"):
@@ -251,7 +275,6 @@ class DatesBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
-
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula de dates"""

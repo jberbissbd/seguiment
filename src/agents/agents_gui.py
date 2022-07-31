@@ -6,7 +6,7 @@ from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, D
 from dateutil import parser
 
 from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou
+    Registres_bbdd_nou, Registres_bbdd_comm
 
 
 class Comptable:
@@ -78,28 +78,36 @@ class Comptable:
             return False
 
     def actualitzar_registre(self, registre_input):
-        if not isinstance(registre_input, Registres_gui_comm):
+        """Processa el missatge per actualitzar-lo a la base de dades"""
+        if not isinstance(registre_input, list):
             raise TypeError("El registre_input no és del tipus correcte.")
         else:
-            # Convertim la data a un format que pugui ser llegit per la base de dades:
-            registrenou = [registre_input.id, registre_input.alumne, registre_input.categoria, registre_input.data,
-                           registre_input.descripcio]
-            # Substituim el nom de la llista de registres pel seu id:
-            for al in self.info_alumnes:
-                if al[1] == registre_input.alumne:
-                    registrenou[1] = al[0]
-            # Substituim el nom de la llista de categories pel seu id:
-            for cat in self.info_categories:
-                if cat[1] == registre_input.categoria:
-                    registrenou[2] = cat[0]
-            # Canviem la data de format:
-            registrenou[3] = registre_input.data
-            if not isinstance(registrenou[1], int) or not isinstance(registrenou[2], int):
-                return False
-            else:
-                self.registres.actualitzar_registre(registrenou[0], registrenou[1], registrenou[2], registrenou[3],
-                                                    registrenou[4])
-                return True
+            missatge_actualitzar_registre = []
+            for element in registre_input:
+                if not isinstance(element,Registres_gui_comm):
+                    raise TypeError("Registre no segueix el format establert")
+                else:
+                    element_processat = list
+                    element_processat.append(element.id , element.alumne.id, element.categoria.id, element.data, element.descripcio)
+                    registre_enviar = Registres_bbdd_comm(dada for dada in element_processat)
+                    missatge_actualitzar_registre.append(registre_enviar)
+            self.registrador.actualitzar_registre(missatge_actualitzar_registre)
+
+    def eliminar_registre(self, registre_input):
+        """Processa el missatge per eliminar-lo a la base de dades"""
+        if not isinstance(registre_input, list):
+            raise TypeError("El registre_input no és del tipus correcte.")
+        else:
+            missatge_eliminar_registre = []
+            for element in registre_input:
+                if not isinstance(element,Registres_gui_comm):
+                    raise TypeError("Registre no segueix el format establert")
+                else:
+                    element_processat = list
+                    element_processat.append(element.id , element.alumne.id, element.categoria.id, element.data, element.descripcio)
+                    registre_enviar = Registres_bbdd_comm(dada for dada in element_processat)
+                    missatge_eliminar_registre.append(registre_enviar)
+            self.registrador.eliminar_registre(missatge_eliminar_registre)
 
     def crear_registre(self, registre_input):
         """Crea un registre a la base de dades:"""
