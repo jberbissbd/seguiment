@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
                                QStatusBar,
                                QStyleFactory)
+from src.gui.widgets import Editor_Dates
 
 
 def sortir():
@@ -114,7 +115,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.WIDGET_PRINCIPAL)
         self.widget_creacio()
         self.widget_visualitzacio()
-        self.widget_dates()
+        self.DATES = Editor_Dates()
+        # self.widget_dates()
         self.widget_informes()
         # Introduim la barra d'eines:
         self.BARRA_EINES_DISTRIBUCIO = QToolBar()
@@ -334,49 +336,6 @@ class MainWindow(QMainWindow):
             print(registre)
             # self.TAULA_MODEL.layoutChanged.emit()
 
-    def widget_dates(self):
-        self.DATES = QWidget()
-        DISTRIBUCIO = QGridLayout()
-        DISTRIBUCIO.setAlignment(Qt.AlignTop)
-        DISTRIBUCIO.setHorizontalSpacing(10)
-        self.DATES.setLayout(DISTRIBUCIO)
-        # Definim els editors de dates:
-        self.DATA_SEGON_TRIMESTRE = QDateEdit()
-        self.DATA_SEGON_TRIMESTRE.setDisplayFormat("dd/MM/yyyy")
-        self.DATA_SEGON_TRIMESTRE.setCalendarPopup(True)
-        self.DATA_SEGON_TRIMESTRE.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-
-        self.DATA_TERCER_TRIMESTRE = QDateEdit()
-        self.DATA_TERCER_TRIMESTRE.setDisplayFormat("dd/MM/yyyy")
-        self.DATA_TERCER_TRIMESTRE.setCalendarPopup(True)
-        self.DATA_TERCER_TRIMESTRE.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-        # Definim el boto de desar:
-        self.BOTO_DATES_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"),text="Desar")
-
-        # Definim les etiquetes:
-        ETIQUETA_SEGON = QLabel("Inici del segon trimestre")
-        ETIQUETA_SEGON.setMaximumWidth(150)
-        ETIQUETA_TERCER = QLabel("Inici del tercer trimestre")
-        ETIQUETA_TERCER.setMaximumWidth(150)
-        # Donem valors per si no hi han dades:
-        if not self.calendari.dates:
-            self.DATA_SEGON_TRIMESTRE.setDate(QDate.currentDate())
-            self.DATA_TERCER_TRIMESTRE.setDate(QDate.currentDate())
-        else:
-            DATA_2N_FORMATQT = QDate.fromString(self.calendari.dates[0].dia, "dd/MM/yyyy")
-            DATA_3ER_FORMATQT = QDate.fromString(self.calendari.dates[1].dia, "dd/MM/yyyy")
-            self.DATA_SEGON_TRIMESTRE.setDate(DATA_2N_FORMATQT)
-            self.DATA_TERCER_TRIMESTRE.setDate(DATA_3ER_FORMATQT)
-        # Conectem amb la funcio per garantir resultats coherents:
-        self.DATA_SEGON_TRIMESTRE.dateChanged.connect(self.coherencia_dates_trimestre)
-        self.DATA_TERCER_TRIMESTRE.dateChanged.connect(self.coherencia_dates_trimestre)
-        # Determinem els elements que apareixen al widget:
-        DISTRIBUCIO.addWidget(ETIQUETA_SEGON,0,0)
-        DISTRIBUCIO.addWidget(self.DATA_SEGON_TRIMESTRE,0,1)
-        DISTRIBUCIO.addWidget(ETIQUETA_TERCER,1,0)
-        DISTRIBUCIO.addWidget(self.DATA_TERCER_TRIMESTRE,1,1)
-        DISTRIBUCIO.addWidget(self.BOTO_DATES_DESAR,2,0,2,0)
-
     def widget_informes(self):
         self.INFORME = QWidget()
         self.INFORME.resize(300, 300)
@@ -409,15 +368,7 @@ class MainWindow(QMainWindow):
         opcio_global.toggled.connect(self.seleccionar_informe)
         opcio_escoltam.toggled.connect(self.seleccionar_informe)
 
-    def coherencia_dates_trimestre(self):
-        """Funcio per garantir que la data del tercer trimestre sempre sigui, com a minim, un dia mes, que la del
-        segon. """
-        if self.DATA_SEGON_TRIMESTRE.date() >= self.DATA_TERCER_TRIMESTRE.date():
-            data_3er = self.DATA_SEGON_TRIMESTRE.date().addDays(1)
-            self.DATA_TERCER_TRIMESTRE.setDate(data_3er)
-        elif self.DATA_TERCER_TRIMESTRE.date() <= self.DATA_SEGON_TRIMESTRE.date():
-            data_2n = self.DATA_TERCER_TRIMESTRE.date().addDays(-1)
-            self.DATA_SEGON_TRIMESTRE.setDate(data_2n)
+
 
     def seleccionar_informe(self):
 
