@@ -19,8 +19,8 @@ class Comptable:
         self.registrador = RegistresBbdd()
         self.alumnes.llegir_alumnes()
         self.registrador.lectura_registres()
-        self.categories = CategoriesBbdd()
-        self.categories.lectura_categories()
+        self.categoritzador = CategoriesBbdd()
+        self.info_categories = self.categoritzador.lectura_categories()
         self.registres = self.obtenir_registres()
         self.noms_alumnes = self.obtenir_noms()
         self.categories = self.obtenir_categories()
@@ -30,7 +30,7 @@ class Comptable:
         """
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_registres = self.registrador.lectura_registres()
-        self.info_categories = self.categories.lectura_categories()
+        self.info_categories = self.categoritzador.lectura_categories()
         # Condicio de seguretat per si no hi ha registres:
         if self.info_registres and self.info_alumnes and self.info_categories:
             registres_entrada = self.info_registres
@@ -69,7 +69,7 @@ class Comptable:
 
     def obtenir_categories(self):
         """Retorna una llista de categories convenients per a la presentació: list:"""
-        self.info_categories = self.categories.lectura_categories()
+        self.info_categories = self.categoritzador.lectura_categories()
         # Condicio de seguretat per si no hi ha categories:
         if self.info_categories:
             categories = [categoria.nom for categoria in self.info_categories]
@@ -77,7 +77,7 @@ class Comptable:
         else:
             return False
 
-    def actualitzar_registre(self, registre_input):
+    def actualitzar_registres(self, registre_input):
         """Processa el missatge per actualitzar-lo a la base de dades"""
         if not isinstance(registre_input, list):
             raise TypeError("El registre_input no és del tipus correcte.")
@@ -87,9 +87,7 @@ class Comptable:
                 if not isinstance(element,Registres_gui_comm):
                     raise TypeError("Registre no segueix el format establert")
                 else:
-                    element_processat = list
-                    element_processat.append(element.id , element.alumne.id, element.categoria.id, element.data, element.descripcio)
-                    registre_enviar = Registres_bbdd_comm(dada for dada in element_processat)
+                    registre_enviar = Registres_bbdd_comm(element.id , element.alumne.id, element.categoria.id, element.data, element.descripcio)
                     missatge_actualitzar_registre.append(registre_enviar)
             self.registrador.actualitzar_registre(missatge_actualitzar_registre)
 

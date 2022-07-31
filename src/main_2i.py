@@ -1,9 +1,11 @@
+import datetime
 import sys
+from dataclasses import dataclass
 from typing import Union
 
 import dateutil.parser
 
-from src.agents.formats import Registres_gui_nou, Registres_gui_comm
+from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_bbdd_comm
 from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis
 from dateutil import parser
 from PySide6 import QtCore
@@ -232,7 +234,8 @@ class MainWindow(QMainWindow):
         for motiu in self.categoritzador.categories:
             if motiu.nom == registre_individual[1]:
                 registre_individual[1] = motiu
-        registre_individual = Registres_gui_nou(registre_individual[0], registre_individual[1], registre_individual[2], registre_individual[3])
+        registre_individual = Registres_gui_nou(registre_individual[0], registre_individual[1], registre_individual[2],
+                                                registre_individual[3])
         missatge_creacio_output.append(registre_individual)
         self.acces_registres.crear_registre(missatge_creacio_output)
         self.statusBar().showMessage("Registre desat correctament", 2000)
@@ -249,7 +252,7 @@ class MainWindow(QMainWindow):
         BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar canvis")
         BOTO_DESAR.clicked.connect(self.alteracio_registres)
         self.TAULA_MODEL = TableModel(self.obtenir_llistat_registres())
-        noms_columnes =["ID","Alumne", "Motiu", "Data", "Descripció"]
+        noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
         for nom in noms_columnes:
             self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
 
@@ -331,34 +334,46 @@ class MainWindow(QMainWindow):
 
     def eliminar_registres(self, registres_eliminats):
         """Funcio per a eliminar registres de la base de dades."""
+        missatge_eliminar = []
         for registre in registres_eliminats:
-            print("eliminar")
+            eliminacio_registre = self.transformar_gui_a_bbdd(registre)
+            missatge_eliminar.append(eliminacio_registre)
+        self.acces_registres.eliminar_registre(missatge_eliminar)
+        self.TAULA_MODEL.layoutChanged.emit()
 
     def actualitzar_registres(self, registres_actualitzats):
         """Funcio per a actualitzar registres de la base de dades."""
-        missatge_actualitzacio =[]
+        missatge_actualitzacio = []
         for registre in registres_actualitzats:
-            registre_modificat = []
-            # Afegim l'id del registre:
-            registre_modificat.append(registre[0])
-            # Afegim l'alumne:
-            for persona in self.cap.alumnat:
-                if persona.nom == registre[1]:
-                    registre_modificat.append(persona)
-            # Afegim la categoria:
-            for categoria in self.categoritzador.categories:
-                if categoria.nom == registre[2]:
-                    registre_modificat.append(categoria)
-            # Transformem la data:
-            registre[3] = dateutil.parser.parse(registre[3]).isoformat()
-            registre_modificat.append(registre[3])
-            # Afegim la descripcio:
-            registre_modificat.append(registre[4])
-            actualitzacio_registre = Registres_gui_comm(registre_modificat[0],registre_modificat[1],registre_modificat[2],registre[3],registre_modificat[4])
+            actualitzacio_registre = self.transformar_gui_a_bbdd(registre)
             missatge_actualitzacio.append(actualitzacio_registre)
-        print(missatge_actualitzacio)
-        # self.acces_registres.actualitzar_registres(missatge_actualitzacio)
-        self.TAULA_MODEL.layoutChanged.emit()
+        self.acces_registres.actualitzar_registres(missatge_actualitzacio)
+
+
+    def transformar_gui_a_bbdd(self, dades: list):
+        """Funcio per a transformar les dades de la GUI a la BBDD."""
+        if not isinstance(dades, list):
+            raise TypeError("La dada ha de ser del tipus Registres_gui_comm.")
+        else:
+            id_registre = None
+            alumne = None
+            categoria_enviar = None
+            data = None
+            descripcio = None
+            # Transformem la data:
+            id_registre = dades[0]
+            for persona in self.cap.alumnat:
+                if persona.nom == dades[1]:
+                    alumne = persona
+            for categoria in self.categoritzador.info_categories:
+                if categoria.nom == dades[2]:
+                    categoria_enviar = categoria
+            objecte_data = dateutil.parser.parse(dades[3],dayfirst=True)
+            data = objecte_data.strftime("%Y-%m-%d")
+            descripcio = dades[4]
+            # Guardem la dada:
+            resultat = Registres_gui_comm(id_registre, alumne, categoria_enviar, data, descripcio)
+            return resultat
 
     def widget_informes(self):
         self.INFORME = QWidget()
@@ -391,8 +406,6 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO.addWidget(self.SELECTOR_ALUMNES)
         opcio_global.toggled.connect(self.seleccionar_informe)
         opcio_escoltam.toggled.connect(self.seleccionar_informe)
-
-
 
     def seleccionar_informe(self):
 
@@ -442,7 +455,8 @@ class MainWindow(QMainWindow):
         if self.acces_registres.registres:
             for element in self.acces_registres.registres:
                 data_formatada = parser.parse(element.data).strftime("%d/%m/%Y")
-                registre_ind = [element.id, element.alumne.nom, element.categoria.nom, data_formatada, element.descripcio]
+                registre_ind = [element.id, element.alumne.nom, element.categoria.nom, data_formatada,
+                                element.descripcio]
 
                 llista_registres.append(registre_ind)
             return llista_registres
