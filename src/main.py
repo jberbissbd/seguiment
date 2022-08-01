@@ -759,6 +759,7 @@ class AssistentInicial(QWizard):
         self.addPage(self.pagina_inicial)
         self.addPage(self.pagina_alumnes)
         self.addPage(self.pagina_final)
+
         self.button(QWizard.CancelButton).setText("Cancel·lar")
         self.acciocancela = QAction(app.quit())
         self.acciotanca = QAction(self.cancela())

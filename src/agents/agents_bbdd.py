@@ -55,6 +55,19 @@ class AlumnesBbdd(ModelDao):
             return False
         return llista_alumnes
 
+    def llegir_alumne_individual(self, id_alumne: int):
+        parametre: str = "id,nom_alumne"
+        self.cursor = self.conn.cursor()
+        try:
+            ordre_consultar = f"SELECT {parametre} FROM alumnes WHERE id = {id_alumne}"
+            consulta = self.cursor.execute(ordre_consultar).fetchone()
+            persona = Alumne_comm(consulta[0], consulta[1])
+            self.cursor.close()
+        except sqlite3.OperationalError as e:
+            print(e)
+            return False
+        return persona
+
     def registrar_alumne(self, nom_alumne: str):
         self.cursor = self.conn.cursor()
         try:
@@ -66,8 +79,10 @@ class AlumnesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def eliminar_alumne(self, id_alumne: int):
-        self.cursor = self.conn.cursor()
+    def eliminar_alumne(self, missatge: list):
+        for element in missatge:
+            id_alumne = element.id
+            self.cursor = self.conn.cursor()
         try:
             ordre_eliminar = f"DELETE FROM {self.taula} WHERE id = {id_alumne}"
             self.cursor.execute(ordre_eliminar)
@@ -77,16 +92,19 @@ class AlumnesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def actualitzar_alumne(self, id_alumne: int, nom_alumne: str):
-        self.cursor = self.conn.cursor()
-        try:
-            ordre_consultar = f"UPDATE {self.taula} SET nom_alumne = '{nom_alumne}' WHERE id = {id_alumne}"
-            self.cursor.execute(ordre_consultar)
-            self.conn.commit()
-            self.cursor.close()
-            return True
-        except sqlite3.OperationalError:
-            return False
+    def actualitzar_alumne(self, missatge: list):
+        for element in missatge:
+            id_alumne = element.id
+            nom_alumne = element.nom
+            self.cursor = self.conn.cursor()
+            try:
+                ordre_consultar = f"UPDATE {self.taula} SET nom_alumne = '{nom_alumne}' WHERE id = {id_alumne}"
+                self.cursor.execute(ordre_consultar)
+                self.conn.commit()
+                self.cursor.close()
+                return True
+            except sqlite3.OperationalError:
+                return False
 
 
 class RegistresBbdd(ModelDao):
@@ -133,7 +151,11 @@ class RegistresBbdd(ModelDao):
             ordre_consultar = f"SELECT DISTINCT {parametre} FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.cursor.close()
-            return consulta
+            missatge = []
+            for persona in consulta:
+                dades_individuals = AlumnesBbdd.llegir_alumne_individual(self, persona[0])
+                missatge.append(dades_individuals)
+            return missatge
         except sqlite3.OperationalError:
             return False
 
@@ -170,7 +192,7 @@ class RegistresBbdd(ModelDao):
                 else:
                     self.cursor = self.conn.cursor()
                     try:
-                        ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}, id_categoria = {element.categoria}, data = '{element.data}', descripcio = '{element.descripcio}' WHERE id = {element.id}"
+                        ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}, id_categoria = {element.categoria}, data = '{element.data}', descripcio = '{element.descripcio}' WHERE id = {element.id} "
                         self.cursor.execute(ordre_actualitzar)
                         self.conn.commit()
                         self.cursor.close()
@@ -178,7 +200,7 @@ class RegistresBbdd(ModelDao):
                     except sqlite3.OperationalError:
                         return False
 
-    def eliminar_registre(self, missatge_eliminar:list):
+    def eliminar_registre(self, missatge_eliminar: list):
         """Elimina un registre"""
         if not isinstance(missatge_eliminar, list):
             raise TypeError("El missatge ha de ser una llista")
@@ -196,6 +218,7 @@ class RegistresBbdd(ModelDao):
                         return True
                     except sqlite3.OperationalError:
                         return False
+
 
 class CategoriesBbdd(ModelDao):
     def __init__(self, taula="categories"):

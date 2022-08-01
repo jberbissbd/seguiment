@@ -1,4 +1,5 @@
 import itertools
+from dataclasses import dataclass
 
 import dateutil
 
@@ -17,10 +18,10 @@ class Comptable:
         self.info_alumnes = None
         self.alumnes = AlumnesBbdd()
         self.registrador = RegistresBbdd()
-        self.alumnes.llegir_alumnes()
-        self.registrador.lectura_registres()
         self.categoritzador = CategoriesBbdd()
         self.info_categories = self.categoritzador.lectura_categories()
+        self.info_alumnes = self.alumnes.llegir_alumnes()
+        self.info_registres = self.registrador.lectura_registres()
         self.registres = self.obtenir_registres()
         self.noms_alumnes = self.obtenir_noms()
         self.categories = self.obtenir_categories()
@@ -28,9 +29,7 @@ class Comptable:
     def obtenir_registres(self):
         """Retorna una llista de registres convenients per a la presentació: list:
         """
-        self.info_alumnes = self.alumnes.llegir_alumnes()
-        self.info_registres = self.registrador.lectura_registres()
-        self.info_categories = self.categoritzador.lectura_categories()
+
         # Condicio de seguretat per si no hi ha registres:
         if self.info_registres and self.info_alumnes and self.info_categories:
             registres_entrada = self.info_registres
@@ -50,7 +49,8 @@ class Comptable:
                         registre_proces.append(categoria)
                 registre_proces.append(registre.data)
                 registre_proces.append(registre.descripcio)
-                registre_tractat = Registres_gui_comm(registre_proces[0], registre_proces[1], registre_proces[2],registre_proces[3], registre_proces[4])
+                registre_tractat = Registres_gui_comm(registre_proces[0], registre_proces[1], registre_proces[2],
+                                                      registre_proces[3], registre_proces[4])
                 missatge_registres.append(registre_tractat)
 
             return missatge_registres
@@ -84,10 +84,11 @@ class Comptable:
         else:
             missatge_actualitzar_registre = []
             for element in registre_input:
-                if not isinstance(element,Registres_gui_comm):
+                if not isinstance(element, Registres_gui_comm):
                     raise TypeError("Registre no segueix el format establert")
                 else:
-                    registre_enviar = Registres_bbdd_comm(element.id , element.alumne.id, element.categoria.id, element.data, element.descripcio)
+                    registre_enviar = Registres_bbdd_comm(element.id, element.alumne.id, element.categoria.id,
+                                                          element.data, element.descripcio)
                     missatge_actualitzar_registre.append(registre_enviar)
             self.registrador.actualitzar_registre(missatge_actualitzar_registre)
 
@@ -98,11 +99,12 @@ class Comptable:
         else:
             missatge_eliminar_registre = []
             for element in registre_input:
-                if not isinstance(element,Registres_gui_comm):
+                if not isinstance(element, Registres_gui_comm):
                     raise TypeError("Registre no segueix el format establert")
                 else:
                     element_processat = list
-                    element_processat.append(element.id , element.alumne.id, element.categoria.id, element.data, element.descripcio)
+                    element_processat.append(element.id, element.alumne.id, element.categoria.id, element.data,
+                                             element.descripcio)
                     registre_enviar = Registres_bbdd_comm(dada for dada in element_processat)
                     missatge_eliminar_registre.append(registre_enviar)
             self.registrador.eliminar_registre(missatge_eliminar_registre)
@@ -192,46 +194,42 @@ class CapEstudis:
     def obtenir_alumnes_registrats(self):
         """Retorna una llista d'alumnes amb el format Alumne: list:"""
         # Condicio de seguretat per si no hi ha alumnes:
-        alumnes_registrats_formatats = []
-
+        alumnes_formatats = []
         if self.info_alumnes and self.info_alumnes_registrats:
-            alumnes_registrats = list(itertools.chain(*self.info_alumnes_registrats))
-            alumnes_registrats_formatats = []
-            persones = self.info_alumnes
-            for alumne in alumnes_registrats:
-                for persona in persones:
-                    if alumne == persona.id:
-                        alumnes_registrats_formatats.append(Alumne_comm(persona.id, persona.nom))
-
-            return alumnes_registrats_formatats
+            alumnes_registrats = self.info_alumnes_registrats
+            for persona in alumnes_registrats:
+                alumnes_formatats.append(Alumne_comm(persona.id, persona.nom))
+            return alumnes_formatats
         else:
             return False
 
-    def eliminar_alumnes(self, alumne):
+    def eliminar_alumnes(self, llista_eliminar):
         """Elimina un alumne de la base de dades"""
-        id_comprovacio = self.obtenir_id_alumne(alumne)
-        if id_comprovacio:
-            self.alumnes.eliminar_alumne(id_comprovacio)
+        if isinstance(llista_eliminar, list):
+            self.alumnes.actualitzar_alumne(llista_eliminar)
             return True
         else:
             return False
 
-    def actualitzar_alumnes(self, alumne):
-        """Actualitza un alumne de la base de dades"""
-        id_comprovacio = self.obtenir_id_alumne(alumne)
-        if id_comprovacio:
-            self.alumnes.actualitzar_alumne(id_comprovacio, alumne.nom)
+    def actualitzar_alumnes(self, llista_actualitzar: list):
+        if isinstance(llista_actualitzar, list):
+            """Actualitza un alumne de la base de dades"""
+            self.alumnes.actualitzar_alumne(llista_actualitzar)
             return True
         else:
             return False
 
-    def afegir_alumnes(self, alumne):
+    def afegir_alumnes(self, missatge_afegir: list):
         """Afegeix un alumne a la base de dades"""
-        if isinstance(alumne, Alumne_comm):
-            self.alumnes.afegir_alumne(alumne.nom)
-            return True
-        else:
+        if not isinstance(missatge_afegir, list):
             return False
+        else:
+            for persona in missatge_afegir:
+                if not isinstance(persona, Alumne_comm):
+                    return False
+                else:
+                    self.alumnes.registrar_alumne(persona.nom)
+                    return True
 
     def obtenir_id_alumne(self, alumne):
         """Retorna l'id d'un alumne"""
