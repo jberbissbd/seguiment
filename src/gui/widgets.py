@@ -1,11 +1,13 @@
 from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6.QtCore import Qt, QDate, QSize
+from PySide6.QtCore import Qt, QDate, QSize, QSortFilterProxyModel
 from PySide6.QtGui import QIcon, QAction, QPixmap
 from PySide6.QtWidgets import QGridLayout, QDateEdit, QPushButton, QLabel, QComboBox, QTextEdit, QHBoxLayout, \
     QVBoxLayout, QTableView, QAbstractItemView, QWizardPage, QWizard, QDialog, QMessageBox, QLineEdit, QFormLayout, \
     QDialogButtonBox
 from src.agents.agents_gui import Calendaritzador, CapEstudis
 from src.agents.formats import Alumne_comm, Alumne_nou
+
+
 
 
 class ModelEdicioAlumnes(QtCore.QAbstractTableModel):

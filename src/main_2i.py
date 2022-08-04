@@ -9,7 +9,7 @@ from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_
 from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador
 from dateutil import parser
 from PySide6 import QtCore
-from PySide6.QtCore import QSize, Qt, QDate
+from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel
 from PySide6.QtGui import QIcon, QFont, QAction
 from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QToolBar, QTableView, QGridLayout, QLabel,
@@ -18,6 +18,25 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QStatusBar, QWizard, QWizardPage, QLineEdit, QCheckBox, QDialog, QDialogButtonBox,
                                QStyleFactory, QWizard, QHeaderView, QMessageBox, QDialog)
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, AssistentInicial
+
+
+class SortFilterProxyModel(QSortFilterProxyModel):
+    def __init__(self, *args, **kwargs):
+        QSortFilterProxyModel.__init__(self, *args, **kwargs)
+        self.filters = {}
+
+    def setFilterByColumn(self, regex, column):
+        self.filters[column] = regex
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        for key, regex in self.filters.items():
+            ix = self.sourceModel().index(source_row, key, source_parent)
+            if ix.isValid():
+                text = self.sourceModel().data(ix).toString()
+                if not text.contains(regex):
+                    return False
+        return True
 
 
 class ModelVisualitzacio(QtCore.QAbstractTableModel):
@@ -232,6 +251,7 @@ class MainWindow(QMainWindow):
         self.VISUALITZAR_EDITAR.setLayout(DISTRIBUCIO)
         self.VISUALITZA_DESPLEGABLE_SELECCIO = QComboBox()
         self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
+
         if self.obtenir_llistat_alumnes_registrats():
             self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
         self.VISUALITZA_DESPLEGABLE_SELECCIO.setMaximumWidth(300)
@@ -246,14 +266,13 @@ class MainWindow(QMainWindow):
             self.columnes_model = 1
             self.files_model = 1
 
-        self.TAULA_MODEL.installEventFilter(self)
+
         noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
         for nom in noms_columnes:
             self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
-
         self.TAULA = QTableView()
-
         self.TAULA.setModel(self.TAULA_MODEL)
+        self.TAULA.installEventFilter(SortFilterProxyModel(self.TAULA_MODEL))
         self.TAULA.setColumnHidden(0, True)
         self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
         self.TAULA.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -269,6 +288,23 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 1)
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
         self.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.currentTextChanged.connect(self.visualitzacio_filtrar_registres)
+
+    def visualitzacio_filtrar_registres(self):
+        valor_actual_desplegable = self.VISUALITZA_DESPLEGABLE_SELECCIO.currentText()
+        if valor_actual_desplegable == "* Selecciona un alumne *":
+            self.TAULA.model().removeEventFilter()
+            self.TAULA.showColumn(1)
+            self.TAULA.resizeRowsToContents()
+            # self.TAULA_MODEL.installEventFilter(valor_actual_desplegable)
+
+        else:
+            self.TAULA_MODEL.installEventFilter(SortFilterProxyModel.setFilterByColumn(self,valor_actual_desplegable,1))
+            self.TAULA.resizeRowsToContents()
+            self.TAULA.installEventFilter(SortFilterProxyModel(self.TAULA_MODEL))
+
+        # self.VISUALITZAR_EDITAR.TAULA.setFilterRegExp(self.VISUALITZA_DESPLEGABLE_SELECCIO.currentText())
+
 
     def senyal_canvi_registres(self):
         self.acces_registres.refrescar_registres()
@@ -460,7 +496,7 @@ class MainWindow(QMainWindow):
     def obtenir_registres_alumnes(self):
         alumnes_entrada = self.cap.alumnat
         if alumnes_entrada:
-            llistat_dades_alumnes =[[alumne.id, alumne.nom] for alumne in alumnes_entrada]
+            llistat_dades_alumnes = [[alumne.id, alumne.nom] for alumne in alumnes_entrada]
             return llistat_dades_alumnes
         else:
             return False
@@ -495,38 +531,38 @@ def sortir(self):
     sys.exit(0)
 
 
-class Aplicacio(QApplication):
-    def __init__(self, argv):
-        super().__init__(argv)
-        self.setQuitOnLastWindowClosed(True)
-        assistent = AssistentInicial()
-        arrencador = Comprovador()
-        creador = Iniciador()
-        if arrencador.presencia_alumnes and arrencador.presencia_registres and arrencador.presencia_dates:
-            finestra_principal = MainWindow()
-            finestra_principal.show()
-        else:
-            creador.inicia_taules()
-            assistent.show()
-            if assistent.exec() == QWizard.CancelButton:
-                creador.eliminar_basededades()
-                sortir()
-            elif assistent.exec() == QWizard.FinishButton:
-                finestra_principal = MainWindow()
-                finestra_principal.show()
-                assistent.close()
-
-        self.exec()
-
-        sys.exit(self.exec())
-
-
-app = Aplicacio(sys.argv)
-# app = QApplication(sys.argv)
 #
-# window = MainWindow()
-# a = AssistentInicial()
-# window.show()
-# a.show()
+# class Aplicacio(QApplication):
+#     def __init__(self, argv):
+#         super().__init__(argv)
+#         self.setQuitOnLastWindowClosed(True)
+#         assistent = AssistentInicial()
+#         arrencador = Comprovador()
+#         creador = Iniciador()
+#         if arrencador.presencia_alumnes and arrencador.presencia_registres and arrencador.presencia_dates:
+#             finestra_principal = MainWindow()
+#             finestra_principal.show()
+#         else:
+#             creador.inicia_taules()
+#             assistent.show()
+#             if assistent.exec() == QWizard.CancelButton:
+#                 creador.eliminar_basededades()
+#                 sortir()
+#             elif assistent.exec() == QWizard.FinishButton:
+#                 finestra_principal = MainWindow()
+#                 finestra_principal.show()
+#                 assistent.close()
+#
+#         self.exec()
+#
+#         sys.exit(self.exec())
+#
+#
+# app = Aplicacio(sys.argv)
+app = QApplication(sys.argv)
 
-# sys.exit(app.exec())
+window = MainWindow()
+
+window.show()
+
+sys.exit(app.exec())
