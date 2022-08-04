@@ -1,7 +1,7 @@
 import datetime
 import sqlite3
-from datetime import datetime, date
-from dateutil import parser
+from datetime import datetime, date, date, timedelta
+import dateutil
 
 import numpy as np
 import pandas as pd
@@ -45,7 +45,7 @@ class Lector:
 
     @staticmethod
     def llista_alumnes_registres():
-        """Funció per a obtenir el llistat d'alumnes que tenen algun registre"""
+        """Funció per a obtenir el llistat d'alumnes que tenen algun registre_input"""
         ordre_consulta_sql = 'SELECT DISTINCT nom_alumne FROM registres ORDER BY nom_alumne'
 
         try:
@@ -132,7 +132,7 @@ class Lector:
             r_registres = conn.execute(ordre_consulta_sql, (alumne,)).fetchall()
             l_registres = [list(registre) for registre in r_registres]
             for registre in l_registres:
-                registre[3] = parser.parse(registre[3])
+                registre[3] = dateutil.parser.parse(registre[3])
 
             return l_registres
         except sqlite3.OperationalError:
@@ -143,13 +143,12 @@ class Escriptor:
     def __init__(self):
         self.arxiubbdd = arxiubbdd
 
-    @staticmethod
-    def registre_dades(nom_alumne, nom_categoria, data_registre, text_registre):
-        """Funció per a inserir el registre a la taula de la base de dades i, si no existeix, crear-la."""
+    def registre_dades(self, nom_alumne, nom_categoria, data_registre, text_registre):
+        """Funció per a inserir el registre_input a la taula de la base de dades i, si no existeix, crear-la."""
         ordre_inserir_sql = 'INSERT INTO registres (nom_alumne, categoria, data, descripcio) VALUES (?, ?, ?, ?)'
         dades_a_registrar = (nom_alumne, nom_categoria, data_registre, text_registre)
         try:
-            conn = sqlite3.connect(arxiubbdd)
+            conn = sqlite3.connect(self.arxiubbdd)
             conn.cursor()
             conn.execute(ordre_inserir_sql, dades_a_registrar)
             conn.commit()
@@ -157,10 +156,9 @@ class Escriptor:
         except sqlite3.OperationalError:
             print("ERROR")
 
-    @staticmethod
-    def actualitzacio_dates(data1, data2):
+    def actualitzacio_dates(self, data1, data2):
         ordre = 'UPDATE dates SET data=? WHERE id = ?'
-        conn = sqlite3.connect(arxiubbdd)
+        conn = sqlite3.connect(self.arxiubbdd)
         conn.cursor()
         ultim_id_data_consulta = 'SELECT MAX(id) FROM dates'
         ultim_id_data = conn.execute(ultim_id_data_consulta).fetchone()[0]
@@ -172,13 +170,13 @@ class Escriptor:
         finally:
             conn.close()
 
-    @staticmethod
-    def eliminar_registres():
-        """Funció per a eliminar un registre de la taula de la base de dades"""
+
+    def eliminar_registres(self):
+        """Funció per a eliminar un registre_input de la taula de la base de dades"""
         ordre_eliminar_sql = 'DELETE FROM registres; DELETE FROM dates; DELETE FROM alumnes'
 
         try:
-            conn = sqlite3.connect(arxiubbdd)
+            conn = sqlite3.connect(self.arxiubbdd)
             conn.cursor()
             conn.execute(ordre_eliminar_sql)
             conn.commit()
@@ -302,7 +300,7 @@ class Exportador:
                 conn.close()
 
         def determinacio_trimestre(data_cons):
-            """Assigna el trimestre segons la data del registre"""
+            """Assigna el trimestre segons la data del registre_input"""
             data_registre = data_cons['data']
             d1ertrim = datetime.strptime(llista_dates()[0], '%Y-%m-%d')
             d2ontrim = datetime.strptime(llista_dates()[1], '%Y-%m-%d')

@@ -2,12 +2,11 @@
 ### Example user template
 
 # IntelliJ project files
-.idea
+/include/.idea
+/.idea/*
 *.iml
 *.xlsx
-
 !/README.md
-
 /.vscode/
 /venv/
 /lib/
@@ -15,3 +14,5 @@
 /src/__pycache__
 seguiment.sublime-project
 seguiment.sublime-workspace
+Pipfile
+Pipfile.lock

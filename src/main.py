@@ -1,17 +1,20 @@
+import os
 import sys
 from datetime import date, timedelta, datetime
 from typing import List, Any
 
 import PySide6.QtCore
 import PySide6.QtGui
-from PySide6 import QtCharts
+import dateutil
+from PySide6 import QtCharts, QtSql
+from PySide6.QtSql import QSqlTableModel, QSqlDatabase, QSqlDriver
 from PySide6.QtCore import QSize, Qt, QAbstractTableModel, QDate
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateEdit,
                                QFileDialog, QToolBar, QTableView, QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                                QMainWindow, QMessageBox, QPushButton,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QDialog,
-                               QTabWidget, QHeaderView)
+                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QWizard, QWizardPage, QTabWidget,
+                               QHeaderView, QSizePolicy, QStyle)
 
 from funcions import (Escriptor, Lector, Iniciador, Exportador)
 
@@ -55,57 +58,69 @@ class Visualitzador(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        self.model_visualitzar = None
         self.setWindowTitle("Alumnes")
         self.setWindowIcon(QIcon("src/icones/document-properties-symbolic.svg"))
         self.resize(300, 200)
         self.setMinimumWidth(400)
         self.setMaximumWidth(650)
-
         self.alumne_seleccionat = ""
-        self.lector_editor_registres = Lector()
-        self.llista_alumnes = self.lector_editor_registres.llista_alumnes_registres()
-        self.escriptor_registres = Escriptor()
-        self.visualitzador_taula = QTableView()
+        self.taula = QTableView()
+        self.taula.setMaximumWidth(600)
         self.visualitzador_distribucio = QVBoxLayout()
-        self.visualitzador_distribucio.setAlignment(Qt.AlignTop)
-        self.setLayout(self.visualitzador_distribucio)
-        self.alumne_etiqueta = QLabel("Alumne: ")
-        self.selector_alumnes = QComboBox()
-        self.alumne_seleccionat = self.selector_alumnes.currentText()
-        self.selector_alumnes.currentTextChanged.connect(self.canvi_alumne)
         self.bloc_seleccio = QHBoxLayout()
+        self.lector_editor_registres = Lector()
+        self.llista_alumnes = self.lector_editor_registres.llista_alumnes_desplegable()
+        self.conexio_base_dades()
+        # Organitzem elements:
+        self.etiqueta_alumne = QLabel("Alumne: ")
+        self.dialeg_alumne = QComboBox()
+        self.dialeg_alumne.addItem("*Tots*")
+        self.dialeg_alumne.addItems(self.llista_alumnes)
+        self.dialeg_alumne.currentTextChanged.connect(self.modificacio_seleccio)
+        self.bloc_seleccio.addWidget(self.etiqueta_alumne)
+        self.bloc_seleccio.addWidget(self.dialeg_alumne)
         self.bloc_seleccio.setAlignment(Qt.AlignLeft)
-        self.bloc_seleccio.addWidget(self.alumne_etiqueta)
-        self.bloc_seleccio.addWidget(self.selector_alumnes)
-        self.selector_alumnes.addItems(self.llista_alumnes)
-        self.visualitzador_taula_model = ModelVisualitzacio(self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
-        self.visualitzador_taula.setModel(self.visualitzador_taula_model)
-        self.visualitzador_taula.AdjustToContents
-        self.visualitzador_taula.setSortingEnabled(True)
-        self.visualitzador_taula.setWordWrap(True)
-        self.visualitzador_taula.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.visualitzador_taula.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.visualitzador_taula.setColumnHidden(0, True)
-        self.visualitzador_taula.setColumnHidden(1, True)
-        # self.visualitzador_taula.sizeHintForColumn(100)
-        self.visualitzador_taula.horizontalHeader().setStretchLastSection(True)
-        self.visualitzador_taula.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.visualitzador_taula.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.visualitzador_taula.verticalHeader().setVisible(True)
+        self.setLayout(self.visualitzador_distribucio)
         self.visualitzador_distribucio.addLayout(self.bloc_seleccio)
-        self.visualitzador_distribucio.addWidget(self.visualitzador_taula)
+        self.visualitzador_distribucio.addWidget(self.taula)
+        # Esdeveniment si editem un registre_input:
 
-    def canvi_alumne(self):
-        self.alumne_seleccionat = self.selector_alumnes.currentText()
-        self.visualitzador_taula_model = ModelVisualitzacio(self.lector_editor_registres.registres_alumne_individual(self.alumne_seleccionat))
-        self.visualitzador_taula.setModel(self.visualitzador_taula_model)
-        # self.visualitzador_taula.resizeColumnsToContents()
-        # self.visualitzador_taula.resizeRowsToContents()
+    def modificacio_seleccio(self):
+        if self.dialeg_alumne.currentText() != "*Tots*":
+            self.model_visualitzar.setFilter("nom_alumne LIKE '%{}%'".format(self.dialeg_alumne.currentText()))
+            self.taula.updateEditorData()
+            self.taula.hideColumn(1)
+            self.taula.setColumnWidth(4, 150)
+            self.taula.setWordWrap(True)
+            self.taula.resizeColumnsToContents()
+            self.taula.resizeRowsToContents()
 
-    def canvimida(self):
-        self.visualitzador_taula.AdjustToContents()
 
+        else:
+            self.model_visualitzar.setFilter("")
+            self.taula.showColumn(1)
+            self.taula.setColumnWidth(4, 225)
+            self.taula.setWordWrap(True)
+            self.taula.resizeColumnsToContents()
+            self.taula.resizeRowsToContents()
 
+    def conexio_base_dades(self):
+        self.model_visualitzar = VisualitzadorSQL("registres").model
+        self.model_visualitzar.setHeaderData(1, Qt.Horizontal, "Alumne")
+        self.model_visualitzar.setHeaderData(2, Qt.Horizontal, "Motiu")
+        self.model_visualitzar.setHeaderData(3, Qt.Horizontal, "Data")
+        self.model_visualitzar.setHeaderData(4, Qt.Horizontal, "Descripcio")
+        self.taula.setModel(self.model_visualitzar)
+        self.taula.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.taula.setMaximumWidth(600)
+        self.taula.resizeColumnsToContents()
+        self.taula.resizeRowsToContents()
+        self.taula.setColumnWidth(4, 225)
+        self.taula.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.taula.setWordWrap(True)
+        self.taula.hideColumn(0)
 
 
 class Grafics(QWidget):
@@ -366,6 +381,31 @@ class DialegSeleccioCarpeta(QFileDialog):
         self.setFileMode(QFileDialog.Directory)
 
 
+class VisualitzadorSQL(QSqlTableModel):
+    def __init__(self, taula_consultar):
+        super().__init__()
+        self.taula_consultar = taula_consultar
+        self.directory_base = os.path.dirname(__file__)
+        self.carpeta_base_dades = os.path.join(self.directory_base, "dades/registre.db")
+        self.base_dades = QSqlDatabase("QSQLITE")
+        self.base_dades.setDatabaseName(self.carpeta_base_dades)
+        self.base_dades.open()
+        if not self.base_dades.isOpen():
+            print("Error: no s'ha pogut obrir la base de dades")
+            sys.exit(1)
+        self.model = QSqlTableModel(db=self.base_dades)
+        self.model.setTable(self.taula_consultar)
+        self.model.select()
+        self.model.setEditStrategy(QtSql.QSqlTableModel.OnManualSubmit)
+
+        # print(self.model.data(self.model.index(0, 3)))
+        # TODO: Aplicar canvi de data a tot el model
+        if self.taula_consultar == "registres":
+            for i in range(self.model.rowCount()):
+                self.item_format = dateutil.parser.parse(self.model.data(self.model.index(i, 3))).strftime("%d/%m/%Y")
+                self.model.setData(self.model.index(i, 3), self.item_format)
+
+
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
@@ -400,15 +440,23 @@ class TableModel(QAbstractTableModel):
             else:
                 return section
 
+    def flags(self, index):
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+
 
 class ModelVisualitzacio(QAbstractTableModel):
+    """Model de la taula de visualització i edidico de registres. Seguint:
+     https://www.pythonguis.com/tutorials/pyside6-qtableview-modelviews-numpy-pandas/
+     https://www.pythonguis.com/faq/editing-pyqt-tableview/
+     """
+
     def __init__(self, data):
         super(ModelVisualitzacio, self).__init__()
         self._data = data
         self.noms = ["Alumne", "Categoria", "Data", "Descripció"]
 
     def data(self, index, role):
-        if role == Qt.ItemDataRole.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             value = self._data[index.row()][index.column()]
             # See below for the nested-list data structure.
             # .row() indexes into the outer list,
@@ -416,8 +464,15 @@ class ModelVisualitzacio(QAbstractTableModel):
             if isinstance(value, datetime):
                 # Render time to YYY-MM-DD.
                 return value.strftime("%d/%m/%Y")
-
             return value
+        elif role == Qt.ItemDataRole.UserRole:
+            valor_introduit = QAbstractTableModel.data(index)
+            print(self.setData(index, valor_introduit, 2))
+            valor_previ = self._data[index.row()][index.column()]
+            if valor_introduit == valor_previ:
+                return valor_previ
+            else:
+                return valor_introduit
 
     def rowCount(self, index):
         # The length of the outer list.
@@ -434,6 +489,12 @@ class ModelVisualitzacio(QAbstractTableModel):
                 return self.noms[section - 1]
             else:
                 return section
+
+    def flags(self, index):
+        if not index.column() == 2:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+        else:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
 
 class DadesAlumnes(QWidget):
@@ -698,6 +759,7 @@ class AssistentInicial(QWizard):
         self.addPage(self.pagina_inicial)
         self.addPage(self.pagina_alumnes)
         self.addPage(self.pagina_final)
+
         self.button(QWizard.CancelButton).setText("Cancel·lar")
         self.acciocancela = QAction(app.quit())
         self.acciotanca = QAction(self.cancela())
