@@ -105,8 +105,6 @@ class DialegEliminar(QMessageBox):
         self.setIcon(QMessageBox.Warning)
 
 
-
-
 class EditorDates(QtWidgets.QWidget):
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
@@ -231,8 +229,8 @@ class EditorAlumnes(QtWidgets.QWidget):
         self.TAULA_ALUMNES.setSelectionMode(QAbstractItemView.SingleSelection)
         self.TAULA_ALUMNES.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.INDICADOR_ELIMINAT = None
-        if dades_alumnes is None:
-            self.TAULA_ALUMNES_MODEL = (ModelEdicioAlumnes([[]]))
+        if not dades_alumnes:
+            self.TAULA_ALUMNES_MODEL = (ModelEdicioAlumnes([" "]))
             self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
             self.TAULA_ALUMNES_MODEL.setHeaderData(2, Qt.Horizontal, "Alumne")
         else:
@@ -352,7 +350,6 @@ class EditorAlumnes(QtWidgets.QWidget):
             index = self.TAULA_ALUMNES.currentIndex()
             self.TAULA_ALUMNES_MODEL.remove_row(index.row())
 
-
     def modificar_alumne(self):
         # Editar un registre:
         index = self.TAULA_ALUMNES.currentIndex()
@@ -366,7 +363,10 @@ class AssistentInicial(QWizard):
         self.setWizardStyle(QWizard.ModernStyle)
         self.setMinimumSize(QSize(600, 400))
         self.setButtonLayout([QWizard.BackButton, QWizard.NextButton, QWizard.FinishButton, QWizard.CancelButton])
-
+        self.setButtonText(QWizard.FinishButton, "Finalitzar")
+        self.setButtonText(QWizard.BackButton, "Enrere")
+        self.setButtonText(QWizard.CancelButton, "Cancel·lar")
+        # Configuracio de la pagina inicial:
         self.PAGINAINICIAL_TEXT = QLabel("Aquesta aplicació serveix per a la gestió dels alumnes tutoritzats.\n"
                                          "S'ha detectat que no consten noms d'alumnes, registres previs ni dates de "
                                          "trimestre.\n "
@@ -380,14 +380,21 @@ class AssistentInicial(QWizard):
         self.PAGINA_INICIAL.setTitle("Inicialització")
         self.PAGINA_INICIAL.setSubTitle("Inicialització de l'aplicació")
         self.PAGINA_INICIAL.setPixmap(QWizard.WatermarkPixmap, QPixmap("icones/assistent.png"))
+        # Configurem la pagina d'alumnes:
         self.PAGINA_ALUMNES = QWizardPage()
         self.PAGINA_ALUMNES.setTitle("Alumnes")
         PAGINA_ALUMNES_DISTRIBUCIO = QVBoxLayout()
         PAGINA_ALUMNES_DISTRIBUCIO.addWidget(EditorAlumnes())
         self.PAGINA_ALUMNES.setLayout(PAGINA_ALUMNES_DISTRIBUCIO)
-        self.setButtonText(QWizard.FinishButton, "Finalitzar")
-        self.setButtonText(QWizard.BackButton, "Enrere")
-        self.setButtonText(QWizard.CancelButton, "Cancel·lar")
+        # Configurem la pagina de dates:
+        self.PAGINA_DATES = QWizardPage()
+        self.PAGINA_DATES.setTitle("Dates")
+        PAGINA_DATES_DISTRIBUCIO = QVBoxLayout()
+        PAGINA_DATES_DISTRIBUCIO.addWidget(EditorDates())
+        self.PAGINA_DATES.setLayout(PAGINA_DATES_DISTRIBUCIO)
+        self.PAGINA_DATES.setFinalPage(True)
         # Afegim les pagines:
         self.addPage(self.PAGINA_INICIAL)
         self.addPage(self.PAGINA_ALUMNES)
+        self.addPage(self.PAGINA_DATES)
+

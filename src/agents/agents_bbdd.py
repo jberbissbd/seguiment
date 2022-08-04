@@ -25,14 +25,59 @@ class Iniciador(ModelDao):
 
     def __init__(self):
         super(Iniciador, self).__init__()
-        self.presencia_taula_alumne = self.comprova_presencia_taula("alumnes")
-        self.presencia_taula_registres = self.comprova_presencia_taula("registres")
-        self.presencia_taula_dates = self.comprova_presencia_taula("dates")
+        self.presencia_taula_alumne = self.comprova_existencia_taules("alumnes")
+        self.presencia_taula_registres = self.comprova_existencia_taules("registres")
+        self.presencia_taula_dates = self.comprova_existencia_taules("dates")
+        self.presencia_taula_categories = self.comprova_existencia_taules("categories")
 
-    def comprova_presencia_taula(self, taula):
+    def comprova_existencia_taules(self, taula):
         self.taula = taula
-        self.c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='{}';".format(self.taula))
-        return self.c.fetchone() is not None
+        try:
+            self.c.execute(f"SELECT * FROM {self.taula}")
+            if self.c.fetchone() is not None:
+                return True
+            else:
+                return False
+        except sqlite3.OperationalError:
+            return False
+
+    def inicia_taules(self):
+        # if not self.presencia_taula_alumne:
+        #     self.c.execute(
+        #         "CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB);")
+        # if not self.presencia_taula_registres:
+        #     self.c.execute(
+        #         "CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY, alumne INTEGER, categoria INTEGER, "
+        #         "data TEXT, descripcio TEXT);")
+        # if not self.presencia_taula_dates:
+        #     self.c.execute("CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT);")
+        # if not self.presencia_taula_categories:
+        #     self.c.execute("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria "
+        #                    "BLOB);")
+        try:
+            ordre_general = """begin;CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            nom_alumne BLOB); CREATE TABLE IF NOT EXISTS registres (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT 
+            UNIQUE,data INTEGER date, descripcio BLOB, id_alumne INTEGER NOT NULL, id_categoria INTEGER NOT 
+            NULL); CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT); CREATE TABLE IF 
+            NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB);commit """
+            self.conn.executescript(ordre_general)
+
+        except sqlite3.OperationalError:
+            return False
+        try:
+            insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
+            motius = ["Informació acadèmica", "Incidències", "Famílies (reunions)", "Escolta'm", "Observacions"]
+            for motiu in motius:
+                self.c.execute(insercio_categories, (motiu,))
+                self.conn.commit()
+            return True
+        except sqlite3.OperationalError:
+            return False
+        finally:
+            self.conn.close()
+
+    def eliminar_basededades(self):
+        os.remove(self.ruta_bbdd)
 
 
 class AlumnesBbdd(ModelDao):
@@ -68,7 +113,10 @@ class AlumnesBbdd(ModelDao):
         except sqlite3.OperationalError as e:
             print(e)
             return False
-        return llista_alumnes
+        if len(llista_alumnes) > 0:
+            return llista_alumnes
+        else:
+            return False
 
     def llegir_alumne_individual(self, id_alumne: int):
         parametre: str = "id,nom_alumne"

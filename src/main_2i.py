@@ -6,7 +6,7 @@ from typing import Union
 import dateutil.parser
 
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_bbdd_comm
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis,Iniciador
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador
 from dateutil import parser
 from PySide6 import QtCore
 from PySide6.QtCore import QSize, Qt, QDate
@@ -15,13 +15,9 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QToolBar, QTableView, QGridLayout, QLabel,
                                QMainWindow, QPushButton, QStackedWidget, QButtonGroup,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
-                               QStatusBar,
-                               QStyleFactory, QWizard, QHeaderView, QMessageBox)
+                               QStatusBar, QWizard, QWizardPage, QLineEdit, QCheckBox, QDialog, QDialogButtonBox,
+                               QStyleFactory, QWizard, QHeaderView, QMessageBox, QDialog)
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, AssistentInicial
-
-
-def sortir():
-    app.quit()
 
 
 class ModelVisualitzacio(QtCore.QAbstractTableModel):
@@ -69,8 +65,6 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
 class MainWindow(QMainWindow):
     senyal_alumnes_actualitzats = QtCore.Signal(bool)
     senyal_registres_actualitzats = QtCore.Signal(bool)
-    Arrencador = Iniciador()
-    print(Arrencador.presencia_taula_alumne, Arrencador.presencia_taula_registres, Arrencador.presencia_taula_dates),
 
     def __init__(self):
         super().__init__()
@@ -185,14 +179,18 @@ class MainWindow(QMainWindow):
     def widget_creacio(self):
         # Creem el widget de creacio de nous registres:
         self.CREACIO = CreadorRegistres()
-        self.CREACIO.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes())
+        if self.obtenir_llistat_registres():
+            self.CREACIO.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes())
         self.CREACIO.SELECTOR_CATEGORIA.addItems(self.obtenir_categories())
         self.CREACIO.EDICIO_DESCRIPCIO.textChanged.connect(self.actualitzar_descripcio)
         self.CREACIO.BOTO_DESAR.clicked.connect(self.desar_registre)
         self.CREACIO.BOTO_DESAR.clicked.connect(self.senyal_registres_actualitzats)
 
     def widget_edicio_alumnes(self):
-        self.EDITAR_ALUMNES = EditorAlumnes(dades_alumnes=self.obtenir_registres_alumnes())
+        if self.obtenir_llistat_alumnes():
+            self.EDITAR_ALUMNES = EditorAlumnes(dades_alumnes=self.obtenir_registres_alumnes())
+        else:
+            self.EDITAR_ALUMNES = EditorAlumnes(dades_alumnes=[[]])
         self.EDITAR_ALUMNES.BOTO_DESAR.clicked.connect(self.senyal_alumnes_actualitzats)
         self.EDITAR_ALUMNES.BOTO_DESAR.clicked.connect(self.missatge_eliminats)
 
@@ -234,17 +232,25 @@ class MainWindow(QMainWindow):
         self.VISUALITZAR_EDITAR.setLayout(DISTRIBUCIO)
         self.VISUALITZA_DESPLEGABLE_SELECCIO = QComboBox()
         self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
+        if self.obtenir_llistat_alumnes_registrats():
+            self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
         self.VISUALITZA_DESPLEGABLE_SELECCIO.setMaximumWidth(300)
         BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar canvis")
         BOTO_DESAR.clicked.connect(self.alteracio_registres)
-        self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
+        if self.obtenir_llistat_registres() not in [None, False]:
+            self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
+            self.columnes_model: int = self.TAULA_MODEL.columnCount(1)
+            self.files_model: int = self.TAULA_MODEL.rowCount(1)
+        else:
+            self.TAULA_MODEL = ModelVisualitzacio([[" ", " ", " ", " "]])
+            self.columnes_model = 1
+            self.files_model = 1
+
         self.TAULA_MODEL.installEventFilter(self)
         noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
         for nom in noms_columnes:
             self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
-        self.columnes_model: int = self.TAULA_MODEL.columnCount(1)
-        self.files_model: int = self.TAULA_MODEL.rowCount(1)
+
         self.TAULA = QTableView()
 
         self.TAULA.setModel(self.TAULA_MODEL)
@@ -408,7 +414,8 @@ class MainWindow(QMainWindow):
         self.SELECTOR_ALUMNES = QComboBox()
         self.SELECTOR_ALUMNES.addItem("* Selecciona un alumne *")
         self.SELECTOR_ALUMNES.addItem("* Tots *")
-        self.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+        if self.obtenir_llistat_alumnes_registrats():
+            self.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         self.SELECTOR_ALUMNES.setVisible(False)
         DISTRIBUCIO.addWidget(GRUP_TIPUS)
@@ -443,52 +450,83 @@ class MainWindow(QMainWindow):
 
     def obtenir_llistat_alumnes(self):
         alumnes_entrada = self.cap.alumnat
-        llistat_alumnes = []
-        for alumne in alumnes_entrada:
-            llistat_alumnes.append(alumne.nom)
-        return llistat_alumnes
+        if alumnes_entrada:
+            llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+
+            return llistat_alumnes
+        else:
+            return False
 
     def obtenir_registres_alumnes(self):
         alumnes_entrada = self.cap.alumnat
-        llistat_dades_alumnes = []
-        for alumne in alumnes_entrada:
-            llistat_dades_alumnes.append([alumne.id, alumne.nom])
-        return llistat_dades_alumnes
+        if alumnes_entrada:
+            llistat_dades_alumnes =[[alumne.id, alumne.nom] for alumne in alumnes_entrada]
+            return llistat_dades_alumnes
+        else:
+            return False
 
     def obtenir_llistat_alumnes_registrats(self):
         alumnes_entrada = self.cap.alumnat_registres
-        llistat_alumnes = []
-        for alumne in alumnes_entrada:
-            llistat_alumnes.append(alumne.nom)
-        return llistat_alumnes
+        if alumnes_entrada:
+            llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+
+            return llistat_alumnes
+        else:
+            return False
 
     def obtenir_categories(self):
         categories_entrada = self.categoritzador.categories
-        llistat_categories = []
-        for categoria in categories_entrada:
-            llistat_categories.append(categoria.nom)
+        llistat_categories = [categoria.nom for categoria in categories_entrada]
         return llistat_categories
 
     def obtenir_llistat_registres(self):
         llista_registres = []
         self.acces_registres.refrescar_registres()
         if self.acces_registres.registres:
-            for element in self.acces_registres.registres:
-                data_formatada = parser.parse(element.data).strftime("%d/%m/%Y")
-                registre_ind = [element.id, element.alumne.nom, element.categoria.nom, data_formatada,
-                                element.descripcio]
-
-                llista_registres.append(registre_ind)
+            llista_registres = [[element.id, element.alumne.nom, element.categoria.nom,
+                                 parser.parse(element.data).strftime("%d/%m/%Y"), element.descripcio] for element
+                                in self.acces_registres.registres]
             return llista_registres
         else:
             return False
 
 
-app = QApplication(sys.argv)
+def sortir(self):
+    sys.exit(0)
 
-window = MainWindow()
-a = AssistentInicial()
-window.show()
-a.show()
 
-sys.exit(app.exec())
+class Aplicacio(QApplication):
+    def __init__(self, argv):
+        super().__init__(argv)
+        self.setQuitOnLastWindowClosed(True)
+        assistent = AssistentInicial()
+        arrencador = Comprovador()
+        creador = Iniciador()
+        if arrencador.presencia_alumnes and arrencador.presencia_registres and arrencador.presencia_dates:
+            finestra_principal = MainWindow()
+            finestra_principal.show()
+        else:
+            creador.inicia_taules()
+            assistent.show()
+            if assistent.exec() == QWizard.CancelButton:
+                creador.eliminar_basededades()
+                sortir()
+            elif assistent.exec() == QWizard.FinishButton:
+                finestra_principal = MainWindow()
+                finestra_principal.show()
+                assistent.close()
+
+        self.exec()
+
+        sys.exit(self.exec())
+
+
+app = Aplicacio(sys.argv)
+# app = QApplication(sys.argv)
+#
+# window = MainWindow()
+# a = AssistentInicial()
+# window.show()
+# a.show()
+
+# sys.exit(app.exec())
