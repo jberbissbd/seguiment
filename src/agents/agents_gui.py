@@ -3,12 +3,19 @@ from dataclasses import dataclass
 
 import dateutil
 
-from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd
+from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd,Iniciador
 from dateutil import parser
 
 from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, Registres_bbdd_comm
+    Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou
 
+class Comprovador:
+    def __init__(self):
+        super(Comprovador, self).__init__()
+        resultat_iniciador = Iniciador()
+        self.presencia_alumnes = resultat_iniciador.presencia_taula_alumne
+        self.presencia_registres = resultat_iniciador.presencia_taula_registres
+        self.presencia_dates = resultat_iniciador.presencia_taula_dates
 
 class Comptable:
     def __init__(self):
@@ -129,6 +136,15 @@ class Comptable:
                 self.registrador.crear_registre(missatge_registre_bbddd)
                 return True
 
+    def refrescar_registres(self):
+
+        self.info_categories = self.categoritzador.lectura_categories()
+        self.info_alumnes = self.alumnes.llegir_alumnes()
+        self.info_registres = self.registrador.lectura_registres()
+        self.registres = self.obtenir_registres()
+        self.noms_alumnes = self.obtenir_noms()
+        self.categories = self.obtenir_categories()
+
 
 class Calendaritzador:
 
@@ -206,7 +222,8 @@ class CapEstudis:
     def eliminar_alumnes(self, llista_eliminar):
         """Elimina un alumne de la base de dades"""
         if isinstance(llista_eliminar, list):
-            self.alumnes.actualitzar_alumne(llista_eliminar)
+            self.alumnes.eliminar_alumne(llista_eliminar)
+            self.registres.eliminar_registre_alumne(llista_eliminar)
             return True
         else:
             return False
@@ -225,11 +242,10 @@ class CapEstudis:
             return False
         else:
             for persona in missatge_afegir:
-                if not isinstance(persona, Alumne_comm):
+                if not isinstance(persona, Alumne_nou):
                     return False
-                else:
-                    self.alumnes.registrar_alumne(persona.nom)
-                    return True
+        resultat = self.alumnes.registrar_alumne(missatge_afegir)
+        return resultat
 
     def obtenir_id_alumne(self, alumne):
         """Retorna l'id d'un alumne"""
@@ -239,6 +255,12 @@ class CapEstudis:
                     return alumne_bbdd[0]
         else:
             return False
+
+    def refrescar_alumnes(self):
+        self.info_alumnes = self.alumnes.llegir_alumnes()
+        self.info_alumnes_registrats = self.registres.lectura_alumnes_registrats()
+        self.alumnat = self.obtenir_alumnes()
+        self.alumnat_registres = self.obtenir_alumnes_registrats()
 
 
 class Classificador:

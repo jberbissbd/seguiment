@@ -6,7 +6,7 @@ from typing import Union
 import dateutil.parser
 
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_bbdd_comm
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis,Iniciador
 from dateutil import parser
 from PySide6 import QtCore
 from PySide6.QtCore import QSize, Qt, QDate
@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QMainWindow, QPushButton, QStackedWidget, QButtonGroup,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
                                QStatusBar,
-                               QStyleFactory, QWizard)
+                               QStyleFactory, QWizard, QHeaderView, QMessageBox)
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, AssistentInicial
 
 
@@ -67,9 +67,14 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
 
 
 class MainWindow(QMainWindow):
+    senyal_alumnes_actualitzats = QtCore.Signal(bool)
+    senyal_registres_actualitzats = QtCore.Signal(bool)
+    Arrencador = Iniciador()
+    print(Arrencador.presencia_taula_alumne, Arrencador.presencia_taula_registres, Arrencador.presencia_taula_dates),
 
     def __init__(self):
         super().__init__()
+        self.EDITAR_ALUMNES = None
         self.BARRA_NOTIFICACIONS = None
         self.BOTO_DATES = None
         self.BOTO_INFORMES = None
@@ -93,6 +98,9 @@ class MainWindow(QMainWindow):
         self.acces_registres = Comptable()
         self.info_alumnes = self.cap.info_alumnes
         self.configuracio_interficie()
+        # Definim senyals:
+        self.senyal_registres_actualitzats.connect(self.senyal_canvi_registres)
+        self.senyal_alumnes_actualitzats.connect(self.senyal_canvi_alumnes)
 
     def configuracio_interficie(self):
         self.setWindowTitle("Seguiment d'alumnes")
@@ -120,9 +128,10 @@ class MainWindow(QMainWindow):
         self.WIDGET_PRINCIPAL.setLayout(DISTRIBUCIO_PRINCIPAL)
         self.setCentralWidget(self.WIDGET_PRINCIPAL)
         self.widget_creacio()
+        self.widget_edicio_alumnes()
         self.widget_visualitzacio()
         self.DATES = EditorDates()
-        self.EDITAR_ALUMNES = EditorAlumnes(dades_alumnes=self.obtenir_registres_alumnes())
+
         self.widget_informes()
         # Introduim la barra d'eines:
         self.BARRA_EINES_DISTRIBUCIO = QToolBar()
@@ -137,7 +146,7 @@ class MainWindow(QMainWindow):
         self.BOTO_EDITAR_ALUMNES = QAction(self, icon=QIcon("icones/system-switch-user-symbolic.svg"), text="Alumnes")
         self.BOTO_EDITAR_ALUMNES.setToolTip("Editar les dades de l'alumne")
         self.BOTO_VISUALITZAR = QAction(self, icon=QIcon("icones/document-properties-symbolic.svg"),
-                                            text="LListat")
+                                        text="LListat")
         self.BOTO_VISUALITZAR.setToolTip("Visualitzar/Editar un registre")
         self.BOTO_DATES = QAction(self, icon=QIcon("icones/office-calendar-symbolic.svg"), text="Dates")
         self.BOTO_DATES.setToolTip("Dates trimestre")
@@ -180,10 +189,19 @@ class MainWindow(QMainWindow):
         self.CREACIO.SELECTOR_CATEGORIA.addItems(self.obtenir_categories())
         self.CREACIO.EDICIO_DESCRIPCIO.textChanged.connect(self.actualitzar_descripcio)
         self.CREACIO.BOTO_DESAR.clicked.connect(self.desar_registre)
+        self.CREACIO.BOTO_DESAR.clicked.connect(self.senyal_registres_actualitzats)
+
+    def widget_edicio_alumnes(self):
+        self.EDITAR_ALUMNES = EditorAlumnes(dades_alumnes=self.obtenir_registres_alumnes())
+        self.EDITAR_ALUMNES.BOTO_DESAR.clicked.connect(self.senyal_alumnes_actualitzats)
+        self.EDITAR_ALUMNES.BOTO_DESAR.clicked.connect(self.missatge_eliminats)
+
+    def missatge_eliminats(self):
+        if self.EDITAR_ALUMNES.INDICADOR_ELIMINAT:
+            self.statusBar().showMessage("Alumnes eliminats", 2000)
 
     def actualitzar_descripcio(self):
         if self.CREACIO.EDICIO_DESCRIPCIO.toPlainText() == "":
-
             self.CREACIO.BOTO_DESAR.setEnabled(False)
         else:
             self.CREACIO.BOTO_DESAR.setEnabled(True)
@@ -214,20 +232,21 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.VISUALITZAR_EDITAR.setLayout(DISTRIBUCIO)
-        DESPLEGABLE_SELECCIO = QComboBox()
-        DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
-        DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
-        DESPLEGABLE_SELECCIO.setMaximumWidth(300)
+        self.VISUALITZA_DESPLEGABLE_SELECCIO = QComboBox()
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.setMaximumWidth(300)
         BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar canvis")
         BOTO_DESAR.clicked.connect(self.alteracio_registres)
         self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
+        self.TAULA_MODEL.installEventFilter(self)
         noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
         for nom in noms_columnes:
             self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
-
         self.columnes_model: int = self.TAULA_MODEL.columnCount(1)
         self.files_model: int = self.TAULA_MODEL.rowCount(1)
         self.TAULA = QTableView()
+
         self.TAULA.setModel(self.TAULA_MODEL)
         self.TAULA.setColumnHidden(0, True)
         self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
@@ -240,10 +259,34 @@ class MainWindow(QMainWindow):
         self.TAULA.resizeColumnToContents(2)
         self.TAULA.resizeColumnToContents(3)
         self.TAULA.setSortingEnabled(True)
-        DISTRIBUCIO.addWidget(DESPLEGABLE_SELECCIO, 0, 0)
+        DISTRIBUCIO.addWidget(self.VISUALITZA_DESPLEGABLE_SELECCIO, 0, 0)
         DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 1)
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
         self.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
+
+    def senyal_canvi_registres(self):
+        self.acces_registres.refrescar_registres()
+        self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
+        self.TAULA.setModel(self.TAULA_MODEL)
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.clear()
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
+        self.cap.refrescar_alumnes()
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
+
+    def senyal_canvi_alumnes(self):
+        """Actualitza els noms d'alumnes, i tambe els registres a visualitzar"""
+        # Actualitzem els selectors d'alumnes:
+        self.cap.refrescar_alumnes()
+        self.obtenir_llistat_alumnes()
+        self.CREACIO.SELECTOR_ALUMNES.clear()
+        self.CREACIO.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes())
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.clear()
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
+        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
+        # Actualitzem els registres, ja que la base de dades eliminara els registres d'un alumne.
+        self.acces_registres.refrescar_registres()
+        self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
+        self.TAULA.setModel(self.TAULA_MODEL)
 
     def bloqueig_registre_taula(self):
         # Editar un registre:
@@ -428,6 +471,7 @@ class MainWindow(QMainWindow):
 
     def obtenir_llistat_registres(self):
         llista_registres = []
+        self.acces_registres.refrescar_registres()
         if self.acces_registres.registres:
             for element in self.acces_registres.registres:
                 data_formatada = parser.parse(element.data).strftime("%d/%m/%Y")
@@ -446,6 +490,5 @@ window = MainWindow()
 a = AssistentInicial()
 window.show()
 a.show()
-
 
 sys.exit(app.exec())

@@ -20,6 +20,21 @@ class ModelDao:
         self.c = self.conn.cursor()
 
 
+class Iniciador(ModelDao):
+    """Comprova si existeixen les taules alumne, registres i dates"""
+
+    def __init__(self):
+        super(Iniciador, self).__init__()
+        self.presencia_taula_alumne = self.comprova_presencia_taula("alumnes")
+        self.presencia_taula_registres = self.comprova_presencia_taula("registres")
+        self.presencia_taula_dates = self.comprova_presencia_taula("dates")
+
+    def comprova_presencia_taula(self, taula):
+        self.taula = taula
+        self.c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='{}';".format(self.taula))
+        return self.c.fetchone() is not None
+
+
 class AlumnesBbdd(ModelDao):
     def __init__(self, taula="alumnes"):
         super().__init__()
@@ -68,16 +83,19 @@ class AlumnesBbdd(ModelDao):
             return False
         return persona
 
-    def registrar_alumne(self, nom_alumne: str):
-        self.cursor = self.conn.cursor()
-        try:
-            ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
-            self.cursor.execute(ordre_registrar)
-            self.conn.commit()
-            self.cursor.close()
-            return True
-        except sqlite3.OperationalError:
-            return False
+    def registrar_alumne(self, missatge_registar: list):
+        for element in missatge_registar:
+            nom_alumne = element.nom
+            self.cursor = self.conn.cursor()
+            try:
+                ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
+                self.cursor.execute(ordre_registrar)
+                self.conn.commit()
+                self.cursor.close()
+
+            except sqlite3.OperationalError:
+                return False
+        return True
 
     def eliminar_alumne(self, missatge: list):
         for element in missatge:
@@ -145,7 +163,7 @@ class RegistresBbdd(ModelDao):
 
     def lectura_alumnes_registrats(self):
         """Llegeix els alumnes que tinguin algun registre"""
-        parametre: str = "id_alumne"
+        parametre: int = "id_alumne"
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT DISTINCT {parametre} FROM {self.taula}"
@@ -212,6 +230,25 @@ class RegistresBbdd(ModelDao):
                     self.cursor = self.conn.cursor()
                     try:
                         ordre_eliminar = f"DELETE FROM {self.taula} WHERE id = {element.id}"
+                        self.cursor.execute(ordre_eliminar)
+                        self.conn.commit()
+                        self.cursor.close()
+                        return True
+                    except sqlite3.OperationalError:
+                        return False
+
+    def eliminar_registre_alumne(self, missatge_eliminar: list):
+        """Elimina un registre"""
+        if not isinstance(missatge_eliminar, list):
+            raise TypeError("El missatge ha de ser una llista")
+        else:
+            for element in missatge_eliminar:
+                if not isinstance(element, Alumne_comm):
+                    raise TypeError("El missatge ha de ser una llista amb el format correcte")
+                else:
+                    self.cursor = self.conn.cursor()
+                    try:
+                        ordre_eliminar = f"DELETE FROM {self.taula} WHERE id_alumne = {element.id}"
                         self.cursor.execute(ordre_eliminar)
                         self.conn.commit()
                         self.cursor.close()
