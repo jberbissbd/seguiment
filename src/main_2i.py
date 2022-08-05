@@ -9,7 +9,7 @@ from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_
 from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador
 from dateutil import parser
 from PySide6 import QtCore, QtGui
-from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel
+from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel, QLocale
 from PySide6.QtGui import QIcon, QFont, QAction
 from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QToolBar, QTableView, QGridLayout, QLabel,
@@ -17,8 +17,20 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
                                QStatusBar, QWizard, QWizardPage, QLineEdit, QCheckBox, QDialog, QDialogButtonBox,
                                QStyleFactory, QWizard, QHeaderView, QMessageBox, QDialog, QTableWidget,
-                               QTableWidgetItem)
+                               QTableWidgetItem, QStyledItemDelegate)
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, AssistentInicial
+
+
+class DelegatDates(QStyledItemDelegate):
+    """Delegat per a la columna de dates"""
+
+    def __init__(self):
+        super(DelegatDates, self).__init__()
+
+    def displayText(self, value,locale) -> str:
+        """Retorna el text que es mostra a la columna de dates"""
+        value = value.toPython()
+        return value.strftime("%d/%m/%Y")
 
 
 class SortFilterProxyModel(QSortFilterProxyModel):
@@ -53,7 +65,7 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
                 # .column() indexes into the sub-list
                 value: object = self._data[index.row()][index.column()]
                 if isinstance(value, datetime.date):
-                    return QDate(value.year, value.month, value.day)
+                    return QDate(value)
                 else:
                     return value
             elif role == Qt.UserRole:
@@ -62,7 +74,6 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
                     return value.strftime('%d/%m/%Y')
                 else:
                     return self._data[index.row()][index.column()]
-
 
     def rowCount(self, index):
         # The length of the outer list.
@@ -261,11 +272,14 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.VISUALITZAR_EDITAR.setLayout(DISTRIBUCIO)
-        self.VISUALITZA_DESPLEGABLE_SELECCIO = QComboBox()
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
+        self.VISUALITZA_SELECCIO_ALUMNES = QComboBox()
+        self.VISUALITZA_SELECCIO_CATEGORIES = QComboBox()
+        self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Filtrar per alumne *")
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItem("* Filtrar per categoria *")
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItems(self.obtenir_categories())
         if self.obtenir_llistat_alumnes_registrats():
-            self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.setMaximumWidth(300)
+            self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_SELECCIO_ALUMNES.setMaximumWidth(300)
         BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar canvis")
         BOTO_DESAR.clicked.connect(self.alteracio_registres)
         if self.obtenir_llistat_registres() not in [None, False]:
@@ -283,6 +297,8 @@ class MainWindow(QMainWindow):
         self.TAULA_MODEL_FILTRE = QSortFilterProxyModel(self)
         self.TAULA_MODEL_FILTRE.setSourceModel(self.TAULA_MODEL)
         self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
+        # Establim el delegat per a la columna de dates:
+        self.TAULA.setItemDelegateForColumn(3, DelegatDates())
         # Li indiquem que ha de filtrar de la columna 1:
         self.TAULA_MODEL_FILTRE.setFilterKeyColumn(1)
         # I que hauria d'ordenar per la columna 3:
@@ -299,30 +315,45 @@ class MainWindow(QMainWindow):
         self.TAULA.resizeColumnToContents(2)
         self.TAULA.resizeColumnToContents(3)
         self.TAULA.setSortingEnabled(True)
-        DISTRIBUCIO.addWidget(self.VISUALITZA_DESPLEGABLE_SELECCIO, 0, 0)
-        DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 1)
+        DISTRIBUCIO.addWidget(self.VISUALITZA_SELECCIO_ALUMNES, 0, 0)
+        DISTRIBUCIO.addWidget(self.VISUALITZA_SELECCIO_CATEGORIES, 0, 1)
+        DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 2)
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
         self.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.currentTextChanged.connect(self.visualitzacio_filtrar_registres)
+        self.VISUALITZA_SELECCIO_ALUMNES.currentTextChanged.connect(self.visualitzacio_filtre_alumnes)
 
-    def visualitzacio_filtrar_registres(self):
-        valor_actual_desplegable = self.VISUALITZA_DESPLEGABLE_SELECCIO.currentText()
-        if valor_actual_desplegable == "* Selecciona un alumne *":
+    def visualitzacio_filtre_alumnes(self):
+        valor_actual_desplegable = self.VISUALITZA_SELECCIO_ALUMNES.currentText()
+        if valor_actual_desplegable == "* Filtrar per alumne *":
             self.TAULA.showColumn(1)
             self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
+            self.TAULA.resizeRowsToContents()
         else:
             self.TAULA_MODEL_FILTRE.invalidate()
             self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
             self.TAULA.hideColumn(1)
+            self.TAULA.resizeRowsToContents()
+
+    def visualitzacio_filtre_categories(self):
+        categoria_seleccionada = self.VISUALITZA_SELECCIO_CATEGORIES.currentText()
+        if categoria_seleccionada == "* Filtrar per categoria *":
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
+
+            self.TAULA.resizeRowsToContents()
+        else:
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(categoria_seleccionada)
+            self.TAULA.resizeRowsToContents()
 
     def senyal_canvi_registres(self):
         self.acces_registres.refrescar_registres()
         self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
         self.TAULA.setModel(self.TAULA_MODEL)
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.clear()
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
+        self.VISUALITZA_SELECCIO_ALUMNES.clear()
+        self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Selecciona un alumne *")
         self.cap.refrescar_alumnes()
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
 
     def senyal_canvi_alumnes(self):
         """Actualitza els noms d'alumnes, i tambe els registres a visualitzar"""
@@ -331,9 +362,9 @@ class MainWindow(QMainWindow):
         self.obtenir_llistat_alumnes()
         self.CREACIO.SELECTOR_ALUMNES.clear()
         self.CREACIO.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes())
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.clear()
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_SELECCIO_ALUMNES.clear()
+        self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Selecciona un alumne *")
+        self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         # Actualitzem els registres, ja que la base de dades eliminara els registres d'un alumne.
         self.acces_registres.refrescar_registres()
         self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
@@ -569,6 +600,7 @@ def sortir(self):
 #
 # app = Aplicacio(sys.argv)
 app = QApplication(sys.argv)
+QLocale.setDefault(QLocale.Catalan)
 
 window = MainWindow()
 
