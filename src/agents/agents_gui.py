@@ -265,6 +265,28 @@ class CapEstudis:
 
 class Classificador:
     def __init__(self):
-        self.categories = CategoriesBbdd()
-        self.info_categories = self.categories.lectura_categories()
+        self.categoritzador = CategoriesBbdd()
+        self.info_categories = self.categoritzador.lectura_categories()
         self.categories = self.info_categories
+        self.registrador = RegistresBbdd()
+        self.info_registres = self.registrador.lectura_registres()
+
+    def obtenir_categories_registrades(self, item=None):
+        if self.info_categories and self.info_registres:
+            classificacio = self.info_categories
+            info_registres = self.info_registres
+            llista_categories_amb_registre = []
+            for element in classificacio:
+                for item in info_registres:
+                    if element.id == item.categoria:
+                        if element in llista_categories_amb_registre:
+                            continue
+                        llista_categories_amb_registre.append(element)
+                        continue
+            return llista_categories_amb_registre
+        else:
+            return False
+
+    def refrescar_categories_registres(self):
+        self.info_registres = self.registrador.lectura_registres()
+        self.info_categories = self.categoritzador.lectura_categories()

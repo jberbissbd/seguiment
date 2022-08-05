@@ -56,6 +56,7 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
         self._data = data
+        self.noms = ["Alumne", "Categoria", "Data", "Descripció"]
 
     def data(self, index, role=Qt.DisplayRole):
         if index.isValid():
@@ -97,10 +98,12 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
         else:
             return False
 
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return 'Column {}'.format(section + 1)
-        return super().headerData(section, orientation, role)
+    def headerData(self, section, orientation, role):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return self.noms[section - 1]
+            else:
+                return section
 
 
 class MainWindow(QMainWindow):
@@ -276,7 +279,7 @@ class MainWindow(QMainWindow):
         self.VISUALITZA_SELECCIO_CATEGORIES = QComboBox()
         self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Filtrar per alumne *")
         self.VISUALITZA_SELECCIO_CATEGORIES.addItem("* Filtrar per categoria *")
-        self.VISUALITZA_SELECCIO_CATEGORIES.addItems(self.obtenir_categories())
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
         if self.obtenir_llistat_alumnes_registrats():
             self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         self.VISUALITZA_SELECCIO_ALUMNES.setMaximumWidth(300)
@@ -300,9 +303,10 @@ class MainWindow(QMainWindow):
         # Establim el delegat per a la columna de dates:
         self.TAULA.setItemDelegateForColumn(3, DelegatDates())
         # Li indiquem que ha de filtrar de la columna 1:
-        self.TAULA_MODEL_FILTRE.setFilterKeyColumn(1)
+        self.TAULA_MODEL_FILTRE.setFilterKeyColumn(-1)
         # I que hauria d'ordenar per la columna 3:
         self.TAULA_MODEL_FILTRE.sort(3, Qt.AscendingOrder)
+        self.TAULA_MODEL_FILTRE.autoAcceptChildRows()
         self.TAULA_MODEL_FILTRE.setDynamicSortFilter(False)
         self.TAULA.setColumnHidden(0, True)
         self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
@@ -310,6 +314,7 @@ class MainWindow(QMainWindow):
         self.TAULA.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.TAULA.setSelectionMode(QAbstractItemView.SingleSelection)
         self.TAULA.setColumnWidth(4, self.AMPLADA_DESPLEGABLES)
+
         self.TAULA.resizeRowsToContents()
         self.TAULA.resizeColumnToContents(1)
         self.TAULA.resizeColumnToContents(2)
@@ -321,14 +326,17 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
         self.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
         self.VISUALITZA_SELECCIO_ALUMNES.currentTextChanged.connect(self.visualitzacio_filtre_alumnes)
+        self.VISUALITZA_SELECCIO_CATEGORIES.currentTextChanged.connect(self.visualitzacio_filtre_categories)
 
     def visualitzacio_filtre_alumnes(self):
         valor_actual_desplegable = self.VISUALITZA_SELECCIO_ALUMNES.currentText()
-        if valor_actual_desplegable == "* Filtrar per alumne *":
+        if self.VISUALITZA_SELECCIO_ALUMNES.currentIndex() == 0:
             self.TAULA.showColumn(1)
+            self.VISUALITZA_SELECCIO_CATEGORIES.setCurrentIndex(0)
             self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
             self.TAULA.resizeRowsToContents()
         else:
+            self.VISUALITZA_SELECCIO_CATEGORIES.setCurrentIndex(0)
             self.TAULA_MODEL_FILTRE.invalidate()
             self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
             self.TAULA.hideColumn(1)
@@ -336,12 +344,15 @@ class MainWindow(QMainWindow):
 
     def visualitzacio_filtre_categories(self):
         categoria_seleccionada = self.VISUALITZA_SELECCIO_CATEGORIES.currentText()
-        if categoria_seleccionada == "* Filtrar per categoria *":
+        if self.VISUALITZA_SELECCIO_CATEGORIES.currentIndex() == 0:
             self.TAULA_MODEL_FILTRE.invalidate()
             self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
-
             self.TAULA.resizeRowsToContents()
+            self.TAULA.showColumn(1)
+            self.VISUALITZA_SELECCIO_ALUMNES.setCurrentIndex(0)
         else:
+            self.TAULA.showColumn(1)
+            self.VISUALITZA_SELECCIO_ALUMNES.setCurrentIndex(0)
             self.TAULA_MODEL_FILTRE.invalidate()
             self.TAULA_MODEL_FILTRE.setFilterRegularExpression(categoria_seleccionada)
             self.TAULA.resizeRowsToContents()
@@ -351,9 +362,13 @@ class MainWindow(QMainWindow):
         self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
         self.TAULA.setModel(self.TAULA_MODEL)
         self.VISUALITZA_SELECCIO_ALUMNES.clear()
-        self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Selecciona un alumne *")
+        self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Filtrar per alumne *")
         self.cap.refrescar_alumnes()
         self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_SELECCIO_CATEGORIES.clear()
+        self.categoritzador.refrescar_categories_registres()
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItem("* Filtrar per categoria *")
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
 
     def senyal_canvi_alumnes(self):
         """Actualitza els noms d'alumnes, i tambe els registres a visualitzar"""
@@ -388,8 +403,8 @@ class MainWindow(QMainWindow):
         llista_ids_model = []
         registres_eliminats: list = []
         registres_actualitzats: list = []
-        rang_files = list(range(self.TAULA.model().rowCount(1)))
-        rang_columnes = list(range(self.TAULA.model().columnCount(1)))
+        rang_files = list(range(self.TAULA.model().rowCount()))
+        rang_columnes = list(range(self.TAULA.model().columnCount()))
         # Guardem els ids de les files del model i comprovem que no hagi cap id que falti:
         for fila in rang_files:
             llista_ids_model.append(model_comparacio.data(model_comparacio.index(fila, 0)))
@@ -404,6 +419,9 @@ class MainWindow(QMainWindow):
             for column in range(0, self.columnes_model):
                 fila_model.append(model_comparacio.data(model_comparacio.index(row, column)))
             llista_dades_model.append(fila_model)
+        # Transformem les dates de QT a python (per culpa de la taula de visualitzacio):
+        for registre in llista_dades_model:
+            registre[3] = registre[3].toString("yyyy-MM-dd")
         # Ordenem les dades del model per id:
         llista_dades_model.sort(key=lambda x: x[0])
         # Comparem els ids de les files del model amb els ids de les files originals:
@@ -545,7 +563,14 @@ class MainWindow(QMainWindow):
         alumnes_entrada = self.cap.alumnat_registres
         if alumnes_entrada:
             llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+            return llistat_alumnes
+        else:
+            return False
 
+    def obtenir_llistat_categories_registrades(self):
+        categories_registre = self.categoritzador.obtenir_categories_registrades()
+        if categories_registre:
+            llistat_alumnes = [categoria.nom for categoria in categories_registre]
             return llistat_alumnes
         else:
             return False
