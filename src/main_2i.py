@@ -51,8 +51,18 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
                 # See below for the nested-list data structure.
                 # .row() indexes into the outer list,
                 # .column() indexes into the sub-list
-                value = self._data[index.row()][index.column()]
-                return value
+                value: object = self._data[index.row()][index.column()]
+                if isinstance(value, datetime.date):
+                    return QDate(value.year, value.month, value.day)
+                else:
+                    return value
+            elif role == Qt.UserRole:
+                value: object = self._data[index.row()][index.column()]
+                if isinstance(value, datetime.date):
+                    return value.strftime('%d/%m/%Y')
+                else:
+                    return self._data[index.row()][index.column()]
+
 
     def rowCount(self, index):
         # The length of the outer list.
@@ -275,6 +285,7 @@ class MainWindow(QMainWindow):
         self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
         # Li indiquem que ha de filtrar de la columna 1:
         self.TAULA_MODEL_FILTRE.setFilterKeyColumn(1)
+        # I que hauria d'ordenar per la columna 3:
         self.TAULA_MODEL_FILTRE.sort(3, Qt.AscendingOrder)
         self.TAULA_MODEL_FILTRE.setDynamicSortFilter(False)
         self.TAULA.setColumnHidden(0, True)
@@ -518,7 +529,7 @@ class MainWindow(QMainWindow):
         self.acces_registres.refrescar_registres()
         if self.acces_registres.registres:
             llista_registres = [[element.id, element.alumne.nom, element.categoria.nom,
-                                 parser.parse(element.data).strftime("%d/%m/%Y"), element.descripcio] for element
+                                 parser.parse(element.data), element.descripcio] for element
                                 in self.acces_registres.registres]
             return llista_registres
         else:
