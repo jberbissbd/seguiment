@@ -8,7 +8,7 @@ import dateutil.parser
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_bbdd_comm
 from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador
 from dateutil import parser
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel
 from PySide6.QtGui import QIcon, QFont, QAction
 from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QMainWindow, QPushButton, QStackedWidget, QButtonGroup,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
                                QStatusBar, QWizard, QWizardPage, QLineEdit, QCheckBox, QDialog, QDialogButtonBox,
-                               QStyleFactory, QWizard, QHeaderView, QMessageBox, QDialog)
+                               QStyleFactory, QWizard, QHeaderView, QMessageBox, QDialog, QTableWidget,
+                               QTableWidgetItem)
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, AssistentInicial
 
 
@@ -245,13 +246,13 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Registre desat correctament", 2000)
 
     def widget_visualitzacio(self):
+        self.TAULA = QTableView()
         self.VISUALITZAR_EDITAR = QWidget()
         DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.VISUALITZAR_EDITAR.setLayout(DISTRIBUCIO)
         self.VISUALITZA_DESPLEGABLE_SELECCIO = QComboBox()
         self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
-
         if self.obtenir_llistat_alumnes_registrats():
             self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
         self.VISUALITZA_DESPLEGABLE_SELECCIO.setMaximumWidth(300)
@@ -265,14 +266,17 @@ class MainWindow(QMainWindow):
             self.TAULA_MODEL = ModelVisualitzacio([[" ", " ", " ", " "]])
             self.columnes_model = 1
             self.files_model = 1
-
-
         noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
         for nom in noms_columnes:
             self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
-        self.TAULA = QTableView()
-        self.TAULA.setModel(self.TAULA_MODEL)
-        self.TAULA.installEventFilter(SortFilterProxyModel(self.TAULA_MODEL))
+        # Poc elegant, pero el filtre funciona com a objecte intermig entre el model i la taula:
+        self.TAULA_MODEL_FILTRE = QSortFilterProxyModel(self)
+        self.TAULA_MODEL_FILTRE.setSourceModel(self.TAULA_MODEL)
+        self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
+        # Li indiquem que ha de filtrar de la columna 1:
+        self.TAULA_MODEL_FILTRE.setFilterKeyColumn(1)
+        self.TAULA_MODEL_FILTRE.sort(3, Qt.AscendingOrder)
+        self.TAULA_MODEL_FILTRE.setDynamicSortFilter(False)
         self.TAULA.setColumnHidden(0, True)
         self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
         self.TAULA.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -293,18 +297,12 @@ class MainWindow(QMainWindow):
     def visualitzacio_filtrar_registres(self):
         valor_actual_desplegable = self.VISUALITZA_DESPLEGABLE_SELECCIO.currentText()
         if valor_actual_desplegable == "* Selecciona un alumne *":
-            self.TAULA.model().removeEventFilter()
             self.TAULA.showColumn(1)
-            self.TAULA.resizeRowsToContents()
-            # self.TAULA_MODEL.installEventFilter(valor_actual_desplegable)
-
+            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
         else:
-            self.TAULA_MODEL.installEventFilter(SortFilterProxyModel.setFilterByColumn(self,valor_actual_desplegable,1))
-            self.TAULA.resizeRowsToContents()
-            self.TAULA.installEventFilter(SortFilterProxyModel(self.TAULA_MODEL))
-
-        # self.VISUALITZAR_EDITAR.TAULA.setFilterRegExp(self.VISUALITZA_DESPLEGABLE_SELECCIO.currentText())
-
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
+            self.TAULA.hideColumn(1)
 
     def senyal_canvi_registres(self):
         self.acces_registres.refrescar_registres()
