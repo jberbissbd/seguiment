@@ -344,12 +344,13 @@ class CategoriesBbdd(ModelDao):
         """Crea una nova categoria"""
         self.cursor = self.conn.cursor()
         try:
-            ordre_registrar = f"INSERT INTO {self.taula} (nom_categoria) VALUES ('{nom_categoria}')"
+            ordre_registrar = f"INSERT INTO {self.taula} (categoria) VALUES ('{nom_categoria}')"
             self.cursor.execute(ordre_registrar)
             self.conn.commit()
             self.cursor.close()
             return True
-        except sqlite3.OperationalError:
+        except sqlite3.OperationalError as e:
+            print(e)
             return False
 
     def eliminar_categoria(self, num_referencia: int):
