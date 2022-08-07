@@ -27,10 +27,12 @@ class DelegatDates(QStyledItemDelegate):
     def __init__(self):
         super(DelegatDates, self).__init__()
 
-    def displayText(self, value,locale) -> str:
+    def displayText(self, value, locale) -> str:
+        locale = QLocale.Catalan
         """Retorna el text que es mostra a la columna de dates"""
         value = value.toPython()
         return value.strftime("%d/%m/%Y")
+
 
 
 class SortFilterProxyModel(QSortFilterProxyModel):
@@ -302,6 +304,8 @@ class MainWindow(QMainWindow):
         self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
         # Establim el delegat per a la columna de dates:
         self.TAULA.setItemDelegateForColumn(3, DelegatDates())
+        # Possibilitat d'establir un ComboBox:
+        # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
         # Li indiquem que ha de filtrar de la columna 1:
         self.TAULA_MODEL_FILTRE.setFilterKeyColumn(-1)
         # I que hauria d'ordenar per la columna 3:
@@ -389,7 +393,7 @@ class MainWindow(QMainWindow):
         # Editar un registre:
         index = self.TAULA.currentIndex()
         columna = index.column()
-        if columna == 1 or columna == 2:
+        if columna == 1 or columna==2:
             self.statusBar().showMessage("No es pot editar aquest camp", 2000)
         else:
             self.TAULA.edit(index)

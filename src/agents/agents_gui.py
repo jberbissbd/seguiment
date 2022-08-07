@@ -44,8 +44,7 @@ class Comptable:
             # Substituim l'id de l'alumne de la llista de registres pel seu nom:
 
             for registre in registres_entrada:
-                registre_proces = []
-                registre_proces.append(registre.id)
+                registre_proces = [registre.id]
                 # Obtenim el nom de l'alumne:
                 for alumne in self.info_alumnes:
                     if alumne.id == registre.alumne:
@@ -159,14 +158,9 @@ class Calendaritzador:
         classe Data """
         if self.datador.lectura_dates():
             self.info_dates = self.datador.lectura_dates()
-            llista_classes = []
-            for r in self.info_dates:
-                llista_dies = [list(r) for r in self.info_dates]
-
-                for dia in llista_dies:
-                    dia[1] = dateutil.parser.parse(dia[1]).strftime("%d/%m/%Y")
-                    llista_classes.append(Data_gui_comm(dia[0], dia[1]))
-            return llista_classes
+            for data in self.info_dates:
+                data.dia = dateutil.parser.parse(data.dia).strftime("%d/%m/%Y")
+            return self.info_dates
         else:
             return False
 
@@ -174,15 +168,13 @@ class Calendaritzador:
         """Actualitza la base de dades amb la data subministrada, comprovant si es una data nova o no
         :type aniversari: Data_gui_comm
         """
-        if isinstance(aniversari, Data_gui_comm):
-            num_data = [dia.id for dia in self.dates]
-            if aniversari.id not in num_data:
-                return False
-            else:
-                # Convertim la data a tipus string per a la base de dades:
-                dia_python = dateutil.parser.parse(aniversari.dia).strftime("%Y-%m-%d")
-                self.datador.actualitza_dates(aniversari.id, dia_python)
-                return True
+        if isinstance(aniversari, list):
+            for element in aniversari:
+                if isinstance(element, Data_gui_comm):
+                    element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
+                else:
+                    return False
+            self.datador.actualitzar_data(aniversari)
         else:
             return False
 

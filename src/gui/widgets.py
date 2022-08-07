@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QGridLayout, QDateEdit, QPushButton, QLabel, QComb
     QVBoxLayout, QTableView, QAbstractItemView, QWizardPage, QWizard, QDialog, QMessageBox, QLineEdit, QFormLayout, \
     QDialogButtonBox
 from src.agents.agents_gui import Calendaritzador, CapEstudis
-from src.agents.formats import Alumne_comm, Alumne_nou
+from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm
 
 
 
@@ -167,6 +167,17 @@ class EditorDates(QtWidgets.QWidget):
         elif self.DATA_TERCER_TRIMESTRE.date() <= self.DATA_SEGON_TRIMESTRE.date():
             data_2n = self.DATA_TERCER_TRIMESTRE.date().addDays(-1)
             self.DATA_SEGON_TRIMESTRE.setDate(data_2n)
+
+    def modificacio_dates(self):
+        data2n = self.DATA_SEGON_TRIMESTRE.date().toString('ISODate')
+        data3er = self.DATA_TERCER_TRIMESTRE.date().toString('ISODate')
+        data_original_2n = self.calendari_editor_dates.dates[0]
+        data_original_3er = self.calendari_editor_dates.dates[1]
+        missatge_actualitzacio = []
+        if data_original_2n.dia != data2n:
+            missatge_actualitzacio.append(Data_gui_comm(data_original_2n.id, data2n))
+        if data_original_3er.dia != data3er:
+            missatge_actualitzacio.append(Data_gui_comm(data_original_3er.id, data3er))
 
 
 class CreadorRegistres(QtWidgets.QWidget):

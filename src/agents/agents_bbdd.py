@@ -1,14 +1,8 @@
-import datetime
-
-import dateutil
-from dateutil import parser
-import pathlib
-import sqlite3
 import os
-import sys
-from sqlite3 import PARSE_DECLTYPES
-from src.agents.formats import Registres_gui_comm, Registres_bbdd_comm, Registres_gui_nou, Registres_bbdd_nou, \
-    Categoria_comm, Alumne_comm
+import sqlite3
+
+from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, \
+    Categoria_comm, Alumne_comm, Data_gui_comm
 
 
 class ModelDao:
@@ -118,14 +112,32 @@ class AlumnesBbdd(ModelDao):
         else:
             return False
 
+    def test_llegir_alumnes(self):
+        """EXCLUSIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
+        parametre: str = "id"
+        self.cursor = self.conn.cursor()
+        try:
+            ordre_consultar = f"SELECT MAX({parametre}) FROM {self.taula}"
+            consulta = self.cursor.execute(ordre_consultar).fetchone()
+            self.cursor.close()
+        except sqlite3.OperationalError as e:
+            print(e)
+            return False
+        if consulta is not None:
+            return consulta[0]
+        else:
+            return False
     def llegir_alumne_individual(self, id_alumne: int):
         parametre: str = "id,nom_alumne"
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM alumnes WHERE id = {id_alumne}"
             consulta = self.cursor.execute(ordre_consultar).fetchone()
-            persona = Alumne_comm(consulta[0], consulta[1])
-            self.cursor.close()
+            if consulta is not None:
+                persona = Alumne_comm(consulta[0], consulta[1])
+                self.cursor.close()
+            else:
+                return False
         except sqlite3.OperationalError as e:
             print(e)
             return False
@@ -149,14 +161,14 @@ class AlumnesBbdd(ModelDao):
         for element in missatge:
             id_alumne = element.id
             self.cursor = self.conn.cursor()
-        try:
-            ordre_eliminar = f"DELETE FROM {self.taula} WHERE id = {id_alumne}"
-            self.cursor.execute(ordre_eliminar)
-            self.conn.commit()
-            self.cursor.close()
-            return True
-        except sqlite3.OperationalError:
-            return False
+            try:
+                ordre_eliminar = f"DELETE FROM {self.taula} WHERE id = {id_alumne}"
+                self.cursor.execute(ordre_eliminar)
+                self.conn.commit()
+                self.cursor.close()
+                return True
+            except sqlite3.OperationalError:
+                return False
 
     def actualitzar_alumne(self, missatge: list):
         for element in missatge:
@@ -189,7 +201,7 @@ class RegistresBbdd(ModelDao):
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
-            self.close()
+            self.cursor.close()
             return consulta
         except sqlite3.OperationalError:
             return False
@@ -211,7 +223,7 @@ class RegistresBbdd(ModelDao):
 
     def lectura_alumnes_registrats(self):
         """Llegeix els alumnes que tinguin algun registre"""
-        parametre: int = "id_alumne"
+        parametre: str = "id_alumne"
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT DISTINCT {parametre} FROM {self.taula}"
@@ -220,7 +232,10 @@ class RegistresBbdd(ModelDao):
             missatge = []
             for persona in consulta:
                 dades_individuals = AlumnesBbdd.llegir_alumne_individual(self, persona[0])
-                missatge.append(dades_individuals)
+                if dades_individuals:
+                    missatge.append(dades_individuals)
+                else:
+                    continue
             return missatge
         except sqlite3.OperationalError:
             return False
@@ -340,6 +355,19 @@ class CategoriesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
+    def test_lectura_categories(self):
+        """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
+        parametre: str = "id"
+        self.cursor = self.conn.cursor()
+        try:
+            ordre_consultar = f"SELECT MAX({parametre}) FROM {self.taula}"
+            consulta = self.cursor.execute(ordre_consultar).fetchone()
+            self.cursor.close()
+            return consulta[0]
+        except sqlite3.OperationalError:
+            return False
+
+
     def crear_categoria(self, nom_categoria: str):
         """Crea una nova categoria"""
         self.cursor = self.conn.cursor()
@@ -385,18 +413,6 @@ class DatesBbdd(ModelDao):
         self.ordre_consultar = None
         self.parametre = None
 
-    def consultar_camp(self, camp: str):
-        """Obtindre els registres d'un camp de la taula de dates"""
-        parametre: str = camp
-        self.cursor = self.conn.cursor()
-        try:
-            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = self.cursor.execute(ordre_consultar).fetchall()
-            self.cursor.close()
-            return consulta
-        except sqlite3.OperationalError:
-            return False
-
     def lectura_dates(self):
         """Llegeix tota la taula de dates"""
         parametre: str = "id,data"
@@ -405,7 +421,11 @@ class DatesBbdd(ModelDao):
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.cursor.close()
-            return consulta
+            if consulta is not None:
+                missatge_lectura_dates = [Data_gui_comm(element[0], element[1]) for element in consulta]
+                return missatge_lectura_dates
+            else:
+                return False
         except sqlite3.OperationalError:
             return False
 
@@ -435,14 +455,17 @@ class DatesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def actualitzar_data(self, num_referencia: int, data: str):
+    def actualitzar_data(self, missatge_actualizacio: list):
         """Actualitza una data"""
         self.cursor = self.conn.cursor()
         try:
-            actualitzar = f"UPDATE {self.taula} SET data = '{data}' WHERE id = {num_referencia}"
-            self.cursor.execute(actualitzar)
-            self.conn.commit()
-            self.cursor.close()
+            for element in missatge_actualizacio:
+                data = element.data
+                num_referencia = element.id
+                actualitzar = f"UPDATE {self.taula} SET data = '{data}' WHERE id = {num_referencia}"
+                self.cursor.execute(actualitzar)
+                self.conn.commit()
+                self.cursor.close()
             return True
         except sqlite3.OperationalError:
             return False

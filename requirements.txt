@@ -2,4 +2,5 @@ PySide6~=6.3.1
 python-dateutil~=2.8.2
 numpy~=1.23.1
 pandas~=1.4.3
-Faker~=0.7.11
+Faker~=13.15.1
+factory-boy
