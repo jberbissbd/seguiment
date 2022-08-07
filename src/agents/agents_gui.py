@@ -7,7 +7,8 @@ from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, D
 from dateutil import parser
 
 from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou
+    Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Data_nova
+
 
 class Comprovador:
     def __init__(self):
@@ -161,6 +162,24 @@ class Calendaritzador:
             for data in self.info_dates:
                 data.dia = dateutil.parser.parse(data.dia).strftime("%d/%m/%Y")
             return self.info_dates
+        else:
+            return False
+
+    def registra_dates(self, aniversari:list):
+        """Crea nous registres a la base de dades amb la data subministrada
+        :type aniversari: Data_gui_comm
+        :args:
+        list
+        :returns:
+        Veritat si ha pogut crear els registres, Fals si no.
+        """
+        if isinstance(aniversari, list):
+            for element in aniversari:
+                if isinstance(element, Data_nova):
+                    element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
+                else:
+                    return False
+            self.datador.crear_data(aniversari)
         else:
             return False
 

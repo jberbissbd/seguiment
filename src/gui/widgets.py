@@ -5,9 +5,7 @@ from PySide6.QtWidgets import QGridLayout, QDateEdit, QPushButton, QLabel, QComb
     QVBoxLayout, QTableView, QAbstractItemView, QWizardPage, QWizard, QDialog, QMessageBox, QLineEdit, QFormLayout, \
     QDialogButtonBox
 from src.agents.agents_gui import Calendaritzador, CapEstudis
-from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm
-
-
+from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm, Data_nova
 
 
 class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
@@ -169,15 +167,35 @@ class EditorDates(QtWidgets.QWidget):
             self.DATA_SEGON_TRIMESTRE.setDate(data_2n)
 
     def modificacio_dates(self):
+        """
+        Analitza les dates dels components i actualitza els registres o en crea de nous, segons correspongui.
+        :arg
+        Valors actuals de les caselles d'edicio de data, s'executa al apretar el boto desar.
+        :return:
+        Fals si no s'ha pogut realitzar l'operacio corresponent a la base de dades.
+        Veritat si s'han pogut realitzar.
+        """
+        estat_actualitzacio=True
+        estat_creacio = True
         data2n = self.DATA_SEGON_TRIMESTRE.date().toString('ISODate')
         data3er = self.DATA_TERCER_TRIMESTRE.date().toString('ISODate')
-        data_original_2n = self.calendari_editor_dates.dates[0]
-        data_original_3er = self.calendari_editor_dates.dates[1]
-        missatge_actualitzacio = []
-        if data_original_2n.dia != data2n:
-            missatge_actualitzacio.append(Data_gui_comm(data_original_2n.id, data2n))
-        if data_original_3er.dia != data3er:
-            missatge_actualitzacio.append(Data_gui_comm(data_original_3er.id, data3er))
+        if self.calendari_editor_dates.dates:
+            data_original_2n = self.calendari_editor_dates.dates[0]
+            data_original_3er = self.calendari_editor_dates.dates[1]
+            missatge_actualitzacio = []
+            if data_original_2n.dia != data2n:
+                missatge_actualitzacio.append(Data_gui_comm(data_original_2n.id, data2n))
+            if data_original_3er.dia != data3er:
+                missatge_actualitzacio.append(Data_gui_comm(data_original_3er.id, data3er))
+            if len(missatge_actualitzacio) > 0:
+                estat_actualitzacio = self.calendari_editor_dates.actualitza_dates(missatge_actualitzacio)
+        else:
+            llista_noves_dates = [data2n, data3er]
+            missatge_creacio = [Data_nova(item) for item in llista_noves_dates]
+            estat_creacio = self.calendari_editor_dates.crear_data(missatge_creacio)
+        return estat_actualitzacio+estat_creacio
+
+
 
 
 class CreadorRegistres(QtWidgets.QWidget):
@@ -410,4 +428,3 @@ class AssistentInicial(QWizard):
         self.addPage(self.PAGINA_INICIAL)
         self.addPage(self.PAGINA_ALUMNES)
         self.addPage(self.PAGINA_DATES)
-

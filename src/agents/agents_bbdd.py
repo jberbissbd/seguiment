@@ -2,7 +2,7 @@ import os
 import sqlite3
 
 from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, \
-    Categoria_comm, Alumne_comm, Data_gui_comm
+    Categoria_comm, Alumne_comm, Data_gui_comm, Data_nova
 
 
 class ModelDao:
@@ -117,14 +117,15 @@ class AlumnesBbdd(ModelDao):
         parametre: str = "id"
         self.cursor = self.conn.cursor()
         try:
-            ordre_consultar = f"SELECT MAX({parametre}) FROM {self.taula}"
-            consulta = self.cursor.execute(ordre_consultar).fetchone()
+            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            llista_ids =[item[0] for item in consulta]
             self.cursor.close()
         except sqlite3.OperationalError as e:
             print(e)
             return False
-        if consulta is not None:
-            return consulta[0]
+        if llista_ids is not None:
+            return llista_ids
         else:
             return False
     def llegir_alumne_individual(self, id_alumne: int):
@@ -193,6 +194,19 @@ class RegistresBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
+
+    def test_id_registre(self):
+        """Obtindre la llista d'id's de la taula de registres"""
+        parametre: str = "id"
+        self.cursor = self.conn.cursor()
+        try:
+            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
+            llista_ids = [item[0] for item in consulta]
+            return llista_ids
+        except sqlite3.OperationalError:
+            return False
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula de registres"""
@@ -360,10 +374,11 @@ class CategoriesBbdd(ModelDao):
         parametre: str = "id"
         self.cursor = self.conn.cursor()
         try:
-            ordre_consultar = f"SELECT MAX({parametre}) FROM {self.taula}"
-            consulta = self.cursor.execute(ordre_consultar).fetchone()
+            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.cursor.close()
-            return consulta[0]
+            llista_ids = [item[0] for item in consulta]
+            return llista_ids
         except sqlite3.OperationalError:
             return False
 
@@ -393,17 +408,32 @@ class CategoriesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def actualitzar_categoria(self, num_referencia: int, nom_categoria: str):
-        """Actualitza una categoria"""
+    def actualitzar_categoria(self, missatge: list):
+        """Actualitza una categoria
+        :param missatge: Llista amb instancies de Categoria_comm.
+        :arg Llista formada per instancies de Categoria_comm.
+        :returns Fals si no es pot realitzar l'operacio.
+        :raises TypeError si els formats d'enttrada no son correctes.
+        """
         self.cursor = self.conn.cursor()
-        try:
-            actualitzar = f"UPDATE {self.taula} SET nom_categoria = '{nom_categoria}' WHERE id = {num_referencia}"
-            self.cursor.execute(actualitzar)
-            self.conn.commit()
-            self.cursor.close()
+        if isinstance(missatge, list):
+            for item in missatge:
+                if isinstance(item, Categoria_comm):
+                    try:
+                        num_referencia = item.id
+                        nom_categoria = item.nom
+                        actualitzar = f"UPDATE {self.taula} SET categoria = '{nom_categoria}' WHERE id = {num_referencia}"
+                        self.cursor.execute(actualitzar)
+                        self.conn.commit()
+                        self.cursor.close()
+                    except sqlite3.OperationalError:
+                        return False
+                else:
+                    raise TypeError("Les dades han de seguir el format Categoria_comm")
             return True
-        except sqlite3.OperationalError:
-            return False
+
+        else:
+            raise TypeError("Les dades han de tenir format de llista")
 
 
 class DatesBbdd(ModelDao):
@@ -429,18 +459,39 @@ class DatesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def crear_data(self, data: int):
+    def crear_data(self, llista_dates: list):
         """Crea una nova data"""
         self.cursor = self.conn.cursor()
-        try:
-            ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{data}')"
-            self.cursor.execute(ordre_registrar)
-            self.conn.commit()
-            self.cursor.close()
+        if isinstance(llista_dates, list):
+            for item in llista_dates:
+                if isinstance(item,Data_nova):
+                    try:
+                        ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
+                        self.cursor.execute(ordre_registrar)
+                        self.conn.commit()
+                        self.cursor.close()
+                    except sqlite3.OperationalError:
+                        return False
+                else:
+                    # Retorna fals si el registre no te el format adequat
+                    return False
             return True
-        except sqlite3.OperationalError:
+        else:
+            # Retorna Fals si els elements d'entrada no son una llista.
             return False
 
+    def test_dates(self):
+        """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA DE DATES PER A FER TESTS"""
+        parametre: str = "id"
+        self.cursor = self.conn.cursor()
+        try:
+            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
+            consulta = self.cursor.execute(ordre_consultar).fetchall()
+            self.cursor.close()
+            llista_ids = [item[0] for item in consulta]
+            return llista_ids
+        except sqlite3.OperationalError:
+            return False
     def maxim_id_data(self):
         """Retorna l'id de la darrera data
         :int:
@@ -457,15 +508,22 @@ class DatesBbdd(ModelDao):
 
     def actualitzar_data(self, missatge_actualizacio: list):
         """Actualitza una data"""
-        self.cursor = self.conn.cursor()
-        try:
+        if isinstance(missatge_actualizacio,list):
             for element in missatge_actualizacio:
-                data = element.data
-                num_referencia = element.id
-                actualitzar = f"UPDATE {self.taula} SET data = '{data}' WHERE id = {num_referencia}"
-                self.cursor.execute(actualitzar)
-                self.conn.commit()
-                self.cursor.close()
+                if isinstance(element, Data_gui_comm):
+                    self.cursor = self.conn.cursor()
+                    try:
+                        data = element.dia
+                        num_referencia = element.id
+                        actualitzar = f"UPDATE {self.taula} SET data = '{data}' WHERE id = {num_referencia}"
+                        self.cursor.execute(actualitzar)
+                        self.conn.commit()
+                        self.cursor.close()
+
+                    except sqlite3.OperationalError:
+                        return False
+                else:
+                    raise TypeError("Els elements per actualitzar han de ser de la categoria Data_gui_comm")
             return True
-        except sqlite3.OperationalError:
-            return False
+        else:
+            raise TypeError("El paramtere d'entrada ha de ser una llista")
