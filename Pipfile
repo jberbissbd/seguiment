@@ -4,11 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pyside6 = "*"
-numpy = "*"
-pandas = "*"
+pyside6 = "~=6.3.1"
+numpy = "~=1.23.1"
+pandas = "~=1.4.3"
 fake2db = "*"
 fakedata = "*"
+faker = "==13.15.0"
+factory-boy = "==3.2.1"
+python-dateutil = "~=2.8.2"
+coverage = "*"
+openpyxl = "*"
 
 [dev-packages]
 

@@ -10,6 +10,7 @@ class Window(QMainWindow):
 
     def __init__(self, parent=None):
         # Snip...
+        super().__init__(parent)
         self.contactsModel = ContactsModel()
         self.setupUI()
 

@@ -1,23 +1,40 @@
 import datetime
 import sys
+import locale
 from dataclasses import dataclass
 from typing import Union
 
 import dateutil.parser
 
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_bbdd_comm
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador, CreadorInformes
 from dateutil import parser
-from PySide6 import QtCore
-from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel
+from PySide6 import QtCore, QtGui
+from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel, QLocale
 from PySide6.QtGui import QIcon, QFont, QAction
 from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QToolBar, QTableView, QGridLayout, QLabel,
                                QMainWindow, QPushButton, QStackedWidget, QButtonGroup,
                                QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
                                QStatusBar, QWizard, QWizardPage, QLineEdit, QCheckBox, QDialog, QDialogButtonBox,
-                               QStyleFactory, QWizard, QHeaderView, QMessageBox, QDialog)
+                               QStyleFactory, QWizard, QHeaderView, QMessageBox, QDialog, QTableWidget,
+                               QTableWidgetItem, QStyledItemDelegate)
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, AssistentInicial
+
+# locale.setlocale(locale.LC_ALL, 'ca_ES.utf8')
+
+
+class DelegatDates(QStyledItemDelegate):
+    """Delegat per a la columna de dates"""
+
+    def __init__(self):
+        super(DelegatDates, self).__init__()
+
+    def displayText(self, value, locale) -> str:
+        locale = QLocale.Catalan
+        """Retorna el text que es mostra a la columna de dates"""
+        value = value.toPython()
+        return value.strftime("%d/%m/%Y")
 
 
 class SortFilterProxyModel(QSortFilterProxyModel):
@@ -43,6 +60,7 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
         self._data = data
+        self.noms = ["Alumne", "Categoria", "Data", "Descripció"]
 
     def data(self, index, role=Qt.DisplayRole):
         if index.isValid():
@@ -50,8 +68,17 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
                 # See below for the nested-list data structure.
                 # .row() indexes into the outer list,
                 # .column() indexes into the sub-list
-                value = self._data[index.row()][index.column()]
-                return value
+                value: object = self._data[index.row()][index.column()]
+                if isinstance(value, datetime.date):
+                    return QDate(value)
+                else:
+                    return value
+            elif role == Qt.UserRole:
+                value: object = self._data[index.row()][index.column()]
+                if isinstance(value, datetime.date):
+                    return value.strftime('%d/%m/%Y')
+                else:
+                    return self._data[index.row()][index.column()]
 
     def rowCount(self, index):
         # The length of the outer list.
@@ -75,10 +102,12 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
         else:
             return False
 
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return 'Column {}'.format(section + 1)
-        return super().headerData(section, orientation, role)
+    def headerData(self, section, orientation, role):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return self.noms[section - 1]
+            else:
+                return section
 
 
 class MainWindow(QMainWindow):
@@ -245,16 +274,19 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Registre desat correctament", 2000)
 
     def widget_visualitzacio(self):
+        self.TAULA = QTableView()
         self.VISUALITZAR_EDITAR = QWidget()
         DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.VISUALITZAR_EDITAR.setLayout(DISTRIBUCIO)
-        self.VISUALITZA_DESPLEGABLE_SELECCIO = QComboBox()
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
-
+        self.VISUALITZA_SELECCIO_ALUMNES = QComboBox()
+        self.VISUALITZA_SELECCIO_CATEGORIES = QComboBox()
+        self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Filtrar per alumne *")
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItem("* Filtrar per categoria *")
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
         if self.obtenir_llistat_alumnes_registrats():
-            self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.setMaximumWidth(300)
+            self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_SELECCIO_ALUMNES.setMaximumWidth(300)
         BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar canvis")
         BOTO_DESAR.clicked.connect(self.alteracio_registres)
         if self.obtenir_llistat_registres() not in [None, False]:
@@ -265,55 +297,85 @@ class MainWindow(QMainWindow):
             self.TAULA_MODEL = ModelVisualitzacio([[" ", " ", " ", " "]])
             self.columnes_model = 1
             self.files_model = 1
-
-
         noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
         for nom in noms_columnes:
             self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
-        self.TAULA = QTableView()
-        self.TAULA.setModel(self.TAULA_MODEL)
-        self.TAULA.installEventFilter(SortFilterProxyModel(self.TAULA_MODEL))
+        # Poc elegant, pero el filtre funciona com a objecte intermig entre el model i la taula:
+        self.TAULA_MODEL_FILTRE = QSortFilterProxyModel(self)
+        self.TAULA_MODEL_FILTRE.setSourceModel(self.TAULA_MODEL)
+        self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
+        # Establim el delegat per a la columna de dates:
+        self.TAULA.setItemDelegateForColumn(3, DelegatDates())
+        # Possibilitat d'establir un ComboBox:
+        # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
+        # Li indiquem que ha de filtrar de la columna 1:
+        self.TAULA_MODEL_FILTRE.setFilterKeyColumn(-1)
+        # I que hauria d'ordenar per la columna 3:
+        self.TAULA_MODEL_FILTRE.sort(3, Qt.AscendingOrder)
+        self.TAULA_MODEL_FILTRE.autoAcceptChildRows()
+        self.TAULA_MODEL_FILTRE.setDynamicSortFilter(False)
         self.TAULA.setColumnHidden(0, True)
+        self.TAULA.setWordWrap(True)
         self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
         self.TAULA.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.TAULA.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.TAULA.setSelectionMode(QAbstractItemView.SingleSelection)
         self.TAULA.setColumnWidth(4, self.AMPLADA_DESPLEGABLES)
+
         self.TAULA.resizeRowsToContents()
         self.TAULA.resizeColumnToContents(1)
         self.TAULA.resizeColumnToContents(2)
         self.TAULA.resizeColumnToContents(3)
         self.TAULA.setSortingEnabled(True)
-        DISTRIBUCIO.addWidget(self.VISUALITZA_DESPLEGABLE_SELECCIO, 0, 0)
-        DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 1)
+        DISTRIBUCIO.addWidget(self.VISUALITZA_SELECCIO_ALUMNES, 0, 0)
+        DISTRIBUCIO.addWidget(self.VISUALITZA_SELECCIO_CATEGORIES, 0, 1)
+        DISTRIBUCIO.addWidget(BOTO_DESAR, 0, 2)
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
         self.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.currentTextChanged.connect(self.visualitzacio_filtrar_registres)
+        self.VISUALITZA_SELECCIO_ALUMNES.currentTextChanged.connect(self.visualitzacio_filtre_alumnes)
+        self.VISUALITZA_SELECCIO_CATEGORIES.currentTextChanged.connect(self.visualitzacio_filtre_categories)
 
-    def visualitzacio_filtrar_registres(self):
-        valor_actual_desplegable = self.VISUALITZA_DESPLEGABLE_SELECCIO.currentText()
-        if valor_actual_desplegable == "* Selecciona un alumne *":
-            self.TAULA.model().removeEventFilter()
+    def visualitzacio_filtre_alumnes(self):
+        valor_actual_desplegable = self.VISUALITZA_SELECCIO_ALUMNES.currentText()
+        if self.VISUALITZA_SELECCIO_ALUMNES.currentIndex() == 0:
             self.TAULA.showColumn(1)
+            self.VISUALITZA_SELECCIO_CATEGORIES.setCurrentIndex(0)
+            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
             self.TAULA.resizeRowsToContents()
-            # self.TAULA_MODEL.installEventFilter(valor_actual_desplegable)
-
         else:
-            self.TAULA_MODEL.installEventFilter(SortFilterProxyModel.setFilterByColumn(self,valor_actual_desplegable,1))
+            self.VISUALITZA_SELECCIO_CATEGORIES.setCurrentIndex(0)
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
+            self.TAULA.hideColumn(1)
             self.TAULA.resizeRowsToContents()
-            self.TAULA.installEventFilter(SortFilterProxyModel(self.TAULA_MODEL))
 
-        # self.VISUALITZAR_EDITAR.TAULA.setFilterRegExp(self.VISUALITZA_DESPLEGABLE_SELECCIO.currentText())
-
+    def visualitzacio_filtre_categories(self):
+        categoria_seleccionada = self.VISUALITZA_SELECCIO_CATEGORIES.currentText()
+        if self.VISUALITZA_SELECCIO_CATEGORIES.currentIndex() == 0:
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
+            self.TAULA.resizeRowsToContents()
+            self.TAULA.showColumn(1)
+            self.VISUALITZA_SELECCIO_ALUMNES.setCurrentIndex(0)
+        else:
+            self.TAULA.showColumn(1)
+            self.VISUALITZA_SELECCIO_ALUMNES.setCurrentIndex(0)
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(categoria_seleccionada)
+            self.TAULA.resizeRowsToContents()
 
     def senyal_canvi_registres(self):
         self.acces_registres.refrescar_registres()
         self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
         self.TAULA.setModel(self.TAULA_MODEL)
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.clear()
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
+        self.VISUALITZA_SELECCIO_ALUMNES.clear()
+        self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Filtrar per alumne *")
         self.cap.refrescar_alumnes()
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_SELECCIO_CATEGORIES.clear()
+        self.categoritzador.refrescar_categories_registres()
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItem("* Filtrar per categoria *")
+        self.VISUALITZA_SELECCIO_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
 
     def senyal_canvi_alumnes(self):
         """Actualitza els noms d'alumnes, i tambe els registres a visualitzar"""
@@ -322,9 +384,9 @@ class MainWindow(QMainWindow):
         self.obtenir_llistat_alumnes()
         self.CREACIO.SELECTOR_ALUMNES.clear()
         self.CREACIO.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes())
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.clear()
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItem("* Selecciona un alumne *")
-        self.VISUALITZA_DESPLEGABLE_SELECCIO.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.VISUALITZA_SELECCIO_ALUMNES.clear()
+        self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Selecciona un alumne *")
+        self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         # Actualitzem els registres, ja que la base de dades eliminara els registres d'un alumne.
         self.acces_registres.refrescar_registres()
         self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
@@ -348,8 +410,8 @@ class MainWindow(QMainWindow):
         llista_ids_model = []
         registres_eliminats: list = []
         registres_actualitzats: list = []
-        rang_files = list(range(self.TAULA.model().rowCount(1)))
-        rang_columnes = list(range(self.TAULA.model().columnCount(1)))
+        rang_files = list(range(self.TAULA.model().rowCount()))
+        rang_columnes = list(range(self.TAULA.model().columnCount()))
         # Guardem els ids de les files del model i comprovem que no hagi cap id que falti:
         for fila in rang_files:
             llista_ids_model.append(model_comparacio.data(model_comparacio.index(fila, 0)))
@@ -364,6 +426,9 @@ class MainWindow(QMainWindow):
             for column in range(0, self.columnes_model):
                 fila_model.append(model_comparacio.data(model_comparacio.index(row, column)))
             llista_dades_model.append(fila_model)
+        # Transformem les dates de QT a python (per culpa de la taula de visualitzacio):
+        for registre in llista_dades_model:
+            registre[3] = registre[3].toString("yyyy-MM-dd")
         # Ordenem les dades del model per id:
         llista_dades_model.sort(key=lambda x: x[0])
         # Comparem els ids de les files del model amb els ids de les files originals:
@@ -439,34 +504,61 @@ class MainWindow(QMainWindow):
         GRUP_TIPUS_DISTRIBUCIO = QVBoxLayout()
         GRUP_TIPUS.setLayout(GRUP_TIPUS_DISTRIBUCIO)
         self.informe_seleccionat: Union[QButtonGroup, QButtonGroup] = QButtonGroup()
-        opcio_escoltam = QRadioButton("Escolta'm")
-        opcio_escoltam.setChecked(True)
-        opcio_global = QRadioButton("Seguiment d'alumnes")
+        opcio_categories = QRadioButton("Categories")
+        opcio_categories.setChecked(True)
+        opcio_alumnes = QRadioButton("Per alumne")
         self.informe_seleccionat.setExclusive(True)
-        self.informe_seleccionat.addButton(opcio_escoltam, 0)
-        self.informe_seleccionat.addButton(opcio_global, 1)
-        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_escoltam)
-        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_global)
+        self.informe_seleccionat.addButton(opcio_categories, 0)
+        self.informe_seleccionat.addButton(opcio_alumnes, 1)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_categories)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_alumnes)
+        # Creem els selectors:
         self.SELECTOR_ALUMNES = QComboBox()
-        self.SELECTOR_ALUMNES.addItem("* Selecciona un alumne *")
         self.SELECTOR_ALUMNES.addItem("* Tots *")
+
         if self.obtenir_llistat_alumnes_registrats():
             self.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.SELECTOR_CATEGORIES = QComboBox()
+        self.SELECTOR_CATEGORIES.addItem("* Totes *")
+        if self.obtenir_llistat_categories_registrades():
+            self.SELECTOR_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         self.SELECTOR_ALUMNES.setVisible(False)
+        self.SELECTOR_CATEGORIES.setVisible(False)
+        self.SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        # Creem el botó:
+        self.BOTON_INFORME = QPushButton("Generar informe")
+        self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+
         DISTRIBUCIO.addWidget(GRUP_TIPUS)
         DISTRIBUCIO.addWidget(self.SELECTOR_ALUMNES)
-        opcio_global.toggled.connect(self.seleccionar_informe)
-        opcio_escoltam.toggled.connect(self.seleccionar_informe)
+        DISTRIBUCIO.addWidget(self.SELECTOR_CATEGORIES)
+        DISTRIBUCIO.addWidget(self.BOTON_INFORME)
+        opcio_alumnes.toggled.connect(self.seleccionar_informe)
+        opcio_categories.toggled.connect(self.seleccionar_informe)
+        self.BOTON_INFORME.clicked.connect(self.generar_informe)
+        self.destinacio = "/home/jordi/Documents/Projectes/seguiment/src/tests"
+
+    def generar_informe(self):
+        """Funcio per a generar un informe."""
+        dades_registres = self.acces_registres.obtenir_registres()
+        exportador = CreadorInformes(self.cap.info_alumnes, self.categoritzador.info_categories,dades_registres,self.calendari.info_dates,self.destinacio)
+        if self.informe_seleccionat.checkedId() == 0:
+            exportador.export_categories()
+        elif self.informe_seleccionat.checkedId() == 1:
+            exportador.alumne()
+
 
     def seleccionar_informe(self):
 
         if self.informe_seleccionat.checkedId() == 0:
             self.tipus_informes = 0
+            self.SELECTOR_CATEGORIES.setVisible(True)
             self.SELECTOR_ALUMNES.setVisible(False)
 
         elif self.informe_seleccionat.checkedId() == 1:
             self.tipus_informes = 1
+            self.SELECTOR_CATEGORIES.setVisible(False)
             self.SELECTOR_ALUMNES.setVisible(True)
 
     def mostrar_creacio(self):
@@ -505,7 +597,14 @@ class MainWindow(QMainWindow):
         alumnes_entrada = self.cap.alumnat_registres
         if alumnes_entrada:
             llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+            return llistat_alumnes
+        else:
+            return False
 
+    def obtenir_llistat_categories_registrades(self):
+        categories_registre = self.categoritzador.obtenir_categories_registrades()
+        if categories_registre:
+            llistat_alumnes = [categoria.nom for categoria in categories_registre]
             return llistat_alumnes
         else:
             return False
@@ -520,7 +619,7 @@ class MainWindow(QMainWindow):
         self.acces_registres.refrescar_registres()
         if self.acces_registres.registres:
             llista_registres = [[element.id, element.alumne.nom, element.categoria.nom,
-                                 parser.parse(element.data).strftime("%d/%m/%Y"), element.descripcio] for element
+                                 parser.parse(element.data), element.descripcio] for element
                                 in self.acces_registres.registres]
             return llista_registres
         else:
@@ -560,6 +659,7 @@ def sortir(self):
 #
 # app = Aplicacio(sys.argv)
 app = QApplication(sys.argv)
+QLocale.setDefault(QLocale.Catalan)
 
 window = MainWindow()
 
