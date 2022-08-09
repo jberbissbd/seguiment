@@ -1,27 +1,19 @@
 import datetime
 import sys
-import locale
-from dataclasses import dataclass
 from typing import Union
 
 import dateutil.parser
-
-from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_bbdd_comm
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador, CreadorInformes
-from dateutil import parser
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel, QLocale
 from PySide6.QtGui import QIcon, QFont, QAction
-from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
-                               QToolBar, QTableView, QGridLayout, QLabel,
-                               QMainWindow, QPushButton, QStackedWidget, QButtonGroup,
-                               QTextEdit, QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
-                               QStatusBar, QWizard, QWizardPage, QLineEdit, QCheckBox, QDialog, QDialogButtonBox,
-                               QStyleFactory, QWizard, QHeaderView, QMessageBox, QDialog, QTableWidget,
-                               QTableWidgetItem, QStyledItemDelegate)
-from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, AssistentInicial
-
-# locale.setlocale(locale.LC_ALL, 'ca_ES.utf8')
+from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QGridLayout, QMainWindow, QPushButton,
+                               QStackedWidget, QButtonGroup,
+                               QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
+                               QStatusBar, QStyleFactory, QStyledItemDelegate)
+from dateutil import parser
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes
+from src.agents.formats import Registres_gui_nou, Registres_gui_comm
+from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes
 
 
 class DelegatDates(QStyledItemDelegate):
@@ -31,7 +23,6 @@ class DelegatDates(QStyledItemDelegate):
         super(DelegatDates, self).__init__()
 
     def displayText(self, value, locale) -> str:
-        locale = QLocale.Catalan
         """Retorna el text que es mostra a la columna de dates"""
         value = value.toPython()
         return value.strftime("%d/%m/%Y")
@@ -116,6 +107,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.destinacio = None
         self.EDITAR_ALUMNES = None
         self.BARRA_NOTIFICACIONS = None
         self.BOTO_DATES = None
@@ -411,7 +403,6 @@ class MainWindow(QMainWindow):
         registres_eliminats: list = []
         registres_actualitzats: list = []
         rang_files = list(range(self.TAULA.model().rowCount()))
-        rang_columnes = list(range(self.TAULA.model().columnCount()))
         # Guardem els ids de les files del model i comprovem que no hagi cap id que falti:
         for fila in rang_files:
             llista_ids_model.append(model_comparacio.data(model_comparacio.index(fila, 0)))
@@ -471,11 +462,9 @@ class MainWindow(QMainWindow):
         if not isinstance(dades, list):
             raise TypeError("La dada ha de ser del tipus Registres_gui_comm.")
         else:
-            id_registre = None
+
             alumne = None
             categoria_enviar = None
-            data = None
-            descripcio = None
             # Transformem la data:
             id_registre = dades[0]
             for persona in self.cap.alumnat:
@@ -513,26 +502,26 @@ class MainWindow(QMainWindow):
         GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_categories)
         GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_alumnes)
         # Creem els selectors:
-        self.SELECTOR_ALUMNES = QComboBox()
-        self.SELECTOR_ALUMNES.addItem("* Tots *")
+        self.INFORMES_SELECTOR_ALUMNES = QComboBox()
+        self.INFORMES_SELECTOR_ALUMNES.addItem("* Tots *")
 
         if self.obtenir_llistat_alumnes_registrats():
-            self.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
-        self.SELECTOR_CATEGORIES = QComboBox()
-        self.SELECTOR_CATEGORIES.addItem("* Totes *")
+            self.INFORMES_SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.INFORMES_SELECTOR_CATEGORIES = QComboBox()
+        self.INFORMES_SELECTOR_CATEGORIES.addItem("* Totes *")
         if self.obtenir_llistat_categories_registrades():
-            self.SELECTOR_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
-        self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-        self.SELECTOR_ALUMNES.setVisible(False)
-        self.SELECTOR_CATEGORIES.setVisible(False)
-        self.SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+            self.INFORMES_SELECTOR_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
+        self.INFORMES_SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         # Creem el botó:
         self.BOTON_INFORME = QPushButton("Generar informe")
         self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
 
         DISTRIBUCIO.addWidget(GRUP_TIPUS)
-        DISTRIBUCIO.addWidget(self.SELECTOR_ALUMNES)
-        DISTRIBUCIO.addWidget(self.SELECTOR_CATEGORIES)
+        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_ALUMNES)
+        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_CATEGORIES)
         DISTRIBUCIO.addWidget(self.BOTON_INFORME)
         opcio_alumnes.toggled.connect(self.seleccionar_informe)
         opcio_categories.toggled.connect(self.seleccionar_informe)
@@ -542,24 +531,35 @@ class MainWindow(QMainWindow):
     def generar_informe(self):
         """Funcio per a generar un informe."""
         dades_registres = self.acces_registres.obtenir_registres()
-        exportador = CreadorInformes(self.cap.info_alumnes, self.categoritzador.info_categories,dades_registres,self.calendari.info_dates,self.destinacio)
-        if self.informe_seleccionat.checkedId() == 0:
+        exportador = CreadorInformes(self.cap.info_alumnes, self.categoritzador.info_categories, dades_registres,
+                                     self.calendari.info_dates, self.destinacio)
+
+        dates_informe = self.calendari.info_dates
+        if self.tipus_informes == 0:
+            alumnes_informe = self.cap.info_alumnes
+            carpeta_desti = self.destinacio
+            categories_informe = self.categoritzador.info_categories
+            exportador = CreadorInformes(alumnes_informe, categories_informe, dades_registres, dates_informe,
+                                         carpeta_desti)
             exportador.export_categories()
-        elif self.informe_seleccionat.checkedId() == 1:
+            print(self.INFORMES_SELECTOR_CATEGORIES.currentText())
+        elif self.tipus_informes == 1:
+            #
+            categories_enviar = self.categoritzador.obtenir_categories_registrades()
             exportador.alumne()
 
-
     def seleccionar_informe(self):
-
         if self.informe_seleccionat.checkedId() == 0:
             self.tipus_informes = 0
-            self.SELECTOR_CATEGORIES.setVisible(True)
-            self.SELECTOR_ALUMNES.setVisible(False)
+            self.INFORMES_SELECTOR_CATEGORIES.setVisible(True)
+            self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+            self.INFORMES_SELECTOR_ALUMNES.setCurrentIndex(0)
 
         elif self.informe_seleccionat.checkedId() == 1:
             self.tipus_informes = 1
-            self.SELECTOR_CATEGORIES.setVisible(False)
-            self.SELECTOR_ALUMNES.setVisible(True)
+            self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
+            self.INFORMES_SELECTOR_ALUMNES.setVisible(True)
+            self.INFORMES_SELECTOR_CATEGORIES.setCurrentIndex(0)
 
     def mostrar_creacio(self):
         self.WIDGET_CENTRAL.setCurrentWidget(self.CREACIO)
@@ -615,7 +615,6 @@ class MainWindow(QMainWindow):
         return llistat_categories
 
     def obtenir_llistat_registres(self):
-        llista_registres = []
         self.acces_registres.refrescar_registres()
         if self.acces_registres.registres:
             llista_registres = [[element.id, element.alumne.nom, element.categoria.nom,
@@ -626,7 +625,7 @@ class MainWindow(QMainWindow):
             return False
 
 
-def sortir(self):
+def sortir():
     sys.exit(0)
 
 

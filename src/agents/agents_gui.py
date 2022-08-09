@@ -295,7 +295,7 @@ class Classificador:
         self.registrador = RegistresBbdd()
         self.info_registres = self.registrador.lectura_registres()
 
-    def obtenir_categories_registrades(self, item=None):
+    def obtenir_categories_registrades(self):
         if self.info_categories and self.info_registres:
             classificacio = self.info_categories
             info_registres = self.info_registres
@@ -342,6 +342,27 @@ class CreadorInformes:
         """Retorna el nom del mes"""
         posicio = self.nombre_mesos.index(mes)
         return self.mesos[posicio]
+
+    def format_categories(self,ruta_arxiu):
+        wb = openpyxl.load_workbook(ruta_arxiu)
+        ws = wb.active
+        for row in ws.iter_rows():
+            for cell in row:
+                cell.font = openpyxl.styles.Font(size=11)
+
+                cell.border = openpyxl.styles.Border(left=openpyxl.styles.Side(style='thin'),
+                                                     right=openpyxl.styles.Side(style='thin'),
+                                                     top=openpyxl.styles.Side(style='thin'),
+                                                     bottom=openpyxl.styles.Side(style='thin'))
+                cell.alignment = openpyxl.styles.Alignment(horizontal='left', vertical='top')
+        for column in ws.iter_cols():
+            for cell in column:
+                if cell(row,column).value == cell(row,column-1).value:
+                    cell.value = ""
+                    ws.merge_cells(start_row=cell.row, start_column=cell.column-1, end_row=cell.row, end_column=cell.column)
+                else:
+                    continue
+                wb.save(ruta_arxiu)
 
     def data_a_trimestre(self, data: str):
         """Retorna el trimestre de la data"""
@@ -393,6 +414,8 @@ class CreadorInformes:
                 print(taula_pandas)
                 ruta_exportacio = os.path.join(self.desti, f"{element[0]}.xlsx")
                 taula_pandas.to_excel(ruta_exportacio, index=True)
+                # Apliquem format als informes:
+                self.format_categories(ruta_exportacio)
             return True
 
         else:
@@ -419,19 +442,22 @@ class CreadorInformes:
                         # Si el registre pertany a l'alumne, l'afegim al diccionari provisional:
                         if registre.alumne.id == alumne.id:
                             trimestre = self.data_a_trimestre(registre.data)
-                            diccionari_provisional['Trimestre'].append(trimestre)
                             data_python = dateutil.parser.parse(registre.data)
                             data_format = data_python.strftime('%d/%m/%Y')
+                            text_afegir = f"{data_format} - {registre.descripcio}"
                             # Afegim la data i la descripció al diccionari provisional si coincideix amb la categoria:
                             # Si la categoria es diferent, afegim un element buit, per poder tractar-lo amb el pandas.
-                            for categoria in noms_categories:
-                                if registre.categoria.nom == categoria:
-                                    diccionari_provisional[categoria].append(f"{data_format} - {registre.descripcio}")
-                                else:
-                                    diccionari_provisional[categoria].append('')
-
+                            diccionari_provisional[registre.categoria.nom].append(text_afegir)
+                            while diccionari_provisional[registre.categoria.nom].index(text_afegir)+1 > len(diccionari_provisional['Trimestre']):
+                                diccionari_provisional['Trimestre'].append(trimestre)
                         else:
                             continue
+                    # A continuacio ens assegurem que totes les categories tenen el mateix nombre d'elements:
+                    for categoria in noms_categories:
+                        nombre_registres = len(diccionari_provisional['Trimestre'])
+                        while len(diccionari_provisional[categoria]) < nombre_registres:
+                            diccionari_provisional[categoria].append('')
+
                     # Afegim el resultat a la llista d'alumnes:
                     df = pandas.DataFrame(diccionari_provisional).fillna('')
                     df['Trimestre'] = df['Trimestre'].astype("category")
@@ -440,4 +466,5 @@ class CreadorInformes:
             for element in llista_alumnes_informes:
                 print(element[1])
                 ruta_exportacio = os.path.join(self.desti, f"{element[0]}.xlsx")
-                element[1].to_excel(ruta_exportacio, index=False,sheet_name="Informe", header=True, merge_cells=True)
+                element[1].to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
+                # Apliquem format als informes:
