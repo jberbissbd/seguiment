@@ -13,6 +13,7 @@ faker = "==13.15.0"
 factory-boy = "==3.2.1"
 python-dateutil = "~=2.8.2"
 coverage = "*"
+openpyxl = "*"
 
 [dev-packages]
 

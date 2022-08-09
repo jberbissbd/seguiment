@@ -2,7 +2,7 @@ import os
 import sqlite3
 
 from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, \
-    Categoria_comm, Alumne_comm, Data_gui_comm, Data_nova
+    Categoria_comm, Alumne_comm, Data_gui_comm, Data_nova, Alumne_nou
 
 
 class ModelDao:
@@ -98,7 +98,7 @@ class AlumnesBbdd(ModelDao):
         self.cursor = self.conn.cursor()
         try:
             llista_alumnes = []
-            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
+            ordre_consultar = f"SELECT {parametre} FROM {self.taula} ORDER BY nom_alumne ASC"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             for i in consulta:
                 persona = Alumne_comm(i[0], i[1])
@@ -119,7 +119,7 @@ class AlumnesBbdd(ModelDao):
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
-            llista_ids =[item[0] for item in consulta]
+            llista_ids = [item[0] for item in consulta]
             self.cursor.close()
         except sqlite3.OperationalError as e:
             print(e)
@@ -128,6 +128,7 @@ class AlumnesBbdd(ModelDao):
             return llista_ids
         else:
             return False
+
     def llegir_alumne_individual(self, id_alumne: int):
         parametre: str = "id,nom_alumne"
         self.cursor = self.conn.cursor()
@@ -139,24 +140,29 @@ class AlumnesBbdd(ModelDao):
                 self.cursor.close()
             else:
                 return False
-        except sqlite3.OperationalError as e:
-            print(e)
+        except sqlite3.OperationalError:
             return False
         return persona
 
-    def registrar_alumne(self, missatge_registar: list):
-        for element in missatge_registar:
-            nom_alumne = element.nom
-            self.cursor = self.conn.cursor()
-            try:
-                ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
-                self.cursor.execute(ordre_registrar)
-                self.conn.commit()
-                self.cursor.close()
+    def registrar_alumne(self, missatge_registrar: list):
+        if isinstance(missatge_registrar, list):
+            for element in missatge_registrar:
+                if isinstance(element, Alumne_nou):
+                    nom_alumne = element.nom
+                    self.cursor = self.conn.cursor()
+                    try:
+                        ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
+                        self.cursor.execute(ordre_registrar)
+                        self.conn.commit()
+                        self.cursor.close()
 
-            except sqlite3.OperationalError:
-                return False
-        return True
+                    except sqlite3.OperationalError:
+                        return False
+                else:
+                    raise TypeError("El format de cada element de l'entrada ha de ser Alumne_nou")
+            return True
+        else:
+            raise TypeError("El missatge d'entrada ha de ser una llista")
 
     def eliminar_alumne(self, missatge: list):
         for element in missatge:
@@ -382,7 +388,6 @@ class CategoriesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-
     def crear_categoria(self, nom_categoria: str):
         """Crea una nova categoria"""
         self.cursor = self.conn.cursor()
@@ -464,7 +469,7 @@ class DatesBbdd(ModelDao):
         self.cursor = self.conn.cursor()
         if isinstance(llista_dates, list):
             for item in llista_dates:
-                if isinstance(item,Data_nova):
+                if isinstance(item, Data_nova):
                     try:
                         ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
                         self.cursor.execute(ordre_registrar)
@@ -492,6 +497,7 @@ class DatesBbdd(ModelDao):
             return llista_ids
         except sqlite3.OperationalError:
             return False
+
     def maxim_id_data(self):
         """Retorna l'id de la darrera data
         :int:
@@ -508,7 +514,7 @@ class DatesBbdd(ModelDao):
 
     def actualitzar_data(self, missatge_actualizacio: list):
         """Actualitza una data"""
-        if isinstance(missatge_actualizacio,list):
+        if isinstance(missatge_actualizacio, list):
             for element in missatge_actualizacio:
                 if isinstance(element, Data_gui_comm):
                     self.cursor = self.conn.cursor()

@@ -1,12 +1,13 @@
 import datetime
 import sys
+import locale
 from dataclasses import dataclass
 from typing import Union
 
 import dateutil.parser
 
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm, Registres_bbdd_comm
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Iniciador, Comprovador, CreadorInformes
 from dateutil import parser
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel, QLocale
@@ -20,6 +21,8 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDateEdit,
                                QTableWidgetItem, QStyledItemDelegate)
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, AssistentInicial
 
+# locale.setlocale(locale.LC_ALL, 'ca_ES.utf8')
+
 
 class DelegatDates(QStyledItemDelegate):
     """Delegat per a la columna de dates"""
@@ -32,7 +35,6 @@ class DelegatDates(QStyledItemDelegate):
         """Retorna el text que es mostra a la columna de dates"""
         value = value.toPython()
         return value.strftime("%d/%m/%Y")
-
 
 
 class SortFilterProxyModel(QSortFilterProxyModel):
@@ -313,6 +315,7 @@ class MainWindow(QMainWindow):
         self.TAULA_MODEL_FILTRE.autoAcceptChildRows()
         self.TAULA_MODEL_FILTRE.setDynamicSortFilter(False)
         self.TAULA.setColumnHidden(0, True)
+        self.TAULA.setWordWrap(True)
         self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
         self.TAULA.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.TAULA.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -393,7 +396,7 @@ class MainWindow(QMainWindow):
         # Editar un registre:
         index = self.TAULA.currentIndex()
         columna = index.column()
-        if columna == 1 or columna==2:
+        if columna == 1 or columna == 2:
             self.statusBar().showMessage("No es pot editar aquest camp", 2000)
         else:
             self.TAULA.edit(index)
@@ -501,34 +504,61 @@ class MainWindow(QMainWindow):
         GRUP_TIPUS_DISTRIBUCIO = QVBoxLayout()
         GRUP_TIPUS.setLayout(GRUP_TIPUS_DISTRIBUCIO)
         self.informe_seleccionat: Union[QButtonGroup, QButtonGroup] = QButtonGroup()
-        opcio_escoltam = QRadioButton("Escolta'm")
-        opcio_escoltam.setChecked(True)
-        opcio_global = QRadioButton("Seguiment d'alumnes")
+        opcio_categories = QRadioButton("Categories")
+        opcio_categories.setChecked(True)
+        opcio_alumnes = QRadioButton("Per alumne")
         self.informe_seleccionat.setExclusive(True)
-        self.informe_seleccionat.addButton(opcio_escoltam, 0)
-        self.informe_seleccionat.addButton(opcio_global, 1)
-        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_escoltam)
-        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_global)
+        self.informe_seleccionat.addButton(opcio_categories, 0)
+        self.informe_seleccionat.addButton(opcio_alumnes, 1)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_categories)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_alumnes)
+        # Creem els selectors:
         self.SELECTOR_ALUMNES = QComboBox()
-        self.SELECTOR_ALUMNES.addItem("* Selecciona un alumne *")
         self.SELECTOR_ALUMNES.addItem("* Tots *")
+
         if self.obtenir_llistat_alumnes_registrats():
             self.SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+        self.SELECTOR_CATEGORIES = QComboBox()
+        self.SELECTOR_CATEGORIES.addItem("* Totes *")
+        if self.obtenir_llistat_categories_registrades():
+            self.SELECTOR_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         self.SELECTOR_ALUMNES.setVisible(False)
+        self.SELECTOR_CATEGORIES.setVisible(False)
+        self.SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        # Creem el botó:
+        self.BOTON_INFORME = QPushButton("Generar informe")
+        self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+
         DISTRIBUCIO.addWidget(GRUP_TIPUS)
         DISTRIBUCIO.addWidget(self.SELECTOR_ALUMNES)
-        opcio_global.toggled.connect(self.seleccionar_informe)
-        opcio_escoltam.toggled.connect(self.seleccionar_informe)
+        DISTRIBUCIO.addWidget(self.SELECTOR_CATEGORIES)
+        DISTRIBUCIO.addWidget(self.BOTON_INFORME)
+        opcio_alumnes.toggled.connect(self.seleccionar_informe)
+        opcio_categories.toggled.connect(self.seleccionar_informe)
+        self.BOTON_INFORME.clicked.connect(self.generar_informe)
+        self.destinacio = "/home/jordi/Documents/Projectes/seguiment/src/tests"
+
+    def generar_informe(self):
+        """Funcio per a generar un informe."""
+        dades_registres = self.acces_registres.obtenir_registres()
+        exportador = CreadorInformes(self.cap.info_alumnes, self.categoritzador.info_categories,dades_registres,self.calendari.info_dates,self.destinacio)
+        if self.informe_seleccionat.checkedId() == 0:
+            exportador.export_categories()
+        elif self.informe_seleccionat.checkedId() == 1:
+            exportador.alumne()
+
 
     def seleccionar_informe(self):
 
         if self.informe_seleccionat.checkedId() == 0:
             self.tipus_informes = 0
+            self.SELECTOR_CATEGORIES.setVisible(True)
             self.SELECTOR_ALUMNES.setVisible(False)
 
         elif self.informe_seleccionat.checkedId() == 1:
             self.tipus_informes = 1
+            self.SELECTOR_CATEGORIES.setVisible(False)
             self.SELECTOR_ALUMNES.setVisible(True)
 
     def mostrar_creacio(self):

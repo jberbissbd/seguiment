@@ -9,7 +9,7 @@ from src.agents.formats import Registres_bbdd_nou, Registres_bbdd_comm, Alumne_n
     Data_gui_comm, Data_nova
 from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd
 
-fake = Faker()
+fake = Faker("es_CA")
 alumnes = AlumnesBbdd()
 categories = CategoriesBbdd()
 registres = RegistresBbdd()
@@ -33,10 +33,20 @@ class Test_entrada_dades_bbdd(unittest.TestCase):
         calendari.taula = "dates"
 
     def test_alumnes(self):
-        nom_registrar = person.BaseProvider("name")
+        nom_registrar = fake.name()
         missatge_registrar = [Alumne_nou(nom_registrar)]
         resultat_registre = alumnes.registrar_alumne(missatge_registrar)
         assert not True != resultat_registre, "Error al introduir nous valors a la taula d'alumnes"
+
+    def test_alumnes_invers_general(self):
+        nom_registrar: str = fake.name()
+        missatge_registrar = Alumne_nou(nom_registrar)
+        self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Agent alumnes admet valors invalids"
+
+    def test_alumnes_invers_elements(self):
+        nom_registrar: str = fake.name()
+        missatge_registrar = Alumne_nou(nom_registrar)
+        self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Agent alumnes admet valors invalids"
 
     def test_categories(self):
         categoria_registrar = fake.text()
@@ -75,7 +85,7 @@ class Test_actualitzacio(unittest.TestCase):
 
     def test_alumnes(self):
         id_alumne = random.choice(alumnes.test_llegir_alumnes())
-        nom_registrar = person.BaseProvider("name")
+        nom_registrar = fake.name()
         missatge_registrar = [Alumne_comm(id_alumne, nom_registrar)]
         resultat_registre = alumnes.actualitzar_alumne(missatge_registrar)
         assert not True != resultat_registre, "Error al introduir nous valors a la taula d'alumnes"
@@ -191,7 +201,7 @@ class Test_tipus_atributs(unittest.TestCase):
         alumnes.taula = "alumnes"
         calendari.taula = "dates"
 
-    def test_format_individual__registres_variables(self):
+    def test_registres(self):
         llista_registres = registres.lectura_registres()
         for element in llista_registres:
             num_referencia = element.id
@@ -230,6 +240,36 @@ class Test_tipus_atributs(unittest.TestCase):
             assert isinstance(data, str), "La data ha de ser una cadena de text"
 
 
+class Test_eliminacio(unittest.TestCase):
+    def setUp(self) -> None:
+        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        categories.taula = "categories"
+        registres.taula = "registres"
+        alumnes.taula = "alumnes"
+        calendari.taula = "dates"
+
+    def test_registres(self):
+        llista_registres = registres.lectura_registres()
+        missatge_eliminar = [random.choice(llista_registres)]
+        assert registres.eliminar_registre(missatge_eliminar) == True, "No s'ha pogut eliminar un element de la taula "\
+                                                                       "registres"
+
+    def test_alumnes(self):
+        llista_alumnes = alumnes.llegir_alumnes()
+        missatge_eliminar = [random.choice(llista_alumnes)]
+        assert alumnes.eliminar_alumne(missatge_eliminar) == True, "No s'ha pogut eliminar un element de la taula " \
+                                                                   "alumnes"
+
+    def test_categories(self):
+        llista_categories = categories.lectura_categories()
+        missatge_eliminar = [random.choice(llista_categories)]
+        assert alumnes.eliminar_alumne(missatge_eliminar) == True, "No s'ha pogut eliminar un element de la taula " \
+                                                                   "alumnes"
+
+
 def bbdd_lectura():
     bbdd_operacions_lectura = unittest.TestSuite()
     bbdd_operacions_lectura.addTest(Test_lectura)
@@ -243,10 +283,12 @@ def bbdd_escriptura():
     escriptura.addTest(Test_entrada_dades_bbdd)
     return escriptura
 
+
 def bbdd_actualitzacio():
     actualitzacio = unittest.TestSuite
     actualitzacio.addTest(Test_actualitzacio)
     return actualitzacio
+
 
 if __name__ == "__main__":
     executor = unittest.TextTestRunner()
