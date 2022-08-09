@@ -462,7 +462,6 @@ class MainWindow(QMainWindow):
         if not isinstance(dades, list):
             raise TypeError("La dada ha de ser del tipus Registres_gui_comm.")
         else:
-
             alumne = None
             categoria_enviar = None
             # Transformem la data:
@@ -504,7 +503,7 @@ class MainWindow(QMainWindow):
         # Creem els selectors:
         self.INFORMES_SELECTOR_ALUMNES = QComboBox()
         self.INFORMES_SELECTOR_ALUMNES.addItem("* Tots *")
-
+        # Afegim les dades de la taula, si n'hi ha
         if self.obtenir_llistat_alumnes_registrats():
             self.INFORMES_SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         self.INFORMES_SELECTOR_CATEGORIES = QComboBox()
@@ -529,24 +528,37 @@ class MainWindow(QMainWindow):
         self.destinacio = "/home/jordi/Documents/Projectes/seguiment/src/tests"
 
     def generar_informe(self):
-        """Funcio per a generar un informe."""
+        """Funcio per a generar un informe. Explicacio de la variable tipus informe: 0 si es de categories, 1 si es per
+        alumne."""
         dades_registres = self.acces_registres.obtenir_registres()
-        exportador = CreadorInformes(self.cap.info_alumnes, self.categoritzador.info_categories, dades_registres,
-                                     self.calendari.info_dates, self.destinacio)
-
-        dates_informe = self.calendari.info_dates
+        alumnes_informe = self.cap.alumnat_registres
+        carpeta_desti = self.destinacio
+        categories_registrades = self.categoritzador.categories_registrades
+        resposta = None
         if self.tipus_informes == 0:
-            alumnes_informe = self.cap.info_alumnes
-            carpeta_desti = self.destinacio
-            categories_informe = self.categoritzador.info_categories
-            exportador = CreadorInformes(alumnes_informe, categories_informe, dades_registres, dates_informe,
-                                         carpeta_desti)
-            exportador.export_categories()
-            print(self.INFORMES_SELECTOR_CATEGORIES.currentText())
+            # Es un informe de categories:
+
+            valor_actual = self.INFORMES_SELECTOR_CATEGORIES.currentText()
+            if self.INFORMES_SELECTOR_CATEGORIES.currentIndex() != 0:
+                categoria_informe = [categoria for categoria in categories_registrades if
+                                     categoria.nom == valor_actual]
+            exportador = CreadorInformes(alumnes_informe, categoria_informe, dades_registres, carpeta_desti)
+            resposta = exportador.export_categories()
         elif self.tipus_informes == 1:
-            #
-            categories_enviar = self.categoritzador.obtenir_categories_registrades()
-            exportador.alumne()
+            # Es un informe per alumne:
+            dates_informe = self.calendari.info_dates
+            valor_actual = self.INFORMES_SELECTOR_ALUMNES.currentText()
+            categories_enviar = self.categoritzador.categories
+            if self.INFORMES_SELECTOR_ALUMNES.currentIndex() != 0:
+                # Enviem tan sols la informacio de l'alumne en concret, no tot el registre:
+                alumnes_informe = [alumne for alumne in alumnes_informe if alumne.nom == valor_actual]
+                dades_enviar = [registre for registre in dades_registres if registre.alumne.nom == valor_actual]
+            else:
+                dades_enviar = dades_registres
+            exportador = CreadorInformes(alumnes_informe, categories_enviar, dades_enviar, carpeta_desti)
+            resposta = exportador.export_alumne(dates_informe)
+        if resposta:
+            self.statusBar().showMessage("Informe generat correctament", 2000)
 
     def seleccionar_informe(self):
         if self.informe_seleccionat.checkedId() == 0:

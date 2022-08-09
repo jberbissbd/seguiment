@@ -294,6 +294,7 @@ class Classificador:
         self.categories = self.info_categories
         self.registrador = RegistresBbdd()
         self.info_registres = self.registrador.lectura_registres()
+        self.categories_registrades = self.obtenir_categories_registrades()
 
     def obtenir_categories_registrades(self):
         if self.info_categories and self.info_registres:
@@ -325,12 +326,11 @@ class CreadorInformes:
     :arguments:destinacio: string amb la destinacio de l'informe
     """
 
-    def __init__(self, alumnes: list, categories: list, registres: list, dates: list, carpeta_destinacio: str):
+    def __init__(self, alumnes: list, categories: list, registres: list, carpeta_destinacio: str):
         super().__init__()
         self.alumnes = alumnes
         self.categories = categories
         self.registres = registres
-        self.dates = dates
         self.desti = carpeta_destinacio
         self.mesos_escolars = ["Setembre", "Octubre", "Novembre", "Desembre", "Gener", "Febrer", "Març", "Abril",
                                "Maig", "Juny", "Juliol"]
@@ -380,7 +380,8 @@ class CreadorInformes:
 
     def export_categories(self):
         """Crea un informe amb les categories"""
-        if self.categories and self.registres and self.alumnes and self.dates:
+
+        if self.categories and self.registres and self.alumnes:
             # Creem una llista amb les categories i els registres associats:
             llista_categories_informes = []
             llista_categories_als_registres = [registre.categoria.id for registre in self.registres]
@@ -415,13 +416,13 @@ class CreadorInformes:
                 ruta_exportacio = os.path.join(self.desti, f"{element[0]}.xlsx")
                 taula_pandas.to_excel(ruta_exportacio, index=True)
                 # Apliquem format als informes:
-                self.format_categories(ruta_exportacio)
+                # self.format_categories(ruta_exportacio)
             return True
-
         else:
             return False
 
-    def alumne(self):
+    def export_alumne(self,dates):
+        self.dates = dates
         """Crea un informe per cada alumne"""
         if self.alumnes and self.registres and self.categories and self.dates:
             llista_alumnes_informes = []
@@ -468,3 +469,4 @@ class CreadorInformes:
                 ruta_exportacio = os.path.join(self.desti, f"{element[0]}.xlsx")
                 element[1].to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
                 # Apliquem format als informes:
+        return True
