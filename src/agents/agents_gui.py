@@ -375,8 +375,6 @@ class CreadorInformes:
             return "2"
         elif data_calculada >= inici_tercer:
             return "3"
-        else:
-            return "Error"
 
     def export_categories(self):
         """Crea un informe amb les categories"""
@@ -421,7 +419,7 @@ class CreadorInformes:
         else:
             return False
 
-    def export_alumne(self,dates):
+    def export_alumne(self, dates):
         self.dates = dates
         """Crea un informe per cada alumne"""
         if self.alumnes and self.registres and self.categories and self.dates:
@@ -448,9 +446,23 @@ class CreadorInformes:
                             text_afegir = f"{data_format} - {registre.descripcio}"
                             # Afegim la data i la descripció al diccionari provisional si coincideix amb la categoria:
                             # Si la categoria es diferent, afegim un element buit, per poder tractar-lo amb el pandas.
-                            diccionari_provisional[registre.categoria.nom].append(text_afegir)
-                            while diccionari_provisional[registre.categoria.nom].index(text_afegir)+1 > len(diccionari_provisional['Trimestre']):
+                            n_reg_trimestres = len(diccionari_provisional['Trimestre'])
+                            n_reg_categoria = len(diccionari_provisional[registre.categoria.nom])
+                            # Comprovacio de si el trimestre es diferent. Si no, afegim el text a afegir. Si es
+                            # diferent, afegim el text i el trimestre.
+                            if n_reg_trimestres == 0:
                                 diccionari_provisional['Trimestre'].append(trimestre)
+                            elif n_reg_trimestres > 0:
+                                if diccionari_provisional['Trimestre'][n_reg_trimestres - 1] != trimestre:
+                                    for categoria in noms_categories:
+                                        while len(diccionari_provisional[categoria]) < n_reg_trimestres:
+                                            diccionari_provisional[categoria].append('')
+                                    diccionari_provisional['Trimestre'].append(trimestre)
+                                else:
+                                    if n_reg_trimestres <= n_reg_categoria:
+                                        diccionari_provisional['Trimestre'].append(trimestre)
+                            diccionari_provisional[registre.categoria.nom].append(text_afegir)
+
                         else:
                             continue
                     # A continuacio ens assegurem que totes les categories tenen el mateix nombre d'elements:
@@ -458,14 +470,12 @@ class CreadorInformes:
                         nombre_registres = len(diccionari_provisional['Trimestre'])
                         while len(diccionari_provisional[categoria]) < nombre_registres:
                             diccionari_provisional[categoria].append('')
-
                     # Afegim el resultat a la llista d'alumnes:
                     df = pandas.DataFrame(diccionari_provisional).fillna('')
                     df['Trimestre'] = df['Trimestre'].astype("category")
                     llista_dades.append(df)
                     llista_alumnes_informes.append(llista_dades)
             for element in llista_alumnes_informes:
-                print(element[1])
                 ruta_exportacio = os.path.join(self.desti, f"{element[0]}.xlsx")
                 element[1].to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
                 # Apliquem format als informes:
