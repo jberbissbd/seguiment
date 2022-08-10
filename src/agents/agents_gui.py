@@ -462,7 +462,6 @@ class CreadorInformes:
                                     if n_reg_trimestres <= n_reg_categoria:
                                         diccionari_provisional['Trimestre'].append(trimestre)
                             diccionari_provisional[registre.categoria.nom].append(text_afegir)
-
                         else:
                             continue
                     # A continuacio ens assegurem que totes les categories tenen el mateix nombre d'elements:
