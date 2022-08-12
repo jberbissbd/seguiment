@@ -155,6 +155,7 @@ class EditorDates(QtWidgets.QWidget):
         # Conectem amb la funcio per garantir resultats coherents:
         self.DATA_SEGON_TRIMESTRE.dateChanged.connect(self.coherencia_dates_trimestre)
         self.DATA_TERCER_TRIMESTRE.dateChanged.connect(self.coherencia_dates_trimestre)
+        self.BOTO_DATES_DESAR.clicked.connect(self.modificacio_dates)
         # Determinem els elements que apareixen al widget:
         DISTRIBUCIO.addWidget(ETIQUETA_SEGON, 0, 0)
         DISTRIBUCIO.addWidget(self.DATA_SEGON_TRIMESTRE, 0, 1)
