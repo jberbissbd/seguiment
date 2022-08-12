@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 from typing import Union
 
@@ -13,7 +14,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QG
 from dateutil import parser
 from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm
-from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes
+from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
 
 
 class DelegatDates(QStyledItemDelegate):
@@ -107,7 +108,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.destinacio = None
+        self.RUTA_ICONS = "icones"
+        self.destinacio_informes = None
         self.EDITAR_ALUMNES = None
         self.BARRA_NOTIFICACIONS = None
         self.BOTO_DATES = None
@@ -482,7 +484,7 @@ class MainWindow(QMainWindow):
     def widget_informes(self):
         self.INFORME = QWidget()
         self.INFORME.resize(300, 300)
-        DISTRIBUCIO = QVBoxLayout()
+        DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.INFORME.setLayout(DISTRIBUCIO)
         GRUP_TIPUS = QGroupBox()
@@ -514,51 +516,67 @@ class MainWindow(QMainWindow):
         self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
         self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
         self.INFORMES_SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-        # Creem el botó:
+        # Creem els boton:
         self.BOTON_INFORME = QPushButton("Generar informe")
         self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-
-        DISTRIBUCIO.addWidget(GRUP_TIPUS)
-        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_ALUMNES)
-        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_CATEGORIES)
-        DISTRIBUCIO.addWidget(self.BOTON_INFORME)
+        self.SELECCIO_CARPETA = QPushButton(QIcon(os.path.join(self.RUTA_ICONS, "inode-directory-symbolic.svg")), "")
+        self.SELECCIO_CARPETA.setIconSize(QSize(24, 24))
+        DISTRIBUCIO.addWidget(GRUP_TIPUS, 0, 0)
+        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_ALUMNES, 1, 0)
+        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_CATEGORIES, 2, 0)
+        DISTRIBUCIO.addWidget(self.SELECCIO_CARPETA, 3, 0)
+        DISTRIBUCIO.addWidget(self.BOTON_INFORME, 4, 0)
         opcio_alumnes.toggled.connect(self.seleccionar_informe)
         opcio_categories.toggled.connect(self.seleccionar_informe)
         self.BOTON_INFORME.clicked.connect(self.generar_informe)
-        self.destinacio = "/home/jordi/Documents/Projectes/seguiment/src/tests"
+        self.SELECCIO_CARPETA.clicked.connect(self.seleccionar_carpeta_informes)
+        self.destinacio_informes = None
+
+    def seleccionar_carpeta_informes(self):
+        """Funcio per a seleccionar la carpeta on es guardaran els informes."""
+        self.selcarpeta = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
+        if self.selcarpeta:
+            self.destinacio_informes = self.selcarpeta
+
 
     def generar_informe(self):
         """Funcio per a generar un informe. Explicacio de la variable tipus informe: 0 si es de categories, 1 si es per
         alumne."""
         dades_registres = self.acces_registres.obtenir_registres()
         alumnes_informe = self.cap.alumnat_registres
-        carpeta_desti = self.destinacio
+        carpeta_desti = self.destinacio_informes
         categories_registrades = self.categoritzador.categories_registrades
         resposta = None
-        if self.tipus_informes == 0:
-            # Es un informe de categories:
+        if self.destinacio_informes is None:
+            self.statusBar().showMessage("No s'ha seleccionat cap carpeta de destinacio.", 5000)
+        else:
+            if self.tipus_informes == 0:
+                # Es un informe de categories:
 
-            valor_actual = self.INFORMES_SELECTOR_CATEGORIES.currentText()
-            if self.INFORMES_SELECTOR_CATEGORIES.currentIndex() != 0:
+                valor_actual = self.INFORMES_SELECTOR_CATEGORIES.currentText()
                 categoria_informe = [categoria for categoria in categories_registrades if
                                      categoria.nom == valor_actual]
-            exportador = CreadorInformes(alumnes_informe, categoria_informe, dades_registres, carpeta_desti)
-            resposta = exportador.export_categories()
-        elif self.tipus_informes == 1:
-            # Es un informe per alumne:
-            dates_informe = self.calendari.info_dates
-            valor_actual = self.INFORMES_SELECTOR_ALUMNES.currentText()
-            categories_enviar = self.categoritzador.categories
-            if self.INFORMES_SELECTOR_ALUMNES.currentIndex() != 0:
-                # Enviem tan sols la informacio de l'alumne en concret, no tot el registre:
-                alumnes_informe = [alumne for alumne in alumnes_informe if alumne.nom == valor_actual]
-                dades_enviar = [registre for registre in dades_registres if registre.alumne.nom == valor_actual]
-            else:
-                dades_enviar = dades_registres
-            exportador = CreadorInformes(alumnes_informe, categories_enviar, dades_enviar, carpeta_desti)
-            resposta = exportador.export_alumne(dates_informe)
-        if resposta:
-            self.statusBar().showMessage("Informe generat correctament", 2000)
+                if self.INFORMES_SELECTOR_CATEGORIES.currentIndex() != 0:
+
+                    exportador = CreadorInformes(alumnes_informe, categoria_informe, dades_registres, carpeta_desti)
+                else:
+                    exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres, carpeta_desti)
+                resposta = exportador.export_categories()
+            elif self.tipus_informes == 1:
+                # Es un informe per alumne:
+                dates_informe = self.calendari.info_dates
+                valor_actual = self.INFORMES_SELECTOR_ALUMNES.currentText()
+                categories_enviar = self.categoritzador.categories
+                if self.INFORMES_SELECTOR_ALUMNES.currentIndex() != 0:
+                    # Enviem tan sols la informacio de l'alumne en concret, no tot el registre:
+                    alumnes_informe = [alumne for alumne in alumnes_informe if alumne.nom == valor_actual]
+                    dades_enviar = [registre for registre in dades_registres if registre.alumne.nom == valor_actual]
+                else:
+                    dades_enviar = dades_registres
+                exportador = CreadorInformes(alumnes_informe, categories_enviar, dades_enviar, carpeta_desti)
+                resposta = exportador.export_alumne(dates_informe)
+            if resposta:
+                self.statusBar().showMessage("Informe generat correctament", 2000)
 
     def seleccionar_informe(self):
         if self.informe_seleccionat.checkedId() == 0:

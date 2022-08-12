@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import openpyxl
+from openpyxl import load_workbook
+from openpyxl.styles import NamedStyle, Font, Color, Alignment, Border, Side
 
 import numpy as np
 import pandas
@@ -343,26 +345,16 @@ class CreadorInformes:
         posicio = self.nombre_mesos.index(mes)
         return self.mesos[posicio]
 
-    def format_categories(self,ruta_arxiu):
+    def format_categories(self, ruta_arxiu):
         wb = openpyxl.load_workbook(ruta_arxiu)
-        ws = wb.active
-        for row in ws.iter_rows():
-            for cell in row:
-                cell.font = openpyxl.styles.Font(size=11)
-
-                cell.border = openpyxl.styles.Border(left=openpyxl.styles.Side(style='thin'),
-                                                     right=openpyxl.styles.Side(style='thin'),
-                                                     top=openpyxl.styles.Side(style='thin'),
-                                                     bottom=openpyxl.styles.Side(style='thin'))
-                cell.alignment = openpyxl.styles.Alignment(horizontal='left', vertical='top')
-        for column in ws.iter_cols():
-            for cell in column:
-                if cell(row,column).value == cell(row,column-1).value:
-                    cell.value = ""
-                    ws.merge_cells(start_row=cell.row, start_column=cell.column-1, end_row=cell.row, end_column=cell.column)
-                else:
-                    continue
-                wb.save(ruta_arxiu)
+        fulla = wb.active
+        titols = NamedStyle(name="titols")
+        titols.font = Font(bold=True, size=12)
+        titols.alignment = Alignment(horizontal="left", vertical="up")
+        fila_titols = fulla[1]
+        for cell in fila_titols:
+            cell.style = titols
+        wb.save(ruta_arxiu)
 
     def data_a_trimestre(self, data: str):
         """Retorna el trimestre de la data"""
@@ -406,12 +398,12 @@ class CreadorInformes:
                     llista_categories_informes.append(llista_dades)
             for element in llista_categories_informes:
                 agrego_mesos = {'alumnes': np.unique}
+                nom_categoria = element[0]
                 taula_pandas = element[1]
                 taula_pandas = taula_pandas.groupby(['mesos']).aggregate(agrego_mesos).reindex(self.mesos_escolars)
                 taula_pandas['alumnes'].astype(str)
                 taula_pandas['alumnes'] = taula_pandas['alumnes'].str.join(', ')
-                print(taula_pandas)
-                ruta_exportacio = os.path.join(self.desti, f"{element[0]}.xlsx")
+                ruta_exportacio = os.path.join(self.desti, f"{nom_categoria}.xlsx")
                 taula_pandas.to_excel(ruta_exportacio, index=True)
                 # Apliquem format als informes:
                 # self.format_categories(ruta_exportacio)
@@ -475,7 +467,9 @@ class CreadorInformes:
                     llista_dades.append(df)
                     llista_alumnes_informes.append(llista_dades)
             for element in llista_alumnes_informes:
-                ruta_exportacio = os.path.join(self.desti, f"{element[0]}.xlsx")
-                element[1].to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
+                nom_alumne = element[0]
+                dades = element[1]
+                ruta_exportacio = os.path.join(self.desti, f"{nom_alumne}.xlsx")
+                dades.to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
                 # Apliquem format als informes:
         return True
