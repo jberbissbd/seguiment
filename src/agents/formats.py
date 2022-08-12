@@ -45,6 +45,7 @@ class Alumne_comm:
     id: int
     nom: str
 
+
 @dataclass(repr=False)
 class Alumne_nou:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a alumnes nous"""

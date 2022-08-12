@@ -538,7 +538,6 @@ class MainWindow(QMainWindow):
         if self.selcarpeta:
             self.destinacio_informes = self.selcarpeta
 
-
     def generar_informe(self):
         """Funcio per a generar un informe. Explicacio de la variable tipus informe: 0 si es de categories, 1 si es per
         alumne."""
@@ -560,7 +559,8 @@ class MainWindow(QMainWindow):
 
                     exportador = CreadorInformes(alumnes_informe, categoria_informe, dades_registres, carpeta_desti)
                 else:
-                    exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres, carpeta_desti)
+                    exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres,
+                                                 carpeta_desti)
                 resposta = exportador.export_categories()
             elif self.tipus_informes == 1:
                 # Es un informe per alumne:
