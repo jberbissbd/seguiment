@@ -14,19 +14,22 @@ alumnes = AlumnesBbdd()
 categories = CategoriesBbdd()
 registres = RegistresBbdd()
 calendari = DatesBbdd()
+ruta_base_dades = "/home/jordi/Documents/Projectes/seguiment/src/unittests/tests.db"
 
-alumnes.ruta_bbdd = "tests/bbdd_tests.db"
-registres.ruta_bbdd = "tests/bbdd_tests.db"
-categories.ruta_bbdd = "tests/bbdd_tests.db"
-calendari.ruta_bbdd = "tests/bbdd_tests.db"
+
+alumnes.ruta_bbdd = ruta_base_dades
+registres.ruta_bbdd = ruta_base_dades
+categories.ruta_bbdd = ruta_base_dades
+calendari.ruta_bbdd = ruta_base_dades
 
 
 class Test_entrada_dades_bbdd(unittest.TestCase):
-    def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+    def setUp(self, db=ruta_base_dades) -> None:
+
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -36,23 +39,24 @@ class Test_entrada_dades_bbdd(unittest.TestCase):
         nom_registrar = fake.name()
         missatge_registrar = [Alumne_nou(nom_registrar)]
         resultat_registre = alumnes.registrar_alumne(missatge_registrar)
-        assert not True != resultat_registre, "Error al introduir nous valors a la taula d'alumnes"
+        assert resultat_registre is True, "Error al introduir nous valors a la taula d'alumnes"
 
     def test_alumnes_invers_general(self):
         nom_registrar: str = fake.name()
         missatge_registrar = Alumne_nou(nom_registrar)
-        self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Agent alumnes admet valors invalids"
+        self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Agent alumnes admet valors " \
+                                                                                    "invalids "
 
     def test_alumnes_invers_elements(self):
         nom_registrar: str = fake.name()
         missatge_registrar = Alumne_nou(nom_registrar)
-        self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Agent alumnes admet valors invalids"
+        self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Els elements son invalids "
 
     def test_categories(self):
         categoria_registrar = fake.text()
-        missatge_registrar = []
+
         resultat_categories = categories.crear_categoria(categoria_registrar)
-        assert resultat_categories == True, "Error al introduir nous valors a la taula de categories"
+        assert resultat_categories is True, "Error al introduir nous valors a la taula de categories"
 
     def test_registres(self):
         id_alumne = random.choice(alumnes.test_llegir_alumnes())
@@ -61,23 +65,25 @@ class Test_entrada_dades_bbdd(unittest.TestCase):
         descripcio_registre = fake.text()
         llista_registre = [Registres_bbdd_nou(id_alumne, id_categoria, data_registre, descripcio_registre)]
         resultat_crear_regitre = registres.crear_registre(llista_registre)
-        assert resultat_crear_regitre == True, "Comprova si un registre amb el format Registre de missatgeria " \
+        assert resultat_crear_regitre is True, "Comprova si un registre amb el format Registre de missatgeria " \
                                                "s'introdueix "
 
     def test_dates(self):
         data_ficticia = fake.date()
         resultat_registre_data = calendari.crear_data([Data_nova(data_ficticia)])
-        assert resultat_registre_data == True, "Comprovacio al crear una data nova"
+        assert resultat_registre_data is True, "Comprovacio al crear una data nova"
 
 
 class Test_actualitzacio(unittest.TestCase):
     """Classe per a comprovar operacio d'actualitzar"""
 
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        tests_db = ruta_base_dades
+        db = tests_db
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -88,7 +94,7 @@ class Test_actualitzacio(unittest.TestCase):
         nom_registrar = fake.name()
         missatge_registrar = [Alumne_comm(id_alumne, nom_registrar)]
         resultat_registre = alumnes.actualitzar_alumne(missatge_registrar)
-        assert not True != resultat_registre, "Error al introduir nous valors a la taula d'alumnes"
+        assert resultat_registre is True, "Error al introduir nous valors a la taula d'alumnes"
 
     def test_registres(self):
         id_registre = random.choice(registres.test_id_registre())
@@ -99,7 +105,7 @@ class Test_actualitzacio(unittest.TestCase):
         llista_actualitzar = [
             Registres_bbdd_comm(id_registre, id_alumne, id_categoria, data_registre, descripcio_registre)]
         resultat = registres.actualitzar_registre(llista_actualitzar)
-        assert resultat == True, "Comprova si un registre amb el format Registre de missatgeria " \
+        assert resultat is True, "Comprova si un registre amb el format Registre de missatgeria " \
                                  "s'introdueix "
 
     def test_categories(self):
@@ -107,39 +113,41 @@ class Test_actualitzacio(unittest.TestCase):
         categoria_registrar = fake.text()
         missatge_registrar = [Categoria_comm(id_categoria, categoria_registrar)]
         resultat_categories = categories.actualitzar_categoria(missatge_registrar)
-        assert resultat_categories == True, "Error al introduir nous valors a la taula de categories"
+        assert resultat_categories is True, "Error al introduir nous valors a la taula de categories"
 
     def test_dates(self):
         id_data = random.choice(calendari.test_dates())
         nova_data = fake.date()
         missatge_registrar = [Data_gui_comm(id_data, nova_data)]
         resultat_registre = calendari.actualitzar_data(missatge_registrar)
-        assert True == resultat_registre, "Error al introduir nous valors a la taula de dates"
+        assert True is resultat_registre, "Error al introduir nous valors a la taula de dates"
 
 
 class Test_lectura(unittest.TestCase):
 
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        db = ruta_base_dades
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
         calendari.taula = "dates"
+        self.resposta_llista = "Resultats han de ser una llista"
 
     def test_lectura_registres(self):
         llista_registres = registres.lectura_registres()
-        assert isinstance(llista_registres, list), "Resultats han de ser una llista"
+        assert isinstance(llista_registres, list), self.resposta_llista
 
     def test_lectura_alumnes(self):
         llista_registres = alumnes.llegir_alumnes()
-        assert isinstance(llista_registres, list), "Resultats han de ser una llista"
+        assert isinstance(llista_registres, list), self.resposta_llista
 
     def test_lectura_categories(self):
         llista_registres = categories.lectura_categories()
-        assert isinstance(llista_registres, list), "Resultats han de ser una llista"
+        assert isinstance(llista_registres, list), self.resposta_llista
 
     def test_format_individual_categories_variables(self):
         llista_registres = categories.lectura_categories()
@@ -151,17 +159,19 @@ class Test_lectura(unittest.TestCase):
 
     def test_lectura_dates(self):
         llista_registres = calendari.lectura_dates()
-        assert isinstance(llista_registres, list), "Resultats han de ser una llista"
+        assert isinstance(llista_registres, list), self.resposta_llista
 
 
 class Test_formats_resposta(unittest.TestCase):
-    """Comprovacio que la resposta de la lectura de la base de dades segueixi els formats estblerts per a cada taula.."""
+    """Comprovacio que la resposta de la lectura de la base de dades segueixi els formats estblerts per
+    cada taula.. """
 
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        db = ruta_base_dades
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -192,10 +202,11 @@ class Test_tipus_atributs(unittest.TestCase):
     """Test per a comprovar si tots els elements de la base de dades compleixen amb la missatgeria establerta"""
 
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        db = registres
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -242,10 +253,11 @@ class Test_tipus_atributs(unittest.TestCase):
 
 class Test_eliminacio(unittest.TestCase):
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        db = ruta_base_dades
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -254,19 +266,19 @@ class Test_eliminacio(unittest.TestCase):
     def test_registres(self):
         llista_registres = registres.lectura_registres()
         missatge_eliminar = [random.choice(llista_registres)]
-        assert registres.eliminar_registre(missatge_eliminar) == True, "No s'ha pogut eliminar un element de la taula "\
+        assert registres.eliminar_registre(missatge_eliminar) is True, "No s'ha pogut eliminar un element de la taula " \
                                                                        "registres"
 
     def test_alumnes(self):
         llista_alumnes = alumnes.llegir_alumnes()
         missatge_eliminar = [random.choice(llista_alumnes)]
-        assert alumnes.eliminar_alumne(missatge_eliminar) == True, "No s'ha pogut eliminar un element de la taula " \
+        assert alumnes.eliminar_alumne(missatge_eliminar) is True, "No s'ha pogut eliminar un element de la taula " \
                                                                    "alumnes"
 
     def test_categories(self):
         llista_categories = categories.lectura_categories()
         missatge_eliminar = [random.choice(llista_categories)]
-        assert alumnes.eliminar_alumne(missatge_eliminar) == True, "No s'ha pogut eliminar un element de la taula " \
+        assert alumnes.eliminar_alumne(missatge_eliminar) is True, "No s'ha pogut eliminar un element de la taula " \
                                                                    "alumnes"
 
 
@@ -289,9 +301,14 @@ def bbdd_actualitzacio():
     actualitzacio.addTest(Test_actualitzacio)
     return actualitzacio
 
+def bbdd_eliminacio():
+    eliminacio = unittest.TestSuite()
+    eliminacio.addTest(Test_eliminacio)
+    return eliminacio
 
 if __name__ == "__main__":
     executor = unittest.TextTestRunner()
     executor.run(bbdd_lectura())
     executor.run(bbdd_escriptura())
     executor.run(bbdd_actualitzacio())
+    executor.run(bbdd_eliminacio())

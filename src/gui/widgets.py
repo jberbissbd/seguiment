@@ -3,9 +3,15 @@ from PySide6.QtCore import Qt, QDate, QSize, QSortFilterProxyModel
 from PySide6.QtGui import QIcon, QAction, QPixmap
 from PySide6.QtWidgets import QGridLayout, QDateEdit, QPushButton, QLabel, QComboBox, QTextEdit, QHBoxLayout, \
     QVBoxLayout, QTableView, QAbstractItemView, QWizardPage, QWizard, QDialog, QMessageBox, QLineEdit, QFormLayout, \
-    QDialogButtonBox
+    QDialogButtonBox, QFileDialog
 from src.agents.agents_gui import Calendaritzador, CapEstudis
 from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm, Data_nova
+
+
+class DialegSeleccioCarpeta(QFileDialog):
+    def __init__(self):
+        super().__init__()
+        self.setFileMode(QFileDialog.Directory)
 
 
 class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
@@ -149,6 +155,7 @@ class EditorDates(QtWidgets.QWidget):
         # Conectem amb la funcio per garantir resultats coherents:
         self.DATA_SEGON_TRIMESTRE.dateChanged.connect(self.coherencia_dates_trimestre)
         self.DATA_TERCER_TRIMESTRE.dateChanged.connect(self.coherencia_dates_trimestre)
+        self.BOTO_DATES_DESAR.clicked.connect(self.modificacio_dates)
         # Determinem els elements que apareixen al widget:
         DISTRIBUCIO.addWidget(ETIQUETA_SEGON, 0, 0)
         DISTRIBUCIO.addWidget(self.DATA_SEGON_TRIMESTRE, 0, 1)
@@ -175,7 +182,7 @@ class EditorDates(QtWidgets.QWidget):
         Fals si no s'ha pogut realitzar l'operacio corresponent a la base de dades.
         Veritat si s'han pogut realitzar.
         """
-        estat_actualitzacio=True
+        estat_actualitzacio = True
         estat_creacio = True
         data2n = self.DATA_SEGON_TRIMESTRE.date().toString('ISODate')
         data3er = self.DATA_TERCER_TRIMESTRE.date().toString('ISODate')
@@ -193,9 +200,7 @@ class EditorDates(QtWidgets.QWidget):
             llista_noves_dates = [data2n, data3er]
             missatge_creacio = [Data_nova(item) for item in llista_noves_dates]
             estat_creacio = self.calendari_editor_dates.crear_data(missatge_creacio)
-        return estat_actualitzacio+estat_creacio
-
-
+        return estat_actualitzacio + estat_creacio
 
 
 class CreadorRegistres(QtWidgets.QWidget):
