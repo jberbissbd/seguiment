@@ -7,11 +7,8 @@ from faker import Faker
 from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd
 import secrets
 from faker.providers import person
+
 sys.path.append('./agents/formats')
-
-
-
-
 
 fake = Faker("es_CA")
 alumnes = AlumnesBbdd()

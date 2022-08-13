@@ -50,10 +50,12 @@ class Iniciador(ModelDao):
         #                    "BLOB);")
         try:
             ordre_general = """begin;CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            nom_alumne BLOB); CREATE TABLE IF NOT EXISTS registres (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT 
-            UNIQUE,data INTEGER date, descripcio BLOB, id_alumne INTEGER NOT NULL, id_categoria INTEGER NOT 
-            NULL); CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT); CREATE TABLE IF 
-            NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB);commit """
+            nom_alumne BLOB); CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            categoria BLOB); CREATE IF NOT EXISTS TABLE "registres" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT 
+            UNIQUE, "data" INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT 
+            NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
+            "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS dates (id INTEGER 
+            PRIMARY KEY AUTOINCREMENT, data TEXT);commit """
             self.conn.executescript(ordre_general)
 
         except sqlite3.OperationalError:
