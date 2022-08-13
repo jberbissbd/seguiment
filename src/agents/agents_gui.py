@@ -439,9 +439,7 @@ class CreadorInformes:
             llista_categories_als_registres = [registre.categoria.id for registre in self.registres]
             categories_registres = set(llista_categories_als_registres)
             for categoria in self.categories:
-                if categoria.id not in categories_registres:
-                    continue
-                else:
+                if categoria.id in categories_registres:
                     llista_dades = [f"{categoria.nom}"]
                     diccionari_provisional = {"mesos": [], "alumnes": []}
                     for registre in self.registres:
@@ -449,12 +447,9 @@ class CreadorInformes:
                         if registre.categoria.id == categoria.id:
                             mes = dateutil.parser.parse(registre.data).month
                             mes = self.mes_a_string(mes)
-
                             alumne = registre.alumne.nom
                             diccionari_provisional['mesos'].append(mes)
                             diccionari_provisional['alumnes'].append(alumne)
-                        else:
-                            continue
                     df = pandas.DataFrame(diccionari_provisional)
                     llista_dades.append(df)
                     llista_categories_informes.append(llista_dades)
@@ -476,7 +471,7 @@ class CreadorInformes:
     def export_alumne(self, dates):
         self.dates = dates
         """Crea un informe per cada alumne"""
-        if self.alumnes and self.registres and self.categories and self.dates:
+        if self.alumnes and self.registres and self.categories:
             llista_alumnes_informes = []
             llista_alumnes_als_registres = [registre.alumne.id for registre in self.registres]
             noms_categories = [categoria.nom for categoria in self.categories]
@@ -506,18 +501,16 @@ class CreadorInformes:
                             # diferent, afegim el text i el trimestre.
                             if n_reg_trimestres == 0:
                                 diccionari_provisional['Trimestre'].append(trimestre)
-                            elif n_reg_trimestres > 0:
+                            else:
                                 if diccionari_provisional['Trimestre'][n_reg_trimestres - 1] != trimestre:
                                     for categoria in noms_categories:
                                         while len(diccionari_provisional[categoria]) < n_reg_trimestres:
                                             diccionari_provisional[categoria].append('')
                                     diccionari_provisional['Trimestre'].append(trimestre)
-                                else:
-                                    if n_reg_trimestres <= n_reg_categoria:
-                                        diccionari_provisional['Trimestre'].append(trimestre)
+                                elif n_reg_trimestres <= n_reg_categoria:
+                                    diccionari_provisional['Trimestre'].append(trimestre)
                             diccionari_provisional[registre.categoria.nom].append(text_afegir)
-                        else:
-                            continue
+
                     # A continuacio ens assegurem que totes les categories tenen el mateix nombre d'elements:
                     for categoria in noms_categories:
                         nombre_registres = len(diccionari_provisional['Trimestre'])
