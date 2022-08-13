@@ -11,7 +11,7 @@ import numpy as np
 import pandas
 import pandas as pd
 import dateutil
-from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador
+from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
 from dateutil import parser
 
 from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
@@ -31,6 +31,22 @@ class Comprovador:
         self.presencia_alumnes = resultat_iniciador.presencia_taula_alumne
         self.presencia_registres = resultat_iniciador.presencia_taula_registres
         self.presencia_dates = resultat_iniciador.presencia_taula_dates
+
+
+class Destructor:
+    def __init__(self):
+        super(Destructor, self).__init__()
+        self.alumnes = AlumnesBbdd()
+        self.registres = RegistresBbdd()
+        self.categories = CategoriesBbdd()
+        self.dates = DatesBbdd()
+
+    def destruir(self):
+        self.alumnes.destruir_taula()
+        self.categories.destruir_taula()
+        self.dates.destruir_taula()
+        self.registres.destruir_taula()
+        Liquidador.eliminar_basededades()
 
 
 class Comptable:
@@ -374,7 +390,7 @@ class CreadorInformes:
         wb = openpyxl.load_workbook(ruta_arxiu)
         color_taronja = "F6B26B"
         fulla = wb.active
-        llista_columnes = ['B','C', 'D', 'E', 'F']
+        llista_columnes = ['B', 'C', 'D', 'E', 'F']
         # Definim els estils:
         titols_trimestres = NamedStyle(name="titols_trimestres")
         titols_trimestres.font = Font(size=12, name="Arial", bold=True)
@@ -409,9 +425,10 @@ class CreadorInformes:
             llista_valors.append(referencia)
             if n_index != 0 and cell.value == llista_valors[n_index - 1][0]:
                 cell.value = ""
-                fulla.merge_cells(start_row=llista_valors[n_index-1][1], start_column=cell.column, end_row=cell.row, end_column=cell.column)
-                fulla.cell(row=llista_valors[n_index-1][1], column=cell.column).style = titols_trimestres
-            n_index+= 1
+                fulla.merge_cells(start_row=llista_valors[n_index - 1][1], start_column=cell.column, end_row=cell.row,
+                                  end_column=cell.column)
+                fulla.cell(row=llista_valors[n_index - 1][1], column=cell.column).style = titols_trimestres
+            n_index += 1
         # Donem format a la resta de les cel·les:
         for row in fulla.iter_rows(min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column):
             for cell in row:

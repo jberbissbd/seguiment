@@ -16,6 +16,17 @@ class ModelDao:
         self.conn = sqlite3.connect(self.ruta_bbdd)
         self.c = self.conn.cursor()
 
+    def __del__(self):
+        self.conn.close()
+
+
+class Liquidador(ModelDao):
+    def __init__(self):
+        super(Liquidador, self).__init__()
+
+    def eliminar_basededades(self):
+        os.remove(self.ruta_bbdd)
+
 
 class Iniciador(ModelDao):
     """Comprova si existeixen les taules alumne, registres i dates"""
@@ -64,9 +75,6 @@ class Iniciador(ModelDao):
         finally:
             self.conn.close()
 
-    def eliminar_basededades(self):
-        os.remove(self.ruta_bbdd)
-
 
 class AlumnesBbdd(ModelDao):
     def __init__(self, taula="alumnes"):
@@ -75,11 +83,11 @@ class AlumnesBbdd(ModelDao):
         self.ordre_consultar = None
         self.parametre = None
 
-    def buidar_taula(self):
+    def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
         self.cursor = self.conn.cursor()
         try:
-            buidar_categories = f"DELETE FROM {self.taula}"
+            buidar_categories = f"DROP {self.taula}"
             self.cursor.execute(buidar_categories)
             self.conn.commit()
             self.cursor.close()
@@ -207,11 +215,11 @@ class RegistresBbdd(ModelDao):
         self.ordre_consultar = None
         self.parametre = None
 
-    def buidar_taula(self):
+    def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
         self.cursor = self.conn.cursor()
         try:
-            buidar_registres = f"DELETE FROM {self.taula}"
+            buidar_registres = f"DROP {self.taula}"
             self.cursor.execute(buidar_registres)
             self.conn.commit()
             self.cursor.close()
@@ -259,6 +267,7 @@ class RegistresBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
+    # noinspection PyTypeChecker
     def lectura_alumnes_registrats(self):
         """Llegeix els alumnes que tinguin algun registre"""
         parametre: str = "id_alumne"
@@ -434,7 +443,7 @@ class CategoriesBbdd(ModelDao):
     def actualitzar_categoria(self, missatge: list):
         """Actualitza una categoria
         :param missatge: Llista amb instancies de Categoria_comm.
-        :arg Llista formada per instancies de Categoria_comm.
+        :arg missatge formada per instancies de Categoria_comm.
         :returns Fals si no es pot realitzar l'operacio.
         :raises TypeError si els formats d'enttrada no son correctes.
         """
@@ -458,11 +467,11 @@ class CategoriesBbdd(ModelDao):
         else:
             raise TypeError("Les dades han de tenir format de llista")
 
-    def buidar_taula(self):
+    def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
         self.cursor = self.conn.cursor()
         try:
-            buidar_categories = f"DELETE FROM {self.taula}"
+            buidar_categories = f"DROP {self.taula}"
             self.cursor.execute(buidar_categories)
             self.conn.commit()
             self.cursor.close()
@@ -564,11 +573,11 @@ class DatesBbdd(ModelDao):
         else:
             raise TypeError("El paramtere d'entrada ha de ser una llista")
 
-    def buidar_taula(self):
+    def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
         self.cursor = self.conn.cursor()
         try:
-            buidar_categories = f"DELETE FROM {self.taula}"
+            buidar_categories = f"DROP FROM {self.taula}"
             self.cursor.execute(buidar_categories)
             self.conn.commit()
             self.cursor.close()
