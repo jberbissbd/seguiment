@@ -4,6 +4,9 @@ import sqlite3
 from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, \
     Categoria_comm, Alumne_comm, Data_gui_comm, Data_nova, Alumne_nou
 
+error_llista = "Error: el missatge ha de ser una llista."
+error_format = "Error: el missatge no té el format correcte."
+
 
 class ModelDao:
     def __init__(self):
@@ -36,18 +39,7 @@ class Iniciador(ModelDao):
             return False
 
     def inicia_taules(self):
-        # if not self.presencia_taula_alumne:
-        #     self.c.execute(
-        #         "CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB);")
-        # if not self.presencia_taula_registres:
-        #     self.c.execute(
-        #         "CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY, alumne INTEGER, categoria INTEGER, "
-        #         "data TEXT, descripcio TEXT);")
-        # if not self.presencia_taula_dates:
-        #     self.c.execute("CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT);")
-        # if not self.presencia_taula_categories:
-        #     self.c.execute("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria "
-        #                    "BLOB);")
+        """Crea les taules necessaries per a la base de dades"""
         try:
             ordre_general = """begin;CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, 
             nom_alumne BLOB); CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -82,6 +74,18 @@ class AlumnesBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
+
+    def buidar_taula(self):
+        """Eliminar tots els registres de la taula"""
+        self.cursor = self.conn.cursor()
+        try:
+            buidar_categories = f"DELETE FROM {self.taula}"
+            self.cursor.execute(buidar_categories)
+            self.conn.commit()
+            self.cursor.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula"""
@@ -126,7 +130,7 @@ class AlumnesBbdd(ModelDao):
         except sqlite3.OperationalError as e:
             print(e)
             return False
-        if llista_ids is not None:
+        if llista_ids:
             return llista_ids
         else:
             return False
@@ -202,6 +206,18 @@ class RegistresBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
+
+    def buidar_taula(self):
+        """Eliminar tots els registres de la taula"""
+        self.cursor = self.conn.cursor()
+        try:
+            buidar_registres = f"DELETE FROM {self.taula}"
+            self.cursor.execute(buidar_registres)
+            self.conn.commit()
+            self.cursor.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
 
     def test_id_registre(self):
         """Obtindre la llista d'id's de la taula de registres"""
@@ -287,11 +303,11 @@ class RegistresBbdd(ModelDao):
     def actualitzar_registre(self, missatge_actualitzar: list):
         """Actualitza un registre"""
         if not isinstance(missatge_actualitzar, list):
-            raise TypeError("El missatge ha de ser una llista")
+            raise TypeError(error_llista)
         else:
             for element in missatge_actualitzar:
                 if not isinstance(element, Registres_bbdd_comm):
-                    raise TypeError("El missatge ha de ser una llista amb el format correcte")
+                    raise TypeError(error_format)
                 else:
                     self.cursor = self.conn.cursor()
                     try:
@@ -306,11 +322,11 @@ class RegistresBbdd(ModelDao):
     def eliminar_registre(self, missatge_eliminar: list):
         """Elimina un registre"""
         if not isinstance(missatge_eliminar, list):
-            raise TypeError("El missatge ha de ser una llista")
+            raise TypeError(error_llista)
         else:
             for element in missatge_eliminar:
                 if not isinstance(element, Registres_bbdd_comm):
-                    raise TypeError("El missatge ha de ser una llista amb el format correcte")
+                    raise TypeError(error_format)
                 else:
                     self.cursor = self.conn.cursor()
                     try:
@@ -325,7 +341,7 @@ class RegistresBbdd(ModelDao):
     def eliminar_registre_alumne(self, missatge_eliminar: list):
         """Elimina un registre"""
         if not isinstance(missatge_eliminar, list):
-            raise TypeError("El missatge ha de ser una llista")
+            raise TypeError(error_llista)
         else:
             for element in missatge_eliminar:
                 if not isinstance(element, Alumne_comm):
@@ -442,6 +458,18 @@ class CategoriesBbdd(ModelDao):
         else:
             raise TypeError("Les dades han de tenir format de llista")
 
+    def buidar_taula(self):
+        """Eliminar tots els registres de la taula"""
+        self.cursor = self.conn.cursor()
+        try:
+            buidar_categories = f"DELETE FROM {self.taula}"
+            self.cursor.execute(buidar_categories)
+            self.conn.commit()
+            self.cursor.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
+
 
 class DatesBbdd(ModelDao):
     def __init__(self, taula="dates"):
@@ -535,3 +563,15 @@ class DatesBbdd(ModelDao):
             return True
         else:
             raise TypeError("El paramtere d'entrada ha de ser una llista")
+
+    def buidar_taula(self):
+        """Eliminar tots els registres de la taula"""
+        self.cursor = self.conn.cursor()
+        try:
+            buidar_categories = f"DELETE FROM {self.taula}"
+            self.cursor.execute(buidar_categories)
+            self.conn.commit()
+            self.cursor.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
