@@ -14,19 +14,22 @@ alumnes = AlumnesBbdd()
 categories = CategoriesBbdd()
 registres = RegistresBbdd()
 calendari = DatesBbdd()
+ruta_base_dades = "/home/jordi/Documents/Projectes/seguiment/src/unittests/tests.db"
 
-alumnes.ruta_bbdd = "tests/bbdd_tests.db"
-registres.ruta_bbdd = "tests/bbdd_tests.db"
-categories.ruta_bbdd = "tests/bbdd_tests.db"
-calendari.ruta_bbdd = "tests/bbdd_tests.db"
+
+alumnes.ruta_bbdd = ruta_base_dades
+registres.ruta_bbdd = ruta_base_dades
+categories.ruta_bbdd = ruta_base_dades
+calendari.ruta_bbdd = ruta_base_dades
 
 
 class Test_entrada_dades_bbdd(unittest.TestCase):
-    def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+    def setUp(self, db=ruta_base_dades) -> None:
+
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -47,12 +50,11 @@ class Test_entrada_dades_bbdd(unittest.TestCase):
     def test_alumnes_invers_elements(self):
         nom_registrar: str = fake.name()
         missatge_registrar = Alumne_nou(nom_registrar)
-        self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Agent alumnes admet valors " \
-                                                                                    "invalids "
+        self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Els elements son invalids "
 
     def test_categories(self):
         categoria_registrar = fake.text()
-        missatge_registrar = []
+
         resultat_categories = categories.crear_categoria(categoria_registrar)
         assert resultat_categories is True, "Error al introduir nous valors a la taula de categories"
 
@@ -76,10 +78,12 @@ class Test_actualitzacio(unittest.TestCase):
     """Classe per a comprovar operacio d'actualitzar"""
 
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        tests_db = ruta_base_dades
+        db = tests_db
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -122,26 +126,28 @@ class Test_actualitzacio(unittest.TestCase):
 class Test_lectura(unittest.TestCase):
 
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        db = ruta_base_dades
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
         calendari.taula = "dates"
+        self.resposta_llista = "Resultats han de ser una llista"
 
     def test_lectura_registres(self):
         llista_registres = registres.lectura_registres()
-        assert isinstance(llista_registres, list), "Resultats han de ser una llista"
+        assert isinstance(llista_registres, list), self.resposta_llista
 
     def test_lectura_alumnes(self):
         llista_registres = alumnes.llegir_alumnes()
-        assert isinstance(llista_registres, list), "Resultats han de ser una llista"
+        assert isinstance(llista_registres, list), self.resposta_llista
 
     def test_lectura_categories(self):
         llista_registres = categories.lectura_categories()
-        assert isinstance(llista_registres, list), "Resultats han de ser una llista"
+        assert isinstance(llista_registres, list), self.resposta_llista
 
     def test_format_individual_categories_variables(self):
         llista_registres = categories.lectura_categories()
@@ -153,7 +159,7 @@ class Test_lectura(unittest.TestCase):
 
     def test_lectura_dates(self):
         llista_registres = calendari.lectura_dates()
-        assert isinstance(llista_registres, list), "Resultats han de ser una llista"
+        assert isinstance(llista_registres, list), self.resposta_llista
 
 
 class Test_formats_resposta(unittest.TestCase):
@@ -161,10 +167,11 @@ class Test_formats_resposta(unittest.TestCase):
     cada taula.. """
 
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        db = ruta_base_dades
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -195,10 +202,11 @@ class Test_tipus_atributs(unittest.TestCase):
     """Test per a comprovar si tots els elements de la base de dades compleixen amb la missatgeria establerta"""
 
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        db = registres
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -245,10 +253,11 @@ class Test_tipus_atributs(unittest.TestCase):
 
 class Test_eliminacio(unittest.TestCase):
     def setUp(self) -> None:
-        categories.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        registres.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        alumnes.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
-        calendari.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/tests/tests.db"
+        db = ruta_base_dades
+        categories.ruta_bbdd = db
+        registres.ruta_bbdd = db
+        alumnes.ruta_bbdd = db
+        calendari.ruta_bbdd = db
         categories.taula = "categories"
         registres.taula = "registres"
         alumnes.taula = "alumnes"
@@ -292,9 +301,14 @@ def bbdd_actualitzacio():
     actualitzacio.addTest(Test_actualitzacio)
     return actualitzacio
 
+def bbdd_eliminacio():
+    eliminacio = unittest.TestSuite()
+    eliminacio.addTest(Test_eliminacio)
+    return eliminacio
 
 if __name__ == "__main__":
     executor = unittest.TextTestRunner()
     executor.run(bbdd_lectura())
     executor.run(bbdd_escriptura())
     executor.run(bbdd_actualitzacio())
+    executor.run(bbdd_eliminacio())

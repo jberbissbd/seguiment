@@ -309,7 +309,7 @@ class Classificador:
                         if element in llista_categories_amb_registre:
                             continue
                         llista_categories_amb_registre.append(element)
-                        continue
+
             return llista_categories_amb_registre
         else:
             return False
@@ -372,10 +372,12 @@ class CreadorInformes:
         wb.save(ruta_arxiu)
 
     def format_alumnes(self, ruta_arxiu: str):
+        """Dona format a l'informe d'alumnes"""
         wb = openpyxl.load_workbook(ruta_arxiu)
         color_taronja = "F6B26B"
         fulla = wb.active
         llista_columnes = ['B','C', 'D', 'E', 'F']
+        # Definim els estils:
         titols_trimestres = NamedStyle(name="titols_trimestres")
         titols_trimestres.font = Font(size=12, name="Arial", bold=True)
         titols_trimestres.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
@@ -400,18 +402,17 @@ class CreadorInformes:
         fulla.column_dimensions['A'].width = 13
         for column in llista_columnes:
             fulla.column_dimensions[column].width = 30
-        index_trimestre = list(range(fulla.max_row))
+
         llista_valors = []
         n_index = 0
         # Fusionem les cel·les si tenen el mateix valor:
         for cell in fulla['A']:
             referencia = [cell.value, cell.row]
             llista_valors.append(referencia)
-            if n_index != 0:
-                if cell.value == llista_valors[n_index-1][0]:
-                    cell.value = ""
-                    fulla.merge_cells(start_row=llista_valors[n_index-1][1], start_column=cell.column, end_row=cell.row, end_column=cell.column)
-                    fulla.cell(row=llista_valors[n_index-1][1], column=cell.column).style = titols_trimestres
+            if n_index != 0 and cell.value == llista_valors[n_index - 1][0]:
+                cell.value = ""
+                fulla.merge_cells(start_row=llista_valors[n_index-1][1], start_column=cell.column, end_row=cell.row, end_column=cell.column)
+                fulla.cell(row=llista_valors[n_index-1][1], column=cell.column).style = titols_trimestres
             n_index+= 1
         # Donem format a la resta de les cel·les:
         for row in fulla.iter_rows(min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column):

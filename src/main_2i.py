@@ -430,13 +430,13 @@ class MainWindow(QMainWindow):
             if llista_ids_originals[item] != llista_ids_model[item]:
                 registres_eliminats.append(llista_ids_originals[item])
                 item += 1
-                continue
+
             # Un cop sapigut aixo, comprovem les actualitzacions:
             else:
                 # Comprovem els registres un per un. Si son diferents, guardem els canvis:
                 if dades_originals[item] != llista_dades_model[item]:
                     registres_actualitzats.append(llista_dades_model[item])
-                    continue
+
         # Comprovem si hi han actualitzacions o eliminacions i passem l'ordre corresponent:
         if registres_eliminats:
             self.eliminar_registres(registres_eliminats)
