@@ -660,34 +660,6 @@ def sortir():
     sys.exit(0)
 
 
-#
-# class Aplicacio(QApplication):
-#     def __init__(self, argv):
-#         super().__init__(argv)
-#         self.setQuitOnLastWindowClosed(True)
-#         assistent = AssistentInicial()
-#         arrencador = Comprovador()
-#         creador = Iniciador()
-#         if arrencador.presencia_alumnes and arrencador.presencia_registres and arrencador.presencia_dates:
-#             finestra_principal = MainWindow()
-#             finestra_principal.show()
-#         else:
-#             creador.inicia_taules()
-#             assistent.show()
-#             if assistent.exec() == QWizard.CancelButton:
-#                 creador.eliminar_basededades()
-#                 sortir()
-#             elif assistent.exec() == QWizard.FinishButton:
-#                 finestra_principal = MainWindow()
-#                 finestra_principal.show()
-#                 assistent.close()
-#
-#         self.exec()
-#
-#         sys.exit(self.exec())
-#
-#
-# app = Aplicacio(sys.argv)
 app = QApplication(sys.argv)
 QLocale.setDefault(QLocale.Catalan)
 
