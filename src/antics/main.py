@@ -386,7 +386,7 @@ class VisualitzadorSQL(QSqlTableModel):
         super().__init__()
         self.taula_consultar = taula_consultar
         self.directory_base = os.path.dirname(__file__)
-        self.carpeta_base_dades = os.path.join(self.directory_base, "dades/registre.db")
+        self.carpeta_base_dades = os.path.join(self.directory_base, "../dades/registre.db")
         self.base_dades = QSqlDatabase("QSQLITE")
         self.base_dades.setDatabaseName(self.carpeta_base_dades)
         self.base_dades.open()

@@ -1,14 +1,17 @@
 import dataclasses
 import sys
 import unittest
-
-from faker import Faker
-import secrets
-
-from faker.providers import person
 from src.agents.formats import Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Alumne_comm, Categoria_comm, \
     Data_gui_comm, Data_nova
+from faker import Faker
 from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd
+import secrets
+from faker.providers import person
+sys.path.append('./agents/formats')
+
+
+
+
 
 fake = Faker("es_CA")
 alumnes = AlumnesBbdd()
@@ -16,7 +19,6 @@ categories = CategoriesBbdd()
 registres = RegistresBbdd()
 calendari = DatesBbdd()
 ruta_base_dades = "/home/jordi/Documents/Projectes/seguiment/src/unittests/tests.db"
-
 
 alumnes.ruta_bbdd = ruta_base_dades
 registres.ruta_bbdd = ruta_base_dades
@@ -26,7 +28,6 @@ calendari.ruta_bbdd = ruta_base_dades
 
 class test_entrada_dades_bbdd(unittest.TestCase):
     def setUp(self, db=ruta_base_dades) -> None:
-
         categories.ruta_bbdd = db
         registres.ruta_bbdd = db
         alumnes.ruta_bbdd = db
@@ -302,10 +303,12 @@ def bbdd_actualitzacio():
     actualitzacio.addTest(test_actualitzacio)
     return actualitzacio
 
+
 def bbdd_eliminacio():
     eliminacio = unittest.TestSuite()
     eliminacio.addTest(test_eliminacio)
     return eliminacio
+
 
 if __name__ == "__main__":
     executor = unittest.TextTestRunner()

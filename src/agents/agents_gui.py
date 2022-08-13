@@ -306,10 +306,8 @@ class Classificador:
             for element in classificacio:
                 for item in info_registres:
                     if element.id == item.categoria:
-                        if element in llista_categories_amb_registre:
-                            continue
-                        llista_categories_amb_registre.append(element)
-
+                        if element not in llista_categories_amb_registre:
+                            llista_categories_amb_registre.append(element)
             return llista_categories_amb_registre
         else:
             return False
