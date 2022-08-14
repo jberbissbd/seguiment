@@ -1,8 +1,8 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QMainWindow, QTableView, QAbstractItemView, QDialog, QDialogButtonBox, QFormLayout, \
-    QHBoxLayout, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTableView, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QAbstractItemView, QDialog, QDialogButtonBox, QFormLayout, \
+    QLineEdit, QMainWindow, QMessageBox, QTableView, QVBoxLayout
 
-from model import ContactsModel
+from src.antics.model import ContactsModel
 
 
 class Window(QMainWindow):

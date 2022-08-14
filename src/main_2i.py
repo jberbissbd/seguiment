@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QG
                                QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
                                QStatusBar, QStyleFactory, QStyledItemDelegate)
 from dateutil import parser
+from src.agents.agents_bbdd import AjudantDirectoris
 from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
@@ -109,7 +110,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.DATES = None
-        self.RUTA_ICONS = "icones"
+        self.RUTA_ICONS = f"{AjudantDirectoris(1).ruta_icones}"
         self.destinacio_informes = None
         self.EDITAR_ALUMNES = None
         self.BARRA_NOTIFICACIONS = None
@@ -129,10 +130,11 @@ class MainWindow(QMainWindow):
         self.WIDGET_PRINCIPAL = None
         self.BOTO_VISUALITZAR = None
         self.crear_registres = None
-        self.cap = CapEstudis()
-        self.categoritzador = Classificador()
-        self.calendari = Calendaritzador()
-        self.acces_registres = Comptable()
+        self.ruta_icones = AjudantDirectoris(1).ruta_icones
+        self.cap = CapEstudis(modegui=1)
+        self.categoritzador = Classificador(modegui=1)
+        self.calendari = Calendaritzador(modegui=1)
+        self.acces_registres = Comptable(modegui=1)
         self.info_alumnes = self.cap.info_alumnes
         self.configuracio_interficie()
         # Definim senyals:
@@ -178,21 +180,24 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO_PRINCIPAL.addWidget(self.WIDGET_CENTRAL)
         DISTRIBUCIO_PRINCIPAL.addWidget(self.BARRA_NOTIFICACIONS)
         # Definim botons i les seves propietats:
-        self.BOTO_CREAR = QAction(self, icon=QIcon("icones/edit-symbolic.svg"), text="Registrar")
+        self.BOTO_CREAR = QAction(self, icon=QIcon(f"{self.ruta_icones}/edit-symbolic.svg"),
+                                  text="Registrar")
         self.BOTO_CREAR.setToolTip("Crear un nou registre")
-        self.BOTO_EDITAR_ALUMNES = QAction(self, icon=QIcon("icones/system-switch-user-symbolic.svg"), text="Alumnes")
+        self.BOTO_EDITAR_ALUMNES = QAction(self, icon=QIcon(f"{self.ruta_icones}/system-switch-user-symbolic.svg"),
+                                           text="Alumnes")
         self.BOTO_EDITAR_ALUMNES.setToolTip("Editar les dades de l'alumne")
-        self.BOTO_VISUALITZAR = QAction(self, icon=QIcon("icones/document-properties-symbolic.svg"),
+        self.BOTO_VISUALITZAR = QAction(self, icon=QIcon(f"{self.ruta_icones}/document-properties-symbolic.svg"),
                                         text="LListat")
         self.BOTO_VISUALITZAR.setToolTip("Visualitzar/Editar un registre")
-        self.BOTO_DATES = QAction(self, icon=QIcon("icones/office-calendar-symbolic.svg"), text="Dates")
+        self.BOTO_DATES = QAction(self, icon=QIcon(f"{self.ruta_icones}/office-calendar-symbolic.svg"), text="Dates")
         self.BOTO_DATES.setToolTip("Dates trimestre")
-        self.BOTO_INFORMES = QAction(self, icon=QIcon("icones/document-save-symbolic.svg"), text="Informes")
+        self.BOTO_INFORMES = QAction(self, icon=QIcon(f"{self.ruta_icones}/desar.svg"), text="Informes")
         self.BOTO_INFORMES.setToolTip("Informes")
-        self.BOTO_SORTIR = QAction(self, icon=QIcon("icones/application-exit-symbolic.svg"), text="Sortir")
+        self.BOTO_SORTIR = QAction(self, icon=QIcon(f"{self.ruta_icones}/application-exit-symbolic.svg"), text="Sortir")
         self.BOTO_SORTIR.setToolTip("Sortir de l'aplicació")
-        self.BOTO_INFORMACIO = QAction(self, icon=QIcon("icones/help-info-symbolic.svg"), text="Informació")
-        self.BOTO_PURGAR = QAction(self, icon=QIcon("icones/mail-mark-junk-symbolic.svg"), text="Eliminar")
+        self.BOTO_INFORMACIO = QAction(self, icon=QIcon(f"{self.ruta_icones}/help-info-symbolic.svg"),
+                                       text="Informació")
+        self.BOTO_PURGAR = QAction(self, icon=QIcon(f"{self.ruta_icones}/mail-mark-junk-symbolic.svg"), text="Eliminar")
         # Afegim els botons a la barra d'eines:
         self.BARRA_EINES_DISTRIBUCIO.addAction(self.BOTO_CREAR)
         self.BARRA_EINES_DISTRIBUCIO.addAction(self.BOTO_VISUALITZAR)
@@ -282,7 +287,7 @@ class MainWindow(QMainWindow):
         if self.obtenir_llistat_alumnes_registrats():
             self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         self.VISUALITZA_SELECCIO_ALUMNES.setMaximumWidth(300)
-        BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar canvis")
+        BOTO_DESAR = QPushButton(icon=QIcon(f"{self.ruta_icones}/desar.svg"), text="Desar canvis")
         BOTO_DESAR.clicked.connect(self.alteracio_registres)
         if self.obtenir_llistat_registres() not in [None, False]:
             self.TAULA_MODEL = ModelVisualitzacio(self.obtenir_llistat_registres())
@@ -520,7 +525,7 @@ class MainWindow(QMainWindow):
         # Creem els boton:
         self.BOTON_INFORME = QPushButton("Generar informe")
         self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-        self.SELECCIO_CARPETA = QPushButton(QIcon(os.path.join(self.RUTA_ICONS, "inode-directory-symbolic.svg")), "")
+        self.SELECCIO_CARPETA = QPushButton(QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "")
         self.SELECCIO_CARPETA.setIconSize(QSize(24, 24))
         DISTRIBUCIO.addWidget(GRUP_TIPUS, 0, 0)
         DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_ALUMNES, 1, 0)
@@ -660,34 +665,6 @@ def sortir():
     sys.exit(0)
 
 
-#
-# class Aplicacio(QApplication):
-#     def __init__(self, argv):
-#         super().__init__(argv)
-#         self.setQuitOnLastWindowClosed(True)
-#         assistent = AssistentInicial()
-#         arrencador = Comprovador()
-#         creador = Iniciador()
-#         if arrencador.presencia_alumnes and arrencador.presencia_registres and arrencador.presencia_dates:
-#             finestra_principal = MainWindow()
-#             finestra_principal.show()
-#         else:
-#             creador.inicia_taules()
-#             assistent.show()
-#             if assistent.exec() == QWizard.CancelButton:
-#                 creador.eliminar_basededades()
-#                 sortir()
-#             elif assistent.exec() == QWizard.FinishButton:
-#                 finestra_principal = MainWindow()
-#                 finestra_principal.show()
-#                 assistent.close()
-#
-#         self.exec()
-#
-#         sys.exit(self.exec())
-#
-#
-# app = Aplicacio(sys.argv)
 app = QApplication(sys.argv)
 QLocale.setDefault(QLocale.Catalan)
 

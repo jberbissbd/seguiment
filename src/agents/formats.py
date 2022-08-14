@@ -68,7 +68,7 @@ class Data_gui_comm:
 
 
 @dataclass(repr=False)
-class Data_nova:
+class Datanova:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a les dates de trimestre no
     existents
     :parameter:

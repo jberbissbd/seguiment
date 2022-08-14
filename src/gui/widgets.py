@@ -5,7 +5,8 @@ from PySide6.QtWidgets import QGridLayout, QDateEdit, QPushButton, QLabel, QComb
     QVBoxLayout, QTableView, QAbstractItemView, QWizardPage, QWizard, QDialog, QMessageBox, QLineEdit, QFormLayout, \
     QDialogButtonBox, QFileDialog
 from src.agents.agents_gui import Calendaritzador, CapEstudis
-from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm, Data_nova
+from src.agents.agents_bbdd import AjudantDirectoris
+from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm, Datanova
 
 
 class DialegSeleccioCarpeta(QFileDialog):
@@ -65,7 +66,7 @@ class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
         return super().headerData(section, orientation, role)
 
 
-class Dialeg_afegir(QDialog):
+class DialegAfegir(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.setWindowTitle("Afegir alumne")
@@ -78,7 +79,7 @@ class Dialeg_afegir(QDialog):
         self.nomcomplet = QLineEdit()
         self.nomcomplet.setObjectName("Nom complet")
         disposicio = QFormLayout()
-        disposicio.addRow("Name:", self.nomcomplet)
+        disposicio.addRow("Nom:", self.nomcomplet)
         self.layout.addLayout(disposicio)
         self.buttonsBox = QDialogButtonBox(self)
         self.buttonsBox.setOrientation(Qt.Horizontal)
@@ -91,7 +92,7 @@ class Dialeg_afegir(QDialog):
         """Accept the data provided through the dialog."""
         self.data = []
         if not self.nomcomplet.text():
-            QMessageBox.critical(self, "Error!", f"You must provide a contact's {self.nomcomplet.objectName()}", )
+            QMessageBox.critical(self, "Error!", f"Ha de proporcionar un {self.nomcomplet.objectName()}", )
             self.data = None  # Reset .data
             return
         self.data.append(["", self.nomcomplet.text()])
@@ -114,7 +115,7 @@ class DialegEliminar(QMessageBox):
 class EditorDates(QtWidgets.QWidget):
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
-        self.calendari_editor_dates = Calendaritzador()
+        self.calendari_editor_dates = Calendaritzador(1)
         self.AMPLADA_ETIQUETES = 75
         self.AMPLADA_DESPLEGABLES = 200
         self.setWindowTitle("Editor_Dates")
@@ -136,7 +137,7 @@ class EditorDates(QtWidgets.QWidget):
         self.DATA_TERCER_TRIMESTRE.setCalendarPopup(True)
         self.DATA_TERCER_TRIMESTRE.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         # Definim el boto de desar:
-        self.BOTO_DATES_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar")
+        self.BOTO_DATES_DESAR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar")
 
         # Definim les etiquetes:
         ETIQUETA_SEGON = QLabel("Inici del segon trimestre")
@@ -198,7 +199,7 @@ class EditorDates(QtWidgets.QWidget):
                 estat_actualitzacio = self.calendari_editor_dates.actualitza_dates(missatge_actualitzacio)
         else:
             llista_noves_dates = [data2n, data3er]
-            missatge_creacio = [Data_nova(item) for item in llista_noves_dates]
+            missatge_creacio = [Datanova(item) for item in llista_noves_dates]
             estat_creacio = self.calendari_editor_dates.crear_data(missatge_creacio)
         return estat_actualitzacio + estat_creacio
 
@@ -231,7 +232,7 @@ class CreadorRegistres(QtWidgets.QWidget):
         ETIQUETA_DESCRIPCIO = QLabel("Descripcio: ")
         self.EDICIO_DESCRIPCIO = QTextEdit()
 
-        self.BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar")
+        self.BOTO_DESAR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar")
         self.BOTO_DESAR.setIconSize(QSize(24, 24))
         self.BOTO_DESAR.setToolTip("Desar")
         self.BOTO_DESAR.setFlat(True)
@@ -251,9 +252,10 @@ class CreadorRegistres(QtWidgets.QWidget):
 
 class EditorAlumnes(QtWidgets.QWidget):
     def __init__(self, parent=None, dades_alumnes=None):
+        self.confirmacio_eliminar = None
         self.dades_model_transformades = None
         self.dades_originals_transformades = None
-        self.cap_edicio_alumnes = CapEstudis()
+        self.cap_edicio_alumnes = CapEstudis(1)
         QtWidgets.QWidget.__init__(self, parent)
         self.AMPLADA_ETIQUETES = 75
         self.AMPLADA_DESPLEGABLES = 200
@@ -276,11 +278,12 @@ class EditorAlumnes(QtWidgets.QWidget):
             self.TAULA_ALUMNES.setColumnHidden(0, True)
             self.TAULA_ALUMNES.resizeColumnsToContents()
         # Creem els botons:
-        self.BOTO_DESAR = QPushButton(icon=QIcon("icones/document-save-symbolic.svg"), text="Desar")
+        self.BOTO_DESAR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar")
         self.BOTO_DESAR.setIconSize(QSize(24, 24))
-        self.BOTO_AFEGIR = QPushButton(icon=QIcon("icones/value-increase-symbolic.svg"), text="Afegir")
+        self.BOTO_AFEGIR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/value-increase-symbolic.svg"),
+                                       text="Afegir")
         self.BOTO_AFEGIR.setIconSize(QSize(24, 24))
-        self.BOTO_ELIMINAR = QPushButton(icon=QIcon("icones/edit-delete-symbolic.svg"), text="Eliminar")
+        self.BOTO_ELIMINAR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"), text="Eliminar")
         self.BOTO_ELIMINAR.setIconSize(QSize(24, 24))
         DISTRIBUCIO_BOTONS = QVBoxLayout()
         DISTRIBUCIO_BOTONS.setAlignment(Qt.AlignTop)
@@ -321,7 +324,6 @@ class EditorAlumnes(QtWidgets.QWidget):
                         camp = dades_model.data(dades_model.index(fila, columna), Qt.DisplayRole)
                         nous_alumnes.append(Alumne_nou(camp))
                         fila += 1
-                        continue
                     # Si te id, se l'afegeix a la llista de ID's per a comparar, i a les dades del model.
                     else:
                         llista_ids_model.append(camp)
@@ -360,7 +362,7 @@ class EditorAlumnes(QtWidgets.QWidget):
                 missatge_eliminar.append(Alumne_comm(alumne.id, alumne.nom))
         # Comprovem si hi ha algun alumne nou:
         if len(nous_alumnes) > 0:
-            resultat_afegir = self.cap_edicio_alumnes.afegir_alumnes(nous_alumnes)
+            self.cap_edicio_alumnes.afegir_alumnes(nous_alumnes)
         if len(alumnes_modificar) > 0:
             self.cap_edicio_alumnes.actualitzar_alumnes(alumnes_modificar)
         if len(alumnes_eliminar) > 0:
@@ -372,9 +374,10 @@ class EditorAlumnes(QtWidgets.QWidget):
         self.TAULA_ALUMNES_MODEL = ModelEdicioAlumnes(dades_actualitzades)
         self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
 
+
     def afegir_alumne(self):
 
-        dialeg = Dialeg_afegir(self)
+        dialeg = DialegAfegir(self)
         if dialeg.exec() == QDialog.Accepted:
             self.TAULA_ALUMNES.model().add_row(dialeg.data)
             self.TAULA_ALUMNES.resizeColumnsToContents()
@@ -412,10 +415,11 @@ class AssistentInicial(QWizard):
         PAGINA_INICIAL_DISTRIBUCIO.addWidget(self.PAGINAINICIAL_TEXT)
         self.PAGINA_INICIAL = QWizardPage()
         self.PAGINA_INICIAL.setLayout(PAGINA_INICIAL_DISTRIBUCIO)
-        self.pagina_alumnes = QWizardPage()
+
         self.PAGINA_INICIAL.setTitle("Inicialització")
         self.PAGINA_INICIAL.setSubTitle("Inicialització de l'aplicació")
-        self.PAGINA_INICIAL.setPixmap(QWizard.WatermarkPixmap, QPixmap("icones/assistent.png"))
+        self.PAGINA_INICIAL.setPixmap(QWizard.WatermarkPixmap, QPixmap(f"{AjudantDirectoris(1).ruta_icones}/assistent"
+                                                                       f".png"))
         # Configurem la pagina d'alumnes:
         self.PAGINA_ALUMNES = QWizardPage()
         self.PAGINA_ALUMNES.setTitle("Alumnes")

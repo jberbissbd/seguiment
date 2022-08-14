@@ -1,24 +1,60 @@
 import os
 import sqlite3
+from os.path import dirname, abspath
 
 from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, \
-    Categoria_comm, Alumne_comm, Data_gui_comm, Data_nova, Alumne_nou
+    Categoria_comm, Alumne_comm, Data_gui_comm, Datanova, Alumne_nou
+
+error_llista = "Error: el missatge ha de ser una llista."
+error_format = "Error: el missatge no té el format correcte."
+
+
+class AjudantDirectoris:
+    def __init__(self, modebbdd: int):
+        super(AjudantDirectoris, self).__init__()
+        self.mode = modebbdd
+        self.db = self.establiment_mode()
+        self.ruta_icones = self.obtenir_ruta_icones()
+
+
+    def establiment_mode(self):
+        directori_arrel = os.path.abspath(dirname(dirname(abspath(__file__))))
+        if self.mode == 1:
+            localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
+            ruta = os.path.abspath(localitzacio_bbdd)
+            return ruta
+        elif self.mode == 2:
+            localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "unittests", "tests.db"))
+            ruta = os.path.abspath(localitzacio_bbdd)
+            return ruta
+
+    def obtenir_ruta_icones(self):
+        localitzacio_icones = os.path.normpath(os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones"))
+        return localitzacio_icones
 
 
 class ModelDao:
-    def __init__(self):
+    def __init__(self, modebbdd: int):
         super(ModelDao, self).__init__()
-        self.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/src/dades/registre.db"
+        self.ruta_bbdd = AjudantDirectoris(modebbdd).db
         self.taula = ""
         self.conn = sqlite3.connect(self.ruta_bbdd)
         self.c = self.conn.cursor()
 
 
+class Liquidador(ModelDao):
+    def __init__(self):
+        super().__init__()
+
+    def eliminar_basededades(self):
+        os.remove(self.ruta_bbdd)
+
+
 class Iniciador(ModelDao):
     """Comprova si existeixen les taules alumne, registres i dates"""
 
-    def __init__(self):
-        super(Iniciador, self).__init__()
+    def __init__(self, *modebbdd: int):
+        super().__init__(modebbdd)
         self.presencia_taula_alumne = self.comprova_existencia_taules("alumnes")
         self.presencia_taula_registres = self.comprova_existencia_taules("registres")
         self.presencia_taula_dates = self.comprova_existencia_taules("dates")
@@ -27,35 +63,22 @@ class Iniciador(ModelDao):
     def comprova_existencia_taules(self, taula):
         self.taula = taula
         try:
-            self.c.execute(f"SELECT * FROM {self.taula}")
-            if self.c.fetchone() is not None:
-                return True
-            else:
-                return False
+            resultat = self.c.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name={self.taula}")
+            return resultat
         except sqlite3.OperationalError:
-            return False
+            raise FileNotFoundError("Error: no s'ha pogut comprovar la existència de la taula")
 
-    def inicia_taules(self):
-        # if not self.presencia_taula_alumne:
-        #     self.c.execute(
-        #         "CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB);")
-        # if not self.presencia_taula_registres:
-        #     self.c.execute(
-        #         "CREATE TABLE IF NOT EXISTS registres (id INTEGER PRIMARY KEY, alumne INTEGER, categoria INTEGER, "
-        #         "data TEXT, descripcio TEXT);")
-        # if not self.presencia_taula_dates:
-        #     self.c.execute("CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT);")
-        # if not self.presencia_taula_categories:
-        #     self.c.execute("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria "
-        #                    "BLOB);")
+    def crea_taules(self):
+        """Crea les taules necessaries per a la base de dades"""
         try:
             ordre_general = """begin;CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            nom_alumne BLOB); CREATE TABLE IF NOT EXISTS registres (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT 
-            UNIQUE,data INTEGER date, descripcio BLOB, id_alumne INTEGER NOT NULL, id_categoria INTEGER NOT 
-            NULL); CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT); CREATE TABLE IF 
-            NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB);commit """
+            nom_alumne BLOB); CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            categoria BLOB); CREATE IF NOT EXISTS TABLE "registres" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT 
+            UNIQUE, "data" INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT 
+            NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
+            "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS dates (id INTEGER 
+            PRIMARY KEY AUTOINCREMENT, data TEXT);commit """
             self.conn.executescript(ordre_general)
-
         except sqlite3.OperationalError:
             return False
         try:
@@ -70,16 +93,25 @@ class Iniciador(ModelDao):
         finally:
             self.conn.close()
 
-    def eliminar_basededades(self):
-        os.remove(self.ruta_bbdd)
-
 
 class AlumnesBbdd(ModelDao):
-    def __init__(self, taula="alumnes"):
-        super().__init__()
+    def __init__(self, modebbdd: int, taula="alumnes"):
+        super().__init__(modebbdd)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
+
+    def destruir_taula(self):
+        """Eliminar tots els registres de la taula"""
+        self.cursor = self.conn.cursor()
+        try:
+            buidar_categories = f"DROP {self.taula}"
+            self.cursor.execute(buidar_categories)
+            self.conn.commit()
+            self.cursor.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula"""
@@ -124,7 +156,7 @@ class AlumnesBbdd(ModelDao):
         except sqlite3.OperationalError as e:
             print(e)
             return False
-        if llista_ids is not None:
+        if llista_ids:
             return llista_ids
         else:
             return False
@@ -195,11 +227,23 @@ class AlumnesBbdd(ModelDao):
 class RegistresBbdd(ModelDao):
     """Es relaciona amb la taula de registres"""
 
-    def __init__(self, taula="registres"):
-        super().__init__()
+    def __init__(self, modebbdd, taula="registres"):
+        super().__init__(modebbdd)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
+
+    def destruir_taula(self):
+        """Eliminar tots els registres de la taula"""
+        self.cursor = self.conn.cursor()
+        try:
+            buidar_registres = f"DROP {self.taula}"
+            self.cursor.execute(buidar_registres)
+            self.conn.commit()
+            self.cursor.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
 
     def test_id_registre(self):
         """Obtindre la llista d'id's de la taula de registres"""
@@ -241,6 +285,7 @@ class RegistresBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
+    # noinspection PyTypeChecker
     def lectura_alumnes_registrats(self):
         """Llegeix els alumnes que tinguin algun registre"""
         parametre: str = "id_alumne"
@@ -285,11 +330,11 @@ class RegistresBbdd(ModelDao):
     def actualitzar_registre(self, missatge_actualitzar: list):
         """Actualitza un registre"""
         if not isinstance(missatge_actualitzar, list):
-            raise TypeError("El missatge ha de ser una llista")
+            raise TypeError(error_llista)
         else:
             for element in missatge_actualitzar:
                 if not isinstance(element, Registres_bbdd_comm):
-                    raise TypeError("El missatge ha de ser una llista amb el format correcte")
+                    raise TypeError(error_format)
                 else:
                     self.cursor = self.conn.cursor()
                     try:
@@ -304,11 +349,11 @@ class RegistresBbdd(ModelDao):
     def eliminar_registre(self, missatge_eliminar: list):
         """Elimina un registre"""
         if not isinstance(missatge_eliminar, list):
-            raise TypeError("El missatge ha de ser una llista")
+            raise TypeError(error_llista)
         else:
             for element in missatge_eliminar:
                 if not isinstance(element, Registres_bbdd_comm):
-                    raise TypeError("El missatge ha de ser una llista amb el format correcte")
+                    raise TypeError(error_format)
                 else:
                     self.cursor = self.conn.cursor()
                     try:
@@ -323,7 +368,7 @@ class RegistresBbdd(ModelDao):
     def eliminar_registre_alumne(self, missatge_eliminar: list):
         """Elimina un registre"""
         if not isinstance(missatge_eliminar, list):
-            raise TypeError("El missatge ha de ser una llista")
+            raise TypeError(error_llista)
         else:
             for element in missatge_eliminar:
                 if not isinstance(element, Alumne_comm):
@@ -341,8 +386,8 @@ class RegistresBbdd(ModelDao):
 
 
 class CategoriesBbdd(ModelDao):
-    def __init__(self, taula="categories"):
-        super().__init__()
+    def __init__(self, modebbdd, taula="categories"):
+        super().__init__(modebbdd)
         self.cursor = self.conn.cursor()
         self.taula = taula
         self.ordre_consultar = None
@@ -416,7 +461,7 @@ class CategoriesBbdd(ModelDao):
     def actualitzar_categoria(self, missatge: list):
         """Actualitza una categoria
         :param missatge: Llista amb instancies de Categoria_comm.
-        :arg Llista formada per instancies de Categoria_comm.
+        :arg missatge formada per instancies de Categoria_comm.
         :returns Fals si no es pot realitzar l'operacio.
         :raises TypeError si els formats d'enttrada no son correctes.
         """
@@ -440,10 +485,22 @@ class CategoriesBbdd(ModelDao):
         else:
             raise TypeError("Les dades han de tenir format de llista")
 
+    def destruir_taula(self):
+        """Eliminar tots els registres de la taula"""
+        self.cursor = self.conn.cursor()
+        try:
+            buidar_categories = f"DROP {self.taula}"
+            self.cursor.execute(buidar_categories)
+            self.conn.commit()
+            self.cursor.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
+
 
 class DatesBbdd(ModelDao):
-    def __init__(self, taula="dates"):
-        super().__init__()
+    def __init__(self,modebbdd, taula="dates"):
+        super().__init__(modebbdd)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
@@ -469,7 +526,7 @@ class DatesBbdd(ModelDao):
         self.cursor = self.conn.cursor()
         if isinstance(llista_dates, list):
             for item in llista_dates:
-                if isinstance(item, Data_nova):
+                if isinstance(item, Datanova):
                     try:
                         ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
                         self.cursor.execute(ordre_registrar)
@@ -533,3 +590,15 @@ class DatesBbdd(ModelDao):
             return True
         else:
             raise TypeError("El paramtere d'entrada ha de ser una llista")
+
+    def destruir_taula(self):
+        """Eliminar tots els registres de la taula"""
+        self.cursor = self.conn.cursor()
+        try:
+            buidar_categories = f"DROP FROM {self.taula}"
+            self.cursor.execute(buidar_categories)
+            self.conn.commit()
+            self.cursor.close()
+            return True
+        except sqlite3.OperationalError:
+            return False

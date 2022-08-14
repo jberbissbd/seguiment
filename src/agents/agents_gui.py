@@ -11,11 +11,11 @@ import numpy as np
 import pandas
 import pandas as pd
 import dateutil
-from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador
+from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
 from dateutil import parser
 
 from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Data_nova
+    Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Datanova
 
 
 class CatalanParserInfo(parser.parserinfo):
@@ -25,23 +25,39 @@ class CatalanParserInfo(parser.parserinfo):
 
 
 class Comprovador:
-    def __init__(self):
+    def __init__(self, modegui):
         super(Comprovador, self).__init__()
-        resultat_iniciador = Iniciador()
+        resultat_iniciador = Iniciador(modegui)
         self.presencia_alumnes = resultat_iniciador.presencia_taula_alumne
         self.presencia_registres = resultat_iniciador.presencia_taula_registres
         self.presencia_dates = resultat_iniciador.presencia_taula_dates
 
 
+class Destructor:
+    def __init__(self, modegui):
+        super(Destructor, self).__init__()
+        self.alumnes = AlumnesBbdd(modegui)
+        self.registres = RegistresBbdd(modegui)
+        self.categories = CategoriesBbdd(modegui)
+        self.dates = DatesBbdd(modegui)
+
+    def destruir(self):
+        self.alumnes.destruir_taula()
+        self.categories.destruir_taula()
+        self.dates.destruir_taula()
+        self.registres.destruir_taula()
+        Liquidador.eliminar_basededades()
+
+
 class Comptable:
-    def __init__(self):
+    def __init__(self, modegui):
         """Ordenar les taules de la base de dades perquè siguin més fàcils de llegir:"""
         self.info_categories = None
         self.info_registres = None
         self.info_alumnes = None
-        self.alumnes = AlumnesBbdd()
-        self.registrador = RegistresBbdd()
-        self.categoritzador = CategoriesBbdd()
+        self.alumnes = AlumnesBbdd(modegui)
+        self.registrador = RegistresBbdd(modegui)
+        self.categoritzador = CategoriesBbdd(modegui)
         self.info_categories = self.categoritzador.lectura_categories()
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_registres = self.registrador.lectura_registres()
@@ -163,8 +179,8 @@ class Comptable:
 
 class Calendaritzador:
 
-    def __init__(self):
-        self.datador = DatesBbdd()
+    def __init__(self, modegui):
+        self.datador = DatesBbdd(modegui)
         self.info_dates = self.datador.lectura_dates()
         self.dates = self.conversio_dates()
         self.maxim_id = self.datador.maxim_id_data()
@@ -190,7 +206,7 @@ class Calendaritzador:
         """
         if isinstance(aniversari, list):
             for element in aniversari:
-                if isinstance(element, Data_nova):
+                if isinstance(element, Datanova):
                     element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
                 else:
                     return False
@@ -214,9 +230,14 @@ class Calendaritzador:
 
 
 class CapEstudis:
-    def __init__(self):
-        self.alumnes = AlumnesBbdd()
-        self.registres = RegistresBbdd()
+    def __init__(self, modegui: int):
+        """
+
+        :type modegui: int
+        """
+        mode = modegui
+        self.alumnes = AlumnesBbdd(modebbdd=mode)
+        self.registres = RegistresBbdd(mode)
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_alumnes_registrats = self.registres.lectura_alumnes_registrats()
         self.alumnat = self.obtenir_alumnes()
@@ -290,11 +311,11 @@ class CapEstudis:
 
 
 class Classificador:
-    def __init__(self):
-        self.categoritzador = CategoriesBbdd()
+    def __init__(self, modegui):
+        self.categoritzador = CategoriesBbdd(modegui)
         self.info_categories = self.categoritzador.lectura_categories()
         self.categories = self.info_categories
-        self.registrador = RegistresBbdd()
+        self.registrador = RegistresBbdd(modegui)
         self.info_registres = self.registrador.lectura_registres()
         self.categories_registrades = self.obtenir_categories_registrades()
 
@@ -306,10 +327,8 @@ class Classificador:
             for element in classificacio:
                 for item in info_registres:
                     if element.id == item.categoria:
-                        if element in llista_categories_amb_registre:
-                            continue
-                        llista_categories_amb_registre.append(element)
-
+                        if element not in llista_categories_amb_registre:
+                            llista_categories_amb_registre.append(element)
             return llista_categories_amb_registre
         else:
             return False
@@ -376,7 +395,7 @@ class CreadorInformes:
         wb = openpyxl.load_workbook(ruta_arxiu)
         color_taronja = "F6B26B"
         fulla = wb.active
-        llista_columnes = ['B','C', 'D', 'E', 'F']
+        llista_columnes = ['B', 'C', 'D', 'E', 'F']
         # Definim els estils:
         titols_trimestres = NamedStyle(name="titols_trimestres")
         titols_trimestres.font = Font(size=12, name="Arial", bold=True)
@@ -411,9 +430,10 @@ class CreadorInformes:
             llista_valors.append(referencia)
             if n_index != 0 and cell.value == llista_valors[n_index - 1][0]:
                 cell.value = ""
-                fulla.merge_cells(start_row=llista_valors[n_index-1][1], start_column=cell.column, end_row=cell.row, end_column=cell.column)
-                fulla.cell(row=llista_valors[n_index-1][1], column=cell.column).style = titols_trimestres
-            n_index+= 1
+                fulla.merge_cells(start_row=llista_valors[n_index - 1][1], start_column=cell.column, end_row=cell.row,
+                                  end_column=cell.column)
+                fulla.cell(row=llista_valors[n_index - 1][1], column=cell.column).style = titols_trimestres
+            n_index += 1
         # Donem format a la resta de les cel·les:
         for row in fulla.iter_rows(min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column):
             for cell in row:
@@ -441,9 +461,7 @@ class CreadorInformes:
             llista_categories_als_registres = [registre.categoria.id for registre in self.registres]
             categories_registres = set(llista_categories_als_registres)
             for categoria in self.categories:
-                if categoria.id not in categories_registres:
-                    continue
-                else:
+                if categoria.id in categories_registres:
                     llista_dades = [f"{categoria.nom}"]
                     diccionari_provisional = {"mesos": [], "alumnes": []}
                     for registre in self.registres:
@@ -451,12 +469,9 @@ class CreadorInformes:
                         if registre.categoria.id == categoria.id:
                             mes = dateutil.parser.parse(registre.data).month
                             mes = self.mes_a_string(mes)
-
                             alumne = registre.alumne.nom
                             diccionari_provisional['mesos'].append(mes)
                             diccionari_provisional['alumnes'].append(alumne)
-                        else:
-                            continue
                     df = pandas.DataFrame(diccionari_provisional)
                     llista_dades.append(df)
                     llista_categories_informes.append(llista_dades)
@@ -478,7 +493,7 @@ class CreadorInformes:
     def export_alumne(self, dates):
         self.dates = dates
         """Crea un informe per cada alumne"""
-        if self.alumnes and self.registres and self.categories and self.dates:
+        if self.alumnes and self.registres and self.categories:
             llista_alumnes_informes = []
             llista_alumnes_als_registres = [registre.alumne.id for registre in self.registres]
             noms_categories = [categoria.nom for categoria in self.categories]
@@ -508,18 +523,16 @@ class CreadorInformes:
                             # diferent, afegim el text i el trimestre.
                             if n_reg_trimestres == 0:
                                 diccionari_provisional['Trimestre'].append(trimestre)
-                            elif n_reg_trimestres > 0:
+                            else:
                                 if diccionari_provisional['Trimestre'][n_reg_trimestres - 1] != trimestre:
                                     for categoria in noms_categories:
                                         while len(diccionari_provisional[categoria]) < n_reg_trimestres:
                                             diccionari_provisional[categoria].append('')
                                     diccionari_provisional['Trimestre'].append(trimestre)
-                                else:
-                                    if n_reg_trimestres <= n_reg_categoria:
-                                        diccionari_provisional['Trimestre'].append(trimestre)
+                                elif n_reg_trimestres <= n_reg_categoria:
+                                    diccionari_provisional['Trimestre'].append(trimestre)
                             diccionari_provisional[registre.categoria.nom].append(text_afegir)
-                        else:
-                            continue
+
                     # A continuacio ens assegurem que totes les categories tenen el mateix nombre d'elements:
                     for categoria in noms_categories:
                         nombre_registres = len(diccionari_provisional['Trimestre'])
