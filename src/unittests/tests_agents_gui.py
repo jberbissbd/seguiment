@@ -7,6 +7,7 @@ from src.agents.agents_gui import Calendaritzador, CapEstudis, Comptable, Classi
 fake = Faker("es_CA")
 
 registres = Comptable(modegui=2)
+alumnes = CapEstudis(modegui=2)
 
 
 class TestLectura(unittest.TestCase):
@@ -15,6 +16,14 @@ class TestLectura(unittest.TestCase):
     def test_registres(self):
         lectura_registres = registres.obtenir_registres()
         assert isinstance(lectura_registres, list) is True, "Comptable ha de proporcionar una llista"
+
+    def test_alumnes(self):
+        lectura_registres = alumnes.alumnat
+        assert isinstance(lectura_registres, list) is True, "Cap d'Estudis ha de proporcionar una llista"
+
+    def test_alumnes_registres(self):
+        lectura_registres = alumnes.alumnat_registres
+        assert isinstance(lectura_registres, list) is True, "Cap d'Estudis ha de proporcionar una llista"
 
 
 if __name__ == '__main__':
