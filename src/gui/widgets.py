@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QGridLayout, QDateEdit, QPushButton, QLabel, QComb
     QVBoxLayout, QTableView, QAbstractItemView, QWizardPage, QWizard, QDialog, QMessageBox, QLineEdit, QFormLayout, \
     QDialogButtonBox, QFileDialog
 from src.agents.agents_gui import Calendaritzador, CapEstudis
-from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm, Data_nova
+from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm, Datanova
 
 
 class DialegSeleccioCarpeta(QFileDialog):
@@ -198,7 +198,7 @@ class EditorDates(QtWidgets.QWidget):
                 estat_actualitzacio = self.calendari_editor_dates.actualitza_dates(missatge_actualitzacio)
         else:
             llista_noves_dates = [data2n, data3er]
-            missatge_creacio = [Data_nova(item) for item in llista_noves_dates]
+            missatge_creacio = [Datanova(item) for item in llista_noves_dates]
             estat_creacio = self.calendari_editor_dates.crear_data(missatge_creacio)
         return estat_actualitzacio + estat_creacio
 

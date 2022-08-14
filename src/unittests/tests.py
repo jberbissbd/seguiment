@@ -2,20 +2,20 @@ import dataclasses
 import sys
 import unittest
 from src.agents.formats import Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Alumne_comm, Categoria_comm, \
-    Data_gui_comm, Data_nova
+    Data_gui_comm, Datanova
 from faker import Faker
-from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd
+from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd, AjudantBBDD
 import secrets
 from faker.providers import person
 
 sys.path.append('./agents/formats')
 
 fake = Faker("es_CA")
-alumnes = AlumnesBbdd()
-categories = CategoriesBbdd()
-registres = RegistresBbdd()
-calendari = DatesBbdd()
-ruta_base_dades = "/home/jordi/Documents/Projectes/seguiment/src/unittests/tests.db"
+alumnes = AlumnesBbdd(taula="alumnes", mode=2)
+categories = CategoriesBbdd(taula="categories", mode=2)
+registres = RegistresBbdd(mode = 2)
+calendari = DatesBbdd(mode =2)
+ruta_base_dades = AjudantBBDD(2).db
 
 alumnes.ruta_bbdd = ruta_base_dades
 registres.ruta_bbdd = ruta_base_dades
@@ -25,6 +25,7 @@ calendari.ruta_bbdd = ruta_base_dades
 
 class test_entrada_dades_bbdd(unittest.TestCase):
     def setUp(self, db=ruta_base_dades) -> None:
+
         categories.ruta_bbdd = db
         registres.ruta_bbdd = db
         alumnes.ruta_bbdd = db
@@ -69,7 +70,7 @@ class test_entrada_dades_bbdd(unittest.TestCase):
 
     def test_dates(self):
         data_ficticia = fake.date()
-        resultat_registre_data = calendari.crear_data([Data_nova(data_ficticia)])
+        resultat_registre_data = calendari.crear_data([Datanova(data_ficticia)])
         assert resultat_registre_data is True, "Comprovacio al crear una data nova"
 
 
@@ -77,8 +78,7 @@ class test_actualitzacio(unittest.TestCase):
     """Classe per a comprovar operacio d'actualitzar"""
 
     def setUp(self) -> None:
-        tests_db = ruta_base_dades
-        db = tests_db
+        db = ruta_base_dades
         categories.ruta_bbdd = db
         registres.ruta_bbdd = db
         alumnes.ruta_bbdd = db
@@ -201,7 +201,7 @@ class test_tipus_atributs(unittest.TestCase):
     """Test per a comprovar si tots els elements de la base de dades compleixen amb la missatgeria establerta"""
 
     def setUp(self) -> None:
-        db = registres
+        db = ruta_base_dades
         categories.ruta_bbdd = db
         registres.ruta_bbdd = db
         alumnes.ruta_bbdd = db

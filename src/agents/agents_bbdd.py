@@ -1,28 +1,45 @@
 import os
 import sqlite3
+from os.path import dirname, abspath
 
 from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, \
-    Categoria_comm, Alumne_comm, Data_gui_comm, Data_nova, Alumne_nou
+    Categoria_comm, Alumne_comm, Data_gui_comm, Datanova, Alumne_nou
 
 error_llista = "Error: el missatge ha de ser una llista."
 error_format = "Error: el missatge no té el format correcte."
 
 
+class AjudantBBDD:
+    def __init__(self, mode):
+        super(AjudantBBDD, self).__init__()
+        self.mode = mode
+        self.db = self.establiment_mode(mode)
+
+    def establiment_mode(self, mode):
+        self.mode = mode
+        directori_arrel = os.path.abspath(dirname(dirname(abspath(__file__))))
+
+        if mode == 1:
+            localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
+            ruta = os.path.abspath(localitzacio_bbdd)
+            return ruta
+        elif mode == 2:
+            localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "unittests", "tests.db"))
+            ruta = os.path.abspath(localitzacio_bbdd)
+            return ruta
+
+
 class ModelDao:
-    def __init__(self):
-        super(ModelDao, self).__init__()
-        self.ruta_bbdd = "/home/jordi/Documents/Projectes/seguiment/src/dades/registre.db"
+    def __init__(self, mode):
+        self.ruta_bbdd = AjudantBBDD(mode).db
         self.taula = ""
         self.conn = sqlite3.connect(self.ruta_bbdd)
         self.c = self.conn.cursor()
 
-    def __del__(self):
-        self.conn.close()
-
 
 class Liquidador(ModelDao):
     def __init__(self):
-        super(Liquidador, self).__init__()
+        super().__init__(1)
 
     def eliminar_basededades(self):
         os.remove(self.ruta_bbdd)
@@ -32,7 +49,7 @@ class Iniciador(ModelDao):
     """Comprova si existeixen les taules alumne, registres i dates"""
 
     def __init__(self):
-        super(Iniciador, self).__init__()
+        super().__init__(1)
         self.presencia_taula_alumne = self.comprova_existencia_taules("alumnes")
         self.presencia_taula_registres = self.comprova_existencia_taules("registres")
         self.presencia_taula_dates = self.comprova_existencia_taules("dates")
@@ -41,15 +58,12 @@ class Iniciador(ModelDao):
     def comprova_existencia_taules(self, taula):
         self.taula = taula
         try:
-            self.c.execute(f"SELECT * FROM {self.taula}")
-            if self.c.fetchone() is not None:
-                return True
-            else:
-                return False
+            resultat = self.c.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name={self.taula}")
+            return resultat
         except sqlite3.OperationalError:
-            return False
+            raise FileNotFoundError("Error: no s'ha pogut comprovar la existència de la taula")
 
-    def inicia_taules(self):
+    def crea_taules(self):
         """Crea les taules necessaries per a la base de dades"""
         try:
             ordre_general = """begin;CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -60,7 +74,6 @@ class Iniciador(ModelDao):
             "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS dates (id INTEGER 
             PRIMARY KEY AUTOINCREMENT, data TEXT);commit """
             self.conn.executescript(ordre_general)
-
         except sqlite3.OperationalError:
             return False
         try:
@@ -77,8 +90,8 @@ class Iniciador(ModelDao):
 
 
 class AlumnesBbdd(ModelDao):
-    def __init__(self, taula="alumnes"):
-        super().__init__()
+    def __init__(self, taula="alumnes", mode=1):
+        super().__init__(mode)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
@@ -209,8 +222,8 @@ class AlumnesBbdd(ModelDao):
 class RegistresBbdd(ModelDao):
     """Es relaciona amb la taula de registres"""
 
-    def __init__(self, taula="registres"):
-        super().__init__()
+    def __init__(self, taula="registres",mode =1):
+        super().__init__(mode)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
@@ -368,8 +381,8 @@ class RegistresBbdd(ModelDao):
 
 
 class CategoriesBbdd(ModelDao):
-    def __init__(self, taula="categories"):
-        super().__init__()
+    def __init__(self, taula="categories", mode=1):
+        super().__init__(mode)
         self.cursor = self.conn.cursor()
         self.taula = taula
         self.ordre_consultar = None
@@ -481,8 +494,8 @@ class CategoriesBbdd(ModelDao):
 
 
 class DatesBbdd(ModelDao):
-    def __init__(self, taula="dates"):
-        super().__init__()
+    def __init__(self, taula="dates", mode=1):
+        super().__init__(mode)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
@@ -508,7 +521,7 @@ class DatesBbdd(ModelDao):
         self.cursor = self.conn.cursor()
         if isinstance(llista_dates, list):
             for item in llista_dates:
-                if isinstance(item, Data_nova):
+                if isinstance(item, Datanova):
                     try:
                         ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
                         self.cursor.execute(ordre_registrar)

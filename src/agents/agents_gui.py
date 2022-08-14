@@ -15,7 +15,7 @@ from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, D
 from dateutil import parser
 
 from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Data_nova
+    Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Datanova
 
 
 class CatalanParserInfo(parser.parserinfo):
@@ -206,7 +206,7 @@ class Calendaritzador:
         """
         if isinstance(aniversari, list):
             for element in aniversari:
-                if isinstance(element, Data_nova):
+                if isinstance(element, Datanova):
                     element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
                 else:
                     return False
