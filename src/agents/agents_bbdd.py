@@ -9,29 +9,34 @@ error_llista = "Error: el missatge ha de ser una llista."
 error_format = "Error: el missatge no té el format correcte."
 
 
-class AjudantBBDD:
-    def __init__(self, mode):
-        super(AjudantBBDD, self).__init__()
-        self.mode = mode
-        self.db = self.establiment_mode(mode)
+class AjudantDirectoris:
+    def __init__(self, modebbdd: int):
+        super(AjudantDirectoris, self).__init__()
+        self.mode = modebbdd
+        self.db = self.establiment_mode()
+        self.ruta_icones = self.obtenir_ruta_icones()
 
-    def establiment_mode(self, mode):
-        self.mode = mode
+
+    def establiment_mode(self):
         directori_arrel = os.path.abspath(dirname(dirname(abspath(__file__))))
-
-        if mode == 1:
+        if self.mode == 1:
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
             return ruta
-        elif mode == 2:
+        elif self.mode == 2:
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "unittests", "tests.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
             return ruta
 
+    def obtenir_ruta_icones(self):
+        localitzacio_icones = os.path.normpath(os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones"))
+        return localitzacio_icones
+
 
 class ModelDao:
-    def __init__(self, mode):
-        self.ruta_bbdd = AjudantBBDD(mode).db
+    def __init__(self, modebbdd: int):
+        super(ModelDao, self).__init__()
+        self.ruta_bbdd = AjudantDirectoris(modebbdd).db
         self.taula = ""
         self.conn = sqlite3.connect(self.ruta_bbdd)
         self.c = self.conn.cursor()
@@ -39,7 +44,7 @@ class ModelDao:
 
 class Liquidador(ModelDao):
     def __init__(self):
-        super().__init__(1)
+        super().__init__()
 
     def eliminar_basededades(self):
         os.remove(self.ruta_bbdd)
@@ -48,8 +53,8 @@ class Liquidador(ModelDao):
 class Iniciador(ModelDao):
     """Comprova si existeixen les taules alumne, registres i dates"""
 
-    def __init__(self):
-        super().__init__(1)
+    def __init__(self, *modebbdd: int):
+        super().__init__(modebbdd)
         self.presencia_taula_alumne = self.comprova_existencia_taules("alumnes")
         self.presencia_taula_registres = self.comprova_existencia_taules("registres")
         self.presencia_taula_dates = self.comprova_existencia_taules("dates")
@@ -90,8 +95,8 @@ class Iniciador(ModelDao):
 
 
 class AlumnesBbdd(ModelDao):
-    def __init__(self, taula="alumnes", mode=1):
-        super().__init__(mode)
+    def __init__(self, modebbdd: int, taula="alumnes"):
+        super().__init__(modebbdd)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
@@ -222,8 +227,8 @@ class AlumnesBbdd(ModelDao):
 class RegistresBbdd(ModelDao):
     """Es relaciona amb la taula de registres"""
 
-    def __init__(self, taula="registres",mode =1):
-        super().__init__(mode)
+    def __init__(self, modebbdd, taula="registres"):
+        super().__init__(modebbdd)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
@@ -381,8 +386,8 @@ class RegistresBbdd(ModelDao):
 
 
 class CategoriesBbdd(ModelDao):
-    def __init__(self, taula="categories", mode=1):
-        super().__init__(mode)
+    def __init__(self, modebbdd, taula="categories"):
+        super().__init__(modebbdd)
         self.cursor = self.conn.cursor()
         self.taula = taula
         self.ordre_consultar = None
@@ -494,8 +499,8 @@ class CategoriesBbdd(ModelDao):
 
 
 class DatesBbdd(ModelDao):
-    def __init__(self, taula="dates", mode=1):
-        super().__init__(mode)
+    def __init__(self,modebbdd, taula="dates"):
+        super().__init__(modebbdd)
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None

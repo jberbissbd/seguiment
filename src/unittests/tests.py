@@ -4,18 +4,18 @@ import unittest
 from src.agents.formats import Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Alumne_comm, Categoria_comm, \
     Data_gui_comm, Datanova
 from faker import Faker
-from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd, AjudantBBDD
+from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd, AjudantDirectoris
 import secrets
 from faker.providers import person
 
 sys.path.append('./agents/formats')
 
 fake = Faker("es_CA")
-alumnes = AlumnesBbdd(taula="alumnes", mode=2)
-categories = CategoriesBbdd(taula="categories", mode=2)
-registres = RegistresBbdd(mode = 2)
-calendari = DatesBbdd(mode =2)
-ruta_base_dades = AjudantBBDD(2).db
+alumnes = AlumnesBbdd(taula="alumnes", modebbdd=2)
+categories = CategoriesBbdd(taula="categories", modebbdd=2)
+registres = RegistresBbdd(taula="registres", modebbdd=2)
+calendari = DatesBbdd(taula="dates", modebbdd=2)
+ruta_base_dades = AjudantDirectoris(2).db
 
 alumnes.ruta_bbdd = ruta_base_dades
 registres.ruta_bbdd = ruta_base_dades
@@ -25,7 +25,6 @@ calendari.ruta_bbdd = ruta_base_dades
 
 class test_entrada_dades_bbdd(unittest.TestCase):
     def setUp(self, db=ruta_base_dades) -> None:
-
         categories.ruta_bbdd = db
         registres.ruta_bbdd = db
         alumnes.ruta_bbdd = db

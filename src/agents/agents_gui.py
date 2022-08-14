@@ -25,21 +25,21 @@ class CatalanParserInfo(parser.parserinfo):
 
 
 class Comprovador:
-    def __init__(self):
+    def __init__(self, modegui):
         super(Comprovador, self).__init__()
-        resultat_iniciador = Iniciador()
+        resultat_iniciador = Iniciador(modegui)
         self.presencia_alumnes = resultat_iniciador.presencia_taula_alumne
         self.presencia_registres = resultat_iniciador.presencia_taula_registres
         self.presencia_dates = resultat_iniciador.presencia_taula_dates
 
 
 class Destructor:
-    def __init__(self):
+    def __init__(self, modegui):
         super(Destructor, self).__init__()
-        self.alumnes = AlumnesBbdd()
-        self.registres = RegistresBbdd()
-        self.categories = CategoriesBbdd()
-        self.dates = DatesBbdd()
+        self.alumnes = AlumnesBbdd(modegui)
+        self.registres = RegistresBbdd(modegui)
+        self.categories = CategoriesBbdd(modegui)
+        self.dates = DatesBbdd(modegui)
 
     def destruir(self):
         self.alumnes.destruir_taula()
@@ -50,14 +50,14 @@ class Destructor:
 
 
 class Comptable:
-    def __init__(self):
+    def __init__(self, modegui):
         """Ordenar les taules de la base de dades perquè siguin més fàcils de llegir:"""
         self.info_categories = None
         self.info_registres = None
         self.info_alumnes = None
-        self.alumnes = AlumnesBbdd()
-        self.registrador = RegistresBbdd()
-        self.categoritzador = CategoriesBbdd()
+        self.alumnes = AlumnesBbdd(modegui)
+        self.registrador = RegistresBbdd(modegui)
+        self.categoritzador = CategoriesBbdd(modegui)
         self.info_categories = self.categoritzador.lectura_categories()
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_registres = self.registrador.lectura_registres()
@@ -179,8 +179,8 @@ class Comptable:
 
 class Calendaritzador:
 
-    def __init__(self):
-        self.datador = DatesBbdd()
+    def __init__(self, modegui):
+        self.datador = DatesBbdd(modegui)
         self.info_dates = self.datador.lectura_dates()
         self.dates = self.conversio_dates()
         self.maxim_id = self.datador.maxim_id_data()
@@ -230,9 +230,14 @@ class Calendaritzador:
 
 
 class CapEstudis:
-    def __init__(self):
-        self.alumnes = AlumnesBbdd()
-        self.registres = RegistresBbdd()
+    def __init__(self, modegui: int):
+        """
+
+        :type modegui: int
+        """
+        mode = modegui
+        self.alumnes = AlumnesBbdd(modebbdd=mode)
+        self.registres = RegistresBbdd(mode)
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_alumnes_registrats = self.registres.lectura_alumnes_registrats()
         self.alumnat = self.obtenir_alumnes()
@@ -306,11 +311,11 @@ class CapEstudis:
 
 
 class Classificador:
-    def __init__(self):
-        self.categoritzador = CategoriesBbdd()
+    def __init__(self, modegui):
+        self.categoritzador = CategoriesBbdd(modegui)
         self.info_categories = self.categoritzador.lectura_categories()
         self.categories = self.info_categories
-        self.registrador = RegistresBbdd()
+        self.registrador = RegistresBbdd(modegui)
         self.info_registres = self.registrador.lectura_registres()
         self.categories_registrades = self.obtenir_categories_registrades()
 
