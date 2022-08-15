@@ -1,14 +1,14 @@
-import dataclasses
-
 import sys
 
+import secrets
+import sys
 import unittest
+
+from faker import Faker
+
+from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
 from src.agents.formats import Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Alumne_comm, Categoria_comm, \
     Data_gui_comm, Datanova
-from faker import Faker
-from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd, AjudantDirectoris
-import secrets
-from faker.providers import person
 
 sys.path.append('./agents/formats')
 
@@ -266,7 +266,7 @@ class test_eliminacio(unittest.TestCase):
     def test_registres(self):
         llista_registres = registres.lectura_registres()
         missatge_eliminar = [secrets.choice(llista_registres)]
-        assert registres.eliminar_registre(missatge_eliminar) is True, "No s'ha pogut eliminar un element de la taula " \
+        assert registres.eliminar_registre(missatge_eliminar) is True, "No s'ha pogut eliminar un element de la taula" \
                                                                        "registres"
 
     def test_alumnes(self):

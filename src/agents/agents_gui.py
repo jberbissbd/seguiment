@@ -11,12 +11,6 @@ from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, R
     Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Datanova
 
 
-class CatalanParserInfo(parser.parserinfo):
-    MONTHS = [("Jan", "Gener"), ("Feb", "Febrer"), ("Mar", "Març"), ("Apr", "Abril"),
-              ("May", "Maig"), ("Jun", "Juny"), ("Jul", "Juliol"), ("Aug", "Agost"),
-              ("Sep", "Setembre"), ("Oct", "Octubre"), ("Nov", "Novembre"), ("Dec", "Desembre")]
-
-
 class Comprovador:
     def __init__(self, modegui):
         super(Comprovador, self).__init__()

@@ -13,7 +13,8 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QG
                                QStatusBar, QStyleFactory, QStyledItemDelegate, QMessageBox)
 from dateutil import parser
 from src.agents.agents_bbdd import AjudantDirectoris
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor, Comprovador
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor\
+    , Comprovador
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
 
@@ -111,6 +112,21 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # Inicialització de la base de dades (es crea si no existeix)
+        self.INFORME = None
+        self.selcarpeta = None
+        self.SELECCIO_CARPETA = None
+        self.BOTON_INFORME = None
+        self.INFORMES_SELECTOR_CATEGORIES = None
+        self.INFORMES_SELECTOR_ALUMNES = None
+        self.TAULA_MODEL_FILTRE = None
+        self.TAULA = None
+        self.files_model = None
+        self.columnes_model = None
+        self.VISUALITZA_SELECCIO_CATEGORIES = None
+        self.VISUALITZA_SELECCIO_ALUMNES = None
+        self.BOTO_INFORMACIO = None
+        self.BOTO_PURGAR = None
+        self.BOTO_EDITAR_ALUMNES = None
         Comprovador(1)
         # Introduim la resta de parametres
         self.DATES = None
@@ -232,10 +248,8 @@ class MainWindow(QMainWindow):
         """Elimina les dades de la base de dades"""
         if QMessageBox.question(self, "Eliminar dades", "Estàs segur de que vols eliminar les dades?",
                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes:
-
             Destructor(1).destruir()
             sortir()
-
 
     def widget_creacio(self):
         # Creem el widget de creacio de nous registres:
