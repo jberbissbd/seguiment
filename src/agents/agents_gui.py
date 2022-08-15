@@ -1,5 +1,4 @@
 import os
-
 import dateutil
 import numpy as np
 import openpyxl
@@ -12,6 +11,7 @@ from src.agents.formats import DataGuiComm, Registresguicomm, Alumne_comm, Regis
 
 
 class Comprovador:
+    """Comprva la presencia de taules a la base de dades"""
     def __init__(self, modegui):
         super(Comprovador, self).__init__()
         resultat_iniciador = Iniciador(modegui)
@@ -38,6 +38,7 @@ class Destructor:
         self.liquidador = Liquidador(modegui)
 
     def destruir(self):
+        """Elimina les taules de la base de dades i, despres, la base de dades en si."""
         self.registres.destruir_taula()
         self.alumnes.destruir_taula()
         self.categories.destruir_taula()
@@ -46,6 +47,7 @@ class Destructor:
 
 
 class Comptable:
+    """S'ocupa de gestionar amb la gui les entrades a la taula de registres"""
     def __init__(self, modegui):
         """Ordenar les taules de la base de dades perquè siguin més fàcils de llegir:"""
         self.info_categories = None
@@ -64,7 +66,6 @@ class Comptable:
     def obtenir_registres(self):
         """Retorna una llista de registres convenients per a la presentació: list:
         """
-
         # Condicio de seguretat per si no hi ha registres:
         if self.info_registres and self.info_alumnes and self.info_categories:
             registres_entrada = self.info_registres
@@ -73,13 +74,9 @@ class Comptable:
             for registre in registres_entrada:
                 registre_proces = [registre.id]
                 # Obtenim el nom de l'alumne:
-                for alumne in self.info_alumnes:
-                    if alumne.id == registre.alumne:
-                        registre_proces.append(alumne)
+                registre_proces.append(self.obtenir_registres_alumne(id_alumne=registre.alumne))
                 # Substituim l'id de la categoria de la llista de registres pel seu nom:
-                for categoria in self.info_categories:
-                    if categoria.id == registre.categoria:
-                        registre_proces.append(categoria)
+                registre_proces.append(self.obtenir_categoria_registres(id_categoria=registre.categoria))
                 registre_proces.append(registre.data)
                 registre_proces.append(registre.descripcio)
                 registre_tractat = Registresguicomm(registre_proces[0], registre_proces[1], registre_proces[2],
@@ -87,8 +84,19 @@ class Comptable:
                 missatge_registres.append(registre_tractat)
 
             return missatge_registres
-
         return False
+
+    def obtenir_registres_alumne(self, id_alumne):
+        """Retorna el Alumnecomm corresponent a l'id alumne proporcionat"""
+        for alumne in self.info_alumnes:
+            if id_alumne == alumne.id:
+                return alumne
+
+    def obtenir_categoria_registres(self, id_categoria):
+        """Retorna la Categoriacomm corresponent a l'id alumne proporcionat"""
+        for categoria in self.info_categories:
+            if id_categoria == categoria.id:
+                return categoria
 
     def obtenir_noms(self):
         """Retorna una llista d'alumnes convenients per a la presentació: list:"""
@@ -97,7 +105,6 @@ class Comptable:
         if self.info_alumnes:
             noms = [alumne.nom for alumne in self.info_alumnes]
             return noms
-
         return False
 
     def obtenir_categories(self):
@@ -161,7 +168,7 @@ class Comptable:
         return True
 
     def refrescar_registres(self):
-
+        """Tronar a consultar els registres a peticio de la gui, per reflectir els canvis en la base de dades"""
         self.info_categories = self.categoritzador.lectura_categories()
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_registres = self.registrador.lectura_registres()
@@ -171,7 +178,7 @@ class Comptable:
 
 
 class Calendaritzador:
-
+    """Classe que gestiona les dates"""
     def __init__(self, modegui):
         self.datador = DatesBbdd(modegui)
         self.info_dates = self.datador.lectura_dates()
@@ -222,6 +229,7 @@ class Calendaritzador:
 
 
 class CapEstudis:
+    """S'ocupa de les gestions de la taula alumnes amb la interficie grafica"""
     def __init__(self, modegui: int):
         """
 
@@ -255,8 +263,7 @@ class CapEstudis:
             for persona in alumnes_registrats:
                 alumnes_formatats.append(Alumne_comm(persona.id, persona.nom))
             return alumnes_formatats
-        else:
-            return False
+        return False
 
     def eliminar_alumnes(self, llista_eliminar):
         """Elimina un alumne de la base de dades"""
@@ -264,12 +271,11 @@ class CapEstudis:
             self.alumnes.eliminar_alumne(llista_eliminar)
             self.registres.eliminar_registre_alumne(llista_eliminar)
             return True
-        else:
-            return False
+        return False
 
     def actualitzar_alumnes(self, llista_actualitzar: list):
+        """Actualitza els alumnea de la base de dades"""
         if isinstance(llista_actualitzar, list):
-            """Actualitza un alumne de la base de dades"""
             self.alumnes.actualitzar_alumne(llista_actualitzar)
             return True
         return False
@@ -278,10 +284,10 @@ class CapEstudis:
         """Afegeix un alumne a la base de dades"""
         if not isinstance(missatge_afegir, list):
             return False
-        else:
-            for persona in missatge_afegir:
-                if not isinstance(persona, AlumneNou):
-                    return False
+
+        for persona in missatge_afegir:
+            if not isinstance(persona, AlumneNou):
+                return False
         resultat = self.alumnes.registrar_alumne(missatge_afegir)
         return resultat
 
@@ -291,10 +297,10 @@ class CapEstudis:
             for alumne_bbdd in self.info_alumnes:
                 if alumne_bbdd[1] == alumne.nom:
                     return alumne_bbdd[0]
-        else:
-            return False
+        return False
 
     def refrescar_alumnes(self):
+        """Trona a consultar la informacio dels alumnes de la base de dades per a tenir en compte els canvis."""
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_alumnes_registrats = self.registres.lectura_alumnes_registrats()
         self.alumnat = self.obtenir_alumnes()
@@ -302,6 +308,7 @@ class CapEstudis:
 
 
 class Classificador:
+    """S'ocupa de les categories a la base de dades."""
     def __init__(self, modegui):
         self.categoritzador = CategoriesBbdd(modegui)
         self.info_categories = self.categoritzador.lectura_categories()
@@ -311,6 +318,7 @@ class Classificador:
         self.categories_registrades = self.obtenir_categories_registrades()
 
     def obtenir_categories_registrades(self):
+        """Determina quines categories tenen alguna entrada a la taula registres."""
         if self.info_categories and self.info_registres:
             classificacio = self.info_categories
             info_registres = self.info_registres
@@ -320,10 +328,10 @@ class Classificador:
                     if element.id == item.categoria and element not in llista_categories_amb_registre:
                         llista_categories_amb_registre.append(element)
             return llista_categories_amb_registre
-
         return False
 
     def refrescar_categories_registres(self):
+        """Força actualitzacio de les categories que tenen alguna entrada a la taula de registres."""
         self.info_registres = self.registrador.lectura_registres()
         self.info_categories = self.categoritzador.lectura_categories()
 
@@ -334,8 +342,8 @@ def format_categories(ruta_arxiu: str):
     :argument ruta_arxiu: ruta completa fins a l'arxiu
     :returns: Arxiu a la mateixa localitzacio modificat
     """
-    wb = openpyxl.load_workbook(ruta_arxiu)
-    fulla = wb.active
+    full_calcul = openpyxl.load_workbook(ruta_arxiu)
+    fulla = full_calcul.active
     noms = NamedStyle(name="noms")
     noms.font = Font(size=11, name="Calibri")
     noms.alignment = Alignment(horizontal="left", vertical="justify", wrap_text=False)
@@ -357,14 +365,14 @@ def format_categories(ruta_arxiu: str):
     fulla['B1'].value = "Alumnes"
     fulla['B1'].style = titols
     fulla.column_dimensions['B'].width = 20
-    wb.save(ruta_arxiu)
+    full_calcul.save(ruta_arxiu)
 
 
 def format_alumnes(ruta_arxiu: str):
     """Dona format a l'informe d'alumnes"""
-    wb = openpyxl.load_workbook(ruta_arxiu)
+    full_calcul = openpyxl.load_workbook(ruta_arxiu)
     color_taronja = "F6B26B"
-    fulla = wb.active
+    fulla = full_calcul.active
     llista_columnes = ['B', 'C', 'D', 'E', 'F']
     # Definim els estils:
     titols_trimestres = NamedStyle(name="titols_trimestres")
@@ -408,7 +416,7 @@ def format_alumnes(ruta_arxiu: str):
     for row in fulla.iter_rows(min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column):
         for cell in row:
             cell.style = continguts
-    wb.save(ruta_arxiu)
+    full_calcul.save(ruta_arxiu)
 
 
 class CreadorInformes:
@@ -440,15 +448,17 @@ class CreadorInformes:
 
     def data_a_trimestre(self, data: str):
         """Retorna el trimestre de la data"""
+        resultat = None
         inici_segon = dateutil.parser.parse(self.dates[0].dia, dayfirst=True)
         inici_tercer = dateutil.parser.parse(self.dates[1].dia, dayfirst=True)
         data_calculada = dateutil.parser.parse(data)
         if data_calculada < inici_segon:
-            return "1"
+            resultat = 1
         elif inici_segon <= data_calculada < inici_tercer:
-            return "2"
+            resultat = 2
         elif data_calculada >= inici_tercer:
-            return "3"
+            resultat = 3
+        return resultat
 
     def export_categories(self):
         """Crea un informe amb les categories"""
@@ -469,8 +479,8 @@ class CreadorInformes:
                             alumne = registre.alumne.nom
                             diccionari_provisional['mesos'].append(mes)
                             diccionari_provisional['alumnes'].append(alumne)
-                    df = pandas.DataFrame(diccionari_provisional)
-                    llista_dades.append(df)
+                    Df = pandas.DataFrame(diccionari_provisional)
+                    llista_dades.append(Df)
                     llista_categories_informes.append(llista_dades)
             for element in llista_categories_informes:
                 agrego_mesos = {'alumnes': np.unique}
@@ -488,8 +498,11 @@ class CreadorInformes:
         return False
 
     def export_alumne(self, dates):
+        """
+        Crea un informe per cada alumne
+        :rtype: Un arxiu en format excel a la carpeta seleccionada per l'usuari
+        """
         self.dates = dates
-        """Crea un informe per cada alumne"""
         if self.alumnes and self.registres and self.categories:
             llista_alumnes_informes = []
             llista_alumnes_als_registres = [registre.alumne.id for registre in self.registres]
@@ -535,9 +548,9 @@ class CreadorInformes:
                         while len(diccionari_provisional[categoria]) < nombre_registres:
                             diccionari_provisional[categoria].append('')
                     # Afegim el resultat a la llista d'alumnes:
-                    DF = pandas.DataFrame(diccionari_provisional).fillna('')
-                    DF['Trimestre'] = DF['Trimestre'].astype("category")
-                    llista_dades.append(DF)
+                    Df = pandas.DataFrame(diccionari_provisional).fillna('')
+                    Df['Trimestre'] = Df['Trimestre'].astype("category")
+                    llista_dades.append(Df)
                     llista_alumnes_informes.append(llista_dades)
             for element in llista_alumnes_informes:
                 nom_alumne = element[0]

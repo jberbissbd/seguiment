@@ -2,63 +2,73 @@ import os
 import sqlite3
 from os.path import dirname, abspath
 import configparser
-
-from src.agents.formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm,\
+from src.agents.formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm, \
     DataGuiComm, DataNova, AlumneNou
 
-error_llista = "Error: el missatge ha de ser una llista."
-error_format = "Error: el missatge no té el format correcte."
+ERROR_LLISTA = "Error: el missatge ha de ser una llista."
+ERROR_FORMAT = "Error: el missatge no té el format correcte."
 
 
 def obtenir_ruta_config():
+    """Proporciona la ruta dels arxius de configuracio"""
     localitzacio_config = os.path.normpath(
         os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "config.ini"))
     return localitzacio_config
 
 
 def obtenir_ruta_icones():
+    """Proporciona la ruta de la carpeta de les icones"""
     localitzacio_icones = os.path.normpath(
         os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones"))
     return localitzacio_icones
 
 
 class AjudantDirectoris:
+    """Proporciona la ruta d'acces absoluta a la localitzacio de la base de dades i de les icones."""
+
     def __init__(self, modebbdd: int):
-        super(AjudantDirectoris, self).__init__()
+        super().__init__()
         self.mode = modebbdd
-        self.db = self.establiment_mode()
+        self.base_dades = self.establiment_mode()
         self.ruta_icones = obtenir_ruta_icones()
 
     def establiment_mode(self):
+        """Estableix si funciona en mode de produccio o funcionament normal (1) o testing (2)"""
         directori_arrel = os.path.abspath(dirname(dirname(abspath(__file__))))
+        ruta = None
         if self.mode == 1:
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
-            return ruta
         elif self.mode == 2:
             localitzacio_bbdd = os.path.normpath(os.path.join(dirname(directori_arrel), "tests", "tests.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
-            return ruta
+        return ruta
 
 
 class ModelDao:
+    """Patro per als DAO's subsequents"""
+
     def __init__(self, modebbdd: int):
-        super(ModelDao, self).__init__()
-        self.ruta_bbdd = AjudantDirectoris(modebbdd).db
+        super().__init__()
+        self.ruta_bbdd = AjudantDirectoris(modebbdd).base_dades
         self.taula = ""
         self.conn = sqlite3.connect(self.ruta_bbdd)
-        self.c = self.conn.cursor()
+        self.cursor = self.conn.cursor()
 
 
 class Liquidador(ModelDao):
+    """Esborra les taules i la base de dades"""
+
     def __init__(self, model: int):
-        super().__init__(model)
+        super().__init__(modebbdd=model)
 
     def eliminar_basededades(self):
+        """Eliminar l'arxiu de base de dades"""
         os.remove(self.ruta_bbdd)
 
 
 def obtenir_valors_categories():
+    """Metode per a parsejar les categories del config.ini"""
     config = configparser.ConfigParser()
     config.read(obtenir_ruta_config())
     valors = config.get('Categories', 'Defecte').split(', ')
@@ -77,9 +87,10 @@ class Iniciador(ModelDao):
         self.valors_categories = obtenir_valors_categories()
 
     def comprova_existencia_taules(self, taula):
+        """Comprova si la taula existeix a la base de dades o no"""
         self.taula = taula
         try:
-            resultat = self.c.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name={self.taula}")
+            resultat = self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name={self.taula}")
             return resultat
         except sqlite3.OperationalError:
             return False
@@ -88,7 +99,7 @@ class Iniciador(ModelDao):
         """Crea les taules necessaries per a la base de dades"""
         try:
             self.conn = sqlite3.connect(self.ruta_bbdd)
-            self.c = self.conn.cursor()
+            self.cursor = self.conn.cursor()
             ordre_general = """
             CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB);
             CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB);
@@ -97,14 +108,14 @@ class Iniciador(ModelDao):
             NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
             "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE );
             CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT);"""
-            self.c.executescript(ordre_general)
+            self.cursor.executescript(ordre_general)
         except sqlite3.OperationalError:
             return False
         try:
             insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
             motius = self.valors_categories
             for motiu in motius:
-                self.c.execute(insercio_categories, (motiu,))
+                self.cursor.execute(insercio_categories, (motiu,))
                 self.conn.commit()
             return True
         except sqlite3.OperationalError:
@@ -114,6 +125,8 @@ class Iniciador(ModelDao):
 
 
 class AlumnesBbdd(ModelDao):
+    """Realitza les operacions CRUD a la taula d'alumnes"""
+
     def __init__(self, modebbdd: int, taula="alumnes"):
         super().__init__(modebbdd)
         self.cursor = None
@@ -146,6 +159,7 @@ class AlumnesBbdd(ModelDao):
             return False
 
     def llegir_alumnes(self):
+        """Llegeix les dades de la taula alumnes."""
         parametre: str = "id,nom_alumne"
         self.cursor = self.conn.cursor()
         try:
@@ -160,8 +174,7 @@ class AlumnesBbdd(ModelDao):
             return False
         if len(llista_alumnes) > 0:
             return llista_alumnes
-        else:
-            return False
+        return False
 
     def test_llegir_alumnes(self):
         """EXCLUSIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
@@ -172,15 +185,14 @@ class AlumnesBbdd(ModelDao):
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             llista_ids = [item[0] for item in consulta]
             self.cursor.close()
-        except sqlite3.OperationalError as e:
-            print(e)
+        except sqlite3.OperationalError:
             return False
         if llista_ids:
             return llista_ids
-        else:
-            return False
+        return False
 
     def llegir_alumne_individual(self, id_alumne: int):
+        """Proporciona les dades d'un alumne amb el seu ID."""
         parametre: str = "id,nom_alumne"
         self.cursor = self.conn.cursor()
         try:
@@ -196,6 +208,7 @@ class AlumnesBbdd(ModelDao):
         return persona
 
     def registrar_alumne(self, missatge_registrar: list):
+        """Registra tots els alumnes de la llista de missatge registrar"""
         if isinstance(missatge_registrar, list):
             for element in missatge_registrar:
                 if isinstance(element, AlumneNou):
@@ -209,13 +222,12 @@ class AlumnesBbdd(ModelDao):
 
                     except sqlite3.OperationalError:
                         return False
-                else:
-                    raise TypeError("El format de cada element de l'entrada ha de ser AlumneNou")
+                raise TypeError("El format de cada element de l'entrada ha de ser AlumneNou")
             return True
-        else:
-            raise TypeError("El missatge d'entrada ha de ser una llista")
+        raise TypeError("El missatge d'entrada ha de ser una llista")
 
     def eliminar_alumne(self, missatge: list):
+        """Elimina un alumne de la base de dades"""
         for element in missatge:
             id_alumne = element.id
             self.cursor = self.conn.cursor()
@@ -229,6 +241,7 @@ class AlumnesBbdd(ModelDao):
                 return False
 
     def actualitzar_alumne(self, missatge: list):
+        """Actualitza un alumne de la base de dades"""
         for element in missatge:
             id_alumne = element.id
             nom_alumne = element.nom
@@ -319,8 +332,6 @@ class RegistresBbdd(ModelDao):
                 dades_individuals = AlumnesBbdd.llegir_alumne_individual(self, persona[0])
                 if dades_individuals:
                     missatge.append(dades_individuals)
-                else:
-                    continue
             return missatge
         except sqlite3.OperationalError:
             return False
@@ -329,86 +340,78 @@ class RegistresBbdd(ModelDao):
         """Crea un nou registre"""
         if not isinstance(input_creacio_registre, list):
             return False
-        else:
-            for element in input_creacio_registre:
-                if not isinstance(element, Registres_bbdd_nou):
-                    return False
-                else:
-                    self.cursor = self.conn.cursor()
-                    try:
-
-                        ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio)" \
-                                          f"VALUES ({element.alumne},{element.categoria},'{element.data}'," \
-                                          f"'{element.descripcio}')"
-                        self.cursor.execute(ordre_registrar)
-                        self.conn.commit()
-                        self.cursor.close()
-                        return True
-                    except sqlite3.OperationalError as e:
-                        print(e)
-                        return False
+        for element in input_creacio_registre:
+            if not isinstance(element, Registres_bbdd_nou):
+                return False
+            self.cursor = self.conn.cursor()
+            try:
+                ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio)" \
+                                  f"VALUES ({element.alumne},{element.categoria},'{element.data}'," \
+                                  f"'{element.descripcio}')"
+                self.cursor.execute(ordre_registrar)
+                self.conn.commit()
+                self.cursor.close()
+                return True
+            except sqlite3.OperationalError:
+                return False
 
     def actualitzar_registre(self, missatge_actualitzar: list):
         """Actualitza un registre"""
         if not isinstance(missatge_actualitzar, list):
-            raise TypeError(error_llista)
-        else:
-            for element in missatge_actualitzar:
-                if not isinstance(element, RegistresBbddComm):
-                    raise TypeError(error_format)
-                else:
-                    self.cursor = self.conn.cursor()
-                    try:
-                        ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}," \
-                                            f" id_categoria = {element.categoria}, data = '{element.data}'," \
-                                            f" descripcio = '{element.descripcio}' WHERE id = {element.id} "
-                        self.cursor.execute(ordre_actualitzar)
-                        self.conn.commit()
-                        self.cursor.close()
-                        return True
-                    except sqlite3.OperationalError:
-                        return False
+            raise TypeError(ERROR_LLISTA)
+        for element in missatge_actualitzar:
+            if not isinstance(element, RegistresBbddComm):
+                raise TypeError(ERROR_FORMAT)
+            self.cursor = self.conn.cursor()
+            try:
+                ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}," \
+                                    f" id_categoria = {element.categoria}, data = '{element.data}'," \
+                                    f" descripcio = '{element.descripcio}' WHERE id = {element.id} "
+                self.cursor.execute(ordre_actualitzar)
+                self.conn.commit()
+                self.cursor.close()
+                return True
+            except sqlite3.OperationalError:
+                return False
 
     def eliminar_registre(self, missatge_eliminar: list):
         """Elimina un registre"""
         if not isinstance(missatge_eliminar, list):
-            raise TypeError(error_llista)
-        else:
-            for element in missatge_eliminar:
-                if not isinstance(element, RegistresBbddComm):
-                    raise TypeError(error_format)
-                else:
-                    self.cursor = self.conn.cursor()
-                    try:
-                        ordre_eliminar = f"DELETE FROM {self.taula} WHERE id = {element.id}"
-                        self.cursor.execute(ordre_eliminar)
-                        self.conn.commit()
-                        self.cursor.close()
-                        return True
-                    except sqlite3.OperationalError:
-                        return False
+            raise TypeError(ERROR_LLISTA)
+        for element in missatge_eliminar:
+            if not isinstance(element, RegistresBbddComm):
+                raise TypeError(ERROR_FORMAT)
+            self.cursor = self.conn.cursor()
+            try:
+                ordre_eliminar = f"DELETE FROM {self.taula} WHERE id = {element.id}"
+                self.cursor.execute(ordre_eliminar)
+                self.conn.commit()
+                self.cursor.close()
+                return True
+            except sqlite3.OperationalError:
+                return False
 
     def eliminar_registre_alumne(self, missatge_eliminar: list):
         """Elimina un registre"""
         if not isinstance(missatge_eliminar, list):
-            raise TypeError(error_llista)
-        else:
-            for element in missatge_eliminar:
-                if not isinstance(element, Alumne_comm):
-                    raise TypeError("El missatge ha de ser una llista amb el format correcte")
-                else:
-                    self.cursor = self.conn.cursor()
-                    try:
-                        ordre_eliminar = f"DELETE FROM {self.taula} WHERE id_alumne = {element.id}"
-                        self.cursor.execute(ordre_eliminar)
-                        self.conn.commit()
-                        self.cursor.close()
-                        return True
-                    except sqlite3.OperationalError:
-                        return False
+            raise TypeError(ERROR_LLISTA)
+        for element in missatge_eliminar:
+            if not isinstance(element, Alumne_comm):
+                raise TypeError("El missatge ha de ser una llista amb el format correcte")
+            self.cursor = self.conn.cursor()
+            try:
+                ordre_eliminar = f"DELETE FROM {self.taula} WHERE id_alumne = {element.id}"
+                self.cursor.execute(ordre_eliminar)
+                self.conn.commit()
+                self.cursor.close()
+                return True
+            except sqlite3.OperationalError:
+                return False
 
 
 class CategoriesBbdd(ModelDao):
+    """Gestiona operacions CRUD de la taula de categories"""
+
     def __init__(self, modebbdd, taula="categories"):
         super().__init__(modebbdd)
         self.cursor = self.conn.cursor()
@@ -465,8 +468,7 @@ class CategoriesBbdd(ModelDao):
             self.conn.commit()
             self.cursor.close()
             return True
-        except sqlite3.OperationalError as e:
-            print(e)
+        except sqlite3.OperationalError:
             return False
 
     def eliminar_categoria(self, num_referencia: int):
@@ -502,12 +504,9 @@ class CategoriesBbdd(ModelDao):
                         self.cursor.close()
                     except sqlite3.OperationalError:
                         return False
-                else:
-                    raise TypeError("Les dades han de seguir el format CategoriaComm")
+                raise TypeError("Les dades han de seguir el format CategoriaComm")
             return True
-
-        else:
-            raise TypeError("Les dades han de tenir format de llista")
+        raise TypeError("Les dades han de tenir format de llista")
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
@@ -523,6 +522,8 @@ class CategoriesBbdd(ModelDao):
 
 
 class DatesBbdd(ModelDao):
+    """Gestiona operacions CRUD de la taula de dates"""
+
     def __init__(self, modebbdd, taula="dates"):
         super().__init__(modebbdd)
         self.cursor = None
@@ -541,8 +542,7 @@ class DatesBbdd(ModelDao):
             if consulta is not None:
                 missatge_lectura_dates = [DataGuiComm(element[0], element[1]) for element in consulta]
                 return missatge_lectura_dates
-            else:
-                return False
+            return False
         except sqlite3.OperationalError:
             return False
 
@@ -559,13 +559,11 @@ class DatesBbdd(ModelDao):
                         self.cursor.close()
                     except sqlite3.OperationalError:
                         return False
-                else:
-                    # Retorna fals si el registre no te el format adequat
-                    return False
+                # Retorna fals si el registre no te el format adequat
+                return False
             return True
-        else:
-            # Retorna Fals si els elements d'entrada no son una llista.
-            return False
+        # Retorna Fals si els elements d'entrada no son una llista.
+        return False
 
     def test_dates(self):
         """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA DE DATES PER A FER TESTS"""
@@ -610,11 +608,9 @@ class DatesBbdd(ModelDao):
 
                     except sqlite3.OperationalError:
                         return False
-                else:
-                    raise TypeError("Els elements per actualitzar han de ser de la categoria DataGuiComm")
+                raise TypeError("Els elements per actualitzar han de ser de la categoria DataGuiComm")
             return True
-        else:
-            raise TypeError("El paramtere d'entrada ha de ser una llista")
+        raise TypeError("El parametre d'entrada ha de ser una llista")
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
