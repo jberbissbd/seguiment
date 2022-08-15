@@ -1,19 +1,12 @@
-import itertools
 import os
-from dataclasses import dataclass
-from datetime import datetime
 
-import openpyxl
-from openpyxl import load_workbook
-from openpyxl.styles import NamedStyle, Font, Color, Alignment, Border, Side, cell_style, PatternFill
-
-import numpy as np
-import pandas
-import pandas as pd
 import dateutil
-from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
+import numpy as np
+import openpyxl
+import pandas
 from dateutil import parser
-
+from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
+from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
 from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
     Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Datanova
 
@@ -83,7 +76,6 @@ class Comptable:
             registres_entrada = self.info_registres
             missatge_registres = []
             # Substituim l'id de l'alumne de la llista de registres pel seu nom:
-
             for registre in registres_entrada:
                 registre_proces = [registre.id]
                 # Obtenim el nom de l'alumne:
@@ -335,9 +327,8 @@ class Classificador:
             llista_categories_amb_registre = []
             for element in classificacio:
                 for item in info_registres:
-                    if element.id == item.categoria:
-                        if element not in llista_categories_amb_registre:
-                            llista_categories_amb_registre.append(element)
+                    if element.id == item.categoria and element not in llista_categories_amb_registre:
+                        llista_categories_amb_registre.append(element)
             return llista_categories_amb_registre
         else:
             return False
@@ -358,6 +349,7 @@ class CreadorInformes:
 
     def __init__(self, alumnes: list, categories: list, registres: list, carpeta_destinacio: str):
         super().__init__()
+        self.dates = None
         self.alumnes = alumnes
         self.categories = categories
         self.registres = registres
@@ -373,7 +365,12 @@ class CreadorInformes:
         posicio = self.nombre_mesos.index(mes)
         return self.mesos[posicio]
 
-    def format_categories(self, ruta_arxiu):
+    def format_categories(self, ruta_arxiu: str):
+        """
+        Modifica el format de l'arxiu d'entrada al format predeterminat
+        :argument ruta_arxiu: ruta completa fins a l'arxiu
+        :returns: Arxiu a la mateixa localitzacio modificat
+        """
         wb = openpyxl.load_workbook(ruta_arxiu)
         fulla = wb.active
         noms = NamedStyle(name="noms")
@@ -474,7 +471,6 @@ class CreadorInformes:
                     llista_dades = [f"{categoria.nom}"]
                     diccionari_provisional = {"mesos": [], "alumnes": []}
                     for registre in self.registres:
-
                         if registre.categoria.id == categoria.id:
                             mes = dateutil.parser.parse(registre.data).month
                             mes = self.mes_a_string(mes)
@@ -508,9 +504,7 @@ class CreadorInformes:
             noms_categories = [categoria.nom for categoria in self.categories]
             alumnes_registres = set(llista_alumnes_als_registres)
             for alumne in self.alumnes:
-                if alumne.id not in alumnes_registres:
-                    continue
-                else:
+                if alumne.id in alumnes_registres:
                     # Creem una llista amb les categories i els registres associats, una per alumne:
                     llista_dades = [f"{alumne.nom}"]
                     diccionari_provisional = {'Trimestre': []}

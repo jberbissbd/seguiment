@@ -3,11 +3,23 @@ import sqlite3
 from os.path import dirname, abspath
 import configparser
 
-from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, \
-    Categoria_comm, Alumne_comm, Data_gui_comm, Datanova, Alumne_nou
+from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, Categoria_comm, Alumne_comm,\
+    Data_gui_comm, Datanova, Alumne_nou
 
 error_llista = "Error: el missatge ha de ser una llista."
 error_format = "Error: el missatge no té el format correcte."
+
+
+def obtenir_ruta_config():
+    localitzacio_config = os.path.normpath(
+        os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "config.ini"))
+    return localitzacio_config
+
+
+def obtenir_ruta_icones():
+    localitzacio_icones = os.path.normpath(
+        os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones"))
+    return localitzacio_icones
 
 
 class AjudantDirectoris:
@@ -15,7 +27,7 @@ class AjudantDirectoris:
         super(AjudantDirectoris, self).__init__()
         self.mode = modebbdd
         self.db = self.establiment_mode()
-        self.ruta_icones = self.obtenir_ruta_icones()
+        self.ruta_icones = obtenir_ruta_icones()
 
     def establiment_mode(self):
         directori_arrel = os.path.abspath(dirname(dirname(abspath(__file__))))
@@ -28,16 +40,6 @@ class AjudantDirectoris:
             ruta = os.path.abspath(localitzacio_bbdd)
             return ruta
 
-    def obtenir_ruta_icones(self):
-        localitzacio_icones = os.path.normpath(
-            os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones"))
-        return localitzacio_icones
-
-    def obtenir_ruta_config(self):
-        localitzacio_config = os.path.normpath(
-            os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "config.ini"))
-        return localitzacio_config
-
 
 class ModelDao:
     def __init__(self, modebbdd: int):
@@ -48,13 +50,19 @@ class ModelDao:
         self.c = self.conn.cursor()
 
 
-
 class Liquidador(ModelDao):
     def __init__(self, model: int):
         super().__init__(model)
 
     def eliminar_basededades(self):
         os.remove(self.ruta_bbdd)
+
+
+def obtenir_valors_categories():
+    config = configparser.ConfigParser()
+    config.read(obtenir_ruta_config())
+    valors = config.get('Categories', 'Defecte').split(', ')
+    return valors
 
 
 class Iniciador(ModelDao):
@@ -66,7 +74,7 @@ class Iniciador(ModelDao):
         self.presencia_taula_registres = self.comprova_existencia_taules("registres")
         self.presencia_taula_dates = self.comprova_existencia_taules("dates")
         self.presencia_taula_categories = self.comprova_existencia_taules("categories")
-        self.valors_categories = self.obtenir_valors_categories()
+        self.valors_categories = obtenir_valors_categories()
 
     def comprova_existencia_taules(self, taula):
         self.taula = taula
@@ -104,16 +112,11 @@ class Iniciador(ModelDao):
         finally:
             self.conn.close()
 
-    def obtenir_valors_categories(self):
-        config = configparser.ConfigParser()
-        config.read(AjudantDirectoris(1).obtenir_ruta_config())
-        valors = config.get('Categories', 'Defecte').split(', ')
-        return valors
-
 
 class AlumnesBbdd(ModelDao):
     def __init__(self, modebbdd: int, taula="alumnes"):
         super().__init__(modebbdd)
+        self.cursor = None
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
@@ -245,6 +248,7 @@ class RegistresBbdd(ModelDao):
 
     def __init__(self, modebbdd, taula="registres"):
         super().__init__(modebbdd)
+        self.cursor = None
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
@@ -333,8 +337,9 @@ class RegistresBbdd(ModelDao):
                     self.cursor = self.conn.cursor()
                     try:
 
-                        ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio) VALUES " + \
-                                          f"({element.alumne},{element.categoria},'{element.data}','{element.descripcio}')"
+                        ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio)" \
+                                          f"VALUES ({element.alumne},{element.categoria},'{element.data}'," \
+                                          f"'{element.descripcio}')"
                         self.cursor.execute(ordre_registrar)
                         self.conn.commit()
                         self.cursor.close()
@@ -354,7 +359,9 @@ class RegistresBbdd(ModelDao):
                 else:
                     self.cursor = self.conn.cursor()
                     try:
-                        ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}, id_categoria = {element.categoria}, data = '{element.data}', descripcio = '{element.descripcio}' WHERE id = {element.id} "
+                        ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}," \
+                                            f" id_categoria = {element.categoria}, data = '{element.data}'," \
+                                            f" descripcio = '{element.descripcio}' WHERE id = {element.id} "
                         self.cursor.execute(ordre_actualitzar)
                         self.conn.commit()
                         self.cursor.close()
@@ -488,7 +495,8 @@ class CategoriesBbdd(ModelDao):
                     try:
                         num_referencia = item.id
                         nom_categoria = item.nom
-                        actualitzar = f"UPDATE {self.taula} SET categoria = '{nom_categoria}' WHERE id = {num_referencia}"
+                        actualitzar = f"UPDATE {self.taula} SET categoria = '{nom_categoria}'" \
+                                      f"WHERE id = {num_referencia}"
                         self.cursor.execute(actualitzar)
                         self.conn.commit()
                         self.cursor.close()
@@ -517,6 +525,7 @@ class CategoriesBbdd(ModelDao):
 class DatesBbdd(ModelDao):
     def __init__(self, modebbdd, taula="dates"):
         super().__init__(modebbdd)
+        self.cursor = None
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
