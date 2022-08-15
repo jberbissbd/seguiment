@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from os.path import dirname, abspath
+import configparser
 
 from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, \
     Categoria_comm, Alumne_comm, Data_gui_comm, Datanova, Alumne_nou
@@ -16,7 +17,6 @@ class AjudantDirectoris:
         self.db = self.establiment_mode()
         self.ruta_icones = self.obtenir_ruta_icones()
 
-
     def establiment_mode(self):
         directori_arrel = os.path.abspath(dirname(dirname(abspath(__file__))))
         if self.mode == 1:
@@ -24,13 +24,19 @@ class AjudantDirectoris:
             ruta = os.path.abspath(localitzacio_bbdd)
             return ruta
         elif self.mode == 2:
-            localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "unittests", "tests.db"))
+            localitzacio_bbdd = os.path.normpath(os.path.join(dirname(directori_arrel), "tests", "tests.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
             return ruta
 
     def obtenir_ruta_icones(self):
-        localitzacio_icones = os.path.normpath(os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones"))
+        localitzacio_icones = os.path.normpath(
+            os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones"))
         return localitzacio_icones
+
+    def obtenir_ruta_config(self):
+        localitzacio_config = os.path.normpath(
+            os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "config.ini"))
+        return localitzacio_config
 
 
 class ModelDao:
@@ -42,9 +48,10 @@ class ModelDao:
         self.c = self.conn.cursor()
 
 
+
 class Liquidador(ModelDao):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, model: int):
+        super().__init__(model)
 
     def eliminar_basededades(self):
         os.remove(self.ruta_bbdd)
@@ -53,12 +60,13 @@ class Liquidador(ModelDao):
 class Iniciador(ModelDao):
     """Comprova si existeixen les taules alumne, registres i dates"""
 
-    def __init__(self, *modebbdd: int):
+    def __init__(self, modebbdd: int):
         super().__init__(modebbdd)
         self.presencia_taula_alumne = self.comprova_existencia_taules("alumnes")
         self.presencia_taula_registres = self.comprova_existencia_taules("registres")
         self.presencia_taula_dates = self.comprova_existencia_taules("dates")
         self.presencia_taula_categories = self.comprova_existencia_taules("categories")
+        self.valors_categories = self.obtenir_valors_categories()
 
     def comprova_existencia_taules(self, taula):
         self.taula = taula
@@ -66,24 +74,27 @@ class Iniciador(ModelDao):
             resultat = self.c.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name={self.taula}")
             return resultat
         except sqlite3.OperationalError:
-            raise FileNotFoundError("Error: no s'ha pogut comprovar la existència de la taula")
+            return False
 
     def crea_taules(self):
         """Crea les taules necessaries per a la base de dades"""
         try:
-            ordre_general = """begin;CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            nom_alumne BLOB); CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            categoria BLOB); CREATE IF NOT EXISTS TABLE "registres" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT 
-            UNIQUE, "data" INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT 
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.c = self.conn.cursor()
+            ordre_general = """
+            CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB);
+            CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB);
+            CREATE TABLE IF NOT EXISTS "registres" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "data"
+            INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT 
             NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
-            "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS dates (id INTEGER 
-            PRIMARY KEY AUTOINCREMENT, data TEXT);commit """
-            self.conn.executescript(ordre_general)
+            "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE );
+            CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT);"""
+            self.c.executescript(ordre_general)
         except sqlite3.OperationalError:
             return False
         try:
             insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
-            motius = ["Informació acadèmica", "Incidències", "Famílies (reunions)", "Escolta'm", "Observacions"]
+            motius = self.valors_categories
             for motiu in motius:
                 self.c.execute(insercio_categories, (motiu,))
                 self.conn.commit()
@@ -92,6 +103,12 @@ class Iniciador(ModelDao):
             return False
         finally:
             self.conn.close()
+
+    def obtenir_valors_categories(self):
+        config = configparser.ConfigParser()
+        config.read(AjudantDirectoris(1).obtenir_ruta_config())
+        valors = config.get('Categories', 'Defecte').split(', ')
+        return valors
 
 
 class AlumnesBbdd(ModelDao):
@@ -136,8 +153,7 @@ class AlumnesBbdd(ModelDao):
                 persona = Alumne_comm(i[0], i[1])
                 llista_alumnes.append(persona)
             self.cursor.close()
-        except sqlite3.OperationalError as e:
-            print(e)
+        except sqlite3.OperationalError:
             return False
         if len(llista_alumnes) > 0:
             return llista_alumnes
@@ -499,7 +515,7 @@ class CategoriesBbdd(ModelDao):
 
 
 class DatesBbdd(ModelDao):
-    def __init__(self,modebbdd, taula="dates"):
+    def __init__(self, modebbdd, taula="dates"):
         super().__init__(modebbdd)
         self.taula = taula
         self.ordre_consultar = None
