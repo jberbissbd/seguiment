@@ -15,7 +15,7 @@ from dateutil import parser
 from src.agents.agents_bbdd import AjudantDirectoris
 from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor\
     , Comprovador
-from src.agents.formats import Registres_gui_nou, Registres_gui_comm
+from src.agents.formats import Registres_gui_nou, Registresguicomm
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
 
 
@@ -497,7 +497,7 @@ class MainWindow(QMainWindow):
     def transformar_gui_a_bbdd(self, dades: list):
         """Funcio per a transformar les dades de la GUI a la BBDD."""
         if not isinstance(dades, list):
-            raise TypeError("La dada ha de ser del tipus Registres_gui_comm.")
+            raise TypeError("La dada ha de ser del tipus Registresguicomm.")
         else:
             alumne = None
             categoria_enviar = None
@@ -513,7 +513,7 @@ class MainWindow(QMainWindow):
             data = objecte_data.strftime("%Y-%m-%d")
             descripcio = dades[4]
             # Guardem la dada:
-            resultat = Registres_gui_comm(id_registre, alumne, categoria_enviar, data, descripcio)
+            resultat = Registresguicomm(id_registre, alumne, categoria_enviar, data, descripcio)
             return resultat
 
     def widget_informes(self):

@@ -3,8 +3,8 @@ import sqlite3
 from os.path import dirname, abspath
 import configparser
 
-from src.agents.formats import Registres_bbdd_comm, Registres_bbdd_nou, Categoria_comm, Alumne_comm,\
-    Data_gui_comm, Datanova, Alumne_nou
+from src.agents.formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm,\
+    DataGuiComm, DataNova, AlumneNou
 
 error_llista = "Error: el missatge ha de ser una llista."
 error_format = "Error: el missatge no té el format correcte."
@@ -93,7 +93,7 @@ class Iniciador(ModelDao):
             CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB);
             CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB);
             CREATE TABLE IF NOT EXISTS "registres" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "data"
-            INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT 
+            INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT
             NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
             "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE );
             CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT);"""
@@ -198,7 +198,7 @@ class AlumnesBbdd(ModelDao):
     def registrar_alumne(self, missatge_registrar: list):
         if isinstance(missatge_registrar, list):
             for element in missatge_registrar:
-                if isinstance(element, Alumne_nou):
+                if isinstance(element, AlumneNou):
                     nom_alumne = element.nom
                     self.cursor = self.conn.cursor()
                     try:
@@ -210,7 +210,7 @@ class AlumnesBbdd(ModelDao):
                     except sqlite3.OperationalError:
                         return False
                 else:
-                    raise TypeError("El format de cada element de l'entrada ha de ser Alumne_nou")
+                    raise TypeError("El format de cada element de l'entrada ha de ser AlumneNou")
             return True
         else:
             raise TypeError("El missatge d'entrada ha de ser una llista")
@@ -300,7 +300,7 @@ class RegistresBbdd(ModelDao):
             self.cursor.close()
             missatge = []
             for registre in consulta:
-                missatge.append(Registres_bbdd_comm(registre[0], registre[1], registre[2], registre[3], registre[4]))
+                missatge.append(RegistresBbddComm(registre[0], registre[1], registre[2], registre[3], registre[4]))
             return missatge
         except sqlite3.OperationalError:
             return False
@@ -354,7 +354,7 @@ class RegistresBbdd(ModelDao):
             raise TypeError(error_llista)
         else:
             for element in missatge_actualitzar:
-                if not isinstance(element, Registres_bbdd_comm):
+                if not isinstance(element, RegistresBbddComm):
                     raise TypeError(error_format)
                 else:
                     self.cursor = self.conn.cursor()
@@ -375,7 +375,7 @@ class RegistresBbdd(ModelDao):
             raise TypeError(error_llista)
         else:
             for element in missatge_eliminar:
-                if not isinstance(element, Registres_bbdd_comm):
+                if not isinstance(element, RegistresBbddComm):
                     raise TypeError(error_format)
                 else:
                     self.cursor = self.conn.cursor()
@@ -438,7 +438,7 @@ class CategoriesBbdd(ModelDao):
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.cursor.close()
             for element in consulta:
-                missatge.append(Categoria_comm(element[0], element[1]))
+                missatge.append(CategoriaComm(element[0], element[1]))
             return missatge
         except sqlite3.OperationalError:
             return False
@@ -483,15 +483,15 @@ class CategoriesBbdd(ModelDao):
 
     def actualitzar_categoria(self, missatge: list):
         """Actualitza una categoria
-        :param missatge: Llista amb instancies de Categoria_comm.
-        :arg missatge formada per instancies de Categoria_comm.
+        :param missatge: Llista amb instancies de CategoriaComm.
+        :arg missatge formada per instancies de CategoriaComm.
         :returns Fals si no es pot realitzar l'operacio.
         :raises TypeError si els formats d'enttrada no son correctes.
         """
         self.cursor = self.conn.cursor()
         if isinstance(missatge, list):
             for item in missatge:
-                if isinstance(item, Categoria_comm):
+                if isinstance(item, CategoriaComm):
                     try:
                         num_referencia = item.id
                         nom_categoria = item.nom
@@ -503,7 +503,7 @@ class CategoriesBbdd(ModelDao):
                     except sqlite3.OperationalError:
                         return False
                 else:
-                    raise TypeError("Les dades han de seguir el format Categoria_comm")
+                    raise TypeError("Les dades han de seguir el format CategoriaComm")
             return True
 
         else:
@@ -539,7 +539,7 @@ class DatesBbdd(ModelDao):
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.cursor.close()
             if consulta is not None:
-                missatge_lectura_dates = [Data_gui_comm(element[0], element[1]) for element in consulta]
+                missatge_lectura_dates = [DataGuiComm(element[0], element[1]) for element in consulta]
                 return missatge_lectura_dates
             else:
                 return False
@@ -551,7 +551,7 @@ class DatesBbdd(ModelDao):
         self.cursor = self.conn.cursor()
         if isinstance(llista_dates, list):
             for item in llista_dates:
-                if isinstance(item, Datanova):
+                if isinstance(item, DataNova):
                     try:
                         ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
                         self.cursor.execute(ordre_registrar)
@@ -598,7 +598,7 @@ class DatesBbdd(ModelDao):
         """Actualitza una data"""
         if isinstance(missatge_actualizacio, list):
             for element in missatge_actualizacio:
-                if isinstance(element, Data_gui_comm):
+                if isinstance(element, DataGuiComm):
                     self.cursor = self.conn.cursor()
                     try:
                         data = element.dia
@@ -611,7 +611,7 @@ class DatesBbdd(ModelDao):
                     except sqlite3.OperationalError:
                         return False
                 else:
-                    raise TypeError("Els elements per actualitzar han de ser de la categoria Data_gui_comm")
+                    raise TypeError("Els elements per actualitzar han de ser de la categoria DataGuiComm")
             return True
         else:
             raise TypeError("El paramtere d'entrada ha de ser una llista")

@@ -2,7 +2,7 @@ import sys
 import unittest
 from faker import Faker
 from src.agents.agents_gui import Calendaritzador, CapEstudis, Comptable, Classificador
-from src.agents.formats import Registres_gui_comm, Alumne_comm, Categoria_comm, Data_gui_comm
+from src.agents.formats import Registresguicomm, Alumne_comm, CategoriaComm, DataGuiComm
 
 sys.path.append('/home/jordi/Documents/Projectes/seguiment/src/agents')
 
@@ -50,7 +50,7 @@ class TestFormatsLectura(unittest.TestCase):
     def test_registres(self):
         lectura_registres = registres.obtenir_registres()
         for element in lectura_registres:
-            assert isinstance(element, Registres_gui_comm) is True, f"Classe Comptable{ERROR_FORMAT}"
+            assert isinstance(element, Registresguicomm) is True, f"Classe Comptable{ERROR_FORMAT}"
 
     def test_alumnes(self):
         lectura_registres = alumnes.alumnat
@@ -75,8 +75,8 @@ class TestTipusVariables(unittest.TestCase):
             categoria_registre = element.categoria
             assert isinstance(numero, int), "ID del registre ha de ser un numero"
             assert isinstance(alumne_registre, Alumne_comm), "Alumne del registre ha de ser objecte Alumne_comm"
-            assert isinstance(categoria_registre, Categoria_comm), "Categoria del registre ha de ser objecte " \
-                                                                   "Categoria_comm "
+            assert isinstance(categoria_registre, CategoriaComm), "Categoria del registre ha de ser objecte " \
+                                                                   "CategoriaComm "
             assert isinstance(data, str), "Data del registre ha de ser text"
             assert isinstance(text, str), "Descripcio del registre ha de ser text"
 
