@@ -1,5 +1,7 @@
 import dataclasses
+
 import sys
+
 import unittest
 from src.agents.formats import Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Alumne_comm, Categoria_comm, \
     Data_gui_comm, Datanova

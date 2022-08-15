@@ -10,10 +10,10 @@ from PySide6.QtGui import QIcon, QFont, QAction
 from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QGridLayout, QMainWindow, QPushButton,
                                QStackedWidget, QButtonGroup,
                                QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
-                               QStatusBar, QStyleFactory, QStyledItemDelegate)
+                               QStatusBar, QStyleFactory, QStyledItemDelegate, QMessageBox)
 from dateutil import parser
 from src.agents.agents_bbdd import AjudantDirectoris
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor, Comprovador
 from src.agents.formats import Registres_gui_nou, Registres_gui_comm
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
 
@@ -26,8 +26,9 @@ class DelegatDates(QStyledItemDelegate):
 
     def displayText(self, value, locale) -> str:
         """Retorna el text que es mostra a la columna de dates"""
-        value = value.toPython()
-        return value.strftime("%d/%m/%Y")
+        if value != str(""):
+            value = value.toPython()
+            return value.strftime("%d/%m/%Y")
 
 
 class SortFilterProxyModel(QSortFilterProxyModel):
@@ -109,8 +110,10 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        # Inicialització de la base de dades (es crea si no existeix)
+        Comprovador(1)
+        # Introduim la resta de parametres
         self.DATES = None
-        self.RUTA_ICONS = f"{AjudantDirectoris(1).ruta_icones}"
         self.destinacio_informes = None
         self.EDITAR_ALUMNES = None
         self.BARRA_NOTIFICACIONS = None
@@ -223,6 +226,16 @@ class MainWindow(QMainWindow):
         self.BOTO_DATES.triggered.connect(self.mostrar_dates)
         self.BOTO_INFORMES.triggered.connect(self.mostrar_informes)
         self.BOTO_SORTIR.triggered.connect(sortir)
+        self.BOTO_PURGAR.triggered.connect(self.eliminar_dades)
+
+    def eliminar_dades(self):
+        """Elimina les dades de la base de dades"""
+        if QMessageBox.question(self, "Eliminar dades", "Estàs segur de que vols eliminar les dades?",
+                                QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes:
+
+            Destructor(1).destruir()
+            sortir()
+
 
     def widget_creacio(self):
         # Creem el widget de creacio de nous registres:
@@ -283,7 +296,8 @@ class MainWindow(QMainWindow):
         self.VISUALITZA_SELECCIO_CATEGORIES = QComboBox()
         self.VISUALITZA_SELECCIO_ALUMNES.addItem("* Filtrar per alumne *")
         self.VISUALITZA_SELECCIO_CATEGORIES.addItem("* Filtrar per categoria *")
-        self.VISUALITZA_SELECCIO_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
+        if self.obtenir_llistat_categories_registrades():
+            self.VISUALITZA_SELECCIO_CATEGORIES.addItems(self.obtenir_llistat_categories_registrades())
         if self.obtenir_llistat_alumnes_registrats():
             self.VISUALITZA_SELECCIO_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
         self.VISUALITZA_SELECCIO_ALUMNES.setMaximumWidth(300)
@@ -305,7 +319,8 @@ class MainWindow(QMainWindow):
         self.TAULA_MODEL_FILTRE.setSourceModel(self.TAULA_MODEL)
         self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
         # Establim el delegat per a la columna de dates:
-        self.TAULA.setItemDelegateForColumn(3, DelegatDates())
+        if self.obtenir_llistat_registres() not in [None, False]:
+            self.TAULA.setItemDelegateForColumn(3, DelegatDates())
         # Possibilitat d'establir un ComboBox:
         # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
         # Li indiquem que ha de filtrar de la columna 1:
@@ -647,8 +662,11 @@ class MainWindow(QMainWindow):
 
     def obtenir_categories(self):
         categories_entrada = self.categoritzador.categories
-        llistat_categories = [categoria.nom for categoria in categories_entrada]
-        return llistat_categories
+        if categories_entrada:
+            llistat_categories = [categoria.nom for categoria in categories_entrada]
+            return llistat_categories
+        else:
+            return []
 
     def obtenir_llistat_registres(self):
         self.acces_registres.refrescar_registres()
@@ -658,7 +676,7 @@ class MainWindow(QMainWindow):
                                 in self.acces_registres.registres]
             return llista_registres
         else:
-            return False
+            return None
 
 
 def sortir():

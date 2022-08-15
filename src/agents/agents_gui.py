@@ -28,25 +28,34 @@ class Comprovador:
     def __init__(self, modegui):
         super(Comprovador, self).__init__()
         resultat_iniciador = Iniciador(modegui)
-        self.presencia_alumnes = resultat_iniciador.presencia_taula_alumne
-        self.presencia_registres = resultat_iniciador.presencia_taula_registres
-        self.presencia_dates = resultat_iniciador.presencia_taula_dates
+        estat_alumnes = resultat_iniciador.presencia_taula_alumne
+        estat_registres = resultat_iniciador.presencia_taula_registres
+        estat_categories = resultat_iniciador.presencia_taula_categories
+        estat_dates = resultat_iniciador.presencia_taula_dates
+        estat_global = estat_alumnes and estat_registres and estat_categories and estat_dates
+        if estat_global is False:
+            Iniciador(1).crea_taules()
 
 
 class Destructor:
+    """Classe per a eliminar totes les taules de la base de dades i la base de dades en si.
+    :param modegui: int 1 per a l'execucio normal, 0 per a l'execucio en mode test
+    """
+
     def __init__(self, modegui):
-        super(Destructor, self).__init__()
+        super(Destructor).__init__()
         self.alumnes = AlumnesBbdd(modegui)
         self.registres = RegistresBbdd(modegui)
         self.categories = CategoriesBbdd(modegui)
         self.dates = DatesBbdd(modegui)
+        self.liquidador = Liquidador(modegui)
 
     def destruir(self):
+        self.registres.destruir_taula()
         self.alumnes.destruir_taula()
         self.categories.destruir_taula()
         self.dates.destruir_taula()
-        self.registres.destruir_taula()
-        Liquidador.eliminar_basededades()
+        self.liquidador.eliminar_basededades()
 
 
 class Comptable:
