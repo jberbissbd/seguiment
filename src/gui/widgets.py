@@ -22,9 +22,9 @@ from PySide6.QtWidgets import (
     QFileDialog,
 )
 
-from src.agents.agents_bbdd import AjudantDirectoris
-from src.agents.agents_gui import Calendaritzador, CapEstudis
-from src.agents.formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova
+from agents.agents_bbdd import AjudantDirectoris
+from agents.agents_gui import Calendaritzador, CapEstudis
+from agents.formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova
 
 
 class DialegSeleccioCarpeta(QFileDialog):

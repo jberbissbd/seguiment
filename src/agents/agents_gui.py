@@ -5,7 +5,7 @@ import openpyxl
 import pandas
 from dateutil import parser
 from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
-from src.agents.agents_bbdd import (
+from agents.agents_bbdd import (
     AlumnesBbdd,
     RegistresBbdd,
     CategoriesBbdd,
@@ -13,7 +13,7 @@ from src.agents.agents_bbdd import (
     Iniciador,
     Liquidador,
 )
-from src.agents.formats import (
+from agents.formats import (
     DataGuiComm,
     Registresguicomm,
     Alumne_comm,

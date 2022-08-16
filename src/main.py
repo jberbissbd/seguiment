@@ -1,6 +1,6 @@
-import datetime
-import os
 import sys
+import os
+import datetime
 from typing import Union
 import dateutil.parser
 from PySide6 import QtCore
@@ -28,11 +28,13 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from dateutil import parser
-from src.agents.agents_bbdd import AjudantDirectoris
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador
-from src.agents.agents_gui import CapEstudis, CreadorInformes, Destructor, Comprovador
-from src.agents.formats import Registres_gui_nou, Registresguicomm
-from src.gui.widgets import (
+sys.path.append('agents')
+sys.path.append('gui')
+from agents.agents_bbdd import AjudantDirectoris
+from agents.agents_gui import Comptable, Classificador, Calendaritzador
+from agents.agents_gui import CapEstudis, CreadorInformes, Destructor, Comprovador
+from agents.formats import Registres_gui_nou, Registresguicomm
+from gui.widgets import (
     EditorDates,
     CreadorRegistres,
     EditorAlumnes,
@@ -113,9 +115,9 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
     def setData(self, index, value, role):
         """Funcio per a guardar els canvis realitzats al model."""
         if (
-            role == Qt.EditRole | Qt.UserRole | Qt.EditRole
-            and index.column() != 2
-            or index.column() != 1
+                role == Qt.EditRole | Qt.UserRole | Qt.EditRole
+                and index.column() != 2
+                or index.column() != 1
         ):
             self._data[index.row()][index.column()] = value
             return True
@@ -296,14 +298,14 @@ class MainWindow(QMainWindow):
     def eliminar_dades(self):
         """Elimina les dades de la base de dades"""
         if (
-            QMessageBox.question(
-                self,
-                "Eliminar dades",
-                "Estàs segur de que vols eliminar les dades?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
-            )
-            == QMessageBox.Yes
+                QMessageBox.question(
+                    self,
+                    "Eliminar dades",
+                    "Estàs segur de que vols eliminar les dades?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No,
+                )
+                == QMessageBox.Yes
         ):
             Destructor(1).destruir()
             sortir()

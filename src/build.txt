@@ -1,0 +1,18 @@
+73 INFO: PyInstaller: 5.3
+73 INFO: Python: 3.10.4
+74 INFO: Platform: Linux-5.15.0-41-generic-x86_64-with-glibc2.35
+74 INFO: wrote /home/jordi/Documents/Projectes/seguiment/src/main.spec
+74 DEBUG: Testing for UPX ...
+74 INFO: UPX is not available.
+75 DEBUG: script: /home/jordi/Documents/Projectes/seguiment/src/main.py
+75 INFO: Extending PYTHONPATH with paths
+['/home/jordi/Documents/Projectes/seguiment/src']
+275 INFO: checking Analysis
+279 INFO: checking PYZ
+280 INFO: checking PKG
+280 INFO: Bootloader /home/jordi/Documents/Projectes/seguiment/venv/lib/python3.10/site-packages/PyInstaller/bootloader/Linux-64bit-intel/run
+280 INFO: checking EXE
+280 INFO: checking COLLECT
+WARNING: The output directory "/home/jordi/Documents/Projectes/seguiment/src/dist/main" and ALL ITS CONTENTS will be REMOVED! Continue? (y/N)17702 INFO: Removing dir /home/jordi/Documents/Projectes/seguiment/src/dist/main
+17743 INFO: Building COLLECT COLLECT-00.toc
+18038 INFO: Building COLLECT COLLECT-00.toc completed successfully.
