@@ -5,13 +5,29 @@ import openpyxl
 import pandas
 from dateutil import parser
 from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
-from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
-from src.agents.formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, RegistresBbddComm, AlumneNou, DataNova
+from src.agents.agents_bbdd import (
+    AlumnesBbdd,
+    RegistresBbdd,
+    CategoriesBbdd,
+    DatesBbdd,
+    Iniciador,
+    Liquidador,
+)
+from src.agents.formats import (
+    DataGuiComm,
+    Registresguicomm,
+    Alumne_comm,
+    Registres_gui_nou,
+    Registres_bbdd_nou,
+    RegistresBbddComm,
+    AlumneNou,
+    DataNova,
+)
 
 
 class Comprovador:
     """Comprva la presencia de taules a la base de dades"""
+
     def __init__(self, modegui):
         super(Comprovador, self).__init__()
         resultat_iniciador = Iniciador(modegui)
@@ -19,7 +35,9 @@ class Comprovador:
         estat_registres = resultat_iniciador.presencia_taula_registres
         estat_categories = resultat_iniciador.presencia_taula_categories
         estat_dates = resultat_iniciador.presencia_taula_dates
-        estat_global = estat_alumnes and estat_registres and estat_categories and estat_dates
+        estat_global = (
+            estat_alumnes and estat_registres and estat_categories and estat_dates
+        )
         if estat_global is False:
             Iniciador(1).crea_taules()
 
@@ -48,6 +66,7 @@ class Destructor:
 
 class Comptable:
     """S'ocupa de gestionar amb la gui les entrades a la taula de registres"""
+
     def __init__(self, modegui):
         """Ordenar les taules de la base de dades perquè siguin més fàcils de llegir:"""
         self.info_categories = None
@@ -64,8 +83,7 @@ class Comptable:
         self.categories = self.obtenir_categories()
 
     def obtenir_registres(self):
-        """Retorna una llista de registres convenients per a la presentació: list:
-        """
+        """Retorna una llista de registres convenients per a la presentació: list:"""
         # Condicio de seguretat per si no hi ha registres:
         if self.info_registres and self.info_alumnes and self.info_categories:
             registres_entrada = self.info_registres
@@ -74,13 +92,22 @@ class Comptable:
             for registre in registres_entrada:
                 registre_proces = [registre.id]
                 # Obtenim el nom de l'alumne:
-                registre_proces.append(self.obtenir_registres_alumne(id_alumne=registre.alumne))
+                registre_proces.append(
+                    self.obtenir_registres_alumne(id_alumne=registre.alumne)
+                )
                 # Substituim l'id de la categoria de la llista de registres pel seu nom:
-                registre_proces.append(self.obtenir_categoria_registres(id_categoria=registre.categoria))
+                registre_proces.append(
+                    self.obtenir_categoria_registres(id_categoria=registre.categoria)
+                )
                 registre_proces.append(registre.data)
                 registre_proces.append(registre.descripcio)
-                registre_tractat = Registresguicomm(registre_proces[0], registre_proces[1], registre_proces[2],
-                                                    registre_proces[3], registre_proces[4])
+                registre_tractat = Registresguicomm(
+                    registre_proces[0],
+                    registre_proces[1],
+                    registre_proces[2],
+                    registre_proces[3],
+                    registre_proces[4],
+                )
                 missatge_registres.append(registre_tractat)
 
             return missatge_registres
@@ -93,6 +120,7 @@ class Comptable:
             if id_alumne == alumne.id:
                 resposta = alumne
         return resposta
+
     def obtenir_categoria_registres(self, id_categoria):
         """Retorna la Categoriacomm corresponent a l'id alumne proporcionat"""
         for categoria in self.info_categories:
@@ -126,8 +154,13 @@ class Comptable:
         for element in registre_input:
             if not isinstance(element, Registresguicomm):
                 raise TypeError("Registre no segueix el format establert")
-            registre_enviar = RegistresBbddComm(element.id, element.alumne.id, element.categoria.id, element.data,
-                                                element.descripcio)
+            registre_enviar = RegistresBbddComm(
+                element.id,
+                element.alumne.id,
+                element.categoria.id,
+                element.data,
+                element.descripcio,
+            )
             missatge_actualitzar_registre.append(registre_enviar)
         self.registrador.actualitzar_registre(missatge_actualitzar_registre)
 
@@ -141,8 +174,13 @@ class Comptable:
             if not isinstance(element, Registresguicomm):
                 raise TypeError("Registre no segueix el format establert")
             element_processat = list
-            element_processat.append(element.id, element.alumne.id, element.categoria.id, element.data,
-                                     element.descripcio)
+            element_processat.append(
+                element.id,
+                element.alumne.id,
+                element.categoria.id,
+                element.data,
+                element.descripcio,
+            )
             registre_enviar = RegistresBbddComm(dada for dada in element_processat)
             missatge_eliminar_registre.append(registre_enviar)
         self.registrador.eliminar_registre(missatge_eliminar_registre)
@@ -159,8 +197,12 @@ class Comptable:
                 return False
 
             # Convertim la data a un format que pugui ser llegit per la base de dades:
-            registrenou = Registres_bbdd_nou(info.alumne.id, info.categoria.id, info.data, info.descripcio)
-            if not isinstance(registrenou.alumne, int) or not isinstance(registrenou.categoria, int):
+            registrenou = Registres_bbdd_nou(
+                info.alumne.id, info.categoria.id, info.data, info.descripcio
+            )
+            if not isinstance(registrenou.alumne, int) or not isinstance(
+                registrenou.categoria, int
+            ):
                 return False
 
             missatge_registre_bbddd.append(registrenou)
@@ -179,6 +221,7 @@ class Comptable:
 
 class Calendaritzador:
     """Classe que gestiona les dates"""
+
     def __init__(self, modegui):
         self.datador = DatesBbdd(modegui)
         self.info_dates = self.datador.lectura_dates()
@@ -187,7 +230,7 @@ class Calendaritzador:
 
     def conversio_dates(self):
         """Obte els registres de dates, els transforma a llista i converteix dates a format dia/mes/any, basades en
-        classe Data """
+        classe Data"""
         if self.datador.lectura_dates():
             self.info_dates = self.datador.lectura_dates()
             for data in self.info_dates:
@@ -206,7 +249,9 @@ class Calendaritzador:
         if isinstance(aniversari, list):
             for element in aniversari:
                 if isinstance(element, DataNova):
-                    element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
+                    element.dia = dateutil.parser.parse(element.dia).strftime(
+                        "%Y-%m-%d"
+                    )
                 else:
                     return False
             self.datador.crear_data(aniversari)
@@ -220,7 +265,9 @@ class Calendaritzador:
         if isinstance(aniversari, list):
             for element in aniversari:
                 if isinstance(element, DataGuiComm):
-                    element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
+                    element.dia = dateutil.parser.parse(element.dia).strftime(
+                        "%Y-%m-%d"
+                    )
                 else:
                     return False
             self.datador.actualitzar_data(aniversari)
@@ -230,6 +277,7 @@ class Calendaritzador:
 
 class CapEstudis:
     """S'ocupa de les gestions de la taula alumnes amb la interficie grafica"""
+
     def __init__(self, modegui: int):
         """
 
@@ -309,6 +357,7 @@ class CapEstudis:
 
 class Classificador:
     """S'ocupa de les categories a la base de dades."""
+
     def __init__(self, modegui):
         self.categoritzador = CategoriesBbdd(modegui)
         self.info_categories = self.categoritzador.lectura_categories()
@@ -325,7 +374,10 @@ class Classificador:
             llista_categories_amb_registre = []
             for element in classificacio:
                 for item in info_registres:
-                    if element.id == item.categoria and element not in llista_categories_amb_registre:
+                    if (
+                        element.id == item.categoria
+                        and element not in llista_categories_amb_registre
+                    ):
                         llista_categories_amb_registre.append(element)
             return llista_categories_amb_registre
         return False
@@ -347,24 +399,28 @@ def format_categories(ruta_arxiu: str):
     noms = NamedStyle(name="noms")
     noms.font = Font(size=11, name="Calibri")
     noms.alignment = Alignment(horizontal="left", vertical="justify", wrap_text=False)
-    vora_simple = Side(border_style='thin')
-    noms.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
+    vora_simple = Side(border_style="thin")
+    noms.border = Border(
+        top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple
+    )
     noms.width = 20
     titols = NamedStyle(name="titols")
     titols.font = Font(size=11, name="Calibri", bold=True)
     titols.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
-    titols.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
-    fulla.column_dimensions['A'].width = 20
+    titols.border = Border(
+        top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple
+    )
+    fulla.column_dimensions["A"].width = 20
 
-    for cell in fulla['B']:
+    for cell in fulla["B"]:
         cell.style = noms
-    for cell in fulla['A']:
+    for cell in fulla["A"]:
         cell.style = titols
-    fulla['A1'].value = "Mesos"
-    fulla['A1'].style = titols
-    fulla['B1'].value = "Alumnes"
-    fulla['B1'].style = titols
-    fulla.column_dimensions['B'].width = 20
+    fulla["A1"].value = "Mesos"
+    fulla["A1"].style = titols
+    fulla["B1"].value = "Alumnes"
+    fulla["B1"].style = titols
+    fulla.column_dimensions["B"].width = 20
     full_calcul.save(ruta_arxiu)
 
 
@@ -373,47 +429,67 @@ def format_alumnes(ruta_arxiu: str):
     full_calcul = openpyxl.load_workbook(ruta_arxiu)
     color_taronja = "F6B26B"
     fulla = full_calcul.active
-    llista_columnes = ['B', 'C', 'D', 'E', 'F']
+    llista_columnes = ["B", "C", "D", "E", "F"]
     # Definim els estils:
     titols_trimestres = NamedStyle(name="titols_trimestres")
     titols_trimestres.font = Font(size=12, name="Arial", bold=True)
-    titols_trimestres.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
-    vora_simple = Side(border_style='thin')
-    titols_trimestres.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
+    titols_trimestres.alignment = Alignment(
+        horizontal="left", vertical="top", wrap_text=False
+    )
+    vora_simple = Side(border_style="thin")
+    titols_trimestres.border = Border(
+        top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple
+    )
     titols = NamedStyle(name="titols")
     titols.font = Font(size=12, name="Arial", bold=True)
     titols.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
-    vora_simple = Side(border_style='thin')
-    titols.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
+    vora_simple = Side(border_style="thin")
+    titols.border = Border(
+        top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple
+    )
 
-    titols.fill = PatternFill(fill_type='solid', start_color=color_taronja, end_color=color_taronja)
+    titols.fill = PatternFill(
+        fill_type="solid", start_color=color_taronja, end_color=color_taronja
+    )
     continguts = NamedStyle(name="títols")
     continguts.font = Font(size=10, name="Arial", bold=False)
-    continguts.alignment = Alignment(horizontal="justify", vertical="top", wrap_text=False)
-    vora_simple = Side(border_style='thin')
-    continguts.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
-    for cell in fulla['A']:
+    continguts.alignment = Alignment(
+        horizontal="justify", vertical="top", wrap_text=False
+    )
+    vora_simple = Side(border_style="thin")
+    continguts.border = Border(
+        top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple
+    )
+    for cell in fulla["A"]:
         cell.style = titols_trimestres
-    for cell in fulla['1']:
+    for cell in fulla["1"]:
         cell.style = titols
-    fulla.column_dimensions['A'].width = 13
+    fulla.column_dimensions["A"].width = 13
     for column in llista_columnes:
         fulla.column_dimensions[column].width = 30
 
     llista_valors = []
     n_index = 0
     # Fusionem les cel·les si tenen el mateix valor:
-    for cell in fulla['A']:
+    for cell in fulla["A"]:
         referencia = [cell.value, cell.row]
         llista_valors.append(referencia)
         if n_index != 0 and cell.value == llista_valors[n_index - 1][0]:
             cell.value = ""
-            fulla.merge_cells(start_row=llista_valors[n_index - 1][1], start_column=cell.column, end_row=cell.row,
-                              end_column=cell.column)
-            fulla.cell(row=llista_valors[n_index - 1][1], column=cell.column).style = titols_trimestres
+            fulla.merge_cells(
+                start_row=llista_valors[n_index - 1][1],
+                start_column=cell.column,
+                end_row=cell.row,
+                end_column=cell.column,
+            )
+            fulla.cell(
+                row=llista_valors[n_index - 1][1], column=cell.column
+            ).style = titols_trimestres
         n_index += 1
     # Donem format a la resta de les cel·les:
-    for row in fulla.iter_rows(min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column):
+    for row in fulla.iter_rows(
+        min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column
+    ):
         for cell in row:
             cell.style = continguts
     full_calcul.save(ruta_arxiu)
@@ -428,17 +504,42 @@ class CreadorInformes:
     :arguments:destinacio: string amb la destinacio de l'informe
     """
 
-    def __init__(self, alumnes: list, categories: list, registres: list, carpeta_destinacio: str):
+    def __init__(
+        self, alumnes: list, categories: list, registres: list, carpeta_destinacio: str
+    ):
         super().__init__()
         self.dates = None
         self.alumnes = alumnes
         self.categories = categories
         self.registres = registres
         self.desti = carpeta_destinacio
-        self.mesos_escolars = ["Setembre", "Octubre", "Novembre", "Desembre", "Gener", "Febrer", "Març", "Abril",
-                               "Maig", "Juny", "Juliol"]
-        self.mesos = ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny', 'Juliol', 'Agost', 'Setembre', 'Octubre',
-                      'Novembre', 'Desembre']
+        self.mesos_escolars = [
+            "Setembre",
+            "Octubre",
+            "Novembre",
+            "Desembre",
+            "Gener",
+            "Febrer",
+            "Març",
+            "Abril",
+            "Maig",
+            "Juny",
+            "Juliol",
+        ]
+        self.mesos = [
+            "Gener",
+            "Febrer",
+            "Març",
+            "Abril",
+            "Maig",
+            "Juny",
+            "Juliol",
+            "Agost",
+            "Setembre",
+            "Octubre",
+            "Novembre",
+            "Desembre",
+        ]
         self.nombre_mesos = list(range(1, 13))
 
     def mes_a_string(self, mes: int):
@@ -466,7 +567,9 @@ class CreadorInformes:
         if self.categories and self.registres and self.alumnes:
             # Creem una llista amb les categories i els registres associats:
             llista_categories_informes = []
-            llista_categories_als_registres = [registre.categoria.id for registre in self.registres]
+            llista_categories_als_registres = [
+                registre.categoria.id for registre in self.registres
+            ]
             categories_registres = set(llista_categories_als_registres)
             for categoria in self.categories:
                 if categoria.id in categories_registres:
@@ -477,18 +580,22 @@ class CreadorInformes:
                             mes = dateutil.parser.parse(registre.data).month
                             mes = self.mes_a_string(mes)
                             alumne = registre.alumne.nom
-                            diccionari_provisional['mesos'].append(mes)
-                            diccionari_provisional['alumnes'].append(alumne)
+                            diccionari_provisional["mesos"].append(mes)
+                            diccionari_provisional["alumnes"].append(alumne)
                     Df = pandas.DataFrame(diccionari_provisional)
                     llista_dades.append(Df)
                     llista_categories_informes.append(llista_dades)
             for element in llista_categories_informes:
-                agrego_mesos = {'alumnes': np.unique}
+                agrego_mesos = {"alumnes": np.unique}
                 nom_categoria = element[0]
                 taula_pandas = element[1]
-                taula_pandas = taula_pandas.groupby(['mesos']).aggregate(agrego_mesos).reindex(self.mesos_escolars)
-                taula_pandas['alumnes'].astype(str)
-                taula_pandas['alumnes'] = taula_pandas['alumnes'].str.join(', ')
+                taula_pandas = (
+                    taula_pandas.groupby(["mesos"])
+                    .aggregate(agrego_mesos)
+                    .reindex(self.mesos_escolars)
+                )
+                taula_pandas["alumnes"].astype(str)
+                taula_pandas["alumnes"] = taula_pandas["alumnes"].str.join(", ")
                 ruta_exportacio = os.path.join(self.desti, f"{nom_categoria}.xlsx")
                 taula_pandas.to_excel(ruta_exportacio, index=True)
                 # Apliquem format als informes:
@@ -505,14 +612,16 @@ class CreadorInformes:
         self.dates = dates
         if self.alumnes and self.registres and self.categories:
             llista_alumnes_informes = []
-            llista_alumnes_als_registres = [registre.alumne.id for registre in self.registres]
+            llista_alumnes_als_registres = [
+                registre.alumne.id for registre in self.registres
+            ]
             noms_categories = [categoria.nom for categoria in self.categories]
             alumnes_registres = set(llista_alumnes_als_registres)
             for alumne in self.alumnes:
                 if alumne.id in alumnes_registres:
                     # Creem una llista amb les categories i els registres associats, una per alumne:
                     llista_dades = [f"{alumne.nom}"]
-                    diccionari_provisional = {'Trimestre': []}
+                    diccionari_provisional = {"Trimestre": []}
                     # Afegim les categories al diccionari provisional:
 
                     for item in noms_categories:
@@ -522,41 +631,63 @@ class CreadorInformes:
                         if registre.alumne.id == alumne.id:
                             trimestre = self.data_a_trimestre(registre.data)
                             data_python = dateutil.parser.parse(registre.data)
-                            data_format = data_python.strftime('%d/%m/%Y')
+                            data_format = data_python.strftime("%d/%m/%Y")
                             text_afegir = f"{data_format} - {registre.descripcio}"
                             # Afegim la data i la descripció al diccionari provisional si coincideix amb la categoria:
                             # Si la categoria es diferent, afegim un element buit, per poder tractar-lo amb el pandas.
-                            n_reg_trimestres = len(diccionari_provisional['Trimestre'])
-                            n_reg_categoria = len(diccionari_provisional[registre.categoria.nom])
+                            n_reg_trimestres = len(diccionari_provisional["Trimestre"])
+                            n_reg_categoria = len(
+                                diccionari_provisional[registre.categoria.nom]
+                            )
                             # Comprovacio de si el trimestre es diferent. Si no, afegim el text a afegir. Si es
                             # diferent, afegim el text i el trimestre.
                             if n_reg_trimestres == 0:
-                                diccionari_provisional['Trimestre'].append(trimestre)
+                                diccionari_provisional["Trimestre"].append(trimestre)
                             else:
-                                if diccionari_provisional['Trimestre'][n_reg_trimestres - 1] != trimestre:
+                                if (
+                                        diccionari_provisional["Trimestre"][
+                                            n_reg_trimestres - 1
+                                        ]
+                                        != trimestre
+                                ):
                                     for categoria in noms_categories:
-                                        while len(diccionari_provisional[categoria]) < n_reg_trimestres:
-                                            diccionari_provisional[categoria].append('')
-                                    diccionari_provisional['Trimestre'].append(trimestre)
+                                        while (
+                                                len(diccionari_provisional[categoria])
+                                                < n_reg_trimestres
+                                        ):
+                                            diccionari_provisional[categoria].append("")
+                                    diccionari_provisional["Trimestre"].append(
+                                        trimestre
+                                    )
                                 elif n_reg_trimestres <= n_reg_categoria:
-                                    diccionari_provisional['Trimestre'].append(trimestre)
-                            diccionari_provisional[registre.categoria.nom].append(text_afegir)
+                                    diccionari_provisional["Trimestre"].append(
+                                        trimestre
+                                    )
+                            diccionari_provisional[registre.categoria.nom].append(
+                                text_afegir
+                            )
 
                     # A continuacio ens assegurem que totes les categories tenen el mateix nombre d'elements:
                     for categoria in noms_categories:
-                        nombre_registres = len(diccionari_provisional['Trimestre'])
+                        nombre_registres = len(diccionari_provisional["Trimestre"])
                         while len(diccionari_provisional[categoria]) < nombre_registres:
-                            diccionari_provisional[categoria].append('')
+                            diccionari_provisional[categoria].append("")
                     # Afegim el resultat a la llista d'alumnes:
-                    Df = pandas.DataFrame(diccionari_provisional).fillna('')
-                    Df['Trimestre'] = Df['Trimestre'].astype("category")
+                    Df = pandas.DataFrame(diccionari_provisional).fillna("")
+                    Df["Trimestre"] = Df["Trimestre"].astype("category")
                     llista_dades.append(Df)
                     llista_alumnes_informes.append(llista_dades)
             for element in llista_alumnes_informes:
                 nom_alumne = element[0]
                 dades = element[1]
                 ruta_exportacio = os.path.join(self.desti, f"{nom_alumne}.xlsx")
-                dades.to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
+                dades.to_excel(
+                    ruta_exportacio,
+                    index=False,
+                    sheet_name="Informe",
+                    header=True,
+                    merge_cells=True,
+                )
                 # Apliquem format als informes:
                 format_alumnes(ruta_exportacio)
             return True
