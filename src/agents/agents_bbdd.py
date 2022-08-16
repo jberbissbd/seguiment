@@ -2,7 +2,7 @@ import os
 import sqlite3
 from os.path import dirname, abspath
 import configparser
-from agents.formats import (
+from src.agents.formats import (
     RegistresBbddComm,
     Registres_bbdd_nou,
     CategoriaComm,
