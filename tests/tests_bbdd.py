@@ -17,7 +17,7 @@ alumnes = AlumnesBbdd(taula="alumnes", modebbdd=2)
 categories = CategoriesBbdd(taula="categories", modebbdd=2)
 registres = RegistresBbdd(taula="registres", modebbdd=2)
 calendari = DatesBbdd(taula="dates", modebbdd=2)
-ruta_base_dades = AjudantDirectoris(2).db
+ruta_base_dades = AjudantDirectoris(2).base_dades
 
 alumnes.ruta_bbdd = ruta_base_dades
 registres.ruta_bbdd = ruta_base_dades

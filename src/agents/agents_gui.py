@@ -88,10 +88,11 @@ class Comptable:
 
     def obtenir_registres_alumne(self, id_alumne):
         """Retorna el Alumnecomm corresponent a l'id alumne proporcionat"""
+        resposta = None
         for alumne in self.info_alumnes:
             if id_alumne == alumne.id:
-                return alumne
-
+                resposta = alumne
+        return resposta
     def obtenir_categoria_registres(self, id_categoria):
         """Retorna la Categoriacomm corresponent a l'id alumne proporcionat"""
         for categoria in self.info_categories:
@@ -139,7 +140,6 @@ class Comptable:
         for element in registre_input:
             if not isinstance(element, Registresguicomm):
                 raise TypeError("Registre no segueix el format establert")
-
             element_processat = list
             element_processat.append(element.id, element.alumne.id, element.categoria.id, element.data,
                                      element.descripcio)

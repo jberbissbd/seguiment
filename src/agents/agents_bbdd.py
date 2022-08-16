@@ -209,22 +209,22 @@ class AlumnesBbdd(ModelDao):
 
     def registrar_alumne(self, missatge_registrar: list):
         """Registra tots els alumnes de la llista de missatge registrar"""
-        if isinstance(missatge_registrar, list):
-            for element in missatge_registrar:
-                if isinstance(element, AlumneNou):
-                    nom_alumne = element.nom
-                    self.cursor = self.conn.cursor()
-                    try:
-                        ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
-                        self.cursor.execute(ordre_registrar)
-                        self.conn.commit()
-                        self.cursor.close()
-
-                    except sqlite3.OperationalError:
-                        return False
+        if not isinstance(missatge_registrar, list):
+            raise TypeError("El missatge d'entrada ha de ser una llista")
+        for element in missatge_registrar:
+            if not isinstance(element, AlumneNou):
                 raise TypeError("El format de cada element de l'entrada ha de ser AlumneNou")
-            return True
-        raise TypeError("El missatge d'entrada ha de ser una llista")
+            nom_alumne = element.nom
+            self.cursor = self.conn.cursor()
+            try:
+                ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
+                self.cursor.execute(ordre_registrar)
+                self.conn.commit()
+                self.cursor.close()
+
+            except sqlite3.OperationalError:
+                return False
+        return True
 
     def eliminar_alumne(self, missatge: list):
         """Elimina un alumne de la base de dades"""
@@ -491,22 +491,22 @@ class CategoriesBbdd(ModelDao):
         :raises TypeError si els formats d'enttrada no son correctes.
         """
         self.cursor = self.conn.cursor()
-        if isinstance(missatge, list):
-            for item in missatge:
-                if isinstance(item, CategoriaComm):
-                    try:
-                        num_referencia = item.id
-                        nom_categoria = item.nom
-                        actualitzar = f"UPDATE {self.taula} SET categoria = '{nom_categoria}'" \
-                                      f"WHERE id = {num_referencia}"
-                        self.cursor.execute(actualitzar)
-                        self.conn.commit()
-                        self.cursor.close()
-                    except sqlite3.OperationalError:
-                        return False
+        if not isinstance(missatge, list):
+            raise TypeError("Les dades han de tenir format de llista")
+        for item in missatge:
+            if not isinstance(item, CategoriaComm):
                 raise TypeError("Les dades han de seguir el format CategoriaComm")
-            return True
-        raise TypeError("Les dades han de tenir format de llista")
+            try:
+                num_referencia = item.id
+                nom_categoria = item.nom
+                actualitzar = f"UPDATE {self.taula} SET categoria = '{nom_categoria}'" \
+                              f"WHERE id = {num_referencia}"
+                self.cursor.execute(actualitzar)
+                self.conn.commit()
+                self.cursor.close()
+            except sqlite3.OperationalError:
+                return False
+        return True
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
@@ -549,21 +549,21 @@ class DatesBbdd(ModelDao):
     def crear_data(self, llista_dates: list):
         """Crea una nova data"""
         self.cursor = self.conn.cursor()
-        if isinstance(llista_dates, list):
-            for item in llista_dates:
-                if isinstance(item, DataNova):
-                    try:
-                        ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
-                        self.cursor.execute(ordre_registrar)
-                        self.conn.commit()
-                        self.cursor.close()
-                    except sqlite3.OperationalError:
-                        return False
-                # Retorna fals si el registre no te el format adequat
+        if not isinstance(llista_dates, list):
+            raise TypeError("L'entrada de dates ha de ser una llista")
+        for item in llista_dates:
+            if not isinstance(item, DataNova):
+                raise TypeError("La nova data ha de la classe DataNova")
+            try:
+                ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
+                self.cursor.execute(ordre_registrar)
+                self.conn.commit()
+                self.cursor.close()
+            except sqlite3.OperationalError:
                 return False
-            return True
+                # Retorna fals si el registre no te el format adequat
+        return True
         # Retorna Fals si els elements d'entrada no son una llista.
-        return False
 
     def test_dates(self):
         """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA DE DATES PER A FER TESTS"""
@@ -594,23 +594,22 @@ class DatesBbdd(ModelDao):
 
     def actualitzar_data(self, missatge_actualizacio: list):
         """Actualitza una data"""
-        if isinstance(missatge_actualizacio, list):
-            for element in missatge_actualizacio:
-                if isinstance(element, DataGuiComm):
-                    self.cursor = self.conn.cursor()
-                    try:
-                        data = element.dia
-                        num_referencia = element.id
-                        actualitzar = f"UPDATE {self.taula} SET data = '{data}' WHERE id = {num_referencia}"
-                        self.cursor.execute(actualitzar)
-                        self.conn.commit()
-                        self.cursor.close()
-
-                    except sqlite3.OperationalError:
-                        return False
+        if not isinstance(missatge_actualizacio, list):
+            raise TypeError("El parametre d'entrada ha de ser una llista")
+        for element in missatge_actualizacio:
+            if not isinstance(element, DataGuiComm):
                 raise TypeError("Els elements per actualitzar han de ser de la categoria DataGuiComm")
-            return True
-        raise TypeError("El parametre d'entrada ha de ser una llista")
+            self.cursor = self.conn.cursor()
+            try:
+                data = element.dia
+                num_referencia = element.id
+                actualitzar = f"UPDATE {self.taula} SET data = '{data}' WHERE id = {num_referencia}"
+                self.cursor.execute(actualitzar)
+                self.conn.commit()
+                self.cursor.close()
+            except sqlite3.OperationalError:
+                return False
+        return True
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
