@@ -1,14 +1,14 @@
-import dataclasses
-
 import sys
 
-import unittest
-from src.agents.formats import Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Alumne_comm, Categoria_comm, \
-    Data_gui_comm, Datanova
-from faker import Faker
-from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, ModelDao, DatesBbdd, AjudantDirectoris
 import secrets
-from faker.providers import person
+import sys
+import unittest
+
+from faker import Faker
+
+from src.agents.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
+from src.agents.formats import Registres_bbdd_nou, RegistresBbddComm, AlumneNou, Alumne_comm, CategoriaComm, \
+    DataGuiComm, DataNova
 
 sys.path.append('./agents/formats')
 
@@ -17,7 +17,7 @@ alumnes = AlumnesBbdd(taula="alumnes", modebbdd=2)
 categories = CategoriesBbdd(taula="categories", modebbdd=2)
 registres = RegistresBbdd(taula="registres", modebbdd=2)
 calendari = DatesBbdd(taula="dates", modebbdd=2)
-ruta_base_dades = AjudantDirectoris(2).db
+ruta_base_dades = AjudantDirectoris(2).base_dades
 
 alumnes.ruta_bbdd = ruta_base_dades
 registres.ruta_bbdd = ruta_base_dades
@@ -38,19 +38,19 @@ class test_entrada_dades_bbdd(unittest.TestCase):
 
     def test_alumnes(self):
         nom_registrar = fake.name()
-        missatge_registrar = [Alumne_nou(nom_registrar)]
+        missatge_registrar = [AlumneNou(nom_registrar)]
         resultat_registre = alumnes.registrar_alumne(missatge_registrar)
         assert resultat_registre is True, "Error al introduir nous valors a la taula d'alumnes"
 
     def test_alumnes_invers_general(self):
         nom_registrar: str = fake.name()
-        missatge_registrar = Alumne_nou(nom_registrar)
+        missatge_registrar = AlumneNou(nom_registrar)
         self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Agent alumnes admet valors " \
                                                                                     "invalids "
 
     def test_alumnes_invers_elements(self):
         nom_registrar: str = fake.name()
-        missatge_registrar = Alumne_nou(nom_registrar)
+        missatge_registrar = AlumneNou(nom_registrar)
         self.assertRaises(TypeError, alumnes.registrar_alumne, missatge_registrar), "Els elements son invalids "
 
     def test_categories(self):
@@ -71,7 +71,7 @@ class test_entrada_dades_bbdd(unittest.TestCase):
 
     def test_dates(self):
         data_ficticia = fake.date()
-        resultat_registre_data = calendari.crear_data([Datanova(data_ficticia)])
+        resultat_registre_data = calendari.crear_data([DataNova(data_ficticia)])
         assert resultat_registre_data is True, "Comprovacio al crear una data nova"
 
 
@@ -103,7 +103,7 @@ class test_actualitzacio(unittest.TestCase):
         data_registre = fake.date()
         descripcio_registre = fake.text()
         llista_actualitzar = [
-            Registres_bbdd_comm(id_registre, id_alumne, id_categoria, data_registre, descripcio_registre)]
+            RegistresBbddComm(id_registre, id_alumne, id_categoria, data_registre, descripcio_registre)]
         resultat = registres.actualitzar_registre(llista_actualitzar)
         assert resultat is True, "Comprova si un registre amb el format Registre de missatgeria " \
                                  "s'introdueix "
@@ -111,14 +111,14 @@ class test_actualitzacio(unittest.TestCase):
     def test_categories(self):
         id_categoria = secrets.choice(categories.test_lectura_categories())
         categoria_registrar = fake.text()
-        missatge_registrar = [Categoria_comm(id_categoria, categoria_registrar)]
+        missatge_registrar = [CategoriaComm(id_categoria, categoria_registrar)]
         resultat_categories = categories.actualitzar_categoria(missatge_registrar)
         assert resultat_categories is True, "Error al introduir nous valors a la taula de categories"
 
     def test_dates(self):
         id_data = secrets.choice(calendari.test_dates())
         nova_data = fake.date()
-        missatge_registrar = [Data_gui_comm(id_data, nova_data)]
+        missatge_registrar = [DataGuiComm(id_data, nova_data)]
         resultat_registre = calendari.actualitzar_data(missatge_registrar)
         assert True is resultat_registre, "Error al introduir nous valors a la taula de dates"
 
@@ -180,7 +180,7 @@ class test_formats_resposta(unittest.TestCase):
     def test_registres(self):
         llista_registres = registres.lectura_registres()
         for element in llista_registres:
-            assert isinstance(element, Registres_bbdd_comm), "Registre no te el format Registres_bbdd_comm"
+            assert isinstance(element, RegistresBbddComm), "Registre no te el format RegistresBbddComm"
 
     def test_alumnes(self):
         llista_registres = alumnes.llegir_alumnes()
@@ -190,12 +190,12 @@ class test_formats_resposta(unittest.TestCase):
     def test_categories(self):
         llista_registres = categories.lectura_categories()
         for element in llista_registres:
-            assert isinstance(element, Categoria_comm), "Categoria no te el format Categoria_comm"
+            assert isinstance(element, CategoriaComm), "Categoria no te el format CategoriaComm"
 
     def test_dates(self):
         llista_registres = calendari.lectura_dates()
         for element in llista_registres:
-            assert isinstance(element, Data_gui_comm), "Data no te el format Data_gui_comm)"
+            assert isinstance(element, DataGuiComm), "Data no te el format DataGuiComm)"
 
 
 class test_tipus_atributs(unittest.TestCase):
@@ -266,7 +266,7 @@ class test_eliminacio(unittest.TestCase):
     def test_registres(self):
         llista_registres = registres.lectura_registres()
         missatge_eliminar = [secrets.choice(llista_registres)]
-        assert registres.eliminar_registre(missatge_eliminar) is True, "No s'ha pogut eliminar un element de la taula " \
+        assert registres.eliminar_registre(missatge_eliminar) is True, "No s'ha pogut eliminar un element de la taula" \
                                                                        "registres"
 
     def test_alumnes(self):

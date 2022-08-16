@@ -2,7 +2,6 @@ import datetime
 import os
 import sys
 from typing import Union
-
 import dateutil.parser
 from PySide6 import QtCore
 from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel, QLocale
@@ -13,8 +12,9 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QG
                                QStatusBar, QStyleFactory, QStyledItemDelegate, QMessageBox)
 from dateutil import parser
 from src.agents.agents_bbdd import AjudantDirectoris
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor, Comprovador
-from src.agents.formats import Registres_gui_nou, Registres_gui_comm
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor\
+    , Comprovador
+from src.agents.formats import Registres_gui_nou, Registresguicomm
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
 
 
@@ -32,15 +32,18 @@ class DelegatDates(QStyledItemDelegate):
 
 
 class SortFilterProxyModel(QSortFilterProxyModel):
+    """Classe per a poder filtrar a la taula de la Finestra principal"""
     def __init__(self, *args, **kwargs):
         QSortFilterProxyModel.__init__(self, *args, **kwargs)
         self.filters = {}
 
     def setFilterByColumn(self, regex, column):
+        """Filtrar per columna"""
         self.filters[column] = regex
         self.invalidateFilter()
 
     def filterAcceptsRow(self, source_row, source_parent):
+        """Funcio per a determinar si filtra per fila"""
         for key, regex in self.filters.items():
             ix = self.sourceModel().index(source_row, key, source_parent)
             if ix.isValid():
@@ -57,60 +60,72 @@ class ModelVisualitzacio(QtCore.QAbstractTableModel):
         self.noms = ["Alumne", "Categoria", "Data", "Descripció"]
 
     def data(self, index, role=Qt.DisplayRole):
+        """Proporciona les dates del model"""
         if index.isValid():
-            if role == Qt.DisplayRole or role == Qt.EditRole:
+            if role == Qt.DisplayRole or role == Qt.EditRole or role == Qt.UserRole:
                 # See below for the nested-list data structure.
                 # .row() indexes into the outer list,
                 # .column() indexes into the sub-list
                 value: object = self._data[index.row()][index.column()]
                 if isinstance(value, datetime.date):
                     return QDate(value)
-                else:
-                    return value
-            elif role == Qt.UserRole:
-                value: object = self._data[index.row()][index.column()]
-                if isinstance(value, datetime.date):
-                    return value.strftime('%d/%m/%Y')
-                else:
-                    return self._data[index.row()][index.column()]
+                return value
 
     def rowCount(self, index):
+        """Recompte de files"""
         # The length of the outer list.
         return len(self._data)
 
     def columnCount(self, index):
+        """Proporciona el numero de columnes"""
         # The following takes the first sub-list, and returns
         # the length (only works if all rows are an equal length)
         return len(self._data[0])
 
     def flags(self, index):
+        """Estableix les propietats de les cel·les segons la columna."""
         if 2 != index.column() or 1 != index.column():
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-        else:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
     def setData(self, index, value, role):
+        """Funcio per a guardar els canvis realitzats al model."""
         if role == Qt.EditRole | Qt.UserRole | Qt.EditRole and index.column() != 2 or index.column() != 1:
             self._data[index.row()][index.column()] = value
             return True
-        else:
-            return False
+        return False
 
     def headerData(self, section, orientation, role):
+        """Retorna el nom de les capçaleres"""
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 return self.noms[section - 1]
-            else:
-                return section
+            return section
 
 
 class MainWindow(QMainWindow):
+    """Classe per a la finestra principal"""
     senyal_alumnes_actualitzats = QtCore.Signal(bool)
     senyal_registres_actualitzats = QtCore.Signal(bool)
 
     def __init__(self):
         super().__init__()
         # Inicialització de la base de dades (es crea si no existeix)
+        self.INFORME = None
+        self.selcarpeta = None
+        self.SELECCIO_CARPETA = None
+        self.BOTON_INFORME = None
+        self.INFORMES_SELECTOR_CATEGORIES = None
+        self.INFORMES_SELECTOR_ALUMNES = None
+        self.TAULA_MODEL_FILTRE = None
+        self.TAULA = None
+        self.files_model = None
+        self.columnes_model = None
+        self.VISUALITZA_SELECCIO_CATEGORIES = None
+        self.VISUALITZA_SELECCIO_ALUMNES = None
+        self.BOTO_INFORMACIO = None
+        self.BOTO_PURGAR = None
+        self.BOTO_EDITAR_ALUMNES = None
         Comprovador(1)
         # Introduim la resta de parametres
         self.DATES = None
@@ -145,6 +160,7 @@ class MainWindow(QMainWindow):
         self.senyal_alumnes_actualitzats.connect(self.senyal_canvi_alumnes)
 
     def configuracio_interficie(self):
+        """Configuracio de la interficie"""
         self.setWindowTitle("Seguiment d'alumnes")
         self.resize(600, 500)
         # Configurem distribucio principal:
@@ -173,7 +189,6 @@ class MainWindow(QMainWindow):
         self.widget_edicio_alumnes()
         self.widget_visualitzacio()
         self.DATES = EditorDates()
-
         self.widget_informes()
         # Introduim la barra d'eines:
         self.BARRA_EINES_DISTRIBUCIO = QToolBar()
@@ -218,7 +233,6 @@ class MainWindow(QMainWindow):
         self.WIDGET_CENTRAL.addWidget(self.EDITAR_ALUMNES)
         self.WIDGET_CENTRAL.addWidget(self.DATES)
         self.WIDGET_CENTRAL.addWidget(self.INFORME)
-
         # Connectem botons:
         self.BOTO_CREAR.triggered.connect(self.mostrar_creacio)
         self.BOTO_VISUALITZAR.triggered.connect(self.mostrar_visualitzacio)
@@ -232,12 +246,11 @@ class MainWindow(QMainWindow):
         """Elimina les dades de la base de dades"""
         if QMessageBox.question(self, "Eliminar dades", "Estàs segur de que vols eliminar les dades?",
                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes:
-
             Destructor(1).destruir()
             sortir()
 
-
     def widget_creacio(self):
+        """Configurem el widget de creacio de registres"""
         # Creem el widget de creacio de nous registres:
         self.CREACIO = CreadorRegistres()
         if self.obtenir_llistat_registres():
@@ -248,6 +261,7 @@ class MainWindow(QMainWindow):
         self.CREACIO.BOTO_DESAR.clicked.connect(self.senyal_registres_actualitzats)
 
     def widget_edicio_alumnes(self):
+        """Configura el widget d'edicio d'alumnes."""
         if self.obtenir_llistat_alumnes():
             self.EDITAR_ALUMNES = EditorAlumnes(dades_alumnes=self.obtenir_registres_alumnes())
         else:
@@ -256,16 +270,18 @@ class MainWindow(QMainWindow):
         self.EDITAR_ALUMNES.BOTO_DESAR.clicked.connect(self.missatge_eliminats)
 
     def missatge_eliminats(self):
+        """Emissio de notificacio de que s'han eliminat alumnes"""
         if self.EDITAR_ALUMNES.INDICADOR_ELIMINAT:
             self.statusBar().showMessage("Alumnes eliminats", 2000)
 
     def actualitzar_descripcio(self):
+        """Bloqueja el boto desar si no hi ha descripcio."""
         if self.CREACIO.EDICIO_DESCRIPCIO.toPlainText() == "":
             self.CREACIO.BOTO_DESAR.setEnabled(False)
-        else:
-            self.CREACIO.BOTO_DESAR.setEnabled(True)
+        self.CREACIO.BOTO_DESAR.setEnabled(True)
 
     def desar_registre(self):
+        """Tracta els elements de la gui i transmet l'ordre de crear una nova entrada a la taula de registres"""
         # Desar un nou registre:
         alumne = self.CREACIO.SELECTOR_ALUMNES.currentText()
         categoria = self.CREACIO.SELECTOR_CATEGORIA.currentText()
@@ -351,18 +367,18 @@ class MainWindow(QMainWindow):
         self.VISUALITZA_SELECCIO_CATEGORIES.currentTextChanged.connect(self.visualitzacio_filtre_categories)
 
     def visualitzacio_filtre_alumnes(self):
+        """Comportament quan s'esta reallitzant un filtre per alumnes al widget amb el llistat"""
         valor_actual_desplegable = self.VISUALITZA_SELECCIO_ALUMNES.currentText()
         if self.VISUALITZA_SELECCIO_ALUMNES.currentIndex() == 0:
             self.TAULA.showColumn(1)
             self.VISUALITZA_SELECCIO_CATEGORIES.setCurrentIndex(0)
             self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
             self.TAULA.resizeRowsToContents()
-        else:
-            self.VISUALITZA_SELECCIO_CATEGORIES.setCurrentIndex(0)
-            self.TAULA_MODEL_FILTRE.invalidate()
-            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
-            self.TAULA.hideColumn(1)
-            self.TAULA.resizeRowsToContents()
+        self.VISUALITZA_SELECCIO_CATEGORIES.setCurrentIndex(0)
+        self.TAULA_MODEL_FILTRE.invalidate()
+        self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
+        self.TAULA.hideColumn(1)
+        self.TAULA.resizeRowsToContents()
 
     def visualitzacio_filtre_categories(self):
         categoria_seleccionada = self.VISUALITZA_SELECCIO_CATEGORIES.currentText()
@@ -411,10 +427,9 @@ class MainWindow(QMainWindow):
         # Editar un registre:
         index = self.TAULA.currentIndex()
         columna = index.column()
-        if columna == 1 or columna == 2:
+        if columna in (1, 2):
             self.statusBar().showMessage("No es pot editar aquest camp", 2000)
-        else:
-            self.TAULA.edit(index)
+        self.TAULA.edit(index)
 
     def alteracio_registres(self):
         """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
@@ -483,24 +498,23 @@ class MainWindow(QMainWindow):
     def transformar_gui_a_bbdd(self, dades: list):
         """Funcio per a transformar les dades de la GUI a la BBDD."""
         if not isinstance(dades, list):
-            raise TypeError("La dada ha de ser del tipus Registres_gui_comm.")
-        else:
-            alumne = None
-            categoria_enviar = None
-            # Transformem la data:
-            id_registre = dades[0]
-            for persona in self.cap.alumnat:
-                if persona.nom == dades[1]:
-                    alumne = persona
-            for categoria in self.categoritzador.info_categories:
-                if categoria.nom == dades[2]:
-                    categoria_enviar = categoria
-            objecte_data = dateutil.parser.parse(dades[3], dayfirst=True)
-            data = objecte_data.strftime("%Y-%m-%d")
-            descripcio = dades[4]
-            # Guardem la dada:
-            resultat = Registres_gui_comm(id_registre, alumne, categoria_enviar, data, descripcio)
-            return resultat
+            raise TypeError("La dada ha de ser del tipus Registresguicomm.")
+        alumne = None
+        categoria_enviar = None
+        # Transformem la data:
+        id_registre = dades[0]
+        for persona in self.cap.alumnat:
+            if persona.nom == dades[1]:
+                alumne = persona
+        for categoria in self.categoritzador.info_categories:
+            if categoria.nom == dades[2]:
+                categoria_enviar = categoria
+        objecte_data = dateutil.parser.parse(dades[3], dayfirst=True)
+        data = objecte_data.strftime("%Y-%m-%d")
+        descripcio = dades[4]
+        # Guardem la dada:
+        resultat = Registresguicomm(id_registre, alumne, categoria_enviar, data, descripcio)
+        return resultat
 
     def widget_informes(self):
         self.INFORME = QWidget()
@@ -633,40 +647,35 @@ class MainWindow(QMainWindow):
             llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
 
             return llistat_alumnes
-        else:
-            return False
+        return False
 
     def obtenir_registres_alumnes(self):
         alumnes_entrada = self.cap.alumnat
         if alumnes_entrada:
             llistat_dades_alumnes = [[alumne.id, alumne.nom] for alumne in alumnes_entrada]
             return llistat_dades_alumnes
-        else:
-            return False
+        return False
 
     def obtenir_llistat_alumnes_registrats(self):
         alumnes_entrada = self.cap.alumnat_registres
         if alumnes_entrada:
             llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
             return llistat_alumnes
-        else:
-            return False
+        return False
 
     def obtenir_llistat_categories_registrades(self):
         categories_registre = self.categoritzador.obtenir_categories_registrades()
         if categories_registre:
             llistat_alumnes = [categoria.nom for categoria in categories_registre]
             return llistat_alumnes
-        else:
-            return False
+        return False
 
     def obtenir_categories(self):
         categories_entrada = self.categoritzador.categories
         if categories_entrada:
             llistat_categories = [categoria.nom for categoria in categories_entrada]
             return llistat_categories
-        else:
-            return []
+        return []
 
     def obtenir_llistat_registres(self):
         self.acces_registres.refrescar_registres()
@@ -675,11 +684,12 @@ class MainWindow(QMainWindow):
                                  parser.parse(element.data), element.descripcio] for element
                                 in self.acces_registres.registres]
             return llista_registres
-        else:
-            return None
+        return None
 
 
 def sortir():
+    """Tanca l'aplicacio"""
+
     sys.exit(0)
 
 

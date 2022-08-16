@@ -1,30 +1,17 @@
-import itertools
 import os
-from dataclasses import dataclass
-from datetime import datetime
-
-import openpyxl
-from openpyxl import load_workbook
-from openpyxl.styles import NamedStyle, Font, Color, Alignment, Border, Side, cell_style, PatternFill
-
-import numpy as np
-import pandas
-import pandas as pd
 import dateutil
-from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
+import numpy as np
+import openpyxl
+import pandas
 from dateutil import parser
-
-from src.agents.formats import Data_gui_comm, Registres_gui_comm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, Registres_bbdd_comm, Alumne_nou, Datanova
-
-
-class CatalanParserInfo(parser.parserinfo):
-    MONTHS = [("Jan", "Gener"), ("Feb", "Febrer"), ("Mar", "Març"), ("Apr", "Abril"),
-              ("May", "Maig"), ("Jun", "Juny"), ("Jul", "Juliol"), ("Aug", "Agost"),
-              ("Sep", "Setembre"), ("Oct", "Octubre"), ("Nov", "Novembre"), ("Dec", "Desembre")]
+from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
+from src.agents.agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
+from src.agents.formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, \
+    Registres_bbdd_nou, RegistresBbddComm, AlumneNou, DataNova
 
 
 class Comprovador:
+    """Comprva la presencia de taules a la base de dades"""
     def __init__(self, modegui):
         super(Comprovador, self).__init__()
         resultat_iniciador = Iniciador(modegui)
@@ -51,6 +38,7 @@ class Destructor:
         self.liquidador = Liquidador(modegui)
 
     def destruir(self):
+        """Elimina les taules de la base de dades i, despres, la base de dades en si."""
         self.registres.destruir_taula()
         self.alumnes.destruir_taula()
         self.categories.destruir_taula()
@@ -59,6 +47,7 @@ class Destructor:
 
 
 class Comptable:
+    """S'ocupa de gestionar amb la gui les entrades a la taula de registres"""
     def __init__(self, modegui):
         """Ordenar les taules de la base de dades perquè siguin més fàcils de llegir:"""
         self.info_categories = None
@@ -77,32 +66,38 @@ class Comptable:
     def obtenir_registres(self):
         """Retorna una llista de registres convenients per a la presentació: list:
         """
-
         # Condicio de seguretat per si no hi ha registres:
         if self.info_registres and self.info_alumnes and self.info_categories:
             registres_entrada = self.info_registres
             missatge_registres = []
             # Substituim l'id de l'alumne de la llista de registres pel seu nom:
-
             for registre in registres_entrada:
                 registre_proces = [registre.id]
                 # Obtenim el nom de l'alumne:
-                for alumne in self.info_alumnes:
-                    if alumne.id == registre.alumne:
-                        registre_proces.append(alumne)
+                registre_proces.append(self.obtenir_registres_alumne(id_alumne=registre.alumne))
                 # Substituim l'id de la categoria de la llista de registres pel seu nom:
-                for categoria in self.info_categories:
-                    if categoria.id == registre.categoria:
-                        registre_proces.append(categoria)
+                registre_proces.append(self.obtenir_categoria_registres(id_categoria=registre.categoria))
                 registre_proces.append(registre.data)
                 registre_proces.append(registre.descripcio)
-                registre_tractat = Registres_gui_comm(registre_proces[0], registre_proces[1], registre_proces[2],
-                                                      registre_proces[3], registre_proces[4])
+                registre_tractat = Registresguicomm(registre_proces[0], registre_proces[1], registre_proces[2],
+                                                    registre_proces[3], registre_proces[4])
                 missatge_registres.append(registre_tractat)
 
             return missatge_registres
-        else:
-            return False
+        return False
+
+    def obtenir_registres_alumne(self, id_alumne):
+        """Retorna el Alumnecomm corresponent a l'id alumne proporcionat"""
+        resposta = None
+        for alumne in self.info_alumnes:
+            if id_alumne == alumne.id:
+                resposta = alumne
+        return resposta
+    def obtenir_categoria_registres(self, id_categoria):
+        """Retorna la Categoriacomm corresponent a l'id alumne proporcionat"""
+        for categoria in self.info_categories:
+            if id_categoria == categoria.id:
+                return categoria
 
     def obtenir_noms(self):
         """Retorna una llista d'alumnes convenients per a la presentació: list:"""
@@ -111,8 +106,7 @@ class Comptable:
         if self.info_alumnes:
             noms = [alumne.nom for alumne in self.info_alumnes]
             return noms
-        else:
-            return False
+        return False
 
     def obtenir_categories(self):
         """Retorna una llista de categories convenients per a la presentació: list:"""
@@ -121,63 +115,60 @@ class Comptable:
         if self.info_categories:
             categories = [categoria.nom for categoria in self.info_categories]
             return categories
-        else:
-            return False
+
+        return False
 
     def actualitzar_registres(self, registre_input):
         """Processa el missatge per actualitzar-lo a la base de dades"""
         if not isinstance(registre_input, list):
             raise TypeError("El registre_input no és del tipus correcte.")
-        else:
-            missatge_actualitzar_registre = []
-            for element in registre_input:
-                if not isinstance(element, Registres_gui_comm):
-                    raise TypeError("Registre no segueix el format establert")
-                else:
-                    registre_enviar = Registres_bbdd_comm(element.id, element.alumne.id, element.categoria.id,
-                                                          element.data, element.descripcio)
-                    missatge_actualitzar_registre.append(registre_enviar)
-            self.registrador.actualitzar_registre(missatge_actualitzar_registre)
+        missatge_actualitzar_registre = []
+        for element in registre_input:
+            if not isinstance(element, Registresguicomm):
+                raise TypeError("Registre no segueix el format establert")
+            registre_enviar = RegistresBbddComm(element.id, element.alumne.id, element.categoria.id, element.data,
+                                                element.descripcio)
+            missatge_actualitzar_registre.append(registre_enviar)
+        self.registrador.actualitzar_registre(missatge_actualitzar_registre)
 
     def eliminar_registre(self, registre_input):
         """Processa el missatge per eliminar-lo a la base de dades"""
         if not isinstance(registre_input, list):
             raise TypeError("El registre_input no és del tipus correcte.")
-        else:
-            missatge_eliminar_registre = []
-            for element in registre_input:
-                if not isinstance(element, Registres_gui_comm):
-                    raise TypeError("Registre no segueix el format establert")
-                else:
-                    element_processat = list
-                    element_processat.append(element.id, element.alumne.id, element.categoria.id, element.data,
-                                             element.descripcio)
-                    registre_enviar = Registres_bbdd_comm(dada for dada in element_processat)
-                    missatge_eliminar_registre.append(registre_enviar)
-            self.registrador.eliminar_registre(missatge_eliminar_registre)
+
+        missatge_eliminar_registre = []
+        for element in registre_input:
+            if not isinstance(element, Registresguicomm):
+                raise TypeError("Registre no segueix el format establert")
+            element_processat = list
+            element_processat.append(element.id, element.alumne.id, element.categoria.id, element.data,
+                                     element.descripcio)
+            registre_enviar = RegistresBbddComm(dada for dada in element_processat)
+            missatge_eliminar_registre.append(registre_enviar)
+        self.registrador.eliminar_registre(missatge_eliminar_registre)
 
     def crear_registre(self, registre_input):
         """Crea un registre a la base de dades:"""
         if not isinstance(registre_input, list):
             return False
-        else:
-            missatge_registre_bbddd = []
-            # Processem els registres nous:
-            for info in registre_input:
-                if not isinstance(info, Registres_gui_nou):
-                    return False
-                else:
-                    # Convertim la data a un format que pugui ser llegit per la base de dades:
-                    registrenou = Registres_bbdd_nou(info.alumne.id, info.categoria.id, info.data, info.descripcio)
-                    if not isinstance(registrenou.alumne, int) or not isinstance(registrenou.categoria, int):
-                        return False
 
-                    missatge_registre_bbddd.append(registrenou)
-                self.registrador.crear_registre(missatge_registre_bbddd)
-                return True
+        missatge_registre_bbddd = []
+        # Processem els registres nous:
+        for info in registre_input:
+            if not isinstance(info, Registres_gui_nou):
+                return False
+
+            # Convertim la data a un format que pugui ser llegit per la base de dades:
+            registrenou = Registres_bbdd_nou(info.alumne.id, info.categoria.id, info.data, info.descripcio)
+            if not isinstance(registrenou.alumne, int) or not isinstance(registrenou.categoria, int):
+                return False
+
+            missatge_registre_bbddd.append(registrenou)
+        self.registrador.crear_registre(missatge_registre_bbddd)
+        return True
 
     def refrescar_registres(self):
-
+        """Tronar a consultar els registres a peticio de la gui, per reflectir els canvis en la base de dades"""
         self.info_categories = self.categoritzador.lectura_categories()
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_registres = self.registrador.lectura_registres()
@@ -187,7 +178,7 @@ class Comptable:
 
 
 class Calendaritzador:
-
+    """Classe que gestiona les dates"""
     def __init__(self, modegui):
         self.datador = DatesBbdd(modegui)
         self.info_dates = self.datador.lectura_dates()
@@ -202,12 +193,11 @@ class Calendaritzador:
             for data in self.info_dates:
                 data.dia = dateutil.parser.parse(data.dia).strftime("%d/%m/%Y")
             return self.info_dates
-        else:
-            return False
+        return False
 
     def registra_dates(self, aniversari: list):
         """Crea nous registres a la base de dades amb la data subministrada
-        :type aniversari: Data_gui_comm
+        :type aniversari: DataGuiComm
         :args:
         list
         :returns:
@@ -215,7 +205,7 @@ class Calendaritzador:
         """
         if isinstance(aniversari, list):
             for element in aniversari:
-                if isinstance(element, Datanova):
+                if isinstance(element, DataNova):
                     element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
                 else:
                     return False
@@ -225,11 +215,11 @@ class Calendaritzador:
 
     def actualitza_dates(self, aniversari):
         """Actualitza la base de dades amb la data subministrada, comprovant si es una data nova o no
-        :type aniversari: Data_gui_comm
+        :type aniversari: DataGuiComm
         """
         if isinstance(aniversari, list):
             for element in aniversari:
-                if isinstance(element, Data_gui_comm):
+                if isinstance(element, DataGuiComm):
                     element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
                 else:
                     return False
@@ -239,6 +229,7 @@ class Calendaritzador:
 
 
 class CapEstudis:
+    """S'ocupa de les gestions de la taula alumnes amb la interficie grafica"""
     def __init__(self, modegui: int):
         """
 
@@ -260,8 +251,8 @@ class CapEstudis:
             for alumne in self.info_alumnes:
                 alumnes_formatats.append(Alumne_comm(alumne.id, alumne.nom))
             return alumnes_formatats
-        else:
-            return False
+
+        return False
 
     def obtenir_alumnes_registrats(self):
         """Retorna una llista d'alumnes amb el format Alumne: list:"""
@@ -272,8 +263,7 @@ class CapEstudis:
             for persona in alumnes_registrats:
                 alumnes_formatats.append(Alumne_comm(persona.id, persona.nom))
             return alumnes_formatats
-        else:
-            return False
+        return False
 
     def eliminar_alumnes(self, llista_eliminar):
         """Elimina un alumne de la base de dades"""
@@ -281,25 +271,23 @@ class CapEstudis:
             self.alumnes.eliminar_alumne(llista_eliminar)
             self.registres.eliminar_registre_alumne(llista_eliminar)
             return True
-        else:
-            return False
+        return False
 
     def actualitzar_alumnes(self, llista_actualitzar: list):
+        """Actualitza els alumnea de la base de dades"""
         if isinstance(llista_actualitzar, list):
-            """Actualitza un alumne de la base de dades"""
             self.alumnes.actualitzar_alumne(llista_actualitzar)
             return True
-        else:
-            return False
+        return False
 
     def afegir_alumnes(self, missatge_afegir: list):
         """Afegeix un alumne a la base de dades"""
         if not isinstance(missatge_afegir, list):
             return False
-        else:
-            for persona in missatge_afegir:
-                if not isinstance(persona, Alumne_nou):
-                    return False
+
+        for persona in missatge_afegir:
+            if not isinstance(persona, AlumneNou):
+                return False
         resultat = self.alumnes.registrar_alumne(missatge_afegir)
         return resultat
 
@@ -309,10 +297,10 @@ class CapEstudis:
             for alumne_bbdd in self.info_alumnes:
                 if alumne_bbdd[1] == alumne.nom:
                     return alumne_bbdd[0]
-        else:
-            return False
+        return False
 
     def refrescar_alumnes(self):
+        """Trona a consultar la informacio dels alumnes de la base de dades per a tenir en compte els canvis."""
         self.info_alumnes = self.alumnes.llegir_alumnes()
         self.info_alumnes_registrats = self.registres.lectura_alumnes_registrats()
         self.alumnat = self.obtenir_alumnes()
@@ -320,6 +308,7 @@ class CapEstudis:
 
 
 class Classificador:
+    """S'ocupa de les categories a la base de dades."""
     def __init__(self, modegui):
         self.categoritzador = CategoriesBbdd(modegui)
         self.info_categories = self.categoritzador.lectura_categories()
@@ -329,22 +318,105 @@ class Classificador:
         self.categories_registrades = self.obtenir_categories_registrades()
 
     def obtenir_categories_registrades(self):
+        """Determina quines categories tenen alguna entrada a la taula registres."""
         if self.info_categories and self.info_registres:
             classificacio = self.info_categories
             info_registres = self.info_registres
             llista_categories_amb_registre = []
             for element in classificacio:
                 for item in info_registres:
-                    if element.id == item.categoria:
-                        if element not in llista_categories_amb_registre:
-                            llista_categories_amb_registre.append(element)
+                    if element.id == item.categoria and element not in llista_categories_amb_registre:
+                        llista_categories_amb_registre.append(element)
             return llista_categories_amb_registre
-        else:
-            return False
+        return False
 
     def refrescar_categories_registres(self):
+        """Força actualitzacio de les categories que tenen alguna entrada a la taula de registres."""
         self.info_registres = self.registrador.lectura_registres()
         self.info_categories = self.categoritzador.lectura_categories()
+
+
+def format_categories(ruta_arxiu: str):
+    """
+    Modifica el format de l'arxiu d'entrada al format predeterminat
+    :argument ruta_arxiu: ruta completa fins a l'arxiu
+    :returns: Arxiu a la mateixa localitzacio modificat
+    """
+    full_calcul = openpyxl.load_workbook(ruta_arxiu)
+    fulla = full_calcul.active
+    noms = NamedStyle(name="noms")
+    noms.font = Font(size=11, name="Calibri")
+    noms.alignment = Alignment(horizontal="left", vertical="justify", wrap_text=False)
+    vora_simple = Side(border_style='thin')
+    noms.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
+    noms.width = 20
+    titols = NamedStyle(name="titols")
+    titols.font = Font(size=11, name="Calibri", bold=True)
+    titols.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    titols.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
+    fulla.column_dimensions['A'].width = 20
+
+    for cell in fulla['B']:
+        cell.style = noms
+    for cell in fulla['A']:
+        cell.style = titols
+    fulla['A1'].value = "Mesos"
+    fulla['A1'].style = titols
+    fulla['B1'].value = "Alumnes"
+    fulla['B1'].style = titols
+    fulla.column_dimensions['B'].width = 20
+    full_calcul.save(ruta_arxiu)
+
+
+def format_alumnes(ruta_arxiu: str):
+    """Dona format a l'informe d'alumnes"""
+    full_calcul = openpyxl.load_workbook(ruta_arxiu)
+    color_taronja = "F6B26B"
+    fulla = full_calcul.active
+    llista_columnes = ['B', 'C', 'D', 'E', 'F']
+    # Definim els estils:
+    titols_trimestres = NamedStyle(name="titols_trimestres")
+    titols_trimestres.font = Font(size=12, name="Arial", bold=True)
+    titols_trimestres.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
+    vora_simple = Side(border_style='thin')
+    titols_trimestres.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
+    titols = NamedStyle(name="titols")
+    titols.font = Font(size=12, name="Arial", bold=True)
+    titols.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
+    vora_simple = Side(border_style='thin')
+    titols.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
+
+    titols.fill = PatternFill(fill_type='solid', start_color=color_taronja, end_color=color_taronja)
+    continguts = NamedStyle(name="títols")
+    continguts.font = Font(size=10, name="Arial", bold=False)
+    continguts.alignment = Alignment(horizontal="justify", vertical="top", wrap_text=False)
+    vora_simple = Side(border_style='thin')
+    continguts.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
+    for cell in fulla['A']:
+        cell.style = titols_trimestres
+    for cell in fulla['1']:
+        cell.style = titols
+    fulla.column_dimensions['A'].width = 13
+    for column in llista_columnes:
+        fulla.column_dimensions[column].width = 30
+
+    llista_valors = []
+    n_index = 0
+    # Fusionem les cel·les si tenen el mateix valor:
+    for cell in fulla['A']:
+        referencia = [cell.value, cell.row]
+        llista_valors.append(referencia)
+        if n_index != 0 and cell.value == llista_valors[n_index - 1][0]:
+            cell.value = ""
+            fulla.merge_cells(start_row=llista_valors[n_index - 1][1], start_column=cell.column, end_row=cell.row,
+                              end_column=cell.column)
+            fulla.cell(row=llista_valors[n_index - 1][1], column=cell.column).style = titols_trimestres
+        n_index += 1
+    # Donem format a la resta de les cel·les:
+    for row in fulla.iter_rows(min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column):
+        for cell in row:
+            cell.style = continguts
+    full_calcul.save(ruta_arxiu)
 
 
 class CreadorInformes:
@@ -358,6 +430,7 @@ class CreadorInformes:
 
     def __init__(self, alumnes: list, categories: list, registres: list, carpeta_destinacio: str):
         super().__init__()
+        self.dates = None
         self.alumnes = alumnes
         self.categories = categories
         self.registres = registres
@@ -373,93 +446,19 @@ class CreadorInformes:
         posicio = self.nombre_mesos.index(mes)
         return self.mesos[posicio]
 
-    def format_categories(self, ruta_arxiu):
-        wb = openpyxl.load_workbook(ruta_arxiu)
-        fulla = wb.active
-        noms = NamedStyle(name="noms")
-        noms.font = Font(size=11, name="Calibri")
-        noms.alignment = Alignment(horizontal="left", vertical="justify", wrap_text=False)
-        vora_simple = Side(border_style='thin')
-        noms.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
-        noms.width = 20
-        titols = NamedStyle(name="titols")
-        titols.font = Font(size=11, name="Calibri", bold=True)
-        titols.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
-        titols.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
-        fulla.column_dimensions['A'].width = 20
-
-        for cell in fulla['B']:
-            cell.style = noms
-        for cell in fulla['A']:
-            cell.style = titols
-        fulla['A1'].value = "Mesos"
-        fulla['A1'].style = titols
-        fulla['B1'].value = "Alumnes"
-        fulla['B1'].style = titols
-        fulla.column_dimensions['B'].width = 20
-        wb.save(ruta_arxiu)
-
-    def format_alumnes(self, ruta_arxiu: str):
-        """Dona format a l'informe d'alumnes"""
-        wb = openpyxl.load_workbook(ruta_arxiu)
-        color_taronja = "F6B26B"
-        fulla = wb.active
-        llista_columnes = ['B', 'C', 'D', 'E', 'F']
-        # Definim els estils:
-        titols_trimestres = NamedStyle(name="titols_trimestres")
-        titols_trimestres.font = Font(size=12, name="Arial", bold=True)
-        titols_trimestres.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
-        vora_simple = Side(border_style='thin')
-        titols_trimestres.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
-        titols = NamedStyle(name="titols")
-        titols.font = Font(size=12, name="Arial", bold=True)
-        titols.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
-        vora_simple = Side(border_style='thin')
-        titols.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
-
-        titols.fill = PatternFill(fill_type='solid', start_color=color_taronja, end_color=color_taronja)
-        continguts = NamedStyle(name="títols")
-        continguts.font = Font(size=10, name="Arial", bold=False)
-        continguts.alignment = Alignment(horizontal="justify", vertical="top", wrap_text=False)
-        vora_simple = Side(border_style='thin')
-        continguts.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
-        for cell in fulla['A']:
-            cell.style = titols_trimestres
-        for cell in fulla['1']:
-            cell.style = titols
-        fulla.column_dimensions['A'].width = 13
-        for column in llista_columnes:
-            fulla.column_dimensions[column].width = 30
-
-        llista_valors = []
-        n_index = 0
-        # Fusionem les cel·les si tenen el mateix valor:
-        for cell in fulla['A']:
-            referencia = [cell.value, cell.row]
-            llista_valors.append(referencia)
-            if n_index != 0 and cell.value == llista_valors[n_index - 1][0]:
-                cell.value = ""
-                fulla.merge_cells(start_row=llista_valors[n_index - 1][1], start_column=cell.column, end_row=cell.row,
-                                  end_column=cell.column)
-                fulla.cell(row=llista_valors[n_index - 1][1], column=cell.column).style = titols_trimestres
-            n_index += 1
-        # Donem format a la resta de les cel·les:
-        for row in fulla.iter_rows(min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column):
-            for cell in row:
-                cell.style = continguts
-        wb.save(ruta_arxiu)
-
     def data_a_trimestre(self, data: str):
         """Retorna el trimestre de la data"""
+        resultat = None
         inici_segon = dateutil.parser.parse(self.dates[0].dia, dayfirst=True)
         inici_tercer = dateutil.parser.parse(self.dates[1].dia, dayfirst=True)
         data_calculada = dateutil.parser.parse(data)
         if data_calculada < inici_segon:
-            return "1"
+            resultat = 1
         elif inici_segon <= data_calculada < inici_tercer:
-            return "2"
+            resultat = 2
         elif data_calculada >= inici_tercer:
-            return "3"
+            resultat = 3
+        return resultat
 
     def export_categories(self):
         """Crea un informe amb les categories"""
@@ -474,15 +473,14 @@ class CreadorInformes:
                     llista_dades = [f"{categoria.nom}"]
                     diccionari_provisional = {"mesos": [], "alumnes": []}
                     for registre in self.registres:
-
                         if registre.categoria.id == categoria.id:
                             mes = dateutil.parser.parse(registre.data).month
                             mes = self.mes_a_string(mes)
                             alumne = registre.alumne.nom
                             diccionari_provisional['mesos'].append(mes)
                             diccionari_provisional['alumnes'].append(alumne)
-                    df = pandas.DataFrame(diccionari_provisional)
-                    llista_dades.append(df)
+                    Df = pandas.DataFrame(diccionari_provisional)
+                    llista_dades.append(Df)
                     llista_categories_informes.append(llista_dades)
             for element in llista_categories_informes:
                 agrego_mesos = {'alumnes': np.unique}
@@ -494,27 +492,29 @@ class CreadorInformes:
                 ruta_exportacio = os.path.join(self.desti, f"{nom_categoria}.xlsx")
                 taula_pandas.to_excel(ruta_exportacio, index=True)
                 # Apliquem format als informes:
-                self.format_categories(ruta_exportacio)
+                format_categories(ruta_exportacio)
             return True
-        else:
-            return False
+
+        return False
 
     def export_alumne(self, dates):
+        """
+        Crea un informe per cada alumne
+        :rtype: Un arxiu en format excel a la carpeta seleccionada per l'usuari
+        """
         self.dates = dates
-        """Crea un informe per cada alumne"""
         if self.alumnes and self.registres and self.categories:
             llista_alumnes_informes = []
             llista_alumnes_als_registres = [registre.alumne.id for registre in self.registres]
             noms_categories = [categoria.nom for categoria in self.categories]
             alumnes_registres = set(llista_alumnes_als_registres)
             for alumne in self.alumnes:
-                if alumne.id not in alumnes_registres:
-                    continue
-                else:
+                if alumne.id in alumnes_registres:
                     # Creem una llista amb les categories i els registres associats, una per alumne:
                     llista_dades = [f"{alumne.nom}"]
                     diccionari_provisional = {'Trimestre': []}
                     # Afegim les categories al diccionari provisional:
+
                     for item in noms_categories:
                         diccionari_provisional[item] = []
                     for registre in self.registres:
@@ -548,9 +548,9 @@ class CreadorInformes:
                         while len(diccionari_provisional[categoria]) < nombre_registres:
                             diccionari_provisional[categoria].append('')
                     # Afegim el resultat a la llista d'alumnes:
-                    df = pandas.DataFrame(diccionari_provisional).fillna('')
-                    df['Trimestre'] = df['Trimestre'].astype("category")
-                    llista_dades.append(df)
+                    Df = pandas.DataFrame(diccionari_provisional).fillna('')
+                    Df['Trimestre'] = Df['Trimestre'].astype("category")
+                    llista_dades.append(Df)
                     llista_alumnes_informes.append(llista_dades)
             for element in llista_alumnes_informes:
                 nom_alumne = element[0]
@@ -558,5 +558,6 @@ class CreadorInformes:
                 ruta_exportacio = os.path.join(self.desti, f"{nom_alumne}.xlsx")
                 dades.to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
                 # Apliquem format als informes:
-                self.format_alumnes(ruta_exportacio)
-        return True
+                format_alumnes(ruta_exportacio)
+            return True
+        return False

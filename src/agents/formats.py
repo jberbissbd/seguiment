@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(repr=False)
-class Registres_gui_comm:
+class Registresguicomm:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a registres ja existents"""
     id: int
     alumne: dataclass
@@ -12,7 +12,7 @@ class Registres_gui_comm:
 
 
 @dataclass(repr=False)
-class Registres_bbdd_comm:
+class RegistresBbddComm:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a registres ja existents"""
     id: int
     alumne: int
@@ -47,20 +47,20 @@ class Alumne_comm:
 
 
 @dataclass(repr=False)
-class Alumne_nou:
+class AlumneNou:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a alumnes nous"""
     nom: str
 
 
 @dataclass(repr=False)
-class Categoria_comm:
+class CategoriaComm:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a categories ja existents"""
     id: int
     nom: str
 
 
 @dataclass(repr=False)
-class Data_gui_comm:
+class DataGuiComm:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a les dates de trimestre ja
     existents """
     id: int
@@ -68,7 +68,7 @@ class Data_gui_comm:
 
 
 @dataclass(repr=False)
-class Datanova:
+class DataNova:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a les dates de trimestre no
     existents
     :parameter:

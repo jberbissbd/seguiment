@@ -1,12 +1,13 @@
-from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6.QtCore import Qt, QDate, QSize, QSortFilterProxyModel
-from PySide6.QtGui import QIcon, QAction, QPixmap
+from PySide6 import QtCore, QtWidgets
+from PySide6.QtCore import Qt, QDate, QSize
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QGridLayout, QDateEdit, QPushButton, QLabel, QComboBox, QTextEdit, QHBoxLayout, \
     QVBoxLayout, QTableView, QAbstractItemView, QWizardPage, QWizard, QDialog, QMessageBox, QLineEdit, QFormLayout, \
     QDialogButtonBox, QFileDialog
-from src.agents.agents_gui import Calendaritzador, CapEstudis
+
 from src.agents.agents_bbdd import AjudantDirectoris
-from src.agents.formats import Alumne_comm, Alumne_nou, Data_gui_comm, Datanova
+from src.agents.agents_gui import Calendaritzador, CapEstudis
+from src.agents.formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova
 
 
 class DialegSeleccioCarpeta(QFileDialog):
@@ -192,14 +193,14 @@ class EditorDates(QtWidgets.QWidget):
             data_original_3er = self.calendari_editor_dates.dates[1]
             missatge_actualitzacio = []
             if data_original_2n.dia != data2n:
-                missatge_actualitzacio.append(Data_gui_comm(data_original_2n.id, data2n))
+                missatge_actualitzacio.append(DataGuiComm(data_original_2n.id, data2n))
             if data_original_3er.dia != data3er:
-                missatge_actualitzacio.append(Data_gui_comm(data_original_3er.id, data3er))
+                missatge_actualitzacio.append(DataGuiComm(data_original_3er.id, data3er))
             if len(missatge_actualitzacio) > 0:
                 estat_actualitzacio = self.calendari_editor_dates.actualitza_dates(missatge_actualitzacio)
         else:
             llista_noves_dates = [data2n, data3er]
-            missatge_creacio = [Datanova(item) for item in llista_noves_dates]
+            missatge_creacio = [DataNova(item) for item in llista_noves_dates]
             estat_creacio = self.calendari_editor_dates.crear_data(missatge_creacio)
         return estat_actualitzacio + estat_creacio
 
@@ -283,7 +284,8 @@ class EditorAlumnes(QtWidgets.QWidget):
         self.BOTO_AFEGIR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/value-increase-symbolic.svg"),
                                        text="Afegir")
         self.BOTO_AFEGIR.setIconSize(QSize(24, 24))
-        self.BOTO_ELIMINAR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"), text="Eliminar")
+        self.BOTO_ELIMINAR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"),
+                                         text="Eliminar")
         self.BOTO_ELIMINAR.setIconSize(QSize(24, 24))
         DISTRIBUCIO_BOTONS = QVBoxLayout()
         DISTRIBUCIO_BOTONS.setAlignment(Qt.AlignTop)
@@ -322,7 +324,7 @@ class EditorAlumnes(QtWidgets.QWidget):
                     if camp == "":
                         columna += 1
                         camp = dades_model.data(dades_model.index(fila, columna), Qt.DisplayRole)
-                        nous_alumnes.append(Alumne_nou(camp))
+                        nous_alumnes.append(AlumneNou(camp))
                         fila += 1
                     # Si te id, se l'afegeix a la llista de ID's per a comparar, i a les dades del model.
                     else:
@@ -373,7 +375,6 @@ class EditorAlumnes(QtWidgets.QWidget):
         dades_actualitzades = [[persona.id, persona.nom] for persona in info_alumnes]
         self.TAULA_ALUMNES_MODEL = ModelEdicioAlumnes(dades_actualitzades)
         self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
-
 
     def afegir_alumne(self):
 
