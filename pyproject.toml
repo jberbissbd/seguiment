@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Seguiment"
+name = "tutopy"
 version = "0.0.1"
 authors = [
   { name="Jordi Berbis", email="jberbis@xtec.cat" },
@@ -20,3 +20,6 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/jberbissbd/seguiment"
 "Bug Tracker" = "https://github.com/jberbissbd/seguiment/issues"
+
+[pytest]
+testpaths = 'tests'
