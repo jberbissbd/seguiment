@@ -75,12 +75,10 @@ class TestTipusVariables(unittest.TestCase):
             categoria_registre = element.categoria
             assert isinstance(numero, int), "ID del registre ha de ser un numero"
             assert isinstance(alumne_registre, Alumne_comm), "Alumne del registre ha de ser objecte Alumne_comm"
-            assert isinstance(categoria_registre, CategoriaComm), "Categoria del registre ha de ser objecte " \
-                                                                   "CategoriaComm "
+            assert isinstance(categoria_registre, CategoriaComm), "Categoria del registre ha de ser " \
+                                                                  "objecte CategoriaComm "
             assert isinstance(data, str), "Data del registre ha de ser text"
             assert isinstance(text, str), "Descripcio del registre ha de ser text"
-
-
 
 
 if __name__ == '__main__':

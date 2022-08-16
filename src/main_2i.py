@@ -12,8 +12,8 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QG
                                QStatusBar, QStyleFactory, QStyledItemDelegate, QMessageBox)
 from dateutil import parser
 from src.agents.agents_bbdd import AjudantDirectoris
-from src.agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor\
-    , Comprovador
+from src.agents.agents_gui import Comptable, Classificador, Calendaritzador
+from src.agents.agents_gui import CapEstudis, CreadorInformes, Destructor, Comprovador
 from src.agents.formats import Registres_gui_nou, Registresguicomm
 from src.gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
 
@@ -26,9 +26,8 @@ class DelegatDates(QStyledItemDelegate):
 
     def displayText(self, value, locale) -> str:
         """Retorna el text que es mostra a la columna de dates"""
-        if value != str(""):
-            value = value.toPython()
-            return value.strftime("%d/%m/%Y")
+        value = value.toPython()
+        return value.strftime("%d/%m/%Y")
 
 
 class SortFilterProxyModel(QSortFilterProxyModel):
@@ -111,9 +110,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # Inicialització de la base de dades (es crea si no existeix)
-        self.INFORME = None
+        self.informe = None
         self.selcarpeta = None
-        self.SELECCIO_CARPETA = None
+        self.seleccio_carpeta = None
         self.BOTON_INFORME = None
         self.INFORMES_SELECTOR_CATEGORIES = None
         self.INFORMES_SELECTOR_ALUMNES = None
@@ -232,7 +231,7 @@ class MainWindow(QMainWindow):
         self.WIDGET_CENTRAL.addWidget(self.VISUALITZAR_EDITAR)
         self.WIDGET_CENTRAL.addWidget(self.EDITAR_ALUMNES)
         self.WIDGET_CENTRAL.addWidget(self.DATES)
-        self.WIDGET_CENTRAL.addWidget(self.INFORME)
+        self.WIDGET_CENTRAL.addWidget(self.informe)
         # Connectem botons:
         self.BOTO_CREAR.triggered.connect(self.mostrar_creacio)
         self.BOTO_VISUALITZAR.triggered.connect(self.mostrar_visualitzacio)
@@ -303,6 +302,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Registre desat correctament", 2000)
 
     def widget_visualitzacio(self):
+        """Defineix el widget per a la visualitzacio dels alumnes"""
         self.TAULA = QTableView()
         self.VISUALITZAR_EDITAR = QWidget()
         DISTRIBUCIO = QGridLayout()
@@ -517,11 +517,11 @@ class MainWindow(QMainWindow):
         return resultat
 
     def widget_informes(self):
-        self.INFORME = QWidget()
-        self.INFORME.resize(300, 300)
+        self.informe = QWidget()
+        self.informe.resize(300, 300)
         DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
-        self.INFORME.setLayout(DISTRIBUCIO)
+        self.informe.setLayout(DISTRIBUCIO)
         GRUP_TIPUS = QGroupBox()
         GRUP_TIPUS.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         GRUP_TIPUS.setTitle("Tipus d'informe")
@@ -554,17 +554,17 @@ class MainWindow(QMainWindow):
         # Creem els boton:
         self.BOTON_INFORME = QPushButton("Generar informe")
         self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-        self.SELECCIO_CARPETA = QPushButton(QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "")
-        self.SELECCIO_CARPETA.setIconSize(QSize(24, 24))
+        self.seleccio_carpeta = QPushButton(QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "")
+        self.seleccio_carpeta.setIconSize(QSize(24, 24))
         DISTRIBUCIO.addWidget(GRUP_TIPUS, 0, 0)
         DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_ALUMNES, 1, 0)
         DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_CATEGORIES, 2, 0)
-        DISTRIBUCIO.addWidget(self.SELECCIO_CARPETA, 3, 0)
+        DISTRIBUCIO.addWidget(self.seleccio_carpeta, 3, 0)
         DISTRIBUCIO.addWidget(self.BOTON_INFORME, 4, 0)
         opcio_alumnes.toggled.connect(self.seleccionar_informe)
         opcio_categories.toggled.connect(self.seleccionar_informe)
         self.BOTON_INFORME.clicked.connect(self.generar_informe)
-        self.SELECCIO_CARPETA.clicked.connect(self.seleccionar_carpeta_informes)
+        self.seleccio_carpeta.clicked.connect(self.seleccionar_carpeta_informes)
         self.destinacio_informes = None
 
     def seleccionar_carpeta_informes(self):
@@ -639,7 +639,7 @@ class MainWindow(QMainWindow):
         self.WIDGET_CENTRAL.setCurrentWidget(self.DATES)
 
     def mostrar_informes(self):
-        self.WIDGET_CENTRAL.setCurrentWidget(self.INFORME)
+        self.WIDGET_CENTRAL.setCurrentWidget(self.informe)
 
     def obtenir_llistat_alumnes(self):
         alumnes_entrada = self.cap.alumnat
