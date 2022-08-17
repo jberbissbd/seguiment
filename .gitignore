@@ -16,3 +16,5 @@ seguiment.sublime-project
 seguiment.sublime-workspace
 Pipfile
 Pipfile.lock
+/src/build/
+/src/dist/
