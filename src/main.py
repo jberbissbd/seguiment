@@ -1,12 +1,11 @@
 # -*- coding:utf-8 -*-
 import datetime
-from dateutil import parser
+import dateutil
 import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.dirname(os.path.abspath(__file__))))
 from typing import Union
-import dateutil.parser
 from PySide6 import QtCore
 from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel, QLocale
 from PySide6.QtGui import QIcon, QFont, QAction
