@@ -11,6 +11,10 @@
       <excludeFolder url="file://$MODULE_DIR$/build" />
       <excludeFolder url="file://$MODULE_DIR$/dist" />
       <excludeFolder url="file://$MODULE_DIR$/lib" />
+      <excludeFolder url="file://$MODULE_DIR$/src/.pytest_cache/v" />
+      <excludeFolder url="file://$MODULE_DIR$/src/build" />
+      <excludeFolder url="file://$MODULE_DIR$/src/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/tests/.pytest_cache/v" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.10 (seguiment)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

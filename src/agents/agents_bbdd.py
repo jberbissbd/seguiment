@@ -1,16 +1,12 @@
 import os
 import sqlite3
 from os.path import dirname, abspath
+import sys
+sys.path.append(os.path.abspath(dirname(__file__)))
+
 import configparser
-from src.agents.formats import (
-    RegistresBbddComm,
-    Registres_bbdd_nou,
-    CategoriaComm,
-    Alumne_comm,
-    DataGuiComm,
-    DataNova,
-    AlumneNou,
-)
+from formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm, \
+    DataGuiComm, DataNova, AlumneNou
 
 ERROR_LLISTA = "Error: el missatge ha de ser una llista."
 ERROR_FORMAT = "Error: el missatge no té el format correcte."
@@ -19,16 +15,14 @@ ERROR_FORMAT = "Error: el missatge no té el format correcte."
 def obtenir_ruta_config():
     """Proporciona la ruta dels arxius de configuracio"""
     localitzacio_config = os.path.normpath(
-        os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "config.ini")
-    )
+        os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "config.ini"))
     return localitzacio_config
 
 
 def obtenir_ruta_icones():
     """Proporciona la ruta de la carpeta de les icones"""
     localitzacio_icones = os.path.normpath(
-        os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones")
-    )
+        os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "icones"))
     return localitzacio_icones
 
 
@@ -46,14 +40,10 @@ class AjudantDirectoris:
         directori_arrel = os.path.abspath(dirname(dirname(abspath(__file__))))
         ruta = None
         if self.mode == 1:
-            localitzacio_bbdd = os.path.normpath(
-                os.path.join(directori_arrel, "dades", "registre.db")
-            )
+            localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
         elif self.mode == 2:
-            localitzacio_bbdd = os.path.normpath(
-                os.path.join(dirname(directori_arrel), "tests", "tests.db")
-            )
+            localitzacio_bbdd = os.path.normpath(os.path.join(dirname(directori_arrel), "tests", "tests.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
         return ruta
 
@@ -84,7 +74,7 @@ def obtenir_valors_categories():
     """Metode per a parsejar les categories del config.ini"""
     config = configparser.ConfigParser()
     config.read(obtenir_ruta_config())
-    valors = config.get("Categories", "Defecte").split(", ")
+    valors = config.get('Categories', 'Defecte').split(', ')
     return valors
 
 
@@ -103,40 +93,32 @@ class Iniciador(ModelDao):
         """Comprova si la taula existeix a la base de dades o no"""
         self.taula = taula
         try:
-            resultat = self.cursor.execute(
-                f"SELECT name FROM sqlite_master WHERE type='table' AND name={self.taula}"
-            )
-            return resultat
+            consulta = self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{self.taula}'").fetchone()
+            if consulta[0] == self.taula:
+                return True
+            return False
         except sqlite3.OperationalError:
             return False
 
     def crea_taules(self):
         """Crea les taules necessaries per a la base de dades"""
-        try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
-            self.cursor = self.conn.cursor()
-            ordre_general = """
-            CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB);
-            CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB);
-            CREATE TABLE IF NOT EXISTS "registres" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "data"
-            INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT
-            NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
-            "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE );
-            CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT);"""
-            self.cursor.executescript(ordre_general)
-        except sqlite3.OperationalError:
-            return False
-        try:
-            insercio_categories = "INSERT INTO categories (categoria) VALUES (?)"
-            motius = self.valors_categories
-            for motiu in motius:
-                self.cursor.execute(insercio_categories, (motiu,))
-                self.conn.commit()
+        creacio_alumnes = False
+        creacio_categories = False
+        creacio_dates = False
+        creacio_registres = False
+        if self.presencia_taula_alumne is False:
+            creacio_alumnes = AlumnesBbdd.crea_taula(self)
+        if self.presencia_taula_categories is False:
+            creacio_categories = CategoriesBbdd.crea_taula(self)
+        if self.presencia_taula_dates is False:
+            creacio_dates = DatesBbdd.crea_taula(self)
+        if self.presencia_taula_registres is False:
+            creacio_registres = RegistresBbdd.crea_taula(self)
+        if creacio_alumnes and creacio_categories and creacio_dates and creacio_registres is True:
             return True
-        except sqlite3.OperationalError:
-            return False
-        finally:
-            self.conn.close()
+        return False
+        
+        
 
 
 class AlumnesBbdd(ModelDao):
@@ -148,6 +130,20 @@ class AlumnesBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
+
+    def crea_taula(self):
+        """Crea la taula si no existeix"""
+        try:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.cursor = self.conn.cursor()
+            ordre_creacio = "CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB)"
+            self.cursor.execute(ordre_creacio)
+            self.conn.commit()
+            self.conn.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
+
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
@@ -179,9 +175,7 @@ class AlumnesBbdd(ModelDao):
         self.cursor = self.conn.cursor()
         try:
             llista_alumnes = []
-            ordre_consultar = (
-                f"SELECT {parametre} FROM {self.taula} ORDER BY nom_alumne ASC"
-            )
+            ordre_consultar = f"SELECT {parametre} FROM {self.taula} ORDER BY nom_alumne ASC"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             for i in consulta:
                 persona = Alumne_comm(i[0], i[1])
@@ -230,15 +224,11 @@ class AlumnesBbdd(ModelDao):
             raise TypeError("El missatge d'entrada ha de ser una llista")
         for element in missatge_registrar:
             if not isinstance(element, AlumneNou):
-                raise TypeError(
-                    "El format de cada element de l'entrada ha de ser AlumneNou"
-                )
+                raise TypeError("El format de cada element de l'entrada ha de ser AlumneNou")
             nom_alumne = element.nom
             self.cursor = self.conn.cursor()
             try:
-                ordre_registrar = (
-                    f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
-                )
+                ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
                 self.cursor.execute(ordre_registrar)
                 self.conn.commit()
                 self.cursor.close()
@@ -287,6 +277,23 @@ class RegistresBbdd(ModelDao):
         self.ordre_consultar = None
         self.parametre = None
 
+    def crea_taula(self):
+        """Crea la taula si no existeix"""
+        try:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.cursor = self.conn.cursor()
+            ordre_creacio = """CREATE TABLE IF NOT EXISTS "registres" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "data"
+            INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT
+            NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
+            "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE )"""
+            self.cursor.execute(ordre_creacio)
+            self.conn.commit()
+            self.conn.close()
+            return True
+        except sqlite3.OperationalError:
+            return False
+    
+
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
         self.cursor = self.conn.cursor()
@@ -334,11 +341,7 @@ class RegistresBbdd(ModelDao):
             self.cursor.close()
             missatge = []
             for registre in consulta:
-                missatge.append(
-                    RegistresBbddComm(
-                        registre[0], registre[1], registre[2], registre[3], registre[4]
-                    )
-                )
+                missatge.append(RegistresBbddComm(registre[0], registre[1], registre[2], registre[3], registre[4]))
             return missatge
         except sqlite3.OperationalError:
             return False
@@ -354,9 +357,7 @@ class RegistresBbdd(ModelDao):
             self.cursor.close()
             missatge = []
             for persona in consulta:
-                dades_individuals = AlumnesBbdd.llegir_alumne_individual(
-                    self, persona[0]
-                )
+                dades_individuals = AlumnesBbdd.llegir_alumne_individual(self, persona[0])
                 if dades_individuals:
                     missatge.append(dades_individuals)
             return missatge
@@ -372,11 +373,9 @@ class RegistresBbdd(ModelDao):
                 return False
             self.cursor = self.conn.cursor()
             try:
-                ordre_registrar = (
-                    f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio)"
-                    f"VALUES ({element.alumne},{element.categoria},'{element.data}',"
-                    f"'{element.descripcio}')"
-                )
+                ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio)" \
+                                  f"VALUES ({element.alumne},{element.categoria},'{element.data}'," \
+                                  f"'{element.descripcio}')"
                 self.cursor.execute(ordre_registrar)
                 self.conn.commit()
                 self.cursor.close()
@@ -393,11 +392,9 @@ class RegistresBbdd(ModelDao):
                 raise TypeError(ERROR_FORMAT)
             self.cursor = self.conn.cursor()
             try:
-                ordre_actualitzar = (
-                    f"UPDATE {self.taula} SET id_alumne = {element.alumne},"
-                    f" id_categoria = {element.categoria}, data = '{element.data}',"
-                    f" descripcio = '{element.descripcio}' WHERE id = {element.id} "
-                )
+                ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}," \
+                                    f" id_categoria = {element.categoria}, data = '{element.data}'," \
+                                    f" descripcio = '{element.descripcio}' WHERE id = {element.id} "
                 self.cursor.execute(ordre_actualitzar)
                 self.conn.commit()
                 self.cursor.close()
@@ -428,14 +425,10 @@ class RegistresBbdd(ModelDao):
             raise TypeError(ERROR_LLISTA)
         for element in missatge_eliminar:
             if not isinstance(element, Alumne_comm):
-                raise TypeError(
-                    "El missatge ha de ser una llista amb el format correcte"
-                )
+                raise TypeError("El missatge ha de ser una llista amb el format correcte")
             self.cursor = self.conn.cursor()
             try:
-                ordre_eliminar = (
-                    f"DELETE FROM {self.taula} WHERE id_alumne = {element.id}"
-                )
+                ordre_eliminar = f"DELETE FROM {self.taula} WHERE id_alumne = {element.id}"
                 self.cursor.execute(ordre_eliminar)
                 self.conn.commit()
                 self.cursor.close()
@@ -453,6 +446,32 @@ class CategoriesBbdd(ModelDao):
         self.taula = taula
         self.ordre_consultar = None
         self.parametre = None
+        self.valors_categories = obtenir_valors_categories()
+
+    def crea_taula(self):
+        """Crea la taula si no existeix"""
+        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.cursor = self.conn.cursor()
+        try:
+            
+            ordre_creacio = "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB)"
+            self.cursor.execute(ordre_creacio)
+            self.conn.commit()
+            
+        except sqlite3.OperationalError:
+            return False
+        if len(self.lectura_categories)==0:
+            try:
+                insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
+                motius = self.valors_categories
+                for motiu in motius:
+                    self.cursor.execute(insercio_categories, (motiu,))
+                    self.conn.commit()
+                
+            except sqlite3.OperationalError:
+                return False            
+        self.conn.close()
+        return True
 
     def consultar_camp(self, camp: str):
         """Obtindre els registres d'un camp de la taula de categories"""
@@ -498,9 +517,7 @@ class CategoriesBbdd(ModelDao):
         """Crea una nova categoria"""
         self.cursor = self.conn.cursor()
         try:
-            ordre_registrar = (
-                f"INSERT INTO {self.taula} (categoria) VALUES ('{nom_categoria}')"
-            )
+            ordre_registrar = f"INSERT INTO {self.taula} (categoria) VALUES ('{nom_categoria}')"
             self.cursor.execute(ordre_registrar)
             self.conn.commit()
             self.cursor.close()
@@ -536,10 +553,8 @@ class CategoriesBbdd(ModelDao):
             try:
                 num_referencia = item.id
                 nom_categoria = item.nom
-                actualitzar = (
-                    f"UPDATE {self.taula} SET categoria = '{nom_categoria}'"
-                    f"WHERE id = {num_referencia}"
-                )
+                actualitzar = f"UPDATE {self.taula} SET categoria = '{nom_categoria}'" \
+                              f"WHERE id = {num_referencia}"
                 self.cursor.execute(actualitzar)
                 self.conn.commit()
                 self.cursor.close()
@@ -570,6 +585,25 @@ class DatesBbdd(ModelDao):
         self.ordre_consultar = None
         self.parametre = None
 
+    def crea_taula(self):
+        """Crea la taula si no existeix"""
+        try:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.cursor = self.conn.cursor()
+            ordre_creacio = "CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT)"
+            self.cursor.execute(ordre_creacio)
+            self.conn.commit()            
+            return True
+        except sqlite3.OperationalError:
+            return False
+        finally:
+            self.conn.close()
+
+
+    
+
+
+
     def lectura_dates(self):
         """Llegeix tota la taula de dates"""
         parametre: str = "id,data"
@@ -579,9 +613,7 @@ class DatesBbdd(ModelDao):
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.cursor.close()
             if consulta is not None:
-                missatge_lectura_dates = [
-                    DataGuiComm(element[0], element[1]) for element in consulta
-                ]
+                missatge_lectura_dates = [DataGuiComm(element[0], element[1]) for element in consulta]
                 return missatge_lectura_dates
             return False
         except sqlite3.OperationalError:
@@ -596,9 +628,7 @@ class DatesBbdd(ModelDao):
             if not isinstance(item, DataNova):
                 raise TypeError("La nova data ha de la classe DataNova")
             try:
-                ordre_registrar = (
-                    f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
-                )
+                ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
                 self.cursor.execute(ordre_registrar)
                 self.conn.commit()
                 self.cursor.close()
@@ -641,9 +671,7 @@ class DatesBbdd(ModelDao):
             raise TypeError("El parametre d'entrada ha de ser una llista")
         for element in missatge_actualizacio:
             if not isinstance(element, DataGuiComm):
-                raise TypeError(
-                    "Els elements per actualitzar han de ser de la categoria DataGuiComm"
-                )
+                raise TypeError("Els elements per actualitzar han de ser de la categoria DataGuiComm")
             self.cursor = self.conn.cursor()
             try:
                 data = element.dia

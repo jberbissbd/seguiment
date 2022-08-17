@@ -1,3 +1,6 @@
+from os.path import dirname, abspath
+import os, sys
+sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt, QDate, QSize
 from PySide6.QtGui import QIcon, QPixmap
