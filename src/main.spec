@@ -7,7 +7,7 @@ block_cipher = None
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[/icones/*,/config.ini],
+    binaries=[/icones/*.svg,/config.ini],
     datas=[],
     hiddenimports=[python-dateutil],
     hookspath=[],
@@ -17,6 +17,7 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
+    warn_on_missing_hiddenimports = True,
 )
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
