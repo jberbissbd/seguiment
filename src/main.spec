@@ -10,7 +10,7 @@ a = Analysis(
     binaries=[('icones.application-exit-symbolic.svg','icones'),
     ('icones.desar.svg', 'icones'),('config.ini','.')],
     datas=[],
-    hiddenimports=[python-dateutil],
+    hiddenimports=['python-dateutil'],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
