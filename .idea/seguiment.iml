@@ -9,7 +9,6 @@
       <excludeFolder url="file://$MODULE_DIR$/.vscode" />
       <excludeFolder url="file://$MODULE_DIR$/dinterficie" />
       <excludeFolder url="file://$MODULE_DIR$/build" />
-      <excludeFolder url="file://$MODULE_DIR$/lib" />
       <excludeFolder url="file://$MODULE_DIR$/src/.pytest_cache/v" />
       <excludeFolder url="file://$MODULE_DIR$/src/build" />
       <excludeFolder url="file://$MODULE_DIR$/tests/.pytest_cache/v" />
