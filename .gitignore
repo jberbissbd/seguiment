@@ -18,4 +18,3 @@ Pipfile.lock
 /src/build/
 /src/dist/
 
-!/lib/
