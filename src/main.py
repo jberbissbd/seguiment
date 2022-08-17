@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 import datetime
-import dateutil.parser
+from dateutil import parser
 import os
 import sys
 
