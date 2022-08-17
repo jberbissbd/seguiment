@@ -1,9 +1,10 @@
+# -*- coding:utf-8 -*-
 import os
 import sqlite3
 from os.path import dirname, abspath
 import sys
-sys.path.append(os.path.abspath(dirname(__file__)))
 
+sys.path.append(os.path.abspath(dirname(__file__)))
 import configparser
 from formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm, \
     DataGuiComm, DataNova, AlumneNou
@@ -93,7 +94,8 @@ class Iniciador(ModelDao):
         """Comprova si la taula existeix a la base de dades o no"""
         self.taula = taula
         try:
-            consulta = self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{self.taula}'").fetchone()
+            consulta = self.cursor.execute(
+                f"SELECT name FROM sqlite_master WHERE type='table' AND name='{self.taula}'").fetchone()
             if consulta[0] == self.taula:
                 return True
             return False
@@ -117,8 +119,6 @@ class Iniciador(ModelDao):
         if creacio_alumnes and creacio_categories and creacio_dates and creacio_registres is True:
             return True
         return False
-        
-        
 
 
 class AlumnesBbdd(ModelDao):
@@ -143,7 +143,6 @@ class AlumnesBbdd(ModelDao):
             return True
         except sqlite3.OperationalError:
             return False
-
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
@@ -282,7 +281,8 @@ class RegistresBbdd(ModelDao):
         try:
             self.conn = sqlite3.connect(self.ruta_bbdd)
             self.cursor = self.conn.cursor()
-            ordre_creacio = """CREATE TABLE IF NOT EXISTS "registres" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "data"
+            ordre_creacio = """CREATE TABLE IF NOT EXISTS "registres" ("id" INTEGER NOT NULL PRIMARY KEY 
+            AUTOINCREMENT UNIQUE, "data"
             INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT
             NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
             "id_alumne") REFERENCES "alumnes"("id") ON DELETE CASCADE )"""
@@ -292,7 +292,6 @@ class RegistresBbdd(ModelDao):
             return True
         except sqlite3.OperationalError:
             return False
-    
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
@@ -453,23 +452,24 @@ class CategoriesBbdd(ModelDao):
         self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         try:
-            
-            ordre_creacio = "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria BLOB)"
+
+            ordre_creacio = "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, " \
+                            "categoria BLOB)"
             self.cursor.execute(ordre_creacio)
             self.conn.commit()
-            
+
         except sqlite3.OperationalError:
             return False
-        if len(self.lectura_categories)==0:
+        if len(self.lectura_categories) == 0:
             try:
                 insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
                 motius = self.valors_categories
                 for motiu in motius:
                     self.cursor.execute(insercio_categories, (motiu,))
                     self.conn.commit()
-                
+
             except sqlite3.OperationalError:
-                return False            
+                return False
         self.conn.close()
         return True
 
@@ -592,17 +592,12 @@ class DatesBbdd(ModelDao):
             self.cursor = self.conn.cursor()
             ordre_creacio = "CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT)"
             self.cursor.execute(ordre_creacio)
-            self.conn.commit()            
+            self.conn.commit()
             return True
         except sqlite3.OperationalError:
             return False
         finally:
             self.conn.close()
-
-
-    
-
-
 
     def lectura_dates(self):
         """Llegeix tota la taula de dates"""

@@ -1,5 +1,4 @@
-import sys
-
+# -*- coding:utf-8 -*-
 import secrets
 import sys
 import unittest
