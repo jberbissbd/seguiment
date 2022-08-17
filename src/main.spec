@@ -22,7 +22,7 @@ a = Analysis(
     ('icones/value-increase-symbolic.svg','icones'),
     ('config.ini','.')],
     datas=[],
-    hiddenimports=['dateutil'],
+    hiddenimports=['python-dateutil'],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
