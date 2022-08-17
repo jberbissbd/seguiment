@@ -13,7 +13,7 @@ a = Analysis(
     ('icones/draw-arrow-back.svg','icones'),
     ('icones/edit-delete-symbolic.svg','icones'),
     ('icones/edit-symbolic.svg','icones'),
-    ('icones/help-info-symbolic'.svg,'icones'),
+    ('icones/help-info-symbolic.svg','icones'),
     ('icones/inode-directory-symbolic.svg','icones'),
     ('icones/mail-mark-junk-symbolic.svg','icones'),
     ('icones/office-calendar-symbolic.svg','icones'),
