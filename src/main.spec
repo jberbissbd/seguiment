@@ -1,4 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_submodules
+
+hiddenimports = []
+hiddenimports += collect_submodules('dateutil')
 
 
 block_cipher = None
@@ -22,7 +26,7 @@ a = Analysis(
     ('icones/value-increase-symbolic.svg','icones'),
     ('config.ini','.')],
     datas=[],
-    hiddenimports=[],
+    hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
@@ -60,3 +64,4 @@ coll = COLLECT(
     upx_exclude=[],
     name='main',
 )
+
