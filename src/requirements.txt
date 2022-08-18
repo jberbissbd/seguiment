@@ -1,6 +1,6 @@
 PySide6~=6.3.1
-python-dateutil~=2.8.2
-numpy~=1.23.1
+python-dateutil
+numpy
 pandas~=1.4.3
 Faker~=14.0.0
 openpyxl~=3.0.10
