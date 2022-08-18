@@ -40,14 +40,14 @@ jobs:
           - os: macos-latest
             TARGET: macos
             CMD_BUILD: >
-                pyinstaller -F -w -n tutopy -i src/icones main.py &&
+                pyinstaller -F -w -n tutopy -i src/icones src/main.py &&
                 cd dist/ &&
                 zip -r9 tutopy tutopy.app/
             OUT_FILE_NAME: tutopy.zip
             ASSET_MIME: application/zip
           - os: windows-latest
             TARGET: windows
-            CMD_BUILD: pyinstaller -F -w -n tutopy -i src/icones main.py 
+            CMD_BUILD: pyinstaller -F -w -n tutopy -i src/icones src/main.py
             OUT_FILE_NAME: tutopy.exe
             ASSET_MIME: application/vnd.microsoft.portable-executable
     steps:
