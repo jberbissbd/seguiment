@@ -81,8 +81,10 @@ class Liquidador(ModelDao):
 def obtenir_valors_categories():
     """Metode per a parsejar les categories del config.ini"""
     config = configparser.ConfigParser()
+    print(obtenir_ruta_config())
     config.read(obtenir_ruta_config())
     valors = config.get('Categories', 'defecte').split(', ')
+    print(valors)
     return valors
 
 
