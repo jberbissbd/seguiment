@@ -66,6 +66,6 @@ jobs:
     - name: Load Release URL File from release job
     - uses: actions/upload-artifact@v2
       with:
-        name: tutopy_${{ matrix.OUT_FILE_NAME}}
+        name: ${{ matrix.OUT_FILE_NAME}}
         path: src/dist/${{ matrix.OUT_FILE_NAME}}
 
