@@ -18,7 +18,6 @@ def obtenir_ruta_config():
     """Proporciona la ruta dels arxius de configuracio"""
     localitzacio_config = os.path.normpath(
         os.path.join(dirname(os.path.abspath(__file__)), "config.ini"))
-    print(localitzacio_config)
     return localitzacio_config
 
 
@@ -44,7 +43,6 @@ class AjudantDirectoris:
             directori_arrel = os.path.dirname(sys.executable)
         else:
             directori_arrel = os.path.dirname(os.path.realpath(__file__))
-        # directori_arrel = os.path.abspath(dirname(abspath(__file__)))
         ruta = None
         if self.mode == 1:
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
@@ -85,6 +83,7 @@ def obtenir_valors_categories():
     config = configparser.ConfigParser()
     config.read(obtenir_ruta_config())
     valors = config.get('Categories', 'Defecte').split(', ')
+    print(valors)
     return valors
 
 
