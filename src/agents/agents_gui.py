@@ -7,7 +7,7 @@ from os.path import dirname, abspath
 import openpyxl
 import pandas
 from dateutil import parser
-sys.path.append((os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.normpath(os.path.dirname(os.path.abspath(__file__))))
 from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
 from agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
 from formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, \

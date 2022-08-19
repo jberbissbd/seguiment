@@ -4,7 +4,8 @@ import sqlite3
 from os.path import dirname, abspath
 import sys
 
-sys.path.append(os.path.abspath(dirname(__file__)))
+# sys.path.append(os.path.abspath(dirname(__file__)))
+sys.path.append(os.path.normpath(os.path.dirname(os.path.abspath(__file__))))
 import configparser
 from formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm, \
     DataGuiComm, DataNova, AlumneNou
