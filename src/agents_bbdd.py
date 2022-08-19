@@ -39,9 +39,14 @@ class AjudantDirectoris:
 
     def establiment_mode(self):
         """Estableix si funciona en mode de produccio o funcionament normal (1) o testing (2)"""
-        directori_arrel = os.path.abspath(dirname(abspath(__file__)))
+        if getattr(sys, 'frozen', False):
+            directori_arrel = os.path.dirname(sys.executable)
+        else:
+            directori_arrel = os.path.dirname(os.path.realpath(__file__))
+        # directori_arrel = os.path.abspath(dirname(abspath(__file__)))
         ruta = None
         if self.mode == 1:
+
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
         elif self.mode == 2:
