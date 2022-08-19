@@ -18,6 +18,7 @@ def obtenir_ruta_config():
     """Proporciona la ruta dels arxius de configuracio"""
     localitzacio_config = os.path.normpath(
         os.path.join(os.path.realpath(__file__), "config.ini"))
+    print(localitzacio_config)
     return localitzacio_config
 
 
