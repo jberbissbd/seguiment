@@ -17,7 +17,7 @@ ERROR_FORMAT = "Error: el missatge no té el format correcte."
 def obtenir_ruta_config():
     """Proporciona la ruta dels arxius de configuracio"""
     localitzacio_config = os.path.normpath(
-        os.path.join(os.path.abspath(dirname(dirname(abspath(__file__)))), "config.ini"))
+        os.path.join(os.path.realpath(__file__), "config.ini"))
     return localitzacio_config
 
 
