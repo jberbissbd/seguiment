@@ -82,8 +82,7 @@ def obtenir_valors_categories():
     """Metode per a parsejar les categories del config.ini"""
     config = configparser.ConfigParser()
     config.read(obtenir_ruta_config())
-    valors = config.get('Categories', 'Defecte').split(', ')
-    print(valors)
+    valors = config.get('Categories', 'defecte').split(', ')
     return valors
 
 
