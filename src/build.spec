@@ -22,7 +22,7 @@ a = Analysis(
     ('icones/system-shutdown-symbolic.svg','icones'),
     ('icones/system-switch-user-symbolic.svg','icones'),
     ('icones/value-increase-symbolic.svg','icones'),
-    ('config.ini','.') ],
+    ('config.ini','.')],
     datas=[],
     hiddenimports=[],
     hookspath=[],
