@@ -1,4 +1,3 @@
-from os.path import dirname, abspath
 import os, sys
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from PySide6 import QtCore, QtWidgets
@@ -25,9 +24,9 @@ from PySide6.QtWidgets import (
     QFileDialog,
 )
 
-from agents.agents_bbdd import AjudantDirectoris
-from agents.agents_gui import Calendaritzador, CapEstudis
-from agents.formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova
+from src.agents_bbdd import AjudantDirectoris
+from src.agents_gui import Calendaritzador, CapEstudis
+from src.formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova
 
 
 class DialegSeleccioCarpeta(QFileDialog):

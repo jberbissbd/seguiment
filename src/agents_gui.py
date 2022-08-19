@@ -3,7 +3,6 @@ import os
 import sys
 import dateutil
 import numpy as np
-from os.path import dirname, abspath
 import openpyxl
 import pandas
 from dateutil import parser

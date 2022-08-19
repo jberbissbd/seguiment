@@ -14,11 +14,11 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QG
                                QVBoxLayout, QWidget, QAbstractItemView, QSizePolicy, QRadioButton, QGroupBox,
                                QStatusBar, QStyleFactory, QStyledItemDelegate, QMessageBox)
 from dateutil import parser
-from agents.agents_bbdd import AjudantDirectoris
-from agents.agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor\
+from agents_bbdd import AjudantDirectoris
+from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor\
     , Comprovador
-from agents.formats import Registres_gui_nou, Registresguicomm
-from gui.widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
+from formats import Registres_gui_nou, Registresguicomm
+from widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
 
 
 class DelegatDates(QStyledItemDelegate):
