@@ -47,7 +47,9 @@ class AjudantDirectoris:
         ruta = None
         if self.mode == 1:
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
-            os.mkdir(os.path.join(directori_arrel, "dades"))
+            carpeta_dades = os.path.normpath(os.path.join(directori_arrel, "dades"))
+            if os.path.exists(carpeta_dades) is False:
+                os.mkdir(carpeta_dades)
             ruta = os.path.abspath(localitzacio_bbdd)
         elif self.mode == 2:
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel), "tests", "tests.db")
@@ -102,6 +104,9 @@ class Iniciador(ModelDao):
         try:
             consulta = self.cursor.execute(
                 f"SELECT name FROM sqlite_master WHERE type='table' AND name='{self.taula}'").fetchone()
+            if consulta is None:
+                return False
+
             if consulta[0] == self.taula:
                 return True
             return False
