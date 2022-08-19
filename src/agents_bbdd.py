@@ -472,7 +472,7 @@ class CategoriesBbdd(ModelDao):
 
         except sqlite3.OperationalError:
             return False
-        if len(self.lectura_categories) == 0:
+        if len(self.valors_categories) == 0:
             try:
                 insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
                 motius = self.valors_categories
