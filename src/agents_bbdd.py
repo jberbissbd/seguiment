@@ -43,6 +43,7 @@ class AjudantDirectoris:
         ruta = None
         if self.mode == 1:
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel, "dades", "registre.db"))
+            print(localitzacio_bbdd)
             ruta = os.path.abspath(localitzacio_bbdd)
         elif self.mode == 2:
             localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel), "tests", "tests.db")
