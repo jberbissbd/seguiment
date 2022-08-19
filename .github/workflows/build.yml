@@ -20,12 +20,12 @@ jobs:
                 pyinstaller -F -w -n src/build.spec main.py &&
                 cd dist/ &&
                 zip -r9 build . -i build.app/
-            OUT_FILE_NAME: tutopy.zip
+            OUT_FILE_NAME: tutopy_macos
             ASSET_MIME: application/zip
           - os: windows-latest
             TARGET: windows
             CMD_BUILD: pyinstaller src/build.spec
-            OUT_FILE_NAME: tutopy
+            OUT_FILE_NAME: tutopy_windows
             ASSET_MIME: application/vnd.microsoft.portable-executable
     steps:
     - uses: actions/checkout@v1
@@ -44,5 +44,5 @@ jobs:
       with:
         name: ${{ matrix.OUT_FILE_NAME}}
         path: dist
-        overwrite: true
+
 

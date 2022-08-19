@@ -7,7 +7,7 @@ import sys
 # sys.path.append(os.path.abspath(dirname(__file__)))
 sys.path.append(os.path.normpath(os.path.dirname(os.path.abspath(__file__))))
 import configparser
-from formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm, \
+from src.agents.formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm, \
     DataGuiComm, DataNova, AlumneNou
 
 ERROR_LLISTA = "Error: el missatge ha de ser una llista."
