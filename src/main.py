@@ -19,7 +19,6 @@ from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Cr
     , Comprovador
 from formats import Registres_gui_nou, Registresguicomm
 from widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
-from qt_material import apply_stylesheet
 
 
 class DelegatDates(QStyledItemDelegate):
