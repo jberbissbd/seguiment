@@ -106,7 +106,6 @@ class Iniciador(ModelDao):
                 f"SELECT name FROM sqlite_master WHERE type='table' AND name='{self.taula}'").fetchone()
             if consulta is None:
                 return False
-
             if consulta[0] == self.taula:
                 return True
             return False
@@ -471,7 +470,7 @@ class CategoriesBbdd(ModelDao):
 
         except sqlite3.OperationalError:
             return False
-        if len(self.valors_categories) == 0:
+        if len(self.valors_categories) > 0:
             try:
                 insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
                 motius = self.valors_categories
