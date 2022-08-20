@@ -83,7 +83,6 @@ def obtenir_valors_categories():
     config = configparser.ConfigParser()
     config.read(obtenir_ruta_config(), encoding='utf-8')
     valors = config.get('Categories', 'defecte').split(', ')
-    print(valors)
     return valors
 
 

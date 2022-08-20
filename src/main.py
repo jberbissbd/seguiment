@@ -19,6 +19,7 @@ from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Cr
     , Comprovador
 from formats import Registres_gui_nou, Registresguicomm
 from widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
+from qt_material import apply_stylesheet
 
 
 class DelegatDates(QStyledItemDelegate):
@@ -114,6 +115,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # Inicialització de la base de dades (es crea si no existeix)
+        Comprovador(1)
+        # Introduim la resta de parametres de la finestra principal
         self.INFORME = None
         self.selcarpeta = None
         self.SELECCIO_CARPETA = None
@@ -129,8 +132,6 @@ class MainWindow(QMainWindow):
         self.BOTO_INFORMACIO = None
         self.BOTO_PURGAR = None
         self.BOTO_EDITAR_ALUMNES = None
-        Comprovador(1)
-        # Introduim la resta de parametres
         self.DATES = None
         self.destinacio_informes = None
         self.EDITAR_ALUMNES = None
@@ -698,9 +699,7 @@ def sortir():
 
 app = QApplication(sys.argv)
 QLocale.setDefault(QLocale.Catalan)
-
+app.setStyle("GTK+")
 window = MainWindow()
-
 window.show()
-
 sys.exit(app.exec())
