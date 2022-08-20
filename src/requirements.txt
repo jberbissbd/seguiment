@@ -1,0 +1,8 @@
+PySide6
+python-dateutil
+numpy
+pandas
+Faker
+openpyxl
+pyinstaller
+configparser
