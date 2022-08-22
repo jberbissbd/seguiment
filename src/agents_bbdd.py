@@ -233,7 +233,7 @@ class AlumnesBbdd(ModelDao):
         for element in missatge_registrar:
             if not isinstance(element, AlumneNou):
                 raise TypeError("El format de cada element de l'entrada ha de ser AlumneNou")
-            nom_alumne = element.nom
+            nom_alumne = element.nom.strip()
             self.cursor = self.conn.cursor()
             try:
                 ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
@@ -383,7 +383,7 @@ class RegistresBbdd(ModelDao):
             try:
                 ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio)" \
                                   f"VALUES ({element.alumne},{element.categoria},'{element.data}'," \
-                                  f"'{element.descripcio}')"
+                                  f"'{element.descripcio.strip()}')"
                 self.cursor.execute(ordre_registrar)
                 self.conn.commit()
                 self.cursor.close()
@@ -526,7 +526,7 @@ class CategoriesBbdd(ModelDao):
         """Crea una nova categoria"""
         self.cursor = self.conn.cursor()
         try:
-            ordre_registrar = f"INSERT INTO {self.taula} (categoria) VALUES ('{nom_categoria}')"
+            ordre_registrar = f"INSERT INTO {self.taula} (categoria) VALUES ('{nom_categoria.strip()}')"
             self.cursor.execute(ordre_registrar)
             self.conn.commit()
             self.cursor.close()
