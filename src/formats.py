@@ -60,6 +60,12 @@ class CategoriaComm:
 
 
 @dataclass(repr=False)
+class CategoriaNova:
+    """Classe per a la missatgeria entre els agents i la interficie grafica, per a categories ja existents"""
+    nom: str
+
+
+@dataclass(repr=False)
 class DataGuiComm:
     """Classe per a la missatgeria entre els agents i la interficie grafica, per a les dates de trimestre ja
     existents """
