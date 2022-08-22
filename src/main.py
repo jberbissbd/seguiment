@@ -698,7 +698,7 @@ def sortir():
 
 app = QApplication(sys.argv)
 QLocale.setDefault(QLocale.Catalan)
-app.setStyle("GTK+")
+app.setStyle("Fusion")
 window = MainWindow()
 window.show()
 sys.exit(app.exec())
