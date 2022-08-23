@@ -618,7 +618,10 @@ class ExportadorImportador:
             estructura["nom"] = alumne.nom
             estructura["registres"] = registres_alumne
             self.dict_json["dades"].append(estructura)
-            with open(f"{destinacio}" + f"{alumne.nom}", "w", encoding='utf-8') as file:
+            carpeta = os.path.abspath(destinacio)
+            arxiu = alumne.nom
+            localitzacio_arxiu = os.path.normpath(os.path.join(carpeta, arxiu))
+            with open(f"{localitzacio_arxiu}" + ".json", "w", encoding='utf-8') as file:
                 json.dump(self.dict_json, file, indent=4, ensure_ascii=False)
                 file.close()
         return True
