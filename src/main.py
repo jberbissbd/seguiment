@@ -602,6 +602,7 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO.addWidget(self.import_seleccio_arxiu, 3, 1)
         DISTRIBUCIO.addWidget(self.BOTON_INFORME, 4, 0)
         opcio_exportar.toggled.connect(self.seleccio_accio_json)
+        opcio_exportar.toggled.connect(self.seleccionar_informe)
         opcio_alumnes.toggled.connect(self.seleccionar_informe)
         opcio_categories.toggled.connect(self.seleccionar_informe)
         self.BOTON_INFORME.clicked.connect(self.generar_informe)
@@ -673,15 +674,18 @@ class MainWindow(QMainWindow):
             self.import_seleccio_arxiu.setVisible(True)
 
     def seleccionar_informe(self):
-        self.BOTON_INFORME.setVisible(True)
-        self.SELECCIO_CARPETA.setVisible(True)
+
         if self.informe_seleccionat.checkedId() == 0:
+            self.BOTON_INFORME.setVisible(True)
+            self.SELECCIO_CARPETA.setVisible(True)
             self.tipus_informes = 0
             self.INFORMES_SELECTOR_CATEGORIES.setVisible(True)
             self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
             self.INFORMES_SELECTOR_ALUMNES.setCurrentIndex(0)
 
         elif self.informe_seleccionat.checkedId() == 1:
+            self.BOTON_INFORME.setVisible(True)
+            self.SELECCIO_CARPETA.setVisible(True)
             self.tipus_informes = 1
             self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
             self.INFORMES_SELECTOR_ALUMNES.setVisible(True)
