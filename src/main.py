@@ -610,6 +610,7 @@ class MainWindow(QMainWindow):
         self.opcio_categories.toggled.connect(self.seleccionar_informe)
         self.BOTON_INFORME.clicked.connect(self.generar_informe)
         self.export_seleccio_carpeta.clicked.connect(self.seleccionar_carpeta_exportacio_json)
+        self.import_seleccio_arxiu.clicked.connect(self.importar)
         self.SELECCIO_CARPETA.clicked.connect(self.seleccionar_carpeta_informes)
         self.boto_exportar_json.clicked.connect(self.exportar)
         self.destinacio_informes = None
@@ -647,7 +648,10 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage("Error en l'exportacio", 2000)
 
     def importar(self):
-        pass
+        self.importacio = DialegSeleccioCarpeta().getOpenFileNames(self, "Selecciona carpeta", filter="Arxius json("
+                                                                                                      "*.json)")
+        arxius_importacio = self.importacio[0]
+        ExportadorImportador(1).importacio(arxius_importacio)
 
     def generar_informe(self):
         """Funcio per a generar un informe. Explicacio de la variable tipus informe: 0 si es de categories, 1 si es per

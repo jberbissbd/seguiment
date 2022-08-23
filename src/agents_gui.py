@@ -626,29 +626,31 @@ class ExportadorImportador:
                 file.close()
         return True
 
-    def importacio(self, arxiu: str):
-        with open(f"{arxiu}", "r", encoding='utf-8') as file:
-            lectura_json = json.load(file)
-            file.close()
-        for alumne in lectura_json["dades"]:
-            for registre in alumne["registres"]:
-                registre.insert(0, alumne["nom"])
-                self.registres_tractar.append(registre)
-        for registre in self.registres_tractar:
-            if registre[0] not in self.alumnes_registrats:
-                self.nous_alumnes.append(AlumneNou(registre[0]))
-            if registre[1] not in self.categories_registrades:
-                self.noves_categories.append(CategoriaNova(registre[1].strip()))
-        # Creem nous valors d'alumne i de categories si s'escau, per a complir amb la restriccio de la base de dades:
-        if len(self.nous_alumnes) > 0:
-            AlumnesBbdd(1).registrar_alumne(self.nous_alumnes)
-        if len(self.noves_categories) > 0:
-            CategoriesBbdd(1).crear_categoria(self.noves_categories)
-        for registre in self.registres_tractar:
-            # Intercanviem el nom de l'alumne pel seu id a la base de dades:
-            registre[0] = self.obtencio_id_alumne(registre[0])
-            # Intercanviem el nom de la categoria pel seu id a la base de dades:
-            registre[1] = self.obtencio_id_categoria(registre[1])
-            self.nous_registres.append(Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]))
-        RegistresBbdd(1).crear_registre(self.nous_registres)
+    def importacio(self, llista_arxius: list):
+        for arxiu in llista_arxius:
+            with open(f"{arxiu}", "r", encoding='utf-8') as file:
+                lectura_json = json.load(file)
+                file.close()
+            for alumne in lectura_json["dades"]:
+                for registre in alumne["registres"]:
+                    registre.insert(0, alumne["nom"])
+                    self.registres_tractar.append(registre)
+            for registre in self.registres_tractar:
+                if registre[0] not in self.alumnes_registrats:
+                    self.nous_alumnes.append(AlumneNou(registre[0]))
+                if registre[1] not in self.categories_registrades:
+                    self.noves_categories.append(CategoriaNova(registre[1].strip()))
+            # Creem nous valors d'alumne i de categories si s'escau, per a complir amb la restriccio de la base de
+            # dades:
+            if len(self.nous_alumnes) > 0:
+                AlumnesBbdd(1).registrar_alumne(self.nous_alumnes)
+            if len(self.noves_categories) > 0:
+                CategoriesBbdd(1).crear_categoria(self.noves_categories)
+            for registre in self.registres_tractar:
+                # Intercanviem el nom de l'alumne pel seu id a la base de dades:
+                registre[0] = self.obtencio_id_alumne(registre[0])
+                # Intercanviem el nom de la categoria pel seu id a la base de dades:
+                registre[1] = self.obtencio_id_categoria(registre[1])
+                self.nous_registres.append(Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]))
+            RegistresBbdd(1).crear_registre(self.nous_registres)
         return True
