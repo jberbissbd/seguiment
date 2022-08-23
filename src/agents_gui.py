@@ -621,6 +621,7 @@ class ExportadorImportador:
             with open(f"{alumne.nom}", "w", encoding='utf-8') as file:
                 json.dump(self.dict_json, file, indent=4, ensure_ascii=False)
                 file.close()
+        return True
 
     def importacio(self, arxiu: str):
         with open(f"{arxiu}", "r", encoding='utf-8') as file:
@@ -646,4 +647,5 @@ class ExportadorImportador:
             # Intercanviem el nom de la categoria pel seu id a la base de dades:
             registre[1] = self.obtencio_id_categoria(registre[1])
             self.nous_registres.append(Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]))
-        # RegistresBbdd(1).crear_registre(registres_tractar)
+        RegistresBbdd(1).crear_registre(self.nous_registres)
+        return True

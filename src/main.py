@@ -3,8 +3,6 @@ import datetime
 import dateutil
 import os
 import sys
-
-sys.path.append(os.path.abspath(os.path.dirname(os.path.abspath(__file__))))
 from typing import Union
 from PySide6 import QtCore
 from PySide6.QtCore import QSize, Qt, QDate, QSortFilterProxyModel, QLocale
@@ -15,7 +13,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QG
                                QStatusBar, QStyleFactory, QStyledItemDelegate, QMessageBox)
 from dateutil import parser
 from agents_bbdd import AjudantDirectoris
-from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor\
+from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor \
     , Comprovador
 from formats import Registres_gui_nou, Registresguicomm
 from widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
@@ -36,6 +34,7 @@ class DelegatDates(QStyledItemDelegate):
 
 class SortFilterProxyModel(QSortFilterProxyModel):
     """Classe per a poder filtrar a la taula de la Finestra principal"""
+
     def __init__(self, *args, **kwargs):
         QSortFilterProxyModel.__init__(self, *args, **kwargs)
         self.filters = {}
@@ -525,27 +524,52 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO = QGridLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.INFORME.setLayout(DISTRIBUCIO)
+        # Creem les opcions d'informe
         GRUP_TIPUS = QGroupBox()
         GRUP_TIPUS.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-        GRUP_TIPUS.setTitle("Tipus d'informe")
+        GRUP_TIPUS.setTitle("Crear informes format Excel")
         GRUP_TIPUS.setFlat(True)
         GRUP_TIPUS_DISTRIBUCIO = QVBoxLayout()
         GRUP_TIPUS.setLayout(GRUP_TIPUS_DISTRIBUCIO)
+        # Creem el grup d'exportacio i importacio:
+        grup_export_import = QGroupBox()
+        grup_export_import.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        grup_export_import.setTitle("Exportar/importar")
+        grup_export_import.setFlat(True)
+        grup_export_importdistribucio = QVBoxLayout()
+        grup_export_import.setLayout(grup_export_importdistribucio)
+        # Definim les opcions per a la creacio d’informes en Excel:
         self.informe_seleccionat: Union[QButtonGroup, QButtonGroup] = QButtonGroup()
         opcio_categories = QRadioButton("Categories")
-        opcio_categories.setChecked(True)
+        opcio_categories.setChecked(False)
         opcio_alumnes = QRadioButton("Per alumne")
         self.informe_seleccionat.setExclusive(True)
         self.informe_seleccionat.addButton(opcio_categories, 0)
         self.informe_seleccionat.addButton(opcio_alumnes, 1)
         GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_categories)
         GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_alumnes)
-        # Creem els selectors:
+        # Creem les opcions per a l'exportacio o la importacio:
+        self.tipus_accio_json = QButtonGroup()
+        self.tipus_accio_json.setExclusive(True)
+        opcio_exportar = QRadioButton("Exportar")
+
+        opcio_importar = QRadioButton("Importar")
+        self.tipus_accio_json.addButton(opcio_exportar, 0)
+        self.tipus_accio_json.addButton(opcio_importar, 1)
+        grup_export_importdistribucio.addWidget(opcio_exportar)
+        grup_export_importdistribucio.addWidget(opcio_importar)
+        # Creem el selector d'alumnes per a l'exportacio:
+        self.exportimport_selector_alumnes = QComboBox()
+        self.exportimport_selector_alumnes.addItem("* Tots *")
+        self.exportimport_selector_alumnes.setVisible(False)
+
+        # Creem els selectors d'informe en Excel:
         self.INFORMES_SELECTOR_ALUMNES = QComboBox()
         self.INFORMES_SELECTOR_ALUMNES.addItem("* Tots *")
-        # Afegim les dades de la taula, si n'hi ha
+        # Afegim les dades de la taula, si n'hi ha:
         if self.obtenir_llistat_alumnes_registrats():
             self.INFORMES_SELECTOR_ALUMNES.addItems(self.obtenir_llistat_alumnes_registrats())
+            self.exportimport_selector_alumnes.addItems(self.obtenir_llistat_alumnes_registrats())
         self.INFORMES_SELECTOR_CATEGORIES = QComboBox()
         self.INFORMES_SELECTOR_CATEGORIES.addItem("* Totes *")
         if self.obtenir_llistat_categories_registrades():
@@ -554,27 +578,49 @@ class MainWindow(QMainWindow):
         self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
         self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
         self.INFORMES_SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-        # Creem els boton:
+        # Creem els botons per a l'exportacio o importacio:
+        self.export_seleccio_carpeta = QPushButton(QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "")
+        self.export_seleccio_carpeta.setVisible(False)
+        self.import_seleccio_arxiu = QPushButton(
+            QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "Seleccioneu arxiu")
+        self.import_seleccio_arxiu.setVisible(False)
+        # Creem els botons per a la creacio d'informes en Excel:
         self.BOTON_INFORME = QPushButton("Generar informe")
         self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.BOTON_INFORME.setVisible(False)
         self.SELECCIO_CARPETA = QPushButton(QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "")
         self.SELECCIO_CARPETA.setIconSize(QSize(24, 24))
+        self.SELECCIO_CARPETA.setVisible(False)
+        # Distribuim els elements:
         DISTRIBUCIO.addWidget(GRUP_TIPUS, 0, 0)
+        DISTRIBUCIO.addWidget(grup_export_import, 0, 1)
         DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_ALUMNES, 1, 0)
+        DISTRIBUCIO.addWidget(self.exportimport_selector_alumnes, 1, 1)
         DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_CATEGORIES, 2, 0)
+        DISTRIBUCIO.addWidget(self.export_seleccio_carpeta, 2, 1)
         DISTRIBUCIO.addWidget(self.SELECCIO_CARPETA, 3, 0)
+        DISTRIBUCIO.addWidget(self.import_seleccio_arxiu, 3, 1)
         DISTRIBUCIO.addWidget(self.BOTON_INFORME, 4, 0)
+        opcio_exportar.toggled.connect(self.seleccio_accio_json)
         opcio_alumnes.toggled.connect(self.seleccionar_informe)
         opcio_categories.toggled.connect(self.seleccionar_informe)
         self.BOTON_INFORME.clicked.connect(self.generar_informe)
         self.SELECCIO_CARPETA.clicked.connect(self.seleccionar_carpeta_informes)
         self.destinacio_informes = None
+        self.carpeta_exportacio = None
+        self.arxiu_importacio = None
 
     def seleccionar_carpeta_informes(self):
         """Funcio per a seleccionar la carpeta on es guardaran els informes."""
         self.selcarpeta = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
         if self.selcarpeta:
             self.destinacio_informes = self.selcarpeta
+
+    def exportar(self):
+        pass
+
+    def importar(self):
+        pass
 
     def generar_informe(self):
         """Funcio per a generar un informe. Explicacio de la variable tipus informe: 0 si es de categories, 1 si es per
@@ -616,7 +662,19 @@ class MainWindow(QMainWindow):
             if resposta:
                 self.statusBar().showMessage("Informe generat correctament", 2000)
 
+    def seleccio_accio_json(self):
+        if self.tipus_accio_json.checkedId() == 0:
+            self.exportimport_selector_alumnes.setVisible(True)
+            self.export_seleccio_carpeta.setVisible(True)
+            self.import_seleccio_arxiu.setVisible(False)
+        else:
+            self.exportimport_selector_alumnes.setVisible(False)
+            self.export_seleccio_carpeta.setVisible(False)
+            self.import_seleccio_arxiu.setVisible(True)
+
     def seleccionar_informe(self):
+        self.BOTON_INFORME.setVisible(True)
+        self.SELECCIO_CARPETA.setVisible(True)
         if self.informe_seleccionat.checkedId() == 0:
             self.tipus_informes = 0
             self.INFORMES_SELECTOR_CATEGORIES.setVisible(True)
