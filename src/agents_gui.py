@@ -604,7 +604,7 @@ class ExportadorImportador:
         nombre_categoria = categoria_completa.id
         return nombre_categoria
 
-    def exportacio(self, llista_alumnes: list):
+    def exportacio(self, llista_alumnes: list, destinacio):
         for alumne in llista_alumnes:
             estructura = {}
             registres_alumne = []
@@ -618,7 +618,7 @@ class ExportadorImportador:
             estructura["nom"] = alumne.nom
             estructura["registres"] = registres_alumne
             self.dict_json["dades"].append(estructura)
-            with open(f"{alumne.nom}", "w", encoding='utf-8') as file:
+            with open(f"{destinacio}" + f"{alumne.nom}", "w", encoding='utf-8') as file:
                 json.dump(self.dict_json, file, indent=4, ensure_ascii=False)
                 file.close()
         return True

@@ -13,8 +13,8 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QToolBar, QTableView, QG
                                QStatusBar, QStyleFactory, QStyledItemDelegate, QMessageBox)
 from dateutil import parser
 from agents_bbdd import AjudantDirectoris
-from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes, Destructor \
-    , Comprovador
+from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, CreadorInformes
+from agents_gui import Destructor, Comprovador, ExportadorImportador
 from formats import Registres_gui_nou, Registresguicomm
 from widgets import EditorDates, CreadorRegistres, EditorAlumnes, DialegSeleccioCarpeta
 
@@ -578,7 +578,10 @@ class MainWindow(QMainWindow):
         self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
         self.INFORMES_SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         # Creem els botons per a l'exportacio o importacio:
-        self.export_seleccio_carpeta = QPushButton(QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "")
+        self.export_seleccio_carpeta = QPushButton(
+            QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "")
+        self.boto_exportar_json = QPushButton("Exportar")
+        self.boto_exportar_json.setVisible(False)
         self.export_seleccio_carpeta.setVisible(False)
         self.import_seleccio_arxiu = QPushButton(
             QIcon(os.path.join(self.ruta_icones, "inode-directory-symbolic.svg")), "Seleccioneu arxiu")
@@ -598,18 +601,25 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_CATEGORIES, 2, 0)
         DISTRIBUCIO.addWidget(self.export_seleccio_carpeta, 2, 1)
         DISTRIBUCIO.addWidget(self.SELECCIO_CARPETA, 3, 0)
+        DISTRIBUCIO.addWidget(self.boto_exportar_json, 3, 1)
         DISTRIBUCIO.addWidget(self.import_seleccio_arxiu, 3, 1)
         DISTRIBUCIO.addWidget(self.BOTON_INFORME, 4, 0)
         self.opcio_exportar.toggled.connect(self.seleccio_accio_json)
         self.opcio_importar.toggled.connect(self.seleccio_accio_json)
         self.opcio_alumnes.toggled.connect(self.seleccionar_informe)
         self.opcio_categories.toggled.connect(self.seleccionar_informe)
-
         self.BOTON_INFORME.clicked.connect(self.generar_informe)
+        self.export_seleccio_carpeta.clicked.connect(self.seleccionar_carpeta_exportacio_json)
         self.SELECCIO_CARPETA.clicked.connect(self.seleccionar_carpeta_informes)
+        self.boto_exportar_json.clicked.connect(self.exportar)
         self.destinacio_informes = None
         self.carpeta_exportacio = None
         self.arxiu_importacio = None
+
+    def seleccionar_carpeta_exportacio_json(self):
+        self.desti_json = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
+        if self.desti_json:
+            self.carpeta_exportacio = self.desti_json
 
     def seleccionar_carpeta_informes(self):
         """Funcio per a seleccionar la carpeta on es guardaran els informes."""
@@ -618,7 +628,23 @@ class MainWindow(QMainWindow):
             self.destinacio_informes = self.selcarpeta
 
     def exportar(self):
-        pass
+        if self.carpeta_exportacio is None:
+            self.statusBar().showMessage("No s'ha seleccionat cap carpeta de destinacio.", 5000)
+        else:
+            llistat_alumnes = []
+            if self.exportimport_selector_alumnes.currentIndex() == 0:
+                llistat_alumnes = self.cap.alumnat_registres
+            else:
+
+                alumne_seleccionat = self.exportimport_selector_alumnes.currentText()
+                for alumne in self.cap.alumnat_registres:
+                    if alumne.nom == alumne_seleccionat:
+                        llistat_alumnes.append(alumne)
+            resultat_exportacio = ExportadorImportador(1).exportacio(llistat_alumnes, self.carpeta_exportacio)
+            if resultat_exportacio:
+                self.statusBar().showMessage("Exportacio finalitzada", 2000)
+            else:
+                self.statusBar().showMessage("Error en l'exportacio", 2000)
 
     def importar(self):
         pass
@@ -675,9 +701,11 @@ class MainWindow(QMainWindow):
         if self.tipus_accio_json.checkedId() == 0:
             self.exportimport_selector_alumnes.setVisible(True)
             self.export_seleccio_carpeta.setVisible(True)
+            self.boto_exportar_json.setVisible(True)
             self.import_seleccio_arxiu.setVisible(False)
         elif self.tipus_accio_json.checkedId() == 1:
             self.exportimport_selector_alumnes.setVisible(False)
+            self.boto_exportar_json.setVisible(False)
             self.export_seleccio_carpeta.setVisible(False)
             self.import_seleccio_arxiu.setVisible(True)
 
@@ -688,6 +716,7 @@ class MainWindow(QMainWindow):
         self.opcio_importar.setChecked(False)
         self.export_seleccio_carpeta.setVisible(False)
         self.exportimport_selector_alumnes.setVisible(False)
+        self.boto_exportar_json.setVisible(False)
         self.import_seleccio_arxiu.setVisible(False)
         if self.informe_seleccionat.checkedId() == 0:
             self.BOTON_INFORME.setVisible(True)
