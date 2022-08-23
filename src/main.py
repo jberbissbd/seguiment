@@ -540,24 +540,23 @@ class MainWindow(QMainWindow):
         grup_export_import.setLayout(grup_export_importdistribucio)
         # Definim les opcions per a la creacio d’informes en Excel:
         self.informe_seleccionat: Union[QButtonGroup, QButtonGroup] = QButtonGroup()
-        opcio_categories = QRadioButton("Categories")
-        opcio_categories.setChecked(False)
-        opcio_alumnes = QRadioButton("Per alumne")
+        self.opcio_categories = QRadioButton("Categories")
+        self.opcio_categories.setChecked(False)
+        self.opcio_alumnes = QRadioButton("Per alumne")
         self.informe_seleccionat.setExclusive(True)
-        self.informe_seleccionat.addButton(opcio_categories, 0)
-        self.informe_seleccionat.addButton(opcio_alumnes, 1)
-        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_categories)
-        GRUP_TIPUS_DISTRIBUCIO.addWidget(opcio_alumnes)
+        self.informe_seleccionat.addButton(self.opcio_categories, 0)
+        self.informe_seleccionat.addButton(self.opcio_alumnes, 1)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(self.opcio_categories)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(self.opcio_alumnes)
         # Creem les opcions per a l'exportacio o la importacio:
         self.tipus_accio_json = QButtonGroup()
         self.tipus_accio_json.setExclusive(True)
-        opcio_exportar = QRadioButton("Exportar")
-
-        opcio_importar = QRadioButton("Importar")
-        self.tipus_accio_json.addButton(opcio_exportar, 0)
-        self.tipus_accio_json.addButton(opcio_importar, 1)
-        grup_export_importdistribucio.addWidget(opcio_exportar)
-        grup_export_importdistribucio.addWidget(opcio_importar)
+        self.opcio_exportar = QRadioButton("Exportar")
+        self.opcio_importar = QRadioButton("Importar")
+        self.tipus_accio_json.addButton(self.opcio_exportar, 0)
+        self.tipus_accio_json.addButton(self.opcio_importar, 1)
+        grup_export_importdistribucio.addWidget(self.opcio_exportar)
+        grup_export_importdistribucio.addWidget(self.opcio_importar)
         # Creem el selector d'alumnes per a l'exportacio:
         self.exportimport_selector_alumnes = QComboBox()
         self.exportimport_selector_alumnes.addItem("* Tots *")
@@ -601,10 +600,11 @@ class MainWindow(QMainWindow):
         DISTRIBUCIO.addWidget(self.SELECCIO_CARPETA, 3, 0)
         DISTRIBUCIO.addWidget(self.import_seleccio_arxiu, 3, 1)
         DISTRIBUCIO.addWidget(self.BOTON_INFORME, 4, 0)
-        opcio_exportar.toggled.connect(self.seleccio_accio_json)
-        opcio_exportar.toggled.connect(self.seleccionar_informe)
-        opcio_alumnes.toggled.connect(self.seleccionar_informe)
-        opcio_categories.toggled.connect(self.seleccionar_informe)
+        self.opcio_exportar.toggled.connect(self.seleccio_accio_json)
+        self.opcio_importar.toggled.connect(self.seleccio_accio_json)
+        self.opcio_alumnes.toggled.connect(self.seleccionar_informe)
+        self.opcio_categories.toggled.connect(self.seleccionar_informe)
+
         self.BOTON_INFORME.clicked.connect(self.generar_informe)
         self.SELECCIO_CARPETA.clicked.connect(self.seleccionar_carpeta_informes)
         self.destinacio_informes = None
@@ -664,20 +664,35 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage("Informe generat correctament", 2000)
 
     def seleccio_accio_json(self):
+        self.informe_seleccionat.setExclusive(False)
+        self.tipus_accio_json.setExclusive(True)
+        self.opcio_categories.setChecked(False)
+        self.opcio_alumnes.setChecked(False)
+        self.BOTON_INFORME.setVisible(False)
+        self.SELECCIO_CARPETA.setVisible(False)
+        self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
         if self.tipus_accio_json.checkedId() == 0:
             self.exportimport_selector_alumnes.setVisible(True)
             self.export_seleccio_carpeta.setVisible(True)
             self.import_seleccio_arxiu.setVisible(False)
-        else:
+        elif self.tipus_accio_json.checkedId() == 1:
             self.exportimport_selector_alumnes.setVisible(False)
             self.export_seleccio_carpeta.setVisible(False)
             self.import_seleccio_arxiu.setVisible(True)
 
     def seleccionar_informe(self):
-
+        self.informe_seleccionat.setExclusive(True)
+        self.tipus_accio_json.setExclusive(False)
+        self.opcio_exportar.setChecked(False)
+        self.opcio_importar.setChecked(False)
+        self.export_seleccio_carpeta.setVisible(False)
+        self.exportimport_selector_alumnes.setVisible(False)
+        self.import_seleccio_arxiu.setVisible(False)
         if self.informe_seleccionat.checkedId() == 0:
             self.BOTON_INFORME.setVisible(True)
             self.SELECCIO_CARPETA.setVisible(True)
+            self.export_seleccio_carpeta.setVisible(False)
             self.tipus_informes = 0
             self.INFORMES_SELECTOR_CATEGORIES.setVisible(True)
             self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
