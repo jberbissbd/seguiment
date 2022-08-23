@@ -7,8 +7,8 @@ import sys
 # sys.path.append(os.path.abspath(dirname(__file__)))
 sys.path.append(os.path.normpath(os.path.dirname(os.path.abspath(__file__))))
 import configparser
-from formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm, \
-    DataGuiComm, DataNova, AlumneNou
+from formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm
+from formats import DataGuiComm, DataNova, AlumneNou, CategoriaNova
 
 ERROR_LLISTA = "Error: el missatge ha de ser una llista."
 ERROR_FORMAT = "Error: el missatge no té el format correcte."
@@ -522,17 +522,28 @@ class CategoriesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def crear_categoria(self, nom_categoria: str):
-        """Crea una nova categoria"""
+    def crear_categoria(self, missatge):
+        """Crea una categoria
+        :param missatge: Llista amb instancies de CategoriaNova.
+        :arg missatge formada per instancies de CategoriaNova.
+        :returns Fals si no es pot realitzar l'operacio.
+        :raises TypeError si els formats d'entrada no son correctes.
+        """
         self.cursor = self.conn.cursor()
-        try:
-            ordre_registrar = f"INSERT INTO {self.taula} (categoria) VALUES ('{nom_categoria.strip()}')"
-            self.cursor.execute(ordre_registrar)
-            self.conn.commit()
-            self.cursor.close()
-            return True
-        except sqlite3.OperationalError:
-            return False
+        if not isinstance(missatge, list):
+            raise TypeError("Les dades han de tenir format de llista")
+        for item in missatge:
+            if not isinstance(item, CategoriaNova):
+                raise TypeError("Les dades han de seguir el format CategoriaNova")
+            try:
+                nom_categoria = item.nom
+                actualitzar = f"'INSERT INTO categories VALUES '{nom_categoria}'"
+                self.cursor.execute(actualitzar)
+                self.conn.commit()
+                self.cursor.close()
+            except sqlite3.OperationalError:
+                return False
+        return True
 
     def eliminar_categoria(self, num_referencia: int):
         """Elimina una categoria"""
@@ -545,6 +556,8 @@ class CategoriesBbdd(ModelDao):
             return True
         except sqlite3.OperationalError:
             return False
+
+
 
     def actualitzar_categoria(self, missatge: list):
         """Actualitza una categoria
