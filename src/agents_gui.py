@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+import json
 import os
 import sys
 import dateutil
@@ -6,15 +7,15 @@ import numpy as np
 import openpyxl
 import pandas
 from dateutil import parser
-sys.path.append(os.path.normpath(os.path.dirname(os.path.abspath(__file__))))
 from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
 from agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
 from formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, RegistresBbddComm, AlumneNou, DataNova
+    Registres_bbdd_nou, RegistresBbddComm, AlumneNou, DataNova, CategoriaNova
 
 
 class Comprovador:
     """Comprova la presencia de taules a la base de dades"""
+
     def __init__(self, modegui):
         super(Comprovador, self).__init__()
         resultat_iniciador = Iniciador(modegui)
@@ -51,6 +52,7 @@ class Destructor:
 
 class Comptable:
     """S'ocupa de gestionar amb la gui les entrades a la taula de registres"""
+
     def __init__(self, modegui):
         """Ordenar les taules de la base de dades perquè siguin més fàcils de llegir:"""
         self.info_categories = None
@@ -96,6 +98,7 @@ class Comptable:
             if id_alumne == alumne.id:
                 resposta = alumne
         return resposta
+
     def obtenir_categoria_registres(self, id_categoria):
         """Retorna la Categoriacomm corresponent a l'id alumne proporcionat"""
         for categoria in self.info_categories:
@@ -182,6 +185,7 @@ class Comptable:
 
 class Calendaritzador:
     """Classe que gestiona les dates"""
+
     def __init__(self, modegui):
         self.datador = DatesBbdd(modegui)
         self.info_dates = self.datador.lectura_dates()
@@ -233,6 +237,7 @@ class Calendaritzador:
 
 class CapEstudis:
     """S'ocupa de les gestions de la taula alumnes amb la interficie grafica"""
+
     def __init__(self, modegui: int):
         """
 
@@ -312,6 +317,7 @@ class CapEstudis:
 
 class Classificador:
     """S'ocupa de les categories a la base de dades."""
+
     def __init__(self, modegui):
         self.categoritzador = CategoriesBbdd(modegui)
         self.info_categories = self.categoritzador.lectura_categories()
@@ -564,3 +570,80 @@ class CreadorInformes:
                 format_alumnes(ruta_exportacio)
             return True
         return False
+
+
+class ExportadorImportador:
+    def __init__(self, mode):
+        seleccio = AlumnesBbdd(mode).llegir_alumnes()
+        self.registres = RegistresBbdd(mode).lectura_registres()
+        self.categories = CategoriesBbdd(mode).lectura_categories()
+        self.noms_alumnes = [(alumne.id, alumne.nom) for alumne in seleccio]
+        self.dict_json = {"dades": []}
+        self.alumnes_registrats = [alumne.nom for alumne in AlumnesBbdd(1).llegir_alumnes()]
+        self.categories_registrades = [categoria.nom for categoria in CategoriesBbdd(1).lectura_categories()]
+        self.nous_alumnes = []
+        self.noves_categories = []
+        self.nous_registres = []
+        self.registres_tractar = []
+
+    def obtencio_id_alumne(self, nom: str):
+        alumne_complet = None
+        alumnes_format_comm = AlumnesBbdd(1).llegir_alumnes()
+        for persona in alumnes_format_comm:
+            if persona.nom == nom:
+                alumne_complet = persona
+        nombre_alumne = alumne_complet.id
+        return nombre_alumne
+
+    def obtencio_id_categoria(self, nom: str):
+        categoria_completa = None
+        categories_format = CategoriesBbdd(1).lectura_categories()
+        for categoria in categories_format:
+            if categoria.nom == nom:
+                categoria_completa = categoria
+        nombre_categoria = categoria_completa.id
+        return nombre_categoria
+
+    def exportacio(self, llista_alumnes: list):
+        for alumne in llista_alumnes:
+            estructura = {}
+            registres_alumne = []
+            for registre in self.registres:
+                if registre.alumne == alumne.id:
+                    dades_afegir = [registre.categoria, registre.data, registre.descripcio]
+                    for categoria in self.categories:
+                        if registre.categoria == categoria.id:
+                            dades_afegir[0] = categoria.nom
+                    registres_alumne.append(dades_afegir)
+            estructura["nom"] = alumne.nom
+            estructura["registres"] = registres_alumne
+            self.dict_json["dades"].append(estructura)
+            with open(f"{alumne.nom}", "w", encoding='utf-8') as file:
+                json.dump(self.dict_json, file, indent=4, ensure_ascii=False)
+                file.close()
+
+    def importacio(self, arxiu: str):
+        with open(f"{arxiu}", "r", encoding='utf-8') as file:
+            lectura_json = json.load(file)
+            file.close()
+        for alumne in lectura_json["dades"]:
+            for registre in alumne["registres"]:
+                registre.insert(0, alumne["nom"])
+                self.registres_tractar.append(registre)
+        for registre in self.registres_tractar:
+            if registre[0] not in self.alumnes_registrats:
+                self.nous_alumnes.append(AlumneNou(registre[0]))
+            if registre[1] not in self.categories_registrades:
+                self.noves_categories.append(CategoriaNova(registre[1].strip()))
+        # Creem nous valors d'alumne i de categories si s'escau, per a complir amb la restriccio de la base de dades:
+        if len(self.nous_alumnes) > 0:
+            AlumnesBbdd(1).registrar_alumne(self.nous_alumnes)
+        if len(self.noves_categories) > 0:
+            CategoriesBbdd(1).crear_categoria(self.noves_categories)
+        for registre in self.registres_tractar:
+            # Intercanviem el nom de l'alumne pel seu id a la base de dades:
+            registre[0] = self.obtencio_id_alumne(registre[0])
+            # Intercanviem el nom de la categoria pel seu id a la base de dades:
+            registre[1] = self.obtencio_id_categoria(registre[1])
+            self.nous_registres.append(Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]))
+        # RegistresBbdd(1).crear_registre(registres_tractar)
