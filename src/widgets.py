@@ -1,7 +1,7 @@
-import os, sys
-sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import os
+from typing import Union
 from PySide6 import QtCore, QtWidgets
-from PySide6.QtCore import Qt, QDate, QSize
+from PySide6.QtCore import Qt, QDate, QSize, QLocale
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QGridLayout,
@@ -21,12 +21,14 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QFormLayout,
     QDialogButtonBox,
-    QFileDialog,
+    QFileDialog, QGroupBox, QButtonGroup, QRadioButton,
 )
 
 from agents_bbdd import AjudantDirectoris
-from agents_gui import Calendaritzador, CapEstudis
+from agents_gui import Calendaritzador, CapEstudis, ExportadorImportador, CreadorInformes, Comptable, Classificador
 from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova
+
+QLocale.setDefault(QLocale.Catalan)
 
 
 class DialegSeleccioCarpeta(QFileDialog):
@@ -88,6 +90,8 @@ class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
 class DialegAfegir(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
+        self.buttonsBox = None
+        self.nomcomplet = None
         self.setWindowTitle("Afegir alumne")
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -237,7 +241,7 @@ class EditorDates(QtWidgets.QWidget):
         else:
             llista_noves_dates = [data2n, data3er]
             missatge_creacio = [DataNova(item) for item in llista_noves_dates]
-            estat_creacio = self.calendari_editor_dates.crear_data(missatge_creacio)
+            estat_creacio = Calendaritzador(1).registra_dates(missatge_creacio)
         return estat_actualitzacio + estat_creacio
 
 
@@ -499,3 +503,228 @@ class AssistentInicial(QWizard):
         self.addPage(self.PAGINA_INICIAL)
         self.addPage(self.PAGINA_ALUMNES)
         self.addPage(self.PAGINA_DATES)
+
+
+class GeneradorInformesExportImport(QtWidgets.QWidget):
+    """Classe per a generar informes i exportar/importar"""
+
+    def __init__(self):
+        super().__init__()
+        self.importacio = None
+        self.selcarpeta = None
+        self.tipus_informes = None
+        self.desti_json = None
+        self.resultat_exportacio = None
+        self.resultat_informes = None
+        self.AMPLADA_DESPLEGABLES = 200
+        self.resize(300, 300)
+        DISTRIBUCIO = QGridLayout()
+        DISTRIBUCIO.setAlignment(Qt.AlignTop)
+        self.setLayout(DISTRIBUCIO)
+        # Creem les opcions d'informe
+        GRUP_TIPUS = QGroupBox()
+        GRUP_TIPUS.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        GRUP_TIPUS.setTitle("Crear informes format Excel")
+        GRUP_TIPUS.setFlat(True)
+        GRUP_TIPUS_DISTRIBUCIO = QVBoxLayout()
+        GRUP_TIPUS.setLayout(GRUP_TIPUS_DISTRIBUCIO)
+        # Creem el grup d'exportacio i importacio:
+        grup_export_import = QGroupBox()
+        grup_export_import.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        grup_export_import.setTitle("Exportar/importar")
+        grup_export_import.setFlat(True)
+        grup_export_importdistribucio = QVBoxLayout()
+        grup_export_import.setLayout(grup_export_importdistribucio)
+        # Definim les opcions per a la creacio d’informes en Excel:
+        self.informe_seleccionat: Union[QButtonGroup, QButtonGroup] = QButtonGroup()
+        self.opcio_categories = QRadioButton("Categories")
+        self.opcio_categories.setChecked(False)
+        self.opcio_alumnes = QRadioButton("Per alumne")
+        self.informe_seleccionat.setExclusive(True)
+        self.informe_seleccionat.addButton(self.opcio_categories, 0)
+        self.informe_seleccionat.addButton(self.opcio_alumnes, 1)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(self.opcio_categories)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(self.opcio_alumnes)
+        # Creem les opcions per a l'exportacio o la importacio:
+        self.tipus_accio_json = QButtonGroup()
+        self.tipus_accio_json.setExclusive(True)
+        self.opcio_exportar = QRadioButton("Exportar")
+        self.opcio_importar = QRadioButton("Importar")
+        self.tipus_accio_json.addButton(self.opcio_exportar, 0)
+        self.tipus_accio_json.addButton(self.opcio_importar, 1)
+        grup_export_importdistribucio.addWidget(self.opcio_exportar)
+        grup_export_importdistribucio.addWidget(self.opcio_importar)
+        # Creem el selector d'alumnes per a l'exportacio:
+        self.exportimport_selector_alumnes = QComboBox()
+        self.exportimport_selector_alumnes.addItem("* Tots *")
+        self.exportimport_selector_alumnes.setVisible(False)
+        # Creem els selectors d'informe en Excel:
+        self.INFORMES_SELECTOR_ALUMNES = QComboBox()
+        self.INFORMES_SELECTOR_ALUMNES.addItem("* Tots *")
+        # Afegim les dades de la taula, si n'hi ha:
+        self.INFORMES_SELECTOR_CATEGORIES = QComboBox()
+        self.INFORMES_SELECTOR_CATEGORIES.addItem("* Totes *")
+
+        self.INFORMES_SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        # Creem els botons per a l'exportacio o importacio:
+        self.export_seleccio_carpeta = QPushButton(
+            QIcon(os.path.join(AjudantDirectoris(1).ruta_icones, "inode-directory-symbolic.svg")), "")
+        self.boto_exportar_json = QPushButton("Exportar")
+        self.boto_exportar_json.setVisible(False)
+        self.export_seleccio_carpeta.setVisible(False)
+        self.import_seleccio_arxiu = QPushButton(
+            QIcon(os.path.join(AjudantDirectoris(1).ruta_icones, "inode-directory-symbolic.svg")), "Seleccioneu arxiu")
+        self.import_seleccio_arxiu.setVisible(False)
+        # Creem els botons per a la creacio d'informes en Excel:
+        self.BOTON_INFORME = QPushButton("Generar informe")
+        self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.BOTON_INFORME.setVisible(False)
+        self.SELECCIO_CARPETA = QPushButton(QIcon(os.path.join(AjudantDirectoris(1).ruta_icones,
+                                                               "inode-directory-symbolic.svg")), "")
+        self.SELECCIO_CARPETA.setIconSize(QSize(24, 24))
+        self.SELECCIO_CARPETA.setVisible(False)
+        # Distribuim els elements:
+        DISTRIBUCIO.addWidget(GRUP_TIPUS, 0, 0)
+        DISTRIBUCIO.addWidget(grup_export_import, 0, 1)
+        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_ALUMNES, 1, 0)
+        DISTRIBUCIO.addWidget(self.exportimport_selector_alumnes, 1, 1)
+        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_CATEGORIES, 2, 0)
+        DISTRIBUCIO.addWidget(self.export_seleccio_carpeta, 2, 1)
+        DISTRIBUCIO.addWidget(self.SELECCIO_CARPETA, 3, 0)
+        DISTRIBUCIO.addWidget(self.boto_exportar_json, 3, 1)
+        DISTRIBUCIO.addWidget(self.import_seleccio_arxiu, 3, 1)
+        DISTRIBUCIO.addWidget(self.BOTON_INFORME, 4, 0)
+        self.opcio_exportar.toggled.connect(self.seleccio_accio_json)
+        self.opcio_importar.toggled.connect(self.seleccio_accio_json)
+        self.opcio_alumnes.toggled.connect(self.seleccionar_informe)
+        self.opcio_categories.toggled.connect(self.seleccionar_informe)
+        self.BOTON_INFORME.clicked.connect(self.generar_informe)
+        self.export_seleccio_carpeta.clicked.connect(self.seleccionar_carpeta_exportacio_json)
+        self.import_seleccio_arxiu.clicked.connect(self.importar)
+        self.SELECCIO_CARPETA.clicked.connect(self.seleccionar_carpeta_informes)
+        self.boto_exportar_json.clicked.connect(self.exportar)
+        self.destinacio_informes = None
+        self.carpeta_exportacio = None
+        self.arxiu_importacio = None
+
+    def seleccionar_informe(self):
+        self.informe_seleccionat.setExclusive(True)
+        self.tipus_accio_json.setExclusive(False)
+        self.opcio_exportar.setChecked(False)
+        self.opcio_importar.setChecked(False)
+        self.export_seleccio_carpeta.setVisible(False)
+        self.exportimport_selector_alumnes.setVisible(False)
+        self.boto_exportar_json.setVisible(False)
+        self.import_seleccio_arxiu.setVisible(False)
+        if self.informe_seleccionat.checkedId() == 0:
+            self.BOTON_INFORME.setVisible(True)
+            self.SELECCIO_CARPETA.setVisible(True)
+            self.export_seleccio_carpeta.setVisible(False)
+            self.tipus_informes = 0
+            self.INFORMES_SELECTOR_CATEGORIES.setVisible(True)
+            self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+            self.INFORMES_SELECTOR_ALUMNES.setCurrentIndex(0)
+
+        elif self.informe_seleccionat.checkedId() == 1:
+            self.BOTON_INFORME.setVisible(True)
+            self.SELECCIO_CARPETA.setVisible(True)
+            self.tipus_informes = 1
+            self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
+            self.INFORMES_SELECTOR_ALUMNES.setVisible(True)
+            self.INFORMES_SELECTOR_CATEGORIES.setCurrentIndex(0)
+
+    def seleccio_accio_json(self):
+        self.informe_seleccionat.setExclusive(False)
+        self.tipus_accio_json.setExclusive(True)
+        self.opcio_categories.setChecked(False)
+        self.opcio_alumnes.setChecked(False)
+        self.BOTON_INFORME.setVisible(False)
+        self.SELECCIO_CARPETA.setVisible(False)
+        self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
+        if self.tipus_accio_json.checkedId() == 0:
+            self.exportimport_selector_alumnes.setVisible(True)
+            self.export_seleccio_carpeta.setVisible(True)
+            self.boto_exportar_json.setVisible(True)
+            self.import_seleccio_arxiu.setVisible(False)
+        elif self.tipus_accio_json.checkedId() == 1:
+            self.exportimport_selector_alumnes.setVisible(False)
+            self.boto_exportar_json.setVisible(False)
+            self.export_seleccio_carpeta.setVisible(False)
+            self.import_seleccio_arxiu.setVisible(True)
+
+    def seleccionar_carpeta_exportacio_json(self):
+        self.desti_json = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
+        if self.desti_json:
+            self.carpeta_exportacio = self.desti_json
+
+    def seleccionar_carpeta_informes(self):
+        """Funcio per a seleccionar la carpeta on es guardaran els informes."""
+        self.selcarpeta = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
+        if self.selcarpeta:
+            self.destinacio_informes = self.selcarpeta
+
+    def exportar(self):
+        if self.carpeta_exportacio is None:
+            self.resultat_exportacio = "nocarpeta"
+        else:
+            llistat_alumnes = []
+            if self.exportimport_selector_alumnes.currentIndex() == 0:
+                llistat_alumnes = CapEstudis(1).alumnat_registres
+            else:
+
+                alumne_seleccionat = self.exportimport_selector_alumnes.currentText()
+                for alumne in CapEstudis(1).alumnat_registres:
+                    if alumne.nom == alumne_seleccionat:
+                        llistat_alumnes.append(alumne)
+            resultat_exportacio = ExportadorImportador(1).exportacio(llistat_alumnes, self.carpeta_exportacio)
+            if resultat_exportacio:
+                self.resultat_exportacio = True
+            elif resultat_exportacio == False:
+                self.resultat_exportacio = False
+
+    def importar(self):
+        self.importacio = DialegSeleccioCarpeta().getOpenFileNames(self, "Selecciona carpeta", filter="Arxius json("
+                                                                                                      "*.json)")
+        arxius_importacio = self.importacio[0]
+        ExportadorImportador(1).importacio(arxius_importacio)
+
+    def generar_informe(self):
+        """Funcio per a generar un informe. Explicacio de la variable tipus informe: 0 si es de categories, 1 si es per
+        alumne."""
+        dades_registres = Comptable(1).obtenir_registres()
+        alumnes_informe = CapEstudis(1).alumnat_registres
+        carpeta_desti = self.destinacio_informes
+        categories_registrades = Classificador(1).categories_registrades
+        resposta = None
+        if self.destinacio_informes is not None:
+            if self.tipus_informes == 0:
+                # Es un informe de categories:
+
+                valor_actual = self.INFORMES_SELECTOR_CATEGORIES.currentText()
+                categoria_informe = [categoria for categoria in categories_registrades if
+                                     categoria.nom == valor_actual]
+                if self.INFORMES_SELECTOR_CATEGORIES.currentIndex() != 0:
+                    exportador = CreadorInformes(alumnes_informe, categoria_informe, dades_registres, carpeta_desti)
+                else:
+                    exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres,
+                                                 carpeta_desti)
+                resposta = exportador.export_categories()
+            elif self.tipus_informes == 1:
+                # Es un informe per alumne:
+                dates_informe = Calendaritzador(1).info_dates
+                valor_actual = self.INFORMES_SELECTOR_ALUMNES.currentText()
+                categories_enviar = Classificador(1).categories
+                if self.INFORMES_SELECTOR_ALUMNES.currentIndex() != 0:
+                    # Enviem tan sols la informacio de l'alumne en concret, no tot el registre:
+                    alumnes_informe = [alumne for alumne in alumnes_informe if alumne.nom == valor_actual]
+                    dades_enviar = [registre for registre in dades_registres if registre.alumne.nom == valor_actual]
+                else:
+                    dades_enviar = dades_registres
+                exportador = CreadorInformes(alumnes_informe, categories_enviar, dades_enviar, carpeta_desti)
+                resposta = exportador.export_alumne(dates_informe)
+            if resposta:
+                self.resultat_informes = True
