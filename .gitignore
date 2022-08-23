@@ -17,5 +17,5 @@ Pipfile
 Pipfile.lock
 /src/build/
 /src/htmlcov/
-
+/src/dades
 !/dist/
