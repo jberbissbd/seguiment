@@ -587,21 +587,13 @@ class ExportadorImportador:
         self.registres_tractar = []
 
     def obtencio_id_alumne(self, nom: str):
-        alumne_complet = None
-        alumnes_format_comm = AlumnesBbdd(1).llegir_alumnes()
-        for persona in alumnes_format_comm:
-            if persona.nom == nom:
-                alumne_complet = persona
-        nombre_alumne = alumne_complet.id
+        alumne_format_comm = AlumnesBbdd(1).llegir_alumne_individual_nom(AlumneNou(nom))
+        nombre_alumne = alumne_format_comm.id
         return nombre_alumne
 
     def obtencio_id_categoria(self, nom: str):
-        categoria_completa = None
-        categories_format = CategoriesBbdd(1).lectura_categories()
-        for categoria in categories_format:
-            if categoria.nom == nom:
-                categoria_completa = categoria
-        nombre_categoria = categoria_completa.id
+        categories_format = CategoriesBbdd(1).lectura_categories_individual_nom(CategoriaNova(nom))
+        nombre_categoria = categories_format.id
         return nombre_categoria
 
     def exportacio(self, llista_alumnes: list, destinacio):

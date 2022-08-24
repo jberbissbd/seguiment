@@ -210,7 +210,7 @@ class AlumnesBbdd(ModelDao):
             return llista_ids
         return False
 
-    def llegir_alumne_individual(self, id_alumne: int):
+    def llegir_alumne_individual_id(self, id_alumne: int):
         """Proporciona les dades d'un alumne amb el seu ID."""
         parametre: str = "id,nom_alumne"
         self.cursor = self.conn.cursor()
@@ -225,6 +225,28 @@ class AlumnesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
         return persona
+
+    def llegir_alumne_individual_nom(self, missatge_consulta):
+        """Proporciona les dades d'un alumne amb el seu ID."""
+        parametre: str = "id,nom_alumne"
+        self.cursor = self.conn.cursor()
+        lectura_consulta = []
+        if not isinstance(missatge_consulta, list):
+            raise TypeError("La consulta ha de ser una llista")
+        for element in missatge_consulta:
+            try:
+                nom = element.nom
+                ordre_consultar = f"SELECT {parametre} FROM alumnes WHERE nom_alumne = '{nom}'"
+                consulta = self.cursor.execute(ordre_consultar).fetchone()
+                if consulta is not None:
+                    persona = Alumne_comm(consulta[0], consulta[1])
+                    lectura_consulta.append(persona)
+                    self.cursor.close()
+                else:
+                    return False
+            except sqlite3.OperationalError:
+                return False
+        return lectura_consulta
 
     def registrar_alumne(self, missatge_registrar: list):
         """Registra tots els alumnes de la llista de missatge registrar"""
@@ -365,7 +387,7 @@ class RegistresBbdd(ModelDao):
             self.cursor.close()
             missatge = []
             for persona in consulta:
-                dades_individuals = AlumnesBbdd.llegir_alumne_individual(self, persona[0])
+                dades_individuals = AlumnesBbdd.llegir_alumne_individual_id(self, persona[0])
                 if dades_individuals:
                     missatge.append(dades_individuals)
             return missatge
@@ -509,6 +531,24 @@ class CategoriesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
+    def lectura_categories_individual_nom(self, llista_lectura):
+        """Llegeix tota la taula de categories"""
+        parametre: str = "id,categoria"
+        self.cursor = self.conn.cursor()
+        if not isinstance(llista_lectura, list):
+            raise TypeError("El missatge per a la lectura individual ha de ser una llista")
+        missatge = []
+        for element in llista_lectura:
+            try:
+                categoria_consultar = element.nom
+                ordre_consultar = f"SELECT {parametre} FROM {self.taula} WHERE categoria='{categoria_consultar}'"
+                consulta = self.cursor.execute(ordre_consultar).fetchall()
+                missatge.append(CategoriaComm(consulta[0], consulta[1]))
+                self.cursor.close()
+            except sqlite3.OperationalError:
+                return False
+        return missatge
+
     def test_lectura_categories(self):
         """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
         parametre: str = "id"
@@ -556,8 +596,6 @@ class CategoriesBbdd(ModelDao):
             return True
         except sqlite3.OperationalError:
             return False
-
-
 
     def actualitzar_categoria(self, missatge: list):
         """Actualitza una categoria
