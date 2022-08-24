@@ -8,7 +8,7 @@ from os.path import dirname
 from faker import Faker
 
 os.sys.path.append(dirname(dirname(__file__)))
-os.sys.path.append(os.path.join(dirname(dirname(__file__))),"src")
+os.sys.path.append(os.path.join(dirname(dirname(__file__)),"src"))
 from src.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
 from src.formats import Registres_bbdd_nou, RegistresBbddComm, AlumneNou, Alumne_comm, CategoriaComm, \
     DataGuiComm, DataNova
