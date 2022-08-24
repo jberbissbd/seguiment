@@ -1,12 +1,14 @@
 # -*- coding:utf-8 -*-
+import os
 import secrets
 import sys
 import unittest
+from os.path import dirname
 
 from faker import Faker
-sys.path.append('/home/jordi/Documents/Projectes/seguiment/src/')
-from agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
-from formats import Registres_bbdd_nou, RegistresBbddComm, AlumneNou, Alumne_comm, CategoriaComm, \
+os.sys.path.append(dirname(__file__))
+from src.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
+from src.formats import Registres_bbdd_nou, RegistresBbddComm, AlumneNou, Alumne_comm, CategoriaComm, \
     DataGuiComm, DataNova
 
 sys.path.append('./agents/formats')

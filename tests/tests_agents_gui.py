@@ -1,10 +1,13 @@
 # -*- coding:utf-8 -*-
+import os
 import sys
 import unittest
+from os.path import dirname
+
 from faker import Faker
-sys.path.append('/home/jordi/Documents/Projectes/seguiment/src/')
-from agents_gui import Calendaritzador, CapEstudis, Comptable, Classificador
-from formats import Registresguicomm, Alumne_comm, CategoriaComm
+os.sys.path.append(dirname(__file__))
+from src.agents_gui import Calendaritzador, CapEstudis, Comptable, Classificador
+from src.formats import Registresguicomm, Alumne_comm, CategoriaComm
 
 fake = Faker("es_CA")
 ERROR_LLISTA = ". Error: ha de proporcionar una llista."
