@@ -423,7 +423,7 @@ class RegistresBbdd(ModelDao):
         if not isinstance(missatge_actualitzar, list):
             raise TypeError(ERROR_LLISTA)
         for element in missatge_actualitzar:
-            if not isinstance(element, RegistresBbddComm):
+            if not is_dataclass(element):
                 raise TypeError(ERROR_FORMAT)
             self.cursor = self.conn.cursor()
             try:
