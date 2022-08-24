@@ -10,7 +10,7 @@ from os.path import dirname
 
 from faker import Faker
 
-# os.sys.path.append(dirname(dirname(__file__)))
+os.sys.path.append(dirname(dirname(__file__)))
 os.sys.path.append(os.path.join(dirname(dirname(__file__)), "src"))
 from src.agents_gui import Calendaritzador, CapEstudis, Comptable, Classificador
 
