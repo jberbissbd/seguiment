@@ -11,7 +11,7 @@ os.sys.path.append(dirname(dirname(__file__)))
 os.sys.path.append(os.path.join(dirname(dirname(__file__)),"src"))
 from src.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
 from src.formats import Registres_bbdd_nou, RegistresBbddComm, AlumneNou, Alumne_comm, CategoriaComm, \
-    DataGuiComm, DataNova
+    DataGuiComm, DataNova, CategoriaNova
 
 sys.path.append('./agents/formats')
 
@@ -58,8 +58,7 @@ class test_entrada_dades_bbdd(unittest.TestCase):
 
     def test_categories(self):
         categoria_registrar = fake.text()
-
-        resultat_categories = categories.crear_categoria(categoria_registrar)
+        resultat_categories = categories.crear_categoria([CategoriaNova(categoria_registrar)])
         assert resultat_categories is True, "Error al introduir nous valors a la taula de categories"
 
     def test_registres(self):

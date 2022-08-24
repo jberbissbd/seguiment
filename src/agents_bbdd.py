@@ -1,8 +1,12 @@
 # -*- coding:utf-8 -*-
+import dataclasses
 import os
 import sqlite3
 from os.path import dirname, abspath
 import sys
+from dataclasses import dataclass
+
+from pandas.core.dtypes.inference import is_dataclass
 
 # sys.path.append(os.path.abspath(dirname(__file__)))
 sys.path.append(os.path.normpath(os.path.dirname(os.path.abspath(__file__))))
@@ -253,7 +257,7 @@ class AlumnesBbdd(ModelDao):
         if not isinstance(missatge_registrar, list):
             raise TypeError("El missatge d'entrada ha de ser una llista")
         for element in missatge_registrar:
-            if not isinstance(element, AlumneNou):
+            if is_dataclass(element) is False:
                 raise TypeError("El format de cada element de l'entrada ha de ser AlumneNou")
             nom_alumne = element.nom.strip()
             self.cursor = self.conn.cursor()
@@ -494,7 +498,7 @@ class CategoriesBbdd(ModelDao):
             return False
         if len(self.valors_categories) > 0:
             try:
-                insercio_categories = 'INSERT INTO categories (categoria) VALUES (?)'
+                insercio_categories = f'INSERT INTO {self.taula} (categoria) VALUES (?)'
                 motius = self.valors_categories
                 for motiu in motius:
                     self.cursor.execute(insercio_categories, (motiu,))
@@ -574,11 +578,11 @@ class CategoriesBbdd(ModelDao):
         if not isinstance(missatge, list):
             raise TypeError("Les dades han de tenir format de llista")
         for item in missatge:
-            if not isinstance(item, CategoriaNova):
-                raise TypeError("Les dades han de seguir el format CategoriaNova")
+            if is_dataclass(item) is False:
+                raise TypeError("Les noves cateogories han de ser de la classe Categoria Nova")
             try:
                 nom_categoria = item.nom
-                actualitzar = f"'INSERT INTO categories VALUES '{nom_categoria}'"
+                actualitzar = f"INSERT INTO {self.taula} (categoria) VALUES ('{nom_categoria}')"
                 self.cursor.execute(actualitzar)
                 self.conn.commit()
                 self.cursor.close()
@@ -609,7 +613,7 @@ class CategoriesBbdd(ModelDao):
         if not isinstance(missatge, list):
             raise TypeError("Les dades han de tenir format de llista")
         for item in missatge:
-            if not isinstance(item, CategoriaComm):
+            if is_dataclass(item) is False:
                 raise TypeError("Les dades han de seguir el format CategoriaComm")
             try:
                 num_referencia = item.id
