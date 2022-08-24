@@ -3,6 +3,7 @@ import os
 import secrets
 import sys
 import unittest
+from dataclasses import is_dataclass
 from os.path import dirname
 
 from faker import Faker
@@ -182,22 +183,22 @@ class test_formats_resposta(unittest.TestCase):
     def test_registres(self):
         llista_registres = registres.lectura_registres()
         for element in llista_registres:
-            assert isinstance(element, RegistresBbddComm), "Registre no te el format RegistresBbddComm"
+            assert is_dataclass(element), "Registre no te el format RegistresBbddComm"
 
     def test_alumnes(self):
         llista_registres = alumnes.llegir_alumnes()
         for element in llista_registres:
-            assert isinstance(element, Alumne_comm), "Alumne no te el format Alumne_comm"
+            assert is_dataclass(element), "Alumne no te el format Alumne_comm"
 
     def test_categories(self):
         llista_registres = categories.lectura_categories()
         for element in llista_registres:
-            assert isinstance(element, CategoriaComm), "Categoria no te el format CategoriaComm"
+            assert is_dataclass(element), "Categoria no te el format CategoriaComm"
 
     def test_dates(self):
         llista_registres = calendari.lectura_dates()
         for element in llista_registres:
-            assert isinstance(element, DataGuiComm), "Data no te el format DataGuiComm)"
+            assert is_dataclass(element), "Data no te el format DataGuiComm)"
 
 
 class test_tipus_atributs(unittest.TestCase):

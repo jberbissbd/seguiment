@@ -403,8 +403,8 @@ class RegistresBbdd(ModelDao):
         if not isinstance(input_creacio_registre, list):
             return False
         for element in input_creacio_registre:
-            if not isinstance(element, Registres_bbdd_nou):
-                return False
+            if is_dataclass(element) is False:
+                raise TypeError("Els registres a introdui han de tenir el format Registre_bbdd_nou")
             self.cursor = self.conn.cursor()
             descripcio = element.descripcio.strip()
             try:
@@ -442,7 +442,7 @@ class RegistresBbdd(ModelDao):
         if not isinstance(missatge_eliminar, list):
             raise TypeError(ERROR_LLISTA)
         for element in missatge_eliminar:
-            if not isinstance(element, RegistresBbddComm):
+            if is_dataclass(element) is False:
                 raise TypeError(ERROR_FORMAT)
             self.cursor = self.conn.cursor()
             try:
@@ -459,7 +459,7 @@ class RegistresBbdd(ModelDao):
         if not isinstance(missatge_eliminar, list):
             raise TypeError(ERROR_LLISTA)
         for element in missatge_eliminar:
-            if not isinstance(element, Alumne_comm):
+            if is_dataclass(element) is False:
                 raise TypeError("El missatge ha de ser una llista amb el format correcte")
             self.cursor = self.conn.cursor()
             try:
@@ -685,7 +685,7 @@ class DatesBbdd(ModelDao):
         if not isinstance(llista_dates, list):
             raise TypeError("L'entrada de dates ha de ser una llista")
         for item in llista_dates:
-            if not isinstance(item, DataNova):
+            if is_dataclass(item) is False:
                 raise TypeError("La nova data ha de la classe DataNova")
             try:
                 ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
@@ -730,7 +730,7 @@ class DatesBbdd(ModelDao):
         if not isinstance(missatge_actualizacio, list):
             raise TypeError("El parametre d'entrada ha de ser una llista")
         for element in missatge_actualizacio:
-            if not isinstance(element, DataGuiComm):
+            if is_dataclass(element) is False:
                 raise TypeError("Els elements per actualitzar han de ser de la categoria DataGuiComm")
             self.cursor = self.conn.cursor()
             try:
