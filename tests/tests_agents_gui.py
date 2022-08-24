@@ -5,7 +5,7 @@ import unittest
 from os.path import dirname
 
 from faker import Faker
-os.sys.path.append(dirname(__file__))
+os.sys.path.append(dirname(dirname(__file__)))
 from src.agents_gui import Calendaritzador, CapEstudis, Comptable, Classificador
 from src.formats import Registresguicomm, Alumne_comm, CategoriaComm
 

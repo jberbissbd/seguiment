@@ -6,7 +6,7 @@ import unittest
 from os.path import dirname
 
 from faker import Faker
-os.sys.path.append(dirname(__file__))
+os.sys.path.append(dirname(dirname(__file__)))
 from src.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
 from src.formats import Registres_bbdd_nou, RegistresBbddComm, AlumneNou, Alumne_comm, CategoriaComm, \
     DataGuiComm, DataNova
