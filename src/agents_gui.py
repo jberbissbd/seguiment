@@ -77,13 +77,11 @@ class Comptable:
             missatge_registres = []
             # Substituim l'id de l'alumne de la llista de registres pel seu nom:
             for registre in registres_entrada:
-                registre_proces = [registre.id]
+                registre_proces = [registre.id, self.obtenir_registres_alumne(id_alumne=registre.alumne),
+                                   self.obtenir_categoria_registres(id_categoria=registre.categoria), registre.data,
+                                   registre.descripcio]
                 # Obtenim el nom de l'alumne:
-                registre_proces.append(self.obtenir_registres_alumne(id_alumne=registre.alumne))
                 # Substituim l'id de la categoria de la llista de registres pel seu nom:
-                registre_proces.append(self.obtenir_categoria_registres(id_categoria=registre.categoria))
-                registre_proces.append(registre.data)
-                registre_proces.append(registre.descripcio)
                 registre_tractat = Registresguicomm(registre_proces[0], registre_proces[1], registre_proces[2],
                                                     registre_proces[3], registre_proces[4])
                 missatge_registres.append(registre_tractat)

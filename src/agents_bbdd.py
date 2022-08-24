@@ -402,10 +402,11 @@ class RegistresBbdd(ModelDao):
             if not isinstance(element, Registres_bbdd_nou):
                 return False
             self.cursor = self.conn.cursor()
+            descripcio = element.descripcio.strip()
             try:
                 ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio)" \
                                   f"VALUES ({element.alumne},{element.categoria},'{element.data}'," \
-                                  f"'{element.descripcio.strip()}')"
+                                  f"'{descripcio}')"
                 self.cursor.execute(ordre_registrar)
                 self.conn.commit()
                 self.cursor.close()
