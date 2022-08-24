@@ -3,8 +3,8 @@ import sys
 import unittest
 from faker import Faker
 sys.path.append('/home/jordi/Documents/Projectes/seguiment/src/')
-from src.agents_gui import Calendaritzador, CapEstudis, Comptable, Classificador
-from src.formats import Registresguicomm, Alumne_comm, CategoriaComm
+from agents_gui import Calendaritzador, CapEstudis, Comptable, Classificador
+from formats import Registresguicomm, Alumne_comm, CategoriaComm
 
 fake = Faker("es_CA")
 ERROR_LLISTA = ". Error: ha de proporcionar una llista."

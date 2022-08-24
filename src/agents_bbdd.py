@@ -51,7 +51,7 @@ class AjudantDirectoris:
                 os.mkdir(carpeta_dades)
             ruta = os.path.abspath(localitzacio_bbdd)
         elif self.mode == 2:
-            localitzacio_bbdd = os.path.normpath(os.path.join(directori_arrel), "tests", "tests.db")
+            localitzacio_bbdd = os.path.normpath(os.path.join(dirname(directori_arrel), "tests", "tests.db"))
             ruta = os.path.abspath(localitzacio_bbdd)
         return ruta
 
