@@ -1,7 +1,10 @@
-import os, sys
-sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import os
+from datetime import date
+from typing import Union
+
+import dateutil
 from PySide6 import QtCore, QtWidgets
-from PySide6.QtCore import Qt, QDate, QSize
+from PySide6.QtCore import Qt, QDate, QSize, QLocale, QSortFilterProxyModel
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QGridLayout,
@@ -21,12 +24,101 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QFormLayout,
     QDialogButtonBox,
-    QFileDialog,
+    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QStyledItemDelegate, QWidget,
 )
+from dateutil.parser import parser
 
 from agents_bbdd import AjudantDirectoris
-from agents_gui import Calendaritzador, CapEstudis
-from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova
+from agents_gui import Calendaritzador, CapEstudis, ExportadorImportador, CreadorInformes, Comptable, Classificador
+from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova, Registresguicomm
+
+QLocale.setDefault(QLocale.Catalan)
+
+
+class DelegatDates(QStyledItemDelegate):
+    """Delegat per a la columna de dates"""
+
+    def __init__(self):
+        super(DelegatDates, self).__init__()
+
+    def displayText(self, value, locale) -> str:
+        """Retorna el text que es mostra a la columna de dates"""
+        if value != str(""):
+            value = value.toPython()
+            return value.strftime("%d/%m/%Y")
+
+
+class SortFilterProxyModel(QSortFilterProxyModel):
+    """Classe per a poder filtrar a la taula de la Finestra principal"""
+
+    def __init__(self, *args, **kwargs):
+        QSortFilterProxyModel.__init__(self, *args, **kwargs)
+        self.filters = {}
+
+    def setFilterByColumn(self, regex, column):
+        """Filtrar per columna"""
+        self.filters[column] = regex
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Funcio per a determinar si filtra per fila"""
+        for key, regex in self.filters.items():
+            ix = self.sourceModel().index(source_row, key, source_parent)
+            if ix.isValid():
+                text = self.sourceModel().data(ix).toString()
+                if not text.contains(regex):
+                    return False
+        return True
+
+
+class ModelVisualitzacio(QtCore.QAbstractTableModel):
+    def __init__(self, data):
+        super().__init__()
+        self._data = data
+        self.noms = ["Alumne", "Categoria", "Data", "Descripció"]
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Proporciona les dates del model"""
+        if index.isValid():
+            if role == Qt.DisplayRole or role == Qt.EditRole or role == Qt.UserRole:
+                # See below for the nested-list data structure.
+                # .row() indexes into the outer list,
+                # .column() indexes into the sub-list
+                value: object = self._data[index.row()][index.column()]
+                if isinstance(value, date):
+                    return QDate(value)
+                return value
+
+    def rowCount(self, index):
+        """Recompte de files"""
+        # The length of the outer list.
+        return len(self._data)
+
+    def columnCount(self, index):
+        """Proporciona el numero de columnes"""
+        # The following takes the first sub-list, and returns
+        # the length (only works if all rows are an equal length)
+        return len(self._data[0])
+
+    def flags(self, index):
+        """Estableix les propietats de les cel·les segons la columna."""
+        if 2 != index.column() or 1 != index.column():
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+
+    def setData(self, index, value, role):
+        """Funcio per a guardar els canvis realitzats al model."""
+        if role == Qt.EditRole | Qt.UserRole | Qt.EditRole and index.column() != 2 or index.column() != 1:
+            self._data[index.row()][index.column()] = value
+            return True
+        return False
+
+    def headerData(self, section, orientation, role):
+        """Retorna el nom de les capçaleres"""
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return self.noms[section - 1]
+            return section
 
 
 class DialegSeleccioCarpeta(QFileDialog):
@@ -88,6 +180,8 @@ class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
 class DialegAfegir(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
+        self.buttonsBox = None
+        self.nomcomplet = None
         self.setWindowTitle("Afegir alumne")
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -237,7 +331,7 @@ class EditorDates(QtWidgets.QWidget):
         else:
             llista_noves_dates = [data2n, data3er]
             missatge_creacio = [DataNova(item) for item in llista_noves_dates]
-            estat_creacio = self.calendari_editor_dates.crear_data(missatge_creacio)
+            estat_creacio = Calendaritzador(1).registra_dates(missatge_creacio)
         return estat_actualitzacio + estat_creacio
 
 
@@ -499,3 +593,456 @@ class AssistentInicial(QWizard):
         self.addPage(self.PAGINA_INICIAL)
         self.addPage(self.PAGINA_ALUMNES)
         self.addPage(self.PAGINA_DATES)
+
+
+class GeneradorInformesExportImport(QtWidgets.QWidget):
+    """Classe per a generar informes i exportar/importar"""
+
+    def __init__(self):
+        super().__init__()
+        self.importacio = None
+        self.selcarpeta = None
+        self.tipus_informes = None
+        self.desti_json = None
+        self.resultat_exportacio = None
+        self.resultat_informes = None
+        self.AMPLADA_DESPLEGABLES = 200
+        self.resize(300, 300)
+        DISTRIBUCIO = QGridLayout()
+        DISTRIBUCIO.setAlignment(Qt.AlignTop)
+        self.setLayout(DISTRIBUCIO)
+        # Creem les opcions d'informe
+        GRUP_TIPUS = QGroupBox()
+        GRUP_TIPUS.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        GRUP_TIPUS.setTitle("Crear informes format Excel")
+        GRUP_TIPUS.setFlat(True)
+        GRUP_TIPUS_DISTRIBUCIO = QVBoxLayout()
+        GRUP_TIPUS.setLayout(GRUP_TIPUS_DISTRIBUCIO)
+        # Creem el grup d'exportacio i importacio:
+        grup_export_import = QGroupBox()
+        grup_export_import.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        grup_export_import.setTitle("Exportar/importar")
+        grup_export_import.setFlat(True)
+        grup_export_importdistribucio = QVBoxLayout()
+        grup_export_import.setLayout(grup_export_importdistribucio)
+        # Definim les opcions per a la creacio d’informes en Excel:
+        self.informe_seleccionat: Union[QButtonGroup, QButtonGroup] = QButtonGroup()
+        self.opcio_categories = QRadioButton("Categories")
+        self.opcio_categories.setChecked(False)
+        self.opcio_alumnes = QRadioButton("Per alumne")
+        self.informe_seleccionat.setExclusive(True)
+        self.informe_seleccionat.addButton(self.opcio_categories, 0)
+        self.informe_seleccionat.addButton(self.opcio_alumnes, 1)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(self.opcio_categories)
+        GRUP_TIPUS_DISTRIBUCIO.addWidget(self.opcio_alumnes)
+        # Creem les opcions per a l'exportacio o la importacio:
+        self.tipus_accio_json = QButtonGroup()
+        self.tipus_accio_json.setExclusive(True)
+        self.opcio_exportar = QRadioButton("Exportar")
+        self.opcio_importar = QRadioButton("Importar")
+        self.tipus_accio_json.addButton(self.opcio_exportar, 0)
+        self.tipus_accio_json.addButton(self.opcio_importar, 1)
+        grup_export_importdistribucio.addWidget(self.opcio_exportar)
+        grup_export_importdistribucio.addWidget(self.opcio_importar)
+        # Creem el selector d'alumnes per a l'exportacio:
+        self.exportimport_selector_alumnes = QComboBox()
+        self.exportimport_selector_alumnes.addItem("* Tots *")
+        self.exportimport_selector_alumnes.setVisible(False)
+        # Creem els selectors d'informe en Excel:
+        self.INFORMES_SELECTOR_ALUMNES = QComboBox()
+        self.INFORMES_SELECTOR_ALUMNES.addItem("* Tots *")
+        # Afegim les dades de la taula, si n'hi ha:
+        self.INFORMES_SELECTOR_CATEGORIES = QComboBox()
+        self.INFORMES_SELECTOR_CATEGORIES.addItem("* Totes *")
+
+        self.INFORMES_SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        # Creem els botons per a l'exportacio o importacio:
+        self.export_seleccio_carpeta = QPushButton(
+            QIcon(os.path.join(AjudantDirectoris(1).ruta_icones, "inode-directory-symbolic.svg")), "")
+        self.boto_exportar_json = QPushButton("Exportar")
+        self.boto_exportar_json.setVisible(False)
+        self.export_seleccio_carpeta.setVisible(False)
+        self.import_seleccio_arxiu = QPushButton(
+            QIcon(os.path.join(AjudantDirectoris(1).ruta_icones, "inode-directory-symbolic.svg")), "Seleccioneu arxiu")
+        self.import_seleccio_arxiu.setVisible(False)
+        # Creem els botons per a la creacio d'informes en Excel:
+        self.BOTON_INFORME = QPushButton("Generar informe")
+        self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        self.BOTON_INFORME.setVisible(False)
+        self.SELECCIO_CARPETA = QPushButton(QIcon(os.path.join(AjudantDirectoris(1).ruta_icones,
+                                                               "inode-directory-symbolic.svg")), "")
+        self.SELECCIO_CARPETA.setIconSize(QSize(24, 24))
+        self.SELECCIO_CARPETA.setVisible(False)
+        # Distribuim els elements:
+        DISTRIBUCIO.addWidget(GRUP_TIPUS, 0, 0)
+        DISTRIBUCIO.addWidget(grup_export_import, 0, 1)
+        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_ALUMNES, 1, 0)
+        DISTRIBUCIO.addWidget(self.exportimport_selector_alumnes, 1, 1)
+        DISTRIBUCIO.addWidget(self.INFORMES_SELECTOR_CATEGORIES, 2, 0)
+        DISTRIBUCIO.addWidget(self.export_seleccio_carpeta, 2, 1)
+        DISTRIBUCIO.addWidget(self.SELECCIO_CARPETA, 3, 0)
+        DISTRIBUCIO.addWidget(self.boto_exportar_json, 3, 1)
+        DISTRIBUCIO.addWidget(self.import_seleccio_arxiu, 3, 1)
+        DISTRIBUCIO.addWidget(self.BOTON_INFORME, 4, 0)
+        self.opcio_exportar.toggled.connect(self.seleccio_accio_json)
+        self.opcio_importar.toggled.connect(self.seleccio_accio_json)
+        self.opcio_alumnes.toggled.connect(self.seleccionar_informe)
+        self.opcio_categories.toggled.connect(self.seleccionar_informe)
+        self.BOTON_INFORME.clicked.connect(self.generar_informe)
+        self.export_seleccio_carpeta.clicked.connect(self.seleccionar_carpeta_exportacio_json)
+        self.import_seleccio_arxiu.clicked.connect(self.importar)
+        self.SELECCIO_CARPETA.clicked.connect(self.seleccionar_carpeta_informes)
+        self.boto_exportar_json.clicked.connect(self.exportar)
+        self.destinacio_informes = None
+        self.carpeta_exportacio = None
+        self.arxiu_importacio = None
+
+    def seleccionar_informe(self):
+        self.informe_seleccionat.setExclusive(True)
+        self.tipus_accio_json.setExclusive(False)
+        self.opcio_exportar.setChecked(False)
+        self.opcio_importar.setChecked(False)
+        self.export_seleccio_carpeta.setVisible(False)
+        self.exportimport_selector_alumnes.setVisible(False)
+        self.boto_exportar_json.setVisible(False)
+        self.import_seleccio_arxiu.setVisible(False)
+        if self.informe_seleccionat.checkedId() == 0:
+            self.BOTON_INFORME.setVisible(True)
+            self.SELECCIO_CARPETA.setVisible(True)
+            self.export_seleccio_carpeta.setVisible(False)
+            self.tipus_informes = 0
+            self.INFORMES_SELECTOR_CATEGORIES.setVisible(True)
+            self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+            self.INFORMES_SELECTOR_ALUMNES.setCurrentIndex(0)
+
+        elif self.informe_seleccionat.checkedId() == 1:
+            self.BOTON_INFORME.setVisible(True)
+            self.SELECCIO_CARPETA.setVisible(True)
+            self.tipus_informes = 1
+            self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
+            self.INFORMES_SELECTOR_ALUMNES.setVisible(True)
+            self.INFORMES_SELECTOR_CATEGORIES.setCurrentIndex(0)
+
+    def seleccio_accio_json(self):
+        self.informe_seleccionat.setExclusive(False)
+        self.tipus_accio_json.setExclusive(True)
+        self.opcio_categories.setChecked(False)
+        self.opcio_alumnes.setChecked(False)
+        self.BOTON_INFORME.setVisible(False)
+        self.SELECCIO_CARPETA.setVisible(False)
+        self.INFORMES_SELECTOR_ALUMNES.setVisible(False)
+        self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
+        if self.tipus_accio_json.checkedId() == 0:
+            self.exportimport_selector_alumnes.setVisible(True)
+            self.export_seleccio_carpeta.setVisible(True)
+            self.boto_exportar_json.setVisible(True)
+            self.import_seleccio_arxiu.setVisible(False)
+        elif self.tipus_accio_json.checkedId() == 1:
+            self.exportimport_selector_alumnes.setVisible(False)
+            self.boto_exportar_json.setVisible(False)
+            self.export_seleccio_carpeta.setVisible(False)
+            self.import_seleccio_arxiu.setVisible(True)
+
+    def seleccionar_carpeta_exportacio_json(self):
+        self.desti_json = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
+        if self.desti_json:
+            self.carpeta_exportacio = self.desti_json
+
+    def seleccionar_carpeta_informes(self):
+        """Funcio per a seleccionar la carpeta on es guardaran els informes."""
+        self.selcarpeta = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
+        if self.selcarpeta:
+            self.destinacio_informes = self.selcarpeta
+
+    def exportar(self):
+        if self.carpeta_exportacio is None:
+            self.resultat_exportacio = "nocarpeta"
+        else:
+            llistat_alumnes = []
+            if self.exportimport_selector_alumnes.currentIndex() == 0:
+                llistat_alumnes = CapEstudis(1).alumnat_registres
+            else:
+
+                alumne_seleccionat = self.exportimport_selector_alumnes.currentText()
+                for alumne in CapEstudis(1).alumnat_registres:
+                    if alumne.nom == alumne_seleccionat:
+                        llistat_alumnes.append(alumne)
+            resultat_exportacio = ExportadorImportador(1).exportacio(llistat_alumnes, self.carpeta_exportacio)
+            if resultat_exportacio:
+                self.resultat_exportacio = True
+            elif resultat_exportacio is False:
+                self.resultat_exportacio = False
+
+    def importar(self):
+        self.importacio = DialegSeleccioCarpeta().getOpenFileNames(self, "Selecciona carpeta", filter="Arxius json("
+                                                                                                      "*.json)")
+        arxius_importacio = self.importacio[0]
+        ExportadorImportador(1).importacio(arxius_importacio)
+
+    def generar_informe(self):
+        """Funcio per a generar un informe. Explicacio de la variable tipus informe: 0 si es de categories, 1 si es per
+        alumne."""
+        dades_registres = Comptable(1).obtenir_registres()
+        alumnes_informe = CapEstudis(1).alumnat_registres
+        carpeta_desti = self.destinacio_informes
+        categories_registrades = Classificador(1).categories_registrades
+        resposta = None
+        if self.destinacio_informes is not None:
+            if self.tipus_informes == 0:
+                # Es un informe de categories:
+
+                valor_actual = self.INFORMES_SELECTOR_CATEGORIES.currentText()
+                categoria_informe = [categoria for categoria in categories_registrades if
+                                     categoria.nom == valor_actual]
+                if self.INFORMES_SELECTOR_CATEGORIES.currentIndex() != 0:
+                    exportador = CreadorInformes(alumnes_informe, categoria_informe, dades_registres, carpeta_desti)
+                else:
+                    exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres,
+                                                 carpeta_desti)
+                resposta = exportador.export_categories()
+            elif self.tipus_informes == 1:
+                # Es un informe per alumne:
+                dates_informe = Calendaritzador(1).info_dates
+                valor_actual = self.INFORMES_SELECTOR_ALUMNES.currentText()
+                categories_enviar = Classificador(1).categories
+                if self.INFORMES_SELECTOR_ALUMNES.currentIndex() != 0:
+                    # Enviem tan sols la informacio de l'alumne en concret, no tot el registre:
+                    alumnes_informe = [alumne for alumne in alumnes_informe if alumne.nom == valor_actual]
+                    dades_enviar = [registre for registre in dades_registres if registre.alumne.nom == valor_actual]
+                else:
+                    dades_enviar = dades_registres
+                exportador = CreadorInformes(alumnes_informe, categories_enviar, dades_enviar, carpeta_desti)
+                resposta = exportador.export_alumne(dates_informe)
+            if resposta:
+                self.resultat_informes = True
+
+
+def obtenir_llistat_alumnes():
+    alumnes_entrada = CapEstudis(1).alumnat
+    if alumnes_entrada:
+        llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+        return llistat_alumnes
+    return False
+
+
+def obtenir_registres_alumnes():
+    alumnes_entrada = CapEstudis(1).alumnat
+    if alumnes_entrada:
+        llistat_dades_alumnes = [[alumne.id, alumne.nom] for alumne in alumnes_entrada]
+        return llistat_dades_alumnes
+    return False
+
+
+def obtenir_categories():
+    categories_entrada = Classificador(1).categories
+    if categories_entrada:
+        llistat_categories = [categoria.nom for categoria in categories_entrada]
+        return llistat_categories
+    return []
+
+
+def obtenir_llistat_registres():
+    Comptable(1).refrescar_registres()
+    if Comptable(1).registres:
+        llista_registres = [[element.id, element.alumne.nom, element.categoria.nom,
+                             dateutil.parser.parse(element.data), element.descripcio] for element
+                            in Comptable(1).registres]
+        return llista_registres
+    return None
+
+
+def obtenir_llistat_categories_registrades():
+    categories_registre = Classificador(1).obtenir_categories_registrades()
+    if categories_registre:
+        llistat_alumnes = [categoria.nom for categoria in categories_registre]
+        return llistat_alumnes
+    return False
+
+
+def obtenir_llistat_alumnes_registrats():
+    alumnes_entrada = CapEstudis(1).alumnat_registres
+    if alumnes_entrada:
+        llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+        return llistat_alumnes
+    return False
+
+
+class EditorRegistres(QtWidgets.QWidget):
+    def __init__(self):
+        super(EditorRegistres, self).__init__()
+        self.AMPLADA_DESPLEGABLES = 200
+        self.TAULA = QTableView()
+        DISTRIBUCIO = QGridLayout()
+        DISTRIBUCIO.setAlignment(Qt.AlignTop)
+        self.setLayout(DISTRIBUCIO)
+        self.seleccio_alumnes = QComboBox()
+        self.seleccio_categories = QComboBox()
+        self.seleccio_alumnes.addItem("* Filtrar per alumne *")
+        self.seleccio_categories.addItem("* Filtrar per categoria *")
+        if obtenir_llistat_categories_registrades():
+            self.seleccio_categories.addItems(obtenir_llistat_categories_registrades())
+        if obtenir_llistat_alumnes_registrats():
+            self.seleccio_alumnes.addItems(obtenir_llistat_alumnes_registrats())
+        self.seleccio_alumnes.setMaximumWidth(300)
+        self.boto_desar = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar canvis")
+        if obtenir_llistat_registres() not in [None, False]:
+            self.TAULA_MODEL = ModelVisualitzacio(obtenir_llistat_registres())
+            self.columnes_model: int = self.TAULA_MODEL.columnCount(1)
+            self.files_model: int = self.TAULA_MODEL.rowCount(1)
+        else:
+            self.TAULA_MODEL = ModelVisualitzacio([[" ", " ", " ", " "]])
+            self.columnes_model = 1
+            self.files_model = 1
+        noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
+        for nom in noms_columnes:
+            self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
+        # Poc elegant, pero el filtre funciona com a objecte intermig entre el model i la taula:
+        self.TAULA_MODEL_FILTRE = QSortFilterProxyModel(self)
+        self.TAULA_MODEL_FILTRE.setSourceModel(self.TAULA_MODEL)
+        self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
+        # Establim el delegat per a la columna de dates:
+        if obtenir_llistat_registres() not in [None, False]:
+            self.TAULA.setItemDelegateForColumn(3, DelegatDates())
+        # Possibilitat d'establir un ComboBox:
+        # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
+        # Li indiquem que ha de filtrar de la columna 1:
+        self.TAULA_MODEL_FILTRE.setFilterKeyColumn(-1)
+        # I que hauria d'ordenar per la columna 3:
+        self.TAULA_MODEL_FILTRE.sort(3, Qt.AscendingOrder)
+        self.TAULA_MODEL_FILTRE.autoAcceptChildRows()
+        self.TAULA_MODEL_FILTRE.setDynamicSortFilter(False)
+        self.TAULA.setColumnHidden(0, True)
+        self.TAULA.setWordWrap(True)
+        self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
+        self.TAULA.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.TAULA.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.TAULA.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.TAULA.setColumnWidth(4, self.AMPLADA_DESPLEGABLES)
+        self.TAULA.resizeRowsToContents()
+        self.TAULA.resizeColumnToContents(1)
+        self.TAULA.resizeColumnToContents(2)
+        self.TAULA.resizeColumnToContents(3)
+        self.TAULA.setSortingEnabled(True)
+        DISTRIBUCIO.addWidget(self.seleccio_alumnes, 0, 0)
+        DISTRIBUCIO.addWidget(self.seleccio_categories, 0, 1)
+        DISTRIBUCIO.addWidget(self.boto_desar, 0, 2)
+        DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
+        self.seleccio_alumnes.currentTextChanged.connect(self.visualitzacio_filtre_alumnes)
+        self.seleccio_categories.currentTextChanged.connect(self.visualitzacio_filtre_categories)
+        self.boto_desar.clicked.connect(self.alteracio_registres)
+
+    def alteracio_registres(self):
+        """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
+        si s'afegien. """
+        model_comparacio = self.TAULA.model()
+        dades_originals = obtenir_llistat_registres()
+        llista_ids_originals: list = [ref[0] for ref in dades_originals]
+        llista_ids_model = []
+        registres_eliminats: list = []
+        registres_actualitzats: list = []
+        rang_files = list(range(self.TAULA.model().rowCount()))
+        # Guardem els ids de les files del model i comprovem que no hagi cap id que falti:
+        for fila in rang_files:
+            llista_ids_model.append(model_comparacio.data(model_comparacio.index(fila, 0)))
+        # Ordenem les llistes per id:
+        llista_ids_originals.sort()
+        llista_ids_model.sort()
+        dades_originals.sort(key=lambda x: x[0])
+        # Convertim les dades del model en llista de llistes per poder comparar::
+        llista_dades_model = []
+        for row in range(0, self.files_model):
+            fila_model = []
+            for column in range(0, self.columnes_model):
+                fila_model.append(model_comparacio.data(model_comparacio.index(row, column)))
+            llista_dades_model.append(fila_model)
+        # Transformem les dates de QT a python (per culpa de la taula de visualitzacio):
+        for registre in llista_dades_model:
+            registre[3] = registre[3].toString("yyyy-MM-dd")
+        # Ordenem les dades del model per id:
+        llista_dades_model.sort(key=lambda x: x[0])
+        # Comparem els ids de les files del model amb els ids de les files originals:
+        for item in rang_files:
+            if llista_ids_originals[item] != llista_ids_model[item]:
+                registres_eliminats.append(llista_ids_originals[item])
+                item += 1
+
+            # Un cop sapigut aixo, comprovem les actualitzacions:
+            else:
+                # Comprovem els registres un per un. Si son diferents, guardem els canvis:
+                if dades_originals[item] != llista_dades_model[item]:
+                    registres_actualitzats.append(llista_dades_model[item])
+        # Comprovem si hi han actualitzacions o eliminacions i passem l'ordre corresponent:
+        if registres_eliminats:
+            self.eliminar_registres(registres_eliminats)
+        if registres_actualitzats:
+            self.actualitzar_registres(registres_actualitzats)
+
+    def eliminar_registres(self, registres_eliminats):
+        """Funcio per a eliminar registres de la base de dades."""
+        missatge_eliminar = []
+        for registre in registres_eliminats:
+            eliminacio_registre = self.transformar_gui_a_bbdd(registre)
+            missatge_eliminar.append(eliminacio_registre)
+        Comptable(1).eliminar_registre(missatge_eliminar)
+
+    def actualitzar_registres(self, registres_actualitzats):
+        """Funcio per a actualitzar registres de la base de dades."""
+        missatge_actualitzacio = []
+        for registre in registres_actualitzats:
+            actualitzacio_registre = self.transformar_gui_a_bbdd(registre)
+            missatge_actualitzacio.append(actualitzacio_registre)
+        Comptable(1).actualitzar_registres(missatge_actualitzacio)
+
+    def transformar_gui_a_bbdd(self, dades: list):
+        """Funcio per a transformar les dades de la GUI a la BBDD."""
+        if not isinstance(dades, list):
+            raise TypeError("La dada ha de ser del tipus Registresguicomm.")
+        alumne = None
+        categoria_enviar = None
+        # Transformem la data:
+        id_registre = dades[0]
+        for persona in CapEstudis(1).alumnat:
+            if persona.nom == dades[1]:
+                alumne = persona
+        for categoria in Classificador(1).info_categories:
+            if categoria.nom == dades[2]:
+                categoria_enviar = categoria
+        objecte_data = dateutil.parser.parse(dades[3], dayfirst=True)
+        data = objecte_data.strftime("%Y-%m-%d")
+        descripcio = dades[4]
+        # Guardem la dada:
+        resultat = Registresguicomm(id_registre, alumne, categoria_enviar, data, descripcio)
+        return resultat
+
+    def visualitzacio_filtre_alumnes(self):
+        """Comportament quan s'esta reallitzant un filtre per alumnes al widget amb el llistat"""
+        valor_actual_desplegable = self.seleccio_alumnes.currentText()
+        self.seleccio_categories.setCurrentIndex(0)
+        if self.seleccio_alumnes.currentIndex() == 0:
+            self.TAULA.showColumn(1)
+            self.seleccio_categories.setCurrentIndex(0)
+            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
+            self.TAULA.resizeRowsToContents()
+        else:
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
+            self.TAULA.hideColumn(1)
+            self.TAULA.resizeRowsToContents()
+
+    def visualitzacio_filtre_categories(self):
+        categoria_seleccionada = self.seleccio_categories.currentText()
+        if self.seleccio_categories.currentIndex() == 0:
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
+            self.TAULA.resizeRowsToContents()
+            self.TAULA.showColumn(1)
+            self.seleccio_alumnes.setCurrentIndex(0)
+        else:
+            self.TAULA.showColumn(1)
+            self.seleccio_alumnes.setCurrentIndex(0)
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(categoria_seleccionada)
+            self.TAULA.resizeRowsToContents()
