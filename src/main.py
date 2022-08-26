@@ -9,8 +9,8 @@ from PySide6.QtWidgets import (QApplication, QToolBar, QMainWindow, QStackedWidg
 from agents_bbdd import AjudantDirectoris
 from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Destructor, Comprovador
 from formats import Registres_gui_nou
-from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres, \
-    obtenir_registres_alumnes, ModelVisualitzacio, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats, \
+from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport,  \
+    obtenir_registres_alumnes, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats, \
     obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories, EditorRegistresBis
 
 

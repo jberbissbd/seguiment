@@ -25,7 +25,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QFormLayout,
     QDialogButtonBox,
-    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QStyledItemDelegate, QTableWidget, QTableWidgetItem
+    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QStyledItemDelegate, QTableWidget, QTableWidgetItem,
+    QItemEditorFactory
 )
 from dateutil.parser import parser
 
@@ -85,6 +86,13 @@ def obtenir_llistat_alumnes_registrats():
         return llistat_alumnes
     return False
 
+class DelegatAlumnes(QStyledItemDelegate):
+    def __init__(self):
+        super(DelegatAlumnes, self).__init__()
+        super().__init__()
+        self.setItemEditorFactory()
+
+
 class DelegatDatesBis(QStyledItemDelegate):
     """Delegat per a la columna de dates"""
 
@@ -110,6 +118,10 @@ class DelegatDates(QStyledItemDelegate):
             value = value.toPython()
             return value.strftime("%d/%m/%Y")
 
+class DialegSeleccioCarpeta(QFileDialog):
+    def __init__(self):
+        super().__init__()
+        self.setFileMode(QFileDialog.Directory)
 
 class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
     """Model de taula per a l'edicio d'alumnes"""
@@ -767,15 +779,9 @@ class EditorRegistresBis(QtWidgets.QWidget):
             self.omplir_taula()
 
         noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
-
         self.TAULA.setHorizontalHeaderLabels(noms_columnes)
-
-        # self.TAULA.setItemDelegateForColumn(3, DelegatDatesBis())
         # Possibilitat d'establir un ComboBox:
         # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
-
-        # self.TAULA_MODEL_FILTRE.setFilterKeyColumn(-1)
-
         self.TAULA.setColumnHidden(0, True)
         self.TAULA.setWordWrap(True)        
         self.TAULA.setEditTriggers(QAbstractItemView.DoubleClicked)
@@ -787,6 +793,7 @@ class EditorRegistresBis(QtWidgets.QWidget):
         self.TAULA.resizeColumnToContents(2)
         self.TAULA.resizeColumnToContents(3)
         self.TAULA.setSortingEnabled(True)
+        # self.TAULA.setItemDelegateForColumn(2,QStyledItemDelegate(QtCore.QStringListModel))
         DISTRIBUCIO.addWidget(self.seleccio_alumnes, 0, 0)
         DISTRIBUCIO.addWidget(self.seleccio_categories, 0, 1)
         DISTRIBUCIO.addWidget(self.boto_eliminar, 0, 2)
@@ -847,7 +854,6 @@ class EditorRegistresBis(QtWidgets.QWidget):
                     valor = int(self.TAULA.item(fila,columna).data(0))
                 elif columna == 3:
                     valor = self.TAULA.item(fila,columna).data(0).toPython()
-                                 
                 else:
                     valor = self.TAULA.item(fila,columna).data(0)
                 fila_taula.append(valor)
