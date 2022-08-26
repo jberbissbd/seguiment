@@ -207,8 +207,8 @@ class MainWindow(QMainWindow):
     def senyal_canvi_registres(self):
         """Funcio per a que s'actualitzin els regitres a la gui quan aquests es modifiquen"""
         self.acces_registres.refrescar_registres()
-        self.visualitzador.TAULA_MODEL = ModelVisualitzacio(obtenir_llistat_registres())
-        self.visualitzador.TAULA.setModel(self.visualitzador.TAULA_MODEL)
+        self.visualitzador.TAULA.clear()
+        self.visualitzador.omplir_taula()
         self.visualitzador.seleccio_alumnes.clear()
         self.visualitzador.seleccio_alumnes.addItem("* Filtrar per alumne *")
         self.cap.refrescar_alumnes()
@@ -229,8 +229,8 @@ class MainWindow(QMainWindow):
         self.visualitzador.seleccio_alumnes.addItems(obtenir_llistat_alumnes_registrats())
         # Actualitzem els registres, ja que la base de dades eliminara els registres d'un alumne.
         self.acces_registres.refrescar_registres()
-        self.visualitzador.TAULA_MODEL = ModelVisualitzacio(obtenir_llistat_registres())
-        self.visualitzador.TAULA.setModel(self.visualitzador.TAULA_MODEL)
+        self.visualitzador.TAULA.clear()
+        self.visualitzador.omplir_taula()
 
     def bloqueig_registre_taula(self):
         """Bloqueja els camps categoria i alumne al widget de visualitzacio"""

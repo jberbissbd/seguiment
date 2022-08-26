@@ -1,7 +1,6 @@
 import datetime
 import os
 from datetime import date
-from re import S
 from typing import Union
 
 import dateutil
@@ -26,8 +25,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QFormLayout,
     QDialogButtonBox,
-    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QStyledItemDelegate, QWidget, QTableWidget, QTableWidgetItem,
-    QHeaderView
+    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QStyledItemDelegate, QTableWidget, QTableWidgetItem
 )
 from dateutil.parser import parser
 
@@ -38,6 +36,7 @@ from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova, Registresguic
 QLocale.setDefault(QLocale.Catalan)
 
 def obtenir_llistat_alumnes():
+    CapEstudis(1).refrescar_alumnes()
     alumnes_entrada = CapEstudis(1).alumnat
     if alumnes_entrada:
         llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
