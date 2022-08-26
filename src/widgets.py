@@ -1153,6 +1153,8 @@ class EditorRegistresBis(QtWidgets.QWidget):
         dades_originals = obtenir_llistat_registres()
         rang_files_taula = range(self.TAULA.rowCount())
         rang_columnes_taula = range(self.TAULA.columnCount())
+        registres_eliminats =[]
+        registres_actualitzats =[]
         llista_dades_model = []
         # Convertim les dades del model en llista de llistes per poder comparar:
         for fila in rang_files_taula:
@@ -1171,8 +1173,6 @@ class EditorRegistresBis(QtWidgets.QWidget):
         
         llista_ids_originals: list = [ref[0] for ref in dades_originals]
         llista_ids_model:list = [ref[0] for ref in llista_dades_model]
-        registres_actualitzats: list = []
-        rang_files = list(rang_files_taula)
         # Comparem els ids, si n'hi ha menys, implica que s'ha eliminat algun:
         if len(llista_ids_model) < len(llista_ids_originals):
             ids_eliminats= [item for item in llista_ids_originals if item not in llista_ids_model]
@@ -1182,9 +1182,9 @@ class EditorRegistresBis(QtWidgets.QWidget):
         llista_dades_model.sort(key=lambda x: x[0])
         registres_actualitzats = [element_taula for element_taula in llista_dades_model if element_taula not in dades_originals]
         # Comprovem si hi han actualitzacions o eliminacions i passem l'ordre corresponent:
-        if registres_eliminats:
+        if len(registres_eliminats)>0:
             self.eliminar_registres(registres_eliminats)
-        if registres_actualitzats:
+        if len(registres_actualitzats)>0:
             self.actualitzar_registres(registres_actualitzats)
 
     def eliminar_registres(self, registres_eliminats):
@@ -1217,7 +1217,6 @@ class EditorRegistresBis(QtWidgets.QWidget):
         for categoria in Classificador(1).info_categories:
             if categoria.nom == dades[2]:
                 categoria_enviar = categoria
-        objecte_data = dateutil.parser.parse(dades[3], dayfirst=True)
         data = dades[3].strftime("%Y-%m-%d")
         descripcio = dades[4]
         # Guardem la dada:
@@ -1229,27 +1228,41 @@ class EditorRegistresBis(QtWidgets.QWidget):
         valor_actual_desplegable = self.seleccio_alumnes.currentText()
         self.seleccio_categories.setCurrentIndex(0)
         if self.seleccio_alumnes.currentIndex() == 0:
+            for fila in range(self.TAULA.rowCount()):
+                self.TAULA.showRow(fila)
             self.TAULA.showColumn(1)
+            self.TAULA.showColumn(2)
             self.seleccio_categories.setCurrentIndex(0)
-            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
             self.TAULA.resizeRowsToContents()
         else:
-            self.TAULA_MODEL_FILTRE.invalidate()
-            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
+            for fila in range(self.TAULA.rowCount()):
+                self.TAULA.showRow(fila)
+            registres_mostrar = self.TAULA.findItems(valor_actual_desplegable,Qt.MatchExactly)
+            files_mostrar = [element.row() for element in registres_mostrar]
+            files_amagar = [fila for fila in range(self.TAULA.rowCount()) if fila not in files_mostrar]
+            for fila in files_amagar:
+                self.TAULA.hideRow(fila)
+            self.TAULA.showColumn(2)
             self.TAULA.hideColumn(1)
             self.TAULA.resizeRowsToContents()
 
     def visualitzacio_filtre_categories(self):
         categoria_seleccionada = self.seleccio_categories.currentText()
         if self.seleccio_categories.currentIndex() == 0:
-            self.TAULA_MODEL_FILTRE.invalidate()
-            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
+            for fila in range(self.TAULA.rowCount()):
+                self.TAULA.showRow(fila)
+            self.TAULA.showColumn(1)
+            self.TAULA.showColumn(2)
+            self.seleccio_categories.setCurrentIndex(0)
             self.TAULA.resizeRowsToContents()
-            self.TAULA.showColumn(1)
-            self.seleccio_alumnes.setCurrentIndex(0)
         else:
-            self.TAULA.showColumn(1)
+            for fila in range(self.TAULA.rowCount()):
+                self.TAULA.showRow(fila)
+            registres_mostrar = self.TAULA.findItems(categoria_seleccionada, Qt.MatchExactly)
+            files_mostrar = [element.row() for element in registres_mostrar]
+            files_amagar = [fila for fila in range(self.TAULA.rowCount()) if fila not in files_mostrar]
+            for fila in files_amagar:
+                self.TAULA.hideRow(fila)
             self.seleccio_alumnes.setCurrentIndex(0)
-            self.TAULA_MODEL_FILTRE.invalidate()
-            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(categoria_seleccionada)
+            self.TAULA.hideColumn(2)
             self.TAULA.resizeRowsToContents()
