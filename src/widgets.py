@@ -65,7 +65,7 @@ def obtenir_llistat_registres():
     Comptable(1).refrescar_registres()
     if Comptable(1).registres:
         llista_registres = [[element.id, element.alumne.nom, element.categoria.nom,
-                             dateutil.parser.parse(element.data), element.descripcio] for element
+                             dateutil.parser.parse(element.data).date(), element.descripcio] for element
                             in Comptable(1).registres]
         return llista_registres
     return None
@@ -1079,6 +1079,8 @@ class EditorRegistresBis(QtWidgets.QWidget):
             self.seleccio_alumnes.addItems(obtenir_llistat_alumnes_registrats())
         self.seleccio_alumnes.setMaximumWidth(300)
         self.boto_desar = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar canvis")
+        self.boto_eliminar = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"),
+                                         text="Eliminar")
         if obtenir_llistat_registres() not in [None, False]:
             self.omplir_taula()
 
@@ -1105,12 +1107,15 @@ class EditorRegistresBis(QtWidgets.QWidget):
         self.TAULA.setSortingEnabled(True)
         DISTRIBUCIO.addWidget(self.seleccio_alumnes, 0, 0)
         DISTRIBUCIO.addWidget(self.seleccio_categories, 0, 1)
-        DISTRIBUCIO.addWidget(self.boto_desar, 0, 2)
+        DISTRIBUCIO.addWidget(self.boto_eliminar, 0, 2)
+        DISTRIBUCIO.addWidget(self.boto_desar, 0, 3)
         DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
         self.seleccio_alumnes.currentTextChanged.connect(self.visualitzacio_filtre_alumnes)
         self.seleccio_categories.currentTextChanged.connect(self.visualitzacio_filtre_categories)
         self.boto_desar.clicked.connect(self.alteracio_registres)
-
+        self.boto_eliminar.clicked.connect(self.eliminar_fila_taula)
+    def eliminar_fila_taula(self):
+        self.TAULA.removeRow(self.TAULA.currentRow())
     def omplir_taula(self):
         dades = obtenir_llistat_registres()
         files = len(dades)
@@ -1138,53 +1143,44 @@ class EditorRegistresBis(QtWidgets.QWidget):
                     self.TAULA.cellWidget(fila, columna).setDisplayFormat("dd/MM/yyyy")
                     self.TAULA.cellWidget(fila,columna).setCalendarPopup(True)
                 else:
-                    nou_item = QTableWidgetItem(valor)
+                    nou_item = QTableWidgetItem(str(valor))
                     self.TAULA.setItem(fila, columna, nou_item)
-
-
-
 
 
     def alteracio_registres(self):
         """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
         si s'afegien. """
-        model_comparacio = self.TAULA.model()
         dades_originals = obtenir_llistat_registres()
-        llista_ids_originals: list = [ref[0] for ref in dades_originals]
-        llista_ids_model = []
-        registres_eliminats: list = []
-        registres_actualitzats: list = []
-        rang_files = list(range(self.TAULA.model().rowCount()))
-        # Guardem els ids de les files del model i comprovem que no hagi cap id que falti:
-        for fila in rang_files:
-            llista_ids_model.append(model_comparacio.data(model_comparacio.index(fila, 0)))
-        # Ordenem les llistes per id:
-        llista_ids_originals.sort()
-        llista_ids_model.sort()
-        dades_originals.sort(key=lambda x: x[0])
-        # Convertim les dades del model en llista de llistes per poder comparar::
+        rang_files_taula = range(self.TAULA.rowCount())
+        rang_columnes_taula = range(self.TAULA.columnCount())
         llista_dades_model = []
-        for row in range(0, self.files_model):
-            fila_model = []
-            for column in range(0, self.columnes_model):
-                fila_model.append(model_comparacio.data(model_comparacio.index(row, column)))
-            llista_dades_model.append(fila_model)
-        # Transformem les dates de QT a python (per culpa de la taula de visualitzacio):
-        for registre in llista_dades_model:
-            registre[3] = registre[3].toString("yyyy-MM-dd")
+        # Convertim les dades del model en llista de llistes per poder comparar:
+        for fila in rang_files_taula:
+            fila_taula =[]
+            for columna in rang_columnes_taula:
+                valor = None
+                if columna == 0:
+                    valor = int(self.TAULA.item(fila,columna).data(0))
+                elif columna == 3:
+                    valor = self.TAULA.item(fila,columna).data(0).toPython()
+                                 
+                else:
+                    valor = self.TAULA.item(fila,columna).data(0)
+                fila_taula.append(valor)
+            llista_dades_model.append(fila_taula)
+        
+        llista_ids_originals: list = [ref[0] for ref in dades_originals]
+        llista_ids_model:list = [ref[0] for ref in llista_dades_model]
+        registres_actualitzats: list = []
+        rang_files = list(rang_files_taula)
+        # Comparem els ids, si n'hi ha menys, implica que s'ha eliminat algun:
+        if len(llista_ids_model) < len(llista_ids_originals):
+            ids_eliminats= [item for item in llista_ids_originals if item not in llista_ids_model]
+            registres_eliminats = [item for item in dades_originals if item[0] in ids_eliminats]       
+        dades_originals.sort(key=lambda x: x[0])
         # Ordenem les dades del model per id:
         llista_dades_model.sort(key=lambda x: x[0])
-        # Comparem els ids de les files del model amb els ids de les files originals:
-        for item in rang_files:
-            if llista_ids_originals[item] != llista_ids_model[item]:
-                registres_eliminats.append(llista_ids_originals[item])
-                item += 1
-
-            # Un cop sapigut aixo, comprovem les actualitzacions:
-            else:
-                # Comprovem els registres un per un. Si son diferents, guardem els canvis:
-                if dades_originals[item] != llista_dades_model[item]:
-                    registres_actualitzats.append(llista_dades_model[item])
+        registres_actualitzats = [element_taula for element_taula in llista_dades_model if element_taula not in dades_originals]
         # Comprovem si hi han actualitzacions o eliminacions i passem l'ordre corresponent:
         if registres_eliminats:
             self.eliminar_registres(registres_eliminats)
@@ -1210,7 +1206,7 @@ class EditorRegistresBis(QtWidgets.QWidget):
     def transformar_gui_a_bbdd(self, dades: list):
         """Funcio per a transformar les dades de la GUI a la BBDD."""
         if not isinstance(dades, list):
-            raise TypeError("La dada ha de ser del tipus Registresguicomm.")
+            raise TypeError("S'ha de passar una llista")
         alumne = None
         categoria_enviar = None
         # Transformem la data:
@@ -1222,7 +1218,7 @@ class EditorRegistresBis(QtWidgets.QWidget):
             if categoria.nom == dades[2]:
                 categoria_enviar = categoria
         objecte_data = dateutil.parser.parse(dades[3], dayfirst=True)
-        data = objecte_data.strftime("%Y-%m-%d")
+        data = dades[3].strftime("%Y-%m-%d")
         descripcio = dades[4]
         # Guardem la dada:
         resultat = Registresguicomm(id_registre, alumne, categoria_enviar, data, descripcio)
