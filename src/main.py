@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (QApplication, QToolBar, QMainWindow, QStackedWidg
 from agents_bbdd import AjudantDirectoris
 from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Destructor, Comprovador
 from formats import Registres_gui_nou
-from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres, \
-    obtenir_registres_alumnes, ModelVisualitzacio, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats, \
-    obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
+from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres
+from widgets import obtenir_registres_alumnes, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats
+from widgets import obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
 
 
 class MainWindow(QMainWindow):
@@ -202,13 +202,13 @@ class MainWindow(QMainWindow):
         """Funcio per a que es mostri el widget per a visualitzar i editar els registres"""
         self.visualitzador = EditorRegistres()
         self.visualitzador.boto_desar.clicked.connect(self.senyal_registres_actualitzats)
-        self.visualitzador.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
+        # self.visualitzador.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
 
     def senyal_canvi_registres(self):
         """Funcio per a que s'actualitzin els regitres a la gui quan aquests es modifiquen"""
         self.acces_registres.refrescar_registres()
-        self.visualitzador.TAULA_MODEL = ModelVisualitzacio(obtenir_llistat_registres())
-        self.visualitzador.TAULA.setModel(self.visualitzador.TAULA_MODEL)
+        self.visualitzador.TAULA.clear()
+        self.visualitzador.omplir_taula()
         self.visualitzador.seleccio_alumnes.clear()
         self.visualitzador.seleccio_alumnes.addItem("* Filtrar per alumne *")
         self.cap.refrescar_alumnes()
@@ -229,8 +229,8 @@ class MainWindow(QMainWindow):
         self.visualitzador.seleccio_alumnes.addItems(obtenir_llistat_alumnes_registrats())
         # Actualitzem els registres, ja que la base de dades eliminara els registres d'un alumne.
         self.acces_registres.refrescar_registres()
-        self.visualitzador.TAULA_MODEL = ModelVisualitzacio(obtenir_llistat_registres())
-        self.visualitzador.TAULA.setModel(self.visualitzador.TAULA_MODEL)
+        self.visualitzador.TAULA.clear()
+        self.visualitzador.omplir_taula()
 
     def bloqueig_registre_taula(self):
         """Bloqueja els camps categoria i alumne al widget de visualitzacio"""
