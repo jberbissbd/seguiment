@@ -1,6 +1,7 @@
 import datetime
 import os
 from datetime import date
+from re import S
 from typing import Union
 
 import dateutil
@@ -1080,37 +1081,20 @@ class EditorRegistresBis(QtWidgets.QWidget):
         self.boto_desar = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar canvis")
         if obtenir_llistat_registres() not in [None, False]:
             self.omplir_taula()
-            # self.TAULA_MODEL = ModelVisualitzacio(obtenir_llistat_registres())
-            # self.columnes_model: int = self.TAULA_MODEL.columnCount(1)
-            # self.files_model: int = self.TAULA_MODEL.rowCount(1)
-        # else:
-        # self.TAULA_MODEL = ModelVisualitzacio([[" ", " ", " ", " "]])
-        # self.columnes_model = 1
-        # self.files_model = 1
+
         noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
-        # capcalera = QHeaderView(Qt.Horizontal)
+
         self.TAULA.setHorizontalHeaderLabels(noms_columnes)
-        # for nom in noms_columnes:
-        # self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
-        # Poc elegant, pero el filtre funciona com a objecte intermig entre el model i la taula:
-        # self.TAULA_MODEL_FILTRE = QSortFilterProxyModel(self)
-        # self.TAULA_MODEL_FILTRE.setSourceModel(self.TAULA_MODEL)
-        # self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
-        # Establim el delegat per a la columna de dates:
-        # if obtenir_llistat_registres() not in [None, False]:
-        self.TAULA.setItemDelegateForColumn(3, DelegatDatesBis())
+
+        # self.TAULA.setItemDelegateForColumn(3, DelegatDatesBis())
         # Possibilitat d'establir un ComboBox:
         # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
-        # Li indiquem que ha de filtrar de la columna 1:
+
         # self.TAULA_MODEL_FILTRE.setFilterKeyColumn(-1)
-        # I que hauria d'ordenar per la columna 3:
-        # self.TAULA_MODEL_FILTRE.sort(3, Qt.AscendingOrder)
-        # self.TAULA_MODEL_FILTRE.autoAcceptChildRows()
-        # self.TAULA_MODEL_FILTRE.setDynamicSortFilter(False)
+
         self.TAULA.setColumnHidden(0, True)
-        self.TAULA.setWordWrap(True)
-        # self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
-        self.TAULA.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.TAULA.setWordWrap(True)        
+        self.TAULA.setEditTriggers(QAbstractItemView.DoubleClicked)
         self.TAULA.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.TAULA.setSelectionMode(QAbstractItemView.SingleSelection)
         self.TAULA.setColumnWidth(4, self.AMPLADA_DESPLEGABLES)
@@ -1135,7 +1119,10 @@ class EditorRegistresBis(QtWidgets.QWidget):
         self.TAULA.setColumnCount(columnes)
         rang_files = range(files)
         rang_columnes = range(columnes)
-        valor = None
+        desplegable_taula_alumnes = QComboBox()
+        desplegable_taula_alumnes.addItems(obtenir_llistat_alumnes())
+        desplegable_taula_categories = QComboBox()
+        desplegable_taula_categories.addItems(obtenir_categories())
         for fila in rang_files:
             for columna in rang_columnes:
                 valor = dades[fila][columna]
@@ -1146,9 +1133,16 @@ class EditorRegistresBis(QtWidgets.QWidget):
                     #nou_item = QTableWidgetItem(QDate(valor).toString("dd/MM/yyyy"))
                     nou_item.setData(Qt.DisplayRole, valor)
                     self.TAULA.setItem(fila,columna,nou_item)
+                    self.TAULA.setCellWidget(fila,columna,QDateEdit())
+                    self.TAULA.cellWidget(fila, columna).setDate(valor)
+                    self.TAULA.cellWidget(fila, columna).setDisplayFormat("dd/MM/yyyy")
+                    self.TAULA.cellWidget(fila,columna).setCalendarPopup(True)
                 else:
                     nou_item = QTableWidgetItem(valor)
                     self.TAULA.setItem(fila, columna, nou_item)
+
+
+
 
 
     def alteracio_registres(self):

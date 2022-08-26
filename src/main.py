@@ -202,7 +202,7 @@ class MainWindow(QMainWindow):
         """Funcio per a que es mostri el widget per a visualitzar i editar els registres"""
         self.visualitzador = EditorRegistresBis()
         self.visualitzador.boto_desar.clicked.connect(self.senyal_registres_actualitzats)
-        self.visualitzador.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
+        # self.visualitzador.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
 
     def senyal_canvi_registres(self):
         """Funcio per a que s'actualitzin els regitres a la gui quan aquests es modifiquen"""
