@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (QApplication, QToolBar, QMainWindow, QStackedWidg
 from agents_bbdd import AjudantDirectoris
 from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Destructor, Comprovador
 from formats import Registres_gui_nou
-from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport,  \
-    obtenir_registres_alumnes, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats, \
-    obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories, EditorRegistresBis
+from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres
+from widgets import obtenir_registres_alumnes, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats
+from widgets import obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
 
 
 class MainWindow(QMainWindow):
@@ -200,7 +200,7 @@ class MainWindow(QMainWindow):
 
     def widget_visualitzacio(self):
         """Funcio per a que es mostri el widget per a visualitzar i editar els registres"""
-        self.visualitzador = EditorRegistresBis()
+        self.visualitzador = EditorRegistres()
         self.visualitzador.boto_desar.clicked.connect(self.senyal_registres_actualitzats)
         # self.visualitzador.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
 

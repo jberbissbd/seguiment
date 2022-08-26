@@ -1,12 +1,11 @@
 import datetime
 import os
-from datetime import date
 from typing import Union
 
 import dateutil
 from PySide6 import QtCore, QtWidgets
-from PySide6.QtCore import Qt, QDate, QSize, QLocale, QSortFilterProxyModel
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import Qt, QDate, QSize, QLocale
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QGridLayout,
     QDateEdit,
@@ -18,15 +17,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QTableView,
     QAbstractItemView,
-    QWizardPage,
-    QWizard,
     QDialog,
     QMessageBox,
     QLineEdit,
     QFormLayout,
     QDialogButtonBox,
-    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QStyledItemDelegate, QTableWidget, QTableWidgetItem,
-    QItemEditorFactory
+    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QTableWidget, QTableWidgetItem,
+    QItemDelegate
 )
 from dateutil.parser import parser
 
@@ -35,6 +32,7 @@ from agents_gui import Calendaritzador, CapEstudis, ExportadorImportador, Creado
 from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova, Registresguicomm
 
 QLocale.setDefault(QLocale.Catalan)
+
 
 def obtenir_llistat_alumnes():
     CapEstudis(1).refrescar_alumnes()
@@ -86,42 +84,60 @@ def obtenir_llistat_alumnes_registrats():
         return llistat_alumnes
     return False
 
-class DelegatAlumnes(QStyledItemDelegate):
-    def __init__(self):
-        super(DelegatAlumnes, self).__init__()
-        super().__init__()
-        self.setItemEditorFactory()
+
+class DelegatAlumnes(QItemDelegate):
+    """
+    A delegate to add QComboBox in every cell of the given column
+    """
+
+    def __init__(self, parent):
+        super(DelegatAlumnes, self).__init__(parent)
+        self.combobox = None
+        self.llista_valors = None
+        self.parent = parent
+
+    def createEditor(self, parent, option, index):
+        self.combobox = QComboBox(parent)
+        self.llista_valors = obtenir_llistat_alumnes()
+        self.combobox.addItems(self.llista_valors)
+        valor_actual = index.data()
+        posicio_valor_actual = self.llista_valors.index(valor_actual)
+        self.combobox.setCurrentIndex(posicio_valor_actual)
+        return self.combobox
+
+    def setEditorData(self, editor, index):
+        value = index.data()
 
 
-class DelegatDatesBis(QStyledItemDelegate):
-    """Delegat per a la columna de dates"""
+class DelegatCategories(QItemDelegate):
+    """
+    A delegate to add QComboBox in every cell of the given column
+    """
 
-    def __init__(self):
-        super(DelegatDatesBis, self).__init__()
+    def __init__(self, parent):
+        super(DelegatCategories, self).__init__(parent)
+        self.combobox = None
+        self.llista_valors = None
+        self.parent = parent
 
-    def displayText(self, value, locale) -> str:
-        """Retorna el text que es mostra a la columna de dates"""
-        if isinstance(value,QDate) is True:
-            value = QDate(value).toString("dd/MM/yyyy")
-        return value
+    def createEditor(self, parent, option, index):
+        self.combobox = QComboBox(parent)
+        self.llista_valors = obtenir_categories()
+        self.combobox.addItems(self.llista_valors)
+        valor_actual = index.data()
+        posicio_valor_actual = self.llista_valors.index(valor_actual)
+        self.combobox.setCurrentIndex(posicio_valor_actual)
+        return self.combobox
 
-class DelegatDates(QStyledItemDelegate):
-    """Delegat per a la columna de dates"""
+    def setEditorData(self, editor, index):
+        value = index.data()
 
-    def __init__(self):
-        super(DelegatDates, self).__init__()
-
-    def displayText(self, value, locale) -> str:
-        """Retorna el text que es mostra a la columna de dates"""
-        locale = QLocale.Catalan
-        if value != str(""):
-            value = value.toPython()
-            return value.strftime("%d/%m/%Y")
 
 class DialegSeleccioCarpeta(QFileDialog):
     def __init__(self):
         super().__init__()
         self.setFileMode(QFileDialog.Directory)
+
 
 class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
     """Model de taula per a l'edicio d'alumnes"""
@@ -533,6 +549,7 @@ class EditorAlumnes(QtWidgets.QWidget):
         index = self.TAULA_ALUMNES.currentIndex()
         self.TAULA_ALUMNES.edit(index)
 
+
 class GeneradorInformesExportImport(QtWidgets.QWidget):
     """Classe per a generar informes i exportar/importar"""
 
@@ -737,7 +754,9 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
                                      categoria.nom == valor_actual]
                 if self.INFORMES_SELECTOR_CATEGORIES.currentIndex() != 0:
                     exportador = CreadorInformes(alumnes_informe, categoria_informe, dades_registres, carpeta_desti)
-                exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres, carpeta_desti)
+                else:
+                    exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres,
+                                                 carpeta_desti)
                 resposta = exportador.export_categories()
             elif self.tipus_informes == 1:
                 # Es un informe per alumne:
@@ -755,9 +774,10 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
             if resposta:
                 self.resultat_informes = True
 
-class EditorRegistresBis(QtWidgets.QWidget):
+
+class EditorRegistres(QtWidgets.QWidget):
     def __init__(self):
-        super(EditorRegistresBis, self).__init__()
+        super(EditorRegistres, self).__init__()
         self.AMPLADA_DESPLEGABLES = 200
         self.TAULA = QTableWidget()
         DISTRIBUCIO = QGridLayout()
@@ -783,7 +803,7 @@ class EditorRegistresBis(QtWidgets.QWidget):
         # Possibilitat d'establir un ComboBox:
         # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
         self.TAULA.setColumnHidden(0, True)
-        self.TAULA.setWordWrap(True)        
+        self.TAULA.setWordWrap(True)
         self.TAULA.setEditTriggers(QAbstractItemView.DoubleClicked)
         self.TAULA.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.TAULA.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -793,7 +813,8 @@ class EditorRegistresBis(QtWidgets.QWidget):
         self.TAULA.resizeColumnToContents(2)
         self.TAULA.resizeColumnToContents(3)
         self.TAULA.setSortingEnabled(True)
-        # self.TAULA.setItemDelegateForColumn(2,QStyledItemDelegate(QtCore.QStringListModel))
+        self.TAULA.setItemDelegateForColumn(1, DelegatAlumnes(self))
+        self.TAULA.setItemDelegateForColumn(2, DelegatCategories(self))
         DISTRIBUCIO.addWidget(self.seleccio_alumnes, 0, 0)
         DISTRIBUCIO.addWidget(self.seleccio_categories, 0, 1)
         DISTRIBUCIO.addWidget(self.boto_eliminar, 0, 2)
@@ -803,8 +824,10 @@ class EditorRegistresBis(QtWidgets.QWidget):
         self.seleccio_categories.currentTextChanged.connect(self.visualitzacio_filtre_categories)
         self.boto_desar.clicked.connect(self.alteracio_registres)
         self.boto_eliminar.clicked.connect(self.eliminar_fila_taula)
+
     def eliminar_fila_taula(self):
         self.TAULA.removeRow(self.TAULA.currentRow())
+
     def omplir_taula(self):
         dades = obtenir_llistat_registres()
         files = len(dades)
@@ -821,20 +844,17 @@ class EditorRegistresBis(QtWidgets.QWidget):
             for columna in rang_columnes:
                 valor = dades[fila][columna]
                 if isinstance(valor, datetime.date):
-                    # valor = valor.strftime('%d/%m/%Y')
                     nou_item = QTableWidgetItem()
                     valor = QDate(valor)
-                    #nou_item = QTableWidgetItem(QDate(valor).toString("dd/MM/yyyy"))
                     nou_item.setData(Qt.DisplayRole, valor)
-                    self.TAULA.setItem(fila,columna,nou_item)
-                    self.TAULA.setCellWidget(fila,columna,QDateEdit())
+                    self.TAULA.setItem(fila, columna, nou_item)
+                    self.TAULA.setCellWidget(fila, columna, QDateEdit())
                     self.TAULA.cellWidget(fila, columna).setDate(valor)
                     self.TAULA.cellWidget(fila, columna).setDisplayFormat("dd/MM/yyyy")
-                    self.TAULA.cellWidget(fila,columna).setCalendarPopup(True)
+                    self.TAULA.cellWidget(fila, columna).setCalendarPopup(True)
                 else:
                     nou_item = QTableWidgetItem(str(valor))
                     self.TAULA.setItem(fila, columna, nou_item)
-
 
     def alteracio_registres(self):
         """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
@@ -842,38 +862,38 @@ class EditorRegistresBis(QtWidgets.QWidget):
         dades_originals = obtenir_llistat_registres()
         rang_files_taula = range(self.TAULA.rowCount())
         rang_columnes_taula = range(self.TAULA.columnCount())
-        registres_eliminats =[]
-        registres_actualitzats =[]
+        registres_eliminats = []
+        registres_actualitzats = []
         llista_dades_model = []
         # Convertim les dades del model en llista de llistes per poder comparar:
         for fila in rang_files_taula:
-            fila_taula =[]
+            fila_taula = []
             for columna in rang_columnes_taula:
                 valor = None
                 if columna == 0:
-                    valor = int(self.TAULA.item(fila,columna).data(0))
+                    valor = int(self.TAULA.item(fila, columna).data(0))
                 elif columna == 3:
-                    valor = self.TAULA.item(fila,columna).data(0).toPython()
+                    valor = self.TAULA.item(fila, columna).data(0).toPython()
                 else:
-                    valor = self.TAULA.item(fila,columna).data(0)
+                    valor = self.TAULA.item(fila, columna).data(0)
                 fila_taula.append(valor)
             llista_dades_model.append(fila_taula)
-        
+
         llista_ids_originals: list = [ref[0] for ref in dades_originals]
-        llista_ids_model:list = [ref[0] for ref in llista_dades_model]
+        llista_ids_model: list = [ref[0] for ref in llista_dades_model]
         # Comparem els ids, si n'hi ha menys, implica que s'ha eliminat algun:
         if len(llista_ids_model) < len(llista_ids_originals):
-            ids_eliminats= [item for item in llista_ids_originals if item not in llista_ids_model]
-            registres_eliminats = [item for item in dades_originals if item[0] in ids_eliminats]       
+            ids_eliminats = [item for item in llista_ids_originals if item not in llista_ids_model]
+            registres_eliminats = [item for item in dades_originals if item[0] in ids_eliminats]
         dades_originals.sort(key=lambda x: x[0])
         # Ordenem les dades del model per id:
         llista_dades_model.sort(key=lambda x: x[0])
         registres_actualitzats = [element_taula for element_taula in llista_dades_model if element_taula not in
                                   dades_originals]
         # Comprovem si hi han actualitzacions o eliminacions i passem l'ordre corresponent:
-        if len(registres_eliminats)>0:
+        if len(registres_eliminats) > 0:
             self.eliminar_registres(registres_eliminats)
-        if len(registres_actualitzats)>0:
+        if len(registres_actualitzats) > 0:
             self.actualitzar_registres(registres_actualitzats)
 
     def eliminar_registres(self, registres_eliminats):
@@ -926,7 +946,7 @@ class EditorRegistresBis(QtWidgets.QWidget):
         else:
             for fila in range(self.TAULA.rowCount()):
                 self.TAULA.showRow(fila)
-            registres_mostrar = self.TAULA.findItems(valor_actual_desplegable,Qt.MatchExactly)
+            registres_mostrar = self.TAULA.findItems(valor_actual_desplegable, Qt.MatchExactly)
             files_mostrar = [element.row() for element in registres_mostrar]
             files_amagar = [fila for fila in range(self.TAULA.rowCount()) if fila not in files_mostrar]
             for fila in files_amagar:

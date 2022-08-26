@@ -486,8 +486,8 @@ class CreadorInformes:
                             alumne = registre.alumne.nom
                             diccionari_provisional['mesos'].append(mes)
                             diccionari_provisional['alumnes'].append(alumne)
-                    Df = pandas.DataFrame(diccionari_provisional)
-                    llista_dades.append(Df)
+                    diccionari_pandas_categories = pandas.DataFrame(diccionari_provisional)
+                    llista_dades.append(diccionari_pandas_categories)
                     llista_categories_informes.append(llista_dades)
             for element in llista_categories_informes:
                 agrego_mesos = {'alumnes': np.unique}
@@ -555,9 +555,9 @@ class CreadorInformes:
                         while len(diccionari_provisional[categoria]) < nombre_registres:
                             diccionari_provisional[categoria].append('')
                     # Afegim el resultat a la llista d'alumnes:
-                    Df = pandas.DataFrame(diccionari_provisional).fillna('')
-                    Df['Trimestre'] = Df['Trimestre'].astype("category")
-                    llista_dades.append(Df)
+                    diccionari_pandas = pandas.DataFrame(diccionari_provisional).fillna('')
+                    diccionari_pandas['Trimestre'] = diccionari_pandas['Trimestre'].astype("category")
+                    llista_dades.append(diccionari_pandas)
                     llista_alumnes_informes.append(llista_dades)
             for element in llista_alumnes_informes:
                 nom_alumne = element[0]
