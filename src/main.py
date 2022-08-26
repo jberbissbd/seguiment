@@ -11,7 +11,7 @@ from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, De
 from formats import Registres_gui_nou
 from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres, \
     obtenir_registres_alumnes, ModelVisualitzacio, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats, \
-    obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
+    obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories, EditorRegistresBis
 
 
 class MainWindow(QMainWindow):
@@ -200,7 +200,7 @@ class MainWindow(QMainWindow):
 
     def widget_visualitzacio(self):
         """Funcio per a que es mostri el widget per a visualitzar i editar els registres"""
-        self.visualitzador = EditorRegistres()
+        self.visualitzador = EditorRegistresBis()
         self.visualitzador.boto_desar.clicked.connect(self.senyal_registres_actualitzats)
         self.visualitzador.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
 

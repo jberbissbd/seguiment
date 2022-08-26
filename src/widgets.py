@@ -1,3 +1,4 @@
+import datetime
 import os
 from datetime import date
 from typing import Union
@@ -24,7 +25,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QFormLayout,
     QDialogButtonBox,
-    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QStyledItemDelegate, QWidget,
+    QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QStyledItemDelegate, QWidget, QTableWidget, QTableWidgetItem,
+    QHeaderView
 )
 from dateutil.parser import parser
 
@@ -34,6 +36,66 @@ from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova, Registresguic
 
 QLocale.setDefault(QLocale.Catalan)
 
+def obtenir_llistat_alumnes():
+    alumnes_entrada = CapEstudis(1).alumnat
+    if alumnes_entrada:
+        llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+        return llistat_alumnes
+    return False
+
+
+def obtenir_registres_alumnes():
+    alumnes_entrada = CapEstudis(1).alumnat
+    if alumnes_entrada:
+        llistat_dades_alumnes = [[alumne.id, alumne.nom] for alumne in alumnes_entrada]
+        return llistat_dades_alumnes
+    return False
+
+
+def obtenir_categories():
+    categories_entrada = Classificador(1).categories
+    if categories_entrada:
+        llistat_categories = [categoria.nom for categoria in categories_entrada]
+        return llistat_categories
+    return []
+
+
+def obtenir_llistat_registres():
+    Comptable(1).refrescar_registres()
+    if Comptable(1).registres:
+        llista_registres = [[element.id, element.alumne.nom, element.categoria.nom,
+                             dateutil.parser.parse(element.data), element.descripcio] for element
+                            in Comptable(1).registres]
+        return llista_registres
+    return None
+
+
+def obtenir_llistat_categories_registrades():
+    categories_registre = Classificador(1).obtenir_categories_registrades()
+    if categories_registre:
+        llistat_alumnes = [categoria.nom for categoria in categories_registre]
+        return llistat_alumnes
+    return False
+
+
+def obtenir_llistat_alumnes_registrats():
+    alumnes_entrada = CapEstudis(1).alumnat_registres
+    if alumnes_entrada:
+        llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+        return llistat_alumnes
+    return False
+
+class DelegatDatesBis(QStyledItemDelegate):
+    """Delegat per a la columna de dates"""
+
+    def __init__(self):
+        super(DelegatDatesBis, self).__init__()
+
+    def displayText(self, value, locale) -> str:
+        """Retorna el text que es mostra a la columna de dates"""
+        if isinstance(value,QDate) is True:
+            value = QDate(value).toString("dd/MM/yyyy")
+        return value
 
 class DelegatDates(QStyledItemDelegate):
     """Delegat per a la columna de dates"""
@@ -43,6 +105,7 @@ class DelegatDates(QStyledItemDelegate):
 
     def displayText(self, value, locale) -> str:
         """Retorna el text que es mostra a la columna de dates"""
+        locale = QLocale.Catalan
         if value != str(""):
             value = value.toPython()
             return value.strftime("%d/%m/%Y")
@@ -498,9 +561,7 @@ class EditorAlumnes(QtWidgets.QWidget):
         alumnes_eliminar = list(set(llista_ids_originals).difference(llista_ids_model))
         # Comprovem els registres que queden al model de taula, per si s'han modificat.
         for registre in self.dades_model_transformades:
-            if registre in self.dades_originals_transformades:
-                continue
-            else:
+            if registre not in self.dades_originals_transformades:
                 alumnes_modificar.append(Alumne_comm([registre[0], registre[1]]))
         # Transformem els alumnes a eliminar a DTO:
         for alumne in dades_originals:
@@ -799,9 +860,7 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
                                      categoria.nom == valor_actual]
                 if self.INFORMES_SELECTOR_CATEGORIES.currentIndex() != 0:
                     exportador = CreadorInformes(alumnes_informe, categoria_informe, dades_registres, carpeta_desti)
-                else:
-                    exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres,
-                                                 carpeta_desti)
+                exportador = CreadorInformes(alumnes_informe, categories_registrades, dades_registres, carpeta_desti)
                 resposta = exportador.export_categories()
             elif self.tipus_informes == 1:
                 # Es un informe per alumne:
@@ -820,54 +879,7 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
                 self.resultat_informes = True
 
 
-def obtenir_llistat_alumnes():
-    alumnes_entrada = CapEstudis(1).alumnat
-    if alumnes_entrada:
-        llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
-        return llistat_alumnes
-    return False
 
-
-def obtenir_registres_alumnes():
-    alumnes_entrada = CapEstudis(1).alumnat
-    if alumnes_entrada:
-        llistat_dades_alumnes = [[alumne.id, alumne.nom] for alumne in alumnes_entrada]
-        return llistat_dades_alumnes
-    return False
-
-
-def obtenir_categories():
-    categories_entrada = Classificador(1).categories
-    if categories_entrada:
-        llistat_categories = [categoria.nom for categoria in categories_entrada]
-        return llistat_categories
-    return []
-
-
-def obtenir_llistat_registres():
-    Comptable(1).refrescar_registres()
-    if Comptable(1).registres:
-        llista_registres = [[element.id, element.alumne.nom, element.categoria.nom,
-                             dateutil.parser.parse(element.data), element.descripcio] for element
-                            in Comptable(1).registres]
-        return llista_registres
-    return None
-
-
-def obtenir_llistat_categories_registrades():
-    categories_registre = Classificador(1).obtenir_categories_registrades()
-    if categories_registre:
-        llistat_alumnes = [categoria.nom for categoria in categories_registre]
-        return llistat_alumnes
-    return False
-
-
-def obtenir_llistat_alumnes_registrats():
-    alumnes_entrada = CapEstudis(1).alumnat_registres
-    if alumnes_entrada:
-        llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
-        return llistat_alumnes
-    return False
 
 
 class EditorRegistres(QtWidgets.QWidget):
@@ -933,6 +945,211 @@ class EditorRegistres(QtWidgets.QWidget):
         self.seleccio_alumnes.currentTextChanged.connect(self.visualitzacio_filtre_alumnes)
         self.seleccio_categories.currentTextChanged.connect(self.visualitzacio_filtre_categories)
         self.boto_desar.clicked.connect(self.alteracio_registres)
+
+    def alteracio_registres(self):
+        """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
+        si s'afegien. """
+        model_comparacio = self.TAULA.model()
+        dades_originals = obtenir_llistat_registres()
+        llista_ids_originals: list = [ref[0] for ref in dades_originals]
+        llista_ids_model = []
+        registres_eliminats: list = []
+        registres_actualitzats: list = []
+        rang_files = list(range(self.TAULA.model().rowCount()))
+        # Guardem els ids de les files del model i comprovem que no hagi cap id que falti:
+        for fila in rang_files:
+            llista_ids_model.append(model_comparacio.data(model_comparacio.index(fila, 0)))
+        # Ordenem les llistes per id:
+        llista_ids_originals.sort()
+        llista_ids_model.sort()
+        dades_originals.sort(key=lambda x: x[0])
+        # Convertim les dades del model en llista de llistes per poder comparar::
+        llista_dades_model = []
+        for row in range(0, self.files_model):
+            fila_model = []
+            for column in range(0, self.columnes_model):
+                fila_model.append(model_comparacio.data(model_comparacio.index(row, column)))
+            llista_dades_model.append(fila_model)
+        # Transformem les dates de QT a python (per culpa de la taula de visualitzacio):
+        for registre in llista_dades_model:
+            registre[3] = registre[3].toString("yyyy-MM-dd")
+        # Ordenem les dades del model per id:
+        llista_dades_model.sort(key=lambda x: x[0])
+        # Comparem els ids de les files del model amb els ids de les files originals:
+        for item in rang_files:
+            if llista_ids_originals[item] != llista_ids_model[item]:
+                registres_eliminats.append(llista_ids_originals[item])
+                item += 1
+
+            # Un cop sapigut aixo, comprovem les actualitzacions:
+            else:
+                # Comprovem els registres un per un. Si son diferents, guardem els canvis:
+                if dades_originals[item] != llista_dades_model[item]:
+                    registres_actualitzats.append(llista_dades_model[item])
+        # Comprovem si hi han actualitzacions o eliminacions i passem l'ordre corresponent:
+        if registres_eliminats:
+            self.eliminar_registres(registres_eliminats)
+        if registres_actualitzats:
+            self.actualitzar_registres(registres_actualitzats)
+
+    def eliminar_registres(self, registres_eliminats):
+        """Funcio per a eliminar registres de la base de dades."""
+        missatge_eliminar = []
+        for registre in registres_eliminats:
+            eliminacio_registre = self.transformar_gui_a_bbdd(registre)
+            missatge_eliminar.append(eliminacio_registre)
+        Comptable(1).eliminar_registre(missatge_eliminar)
+
+    def actualitzar_registres(self, registres_actualitzats):
+        """Funcio per a actualitzar registres de la base de dades."""
+        missatge_actualitzacio = []
+        for registre in registres_actualitzats:
+            actualitzacio_registre = self.transformar_gui_a_bbdd(registre)
+            missatge_actualitzacio.append(actualitzacio_registre)
+        Comptable(1).actualitzar_registres(missatge_actualitzacio)
+
+    def transformar_gui_a_bbdd(self, dades: list):
+        """Funcio per a transformar les dades de la GUI a la BBDD."""
+        if not isinstance(dades, list):
+            raise TypeError("La dada ha de ser del tipus Registresguicomm.")
+        alumne = None
+        categoria_enviar = None
+        # Transformem la data:
+        id_registre = dades[0]
+        for persona in CapEstudis(1).alumnat:
+            if persona.nom == dades[1]:
+                alumne = persona
+        for categoria in Classificador(1).info_categories:
+            if categoria.nom == dades[2]:
+                categoria_enviar = categoria
+        objecte_data = dateutil.parser.parse(dades[3], dayfirst=True)
+        data = objecte_data.strftime("%Y-%m-%d")
+        descripcio = dades[4]
+        # Guardem la dada:
+        resultat = Registresguicomm(id_registre, alumne, categoria_enviar, data, descripcio)
+        return resultat
+
+    def visualitzacio_filtre_alumnes(self):
+        """Comportament quan s'esta reallitzant un filtre per alumnes al widget amb el llistat"""
+        valor_actual_desplegable = self.seleccio_alumnes.currentText()
+        self.seleccio_categories.setCurrentIndex(0)
+        if self.seleccio_alumnes.currentIndex() == 0:
+            self.TAULA.showColumn(1)
+            self.seleccio_categories.setCurrentIndex(0)
+            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
+            self.TAULA.resizeRowsToContents()
+        else:
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(valor_actual_desplegable)
+            self.TAULA.hideColumn(1)
+            self.TAULA.resizeRowsToContents()
+
+    def visualitzacio_filtre_categories(self):
+        categoria_seleccionada = self.seleccio_categories.currentText()
+        if self.seleccio_categories.currentIndex() == 0:
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterWildcard("*")
+            self.TAULA.resizeRowsToContents()
+            self.TAULA.showColumn(1)
+            self.seleccio_alumnes.setCurrentIndex(0)
+        else:
+            self.TAULA.showColumn(1)
+            self.seleccio_alumnes.setCurrentIndex(0)
+            self.TAULA_MODEL_FILTRE.invalidate()
+            self.TAULA_MODEL_FILTRE.setFilterRegularExpression(categoria_seleccionada)
+            self.TAULA.resizeRowsToContents()
+
+
+class EditorRegistresBis(QtWidgets.QWidget):
+    def __init__(self):
+        super(EditorRegistresBis, self).__init__()
+        self.AMPLADA_DESPLEGABLES = 200
+        self.TAULA = QTableWidget()
+        DISTRIBUCIO = QGridLayout()
+        DISTRIBUCIO.setAlignment(Qt.AlignTop)
+        self.setLayout(DISTRIBUCIO)
+        self.seleccio_alumnes = QComboBox()
+        self.seleccio_categories = QComboBox()
+        self.seleccio_alumnes.addItem("* Filtrar per alumne *")
+        self.seleccio_categories.addItem("* Filtrar per categoria *")
+        if obtenir_llistat_categories_registrades():
+            self.seleccio_categories.addItems(obtenir_llistat_categories_registrades())
+        if obtenir_llistat_alumnes_registrats():
+            self.seleccio_alumnes.addItems(obtenir_llistat_alumnes_registrats())
+        self.seleccio_alumnes.setMaximumWidth(300)
+        self.boto_desar = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar canvis")
+        if obtenir_llistat_registres() not in [None, False]:
+            self.omplir_taula()
+            # self.TAULA_MODEL = ModelVisualitzacio(obtenir_llistat_registres())
+            # self.columnes_model: int = self.TAULA_MODEL.columnCount(1)
+            # self.files_model: int = self.TAULA_MODEL.rowCount(1)
+        # else:
+        # self.TAULA_MODEL = ModelVisualitzacio([[" ", " ", " ", " "]])
+        # self.columnes_model = 1
+        # self.files_model = 1
+        noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
+        # capcalera = QHeaderView(Qt.Horizontal)
+        self.TAULA.setHorizontalHeaderLabels(noms_columnes)
+        # for nom in noms_columnes:
+        # self.TAULA_MODEL.setHeaderData(noms_columnes.index(nom), Qt.Horizontal, nom)
+        # Poc elegant, pero el filtre funciona com a objecte intermig entre el model i la taula:
+        # self.TAULA_MODEL_FILTRE = QSortFilterProxyModel(self)
+        # self.TAULA_MODEL_FILTRE.setSourceModel(self.TAULA_MODEL)
+        # self.TAULA.setModel(self.TAULA_MODEL_FILTRE)
+        # Establim el delegat per a la columna de dates:
+        # if obtenir_llistat_registres() not in [None, False]:
+        self.TAULA.setItemDelegateForColumn(3, DelegatDatesBis())
+        # Possibilitat d'establir un ComboBox:
+        # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
+        # Li indiquem que ha de filtrar de la columna 1:
+        # self.TAULA_MODEL_FILTRE.setFilterKeyColumn(-1)
+        # I que hauria d'ordenar per la columna 3:
+        # self.TAULA_MODEL_FILTRE.sort(3, Qt.AscendingOrder)
+        # self.TAULA_MODEL_FILTRE.autoAcceptChildRows()
+        # self.TAULA_MODEL_FILTRE.setDynamicSortFilter(False)
+        self.TAULA.setColumnHidden(0, True)
+        self.TAULA.setWordWrap(True)
+        # self.TAULA.model().setHeaderData(1, Qt.Horizontal, "Alumne")
+        self.TAULA.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.TAULA.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.TAULA.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.TAULA.setColumnWidth(4, self.AMPLADA_DESPLEGABLES)
+        self.TAULA.resizeRowsToContents()
+        self.TAULA.resizeColumnToContents(1)
+        self.TAULA.resizeColumnToContents(2)
+        self.TAULA.resizeColumnToContents(3)
+        self.TAULA.setSortingEnabled(True)
+        DISTRIBUCIO.addWidget(self.seleccio_alumnes, 0, 0)
+        DISTRIBUCIO.addWidget(self.seleccio_categories, 0, 1)
+        DISTRIBUCIO.addWidget(self.boto_desar, 0, 2)
+        DISTRIBUCIO.addWidget(self.TAULA, 1, 0, 1, 0)
+        self.seleccio_alumnes.currentTextChanged.connect(self.visualitzacio_filtre_alumnes)
+        self.seleccio_categories.currentTextChanged.connect(self.visualitzacio_filtre_categories)
+        self.boto_desar.clicked.connect(self.alteracio_registres)
+
+    def omplir_taula(self):
+        dades = obtenir_llistat_registres()
+        files = len(dades)
+        columnes = len(dades[0])
+        self.TAULA.setRowCount(files)
+        self.TAULA.setColumnCount(columnes)
+        rang_files = range(files)
+        rang_columnes = range(columnes)
+        valor = None
+        for fila in rang_files:
+            for columna in rang_columnes:
+                valor = dades[fila][columna]
+                if isinstance(valor, datetime.date):
+                    # valor = valor.strftime('%d/%m/%Y')
+                    nou_item = QTableWidgetItem()
+                    valor = QDate(valor)
+                    #nou_item = QTableWidgetItem(QDate(valor).toString("dd/MM/yyyy"))
+                    nou_item.setData(Qt.DisplayRole, valor)
+                    self.TAULA.setItem(fila,columna,nou_item)
+                else:
+                    nou_item = QTableWidgetItem(valor)
+                    self.TAULA.setItem(fila, columna, nou_item)
+
 
     def alteracio_registres(self):
         """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
