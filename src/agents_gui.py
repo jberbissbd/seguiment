@@ -23,8 +23,8 @@ class Comprovador:
         estat_registres = resultat_iniciador.presencia_taula_registres
         estat_categories = resultat_iniciador.presencia_taula_categories
         estat_dates = resultat_iniciador.presencia_taula_dates
-        estat_global = estat_alumnes and estat_registres and estat_categories and estat_dates
-        if estat_global is False:
+        self.estat_global = estat_alumnes and estat_registres and estat_categories and estat_dates
+        if self.estat_global is False:
             Iniciador(1).crea_taules()
 
 

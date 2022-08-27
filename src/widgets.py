@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QDialogButtonBox,
     QFileDialog, QGroupBox, QButtonGroup, QRadioButton, QTableWidget, QTableWidgetItem,
-    QItemDelegate
+    QItemDelegate, QStyledItemDelegate
 )
 from dateutil.parser import parser
 
@@ -83,6 +83,28 @@ def obtenir_llistat_alumnes_registrats():
         llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
         return llistat_alumnes
     return False
+
+
+class DelegatDates(QStyledItemDelegate):
+    """Delegat per a la columna de dates"""
+
+    def __init__(self, parent):
+        super(DelegatDates, self).__init__()
+        self.editor = None
+
+    def displayText(self, value, locale) -> str:
+        """Retorna el text que es mostra a la columna de dates"""
+        if value != str(""):
+            value = value.toPython()
+        return value.strftime("%d/%m/%Y")
+
+    def createEditor(self, parent, option, index):
+        self.editor = QDateEdit(parent)
+        valor_actual = index.data()
+        self.editor.setDate(valor_actual)
+        self.editor.setCalendarPopup(True)
+        self.editor.setDisplayFormat("dd/MM/yyyy")
+        return self.editor
 
 
 class DelegatAlumnes(QItemDelegate):
@@ -815,6 +837,7 @@ class EditorRegistres(QtWidgets.QWidget):
         self.TAULA.setSortingEnabled(True)
         self.TAULA.setItemDelegateForColumn(1, DelegatAlumnes(self))
         self.TAULA.setItemDelegateForColumn(2, DelegatCategories(self))
+        self.TAULA.setItemDelegateForColumn(3, DelegatDates(self))
         DISTRIBUCIO.addWidget(self.seleccio_alumnes, 0, 0)
         DISTRIBUCIO.addWidget(self.seleccio_categories, 0, 1)
         DISTRIBUCIO.addWidget(self.boto_eliminar, 0, 2)
@@ -848,10 +871,6 @@ class EditorRegistres(QtWidgets.QWidget):
                     valor = QDate(valor)
                     nou_item.setData(Qt.DisplayRole, valor)
                     self.TAULA.setItem(fila, columna, nou_item)
-                    self.TAULA.setCellWidget(fila, columna, QDateEdit())
-                    self.TAULA.cellWidget(fila, columna).setDate(valor)
-                    self.TAULA.cellWidget(fila, columna).setDisplayFormat("dd/MM/yyyy")
-                    self.TAULA.cellWidget(fila, columna).setCalendarPopup(True)
                 else:
                     nou_item = QTableWidgetItem(str(valor))
                     self.TAULA.setItem(fila, columna, nou_item)

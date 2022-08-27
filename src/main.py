@@ -14,6 +14,7 @@ from widgets import obtenir_registres_alumnes, obtenir_llistat_registres, obteni
 from widgets import obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
 
 
+
 class MainWindow(QMainWindow):
     """Classe per a la finestra principal"""
     senyal_alumnes_actualitzats = QtCore.Signal(bool)
@@ -22,7 +23,12 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # Inicialització de la base de dades (es crea si no existeix)
-        Comprovador(1)
+        execucio_previa = Comprovador(1).estat_global
+        if execucio_previa is False:
+            QMessageBox.information(self, "Avis", "S'ha detectat que no hi han dades previes. Per al correcte \n"
+                                                  "funcionament del programa, registreu els vostres alumnes i les"
+                                                  "\n dates d'inici dels trimestres", QMessageBox.Ok)
+
         # Introduim la resta de parametres de la finestra principal
         self.informes_exportador = None
         self.files_model = None
@@ -202,7 +208,6 @@ class MainWindow(QMainWindow):
         """Funcio per a que es mostri el widget per a visualitzar i editar els registres"""
         self.visualitzador = EditorRegistres()
         self.visualitzador.boto_desar.clicked.connect(self.senyal_registres_actualitzats)
-        # self.visualitzador.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
 
     def senyal_canvi_registres(self):
         """Funcio per a que s'actualitzin els regitres a la gui quan aquests es modifiquen"""
@@ -231,15 +236,6 @@ class MainWindow(QMainWindow):
         self.acces_registres.refrescar_registres()
         self.visualitzador.TAULA.clear()
         self.visualitzador.omplir_taula()
-
-    def bloqueig_registre_taula(self):
-        """Bloqueja els camps categoria i alumne al widget de visualitzacio"""
-        # Editar un registre:
-        index = self.visualitzador.TAULA.currentIndex()
-        columna = index.column()
-        if columna in (1, 2):
-            self.statusBar().showMessage("No es pot editar aquest camp", 2000)
-        self.visualitzador.TAULA.edit(index)
 
     def widget_informes(self):
         """Configura el widget d'informes"""
