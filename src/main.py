@@ -12,7 +12,7 @@ from formats import Registres_gui_nou
 from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres
 from widgets import obtenir_registres_alumnes, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats
 from widgets import obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
-from widgets import AvisPrimeraExecucio
+
 
 
 class MainWindow(QMainWindow):
