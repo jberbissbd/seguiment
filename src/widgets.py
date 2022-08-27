@@ -88,8 +88,9 @@ def obtenir_llistat_alumnes_registrats():
 class DelegatDates(QStyledItemDelegate):
     """Delegat per a la columna de dates"""
 
-    def __init__(self,parent):
+    def __init__(self, parent):
         super(DelegatDates, self).__init__()
+        self.editor = None
 
     def displayText(self, value, locale) -> str:
         """Retorna el text que es mostra a la columna de dates"""
@@ -836,7 +837,7 @@ class EditorRegistres(QtWidgets.QWidget):
         self.TAULA.setSortingEnabled(True)
         self.TAULA.setItemDelegateForColumn(1, DelegatAlumnes(self))
         self.TAULA.setItemDelegateForColumn(2, DelegatCategories(self))
-        self.TAULA.setItemDelegateForColumn(3,DelegatDates(self))
+        self.TAULA.setItemDelegateForColumn(3, DelegatDates(self))
         DISTRIBUCIO.addWidget(self.seleccio_alumnes, 0, 0)
         DISTRIBUCIO.addWidget(self.seleccio_categories, 0, 1)
         DISTRIBUCIO.addWidget(self.boto_eliminar, 0, 2)

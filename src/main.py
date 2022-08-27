@@ -12,6 +12,7 @@ from formats import Registres_gui_nou
 from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres
 from widgets import obtenir_registres_alumnes, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats
 from widgets import obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
+from widgets import AvisPrimeraExecucio
 
 
 class MainWindow(QMainWindow):
@@ -22,7 +23,12 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # Inicialització de la base de dades (es crea si no existeix)
-        Comprovador(1)
+        execucio_previa = Comprovador(1).estat_global
+        if execucio_previa is False:
+            QMessageBox.information(self, "Avis", "S'ha detectat que no hi han dades previes. Per al correcte \n"
+                                                  "funcionament del programa, registreu els vostres alumnes i les"
+                                                  "\n dates d'inici dels trimestres", QMessageBox.Ok)
+
         # Introduim la resta de parametres de la finestra principal
         self.informes_exportador = None
         self.files_model = None
@@ -202,7 +208,6 @@ class MainWindow(QMainWindow):
         """Funcio per a que es mostri el widget per a visualitzar i editar els registres"""
         self.visualitzador = EditorRegistres()
         self.visualitzador.boto_desar.clicked.connect(self.senyal_registres_actualitzats)
-
 
     def senyal_canvi_registres(self):
         """Funcio per a que s'actualitzin els regitres a la gui quan aquests es modifiquen"""
