@@ -202,7 +202,7 @@ class MainWindow(QMainWindow):
         """Funcio per a que es mostri el widget per a visualitzar i editar els registres"""
         self.visualitzador = EditorRegistres()
         self.visualitzador.boto_desar.clicked.connect(self.senyal_registres_actualitzats)
-        # self.visualitzador.TAULA.doubleClicked.connect(self.bloqueig_registre_taula)
+
 
     def senyal_canvi_registres(self):
         """Funcio per a que s'actualitzin els regitres a la gui quan aquests es modifiquen"""
@@ -231,15 +231,6 @@ class MainWindow(QMainWindow):
         self.acces_registres.refrescar_registres()
         self.visualitzador.TAULA.clear()
         self.visualitzador.omplir_taula()
-
-    def bloqueig_registre_taula(self):
-        """Bloqueja els camps categoria i alumne al widget de visualitzacio"""
-        # Editar un registre:
-        index = self.visualitzador.TAULA.currentIndex()
-        columna = index.column()
-        if columna in (1, 2):
-            self.statusBar().showMessage("No es pot editar aquest camp", 2000)
-        self.visualitzador.TAULA.edit(index)
 
     def widget_informes(self):
         """Configura el widget d'informes"""
