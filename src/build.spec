@@ -42,6 +42,7 @@ exe = EXE(
     pyz,
     a.scripts,
     [],
+    icon='icones/aplicacio.ico'
     exclude_binaries=True,
     name='tutopy',
     debug=True,
