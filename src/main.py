@@ -299,6 +299,7 @@ def sortir():
 
 
 app = QApplication(sys.argv)
+app.setWindowIcon(QIcon("icones/aplicacio.svg"))
 QLocale.setDefault(QLocale.Catalan)
 app.setStyle("Fusion")
 window = MainWindow()
