@@ -1,16 +1,17 @@
 # -*- coding:utf-8 -*-
 import json
 import os
-import sys
+
 import dateutil
 import numpy as np
 import openpyxl
 import pandas
 from dateutil import parser
 from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
+
 from agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
-from formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, RegistresBbddComm, AlumneNou, DataNova, CategoriaNova
+from formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, Registres_bbdd_nou
+from formats import RegistresBbddComm, AlumneNou, DataNova, CategoriaNova
 
 
 class Comprovador:
@@ -144,9 +145,7 @@ class Comptable:
         for element in registre_input:
             if not isinstance(element, Registresguicomm):
                 raise TypeError("Registre no segueix el format establert")
-            element_processat = list
-            element_processat.append(element.id, element.alumne.id, element.categoria.id, element.data,
-                                     element.descripcio)
+            element_processat = [element.id, element.alumne.id, element.categoria.id, element.data, element.descripcio]
             registre_enviar = RegistresBbddComm(dada for dada in element_processat)
             missatge_eliminar_registre.append(registre_enviar)
         self.registrador.eliminar_registre(missatge_eliminar_registre)
@@ -646,8 +645,6 @@ class ExportadorImportador:
             registre[1] = self.obtencio_id_categoria(str(registre[1]))
         self.nous_registres = [Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]) for registre in
                                self.registres_tractar if registre not in self.registres_existents]
-        # if registre not in self.registres_existents:
-        #     self.nous_registres.append(Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]))
         if len(self.nous_registres) > 0:
             RegistresBbdd(1).crear_registre(self.nous_registres)
         return True

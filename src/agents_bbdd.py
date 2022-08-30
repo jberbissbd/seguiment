@@ -1,18 +1,16 @@
 # -*- coding:utf-8 -*-
-import dataclasses
 import os
 import sqlite3
-from os.path import dirname, abspath
 import sys
-from dataclasses import dataclass
+from os.path import dirname
 
 from pandas.core.dtypes.inference import is_dataclass
 
 # sys.path.append(os.path.abspath(dirname(__file__)))
 sys.path.append(os.path.normpath(os.path.dirname(os.path.abspath(__file__))))
 import configparser
-from formats import RegistresBbddComm, Registres_bbdd_nou, CategoriaComm, Alumne_comm
-from formats import DataGuiComm, DataNova, AlumneNou, CategoriaNova
+from formats import RegistresBbddComm, CategoriaComm, Alumne_comm
+from formats import DataGuiComm
 
 ERROR_LLISTA = "Error: el missatge ha de ser una llista."
 ERROR_FORMAT = "Error: el missatge no té el format correcte."
@@ -122,13 +120,13 @@ class Iniciador(ModelDao):
         creacio_dates = False
         creacio_registres = False
         if self.presencia_taula_alumne is False:
-            creacio_alumnes = AlumnesBbdd.crea_taula(self)
+            creacio_alumnes = AlumnesBbdd(1).crea_taula()
         if self.presencia_taula_categories is False:
-            creacio_categories = CategoriesBbdd.crea_taula(self)
+            creacio_categories = CategoriesBbdd(1).crea_taula()
         if self.presencia_taula_dates is False:
-            creacio_dates = DatesBbdd.crea_taula(self)
+            creacio_dates = DatesBbdd(1).crea_taula()
         if self.presencia_taula_registres is False:
-            creacio_registres = RegistresBbdd.crea_taula(self)
+            creacio_registres = RegistresBbdd(1).crea_taula()
         if creacio_alumnes and creacio_categories and creacio_dates and creacio_registres is True:
             return True
         return False
@@ -496,6 +494,7 @@ class CategoriesBbdd(ModelDao):
                 return False
         self.conn.close()
         return True
+
     def lectura_categories(self):
         """Llegeix tota la taula de categories"""
         parametre: str = "id,categoria"
@@ -513,7 +512,7 @@ class CategoriesBbdd(ModelDao):
 
     def lectura_categories_individual_nom(self, llista_lectura):
         """Llegeix tota la taula de categories"""
-        parametre: str = "id,categoria"
+
         self.cursor = self.conn.cursor()
         if not isinstance(llista_lectura, list):
             raise TypeError("El missatge per a la lectura individual ha de ser una llista")
