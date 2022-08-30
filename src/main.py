@@ -14,7 +14,6 @@ from widgets import obtenir_registres_alumnes, obtenir_llistat_registres, obteni
 from widgets import obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
 
 
-
 class MainWindow(QMainWindow):
     """Classe per a la finestra principal"""
     senyal_alumnes_actualitzats = QtCore.Signal(bool)

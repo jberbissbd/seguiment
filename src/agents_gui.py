@@ -579,22 +579,25 @@ class ExportadorImportador:
         self.dict_json = {"dades": []}
         self.alumnes_registrats = [alumne.nom for alumne in AlumnesBbdd(1).llegir_alumnes()]
         self.categories_registrades = [categoria.nom for categoria in CategoriesBbdd(1).lectura_categories()]
+        self.registres_existents = [[registre.alumne, registre.categoria, registre.data, registre.descripcio]
+                                    for registre in self.registres]
         self.nous_alumnes = []
         self.noves_categories = []
+        self.registres_importats = []
         self.nous_registres = []
         self.registres_tractar = []
 
     def obtencio_id_alumne(self, nom: str):
-        alumne_format_comm = AlumnesBbdd(1).llegir_alumne_individual_nom(AlumneNou(nom))
-        nombre_alumne = alumne_format_comm.id
+        alumne_format_comm = AlumnesBbdd(1).llegir_alumne_individual_nom([AlumneNou(nom)])
+        nombre_alumne = alumne_format_comm[0].id
         return nombre_alumne
 
     def obtencio_id_categoria(self, nom: str):
-        categories_format = CategoriesBbdd(1).lectura_categories_individual_nom(CategoriaNova(nom))
-        nombre_categoria = categories_format.id
+        categories_format = CategoriesBbdd(1).lectura_categories_individual_nom([CategoriaNova(nom)])
+        nombre_categoria = categories_format[0].id
         return nombre_categoria
 
-    def exportacio(self, llista_alumnes: list, destinacio):
+    def exportacio(self, llista_alumnes: list, destinacio: str):
         for alumne in llista_alumnes:
             estructura = {}
             registres_alumne = []
@@ -625,22 +628,26 @@ class ExportadorImportador:
                 for registre in alumne["registres"]:
                     registre.insert(0, alumne["nom"])
                     self.registres_tractar.append(registre)
-            for registre in self.registres_tractar:
-                if registre[0] not in self.alumnes_registrats:
-                    self.nous_alumnes.append(AlumneNou(registre[0]))
-                if registre[1] not in self.categories_registrades:
-                    self.noves_categories.append(CategoriaNova(registre[1].strip()))
+        for registre in self.registres_tractar:
+            if registre[0] not in self.alumnes_registrats:
+                self.nous_alumnes.append(AlumneNou(registre[0].strip()))
+            if registre[1] not in self.categories_registrades:
+                self.noves_categories.append(CategoriaNova(registre[1].strip()))
             # Creem nous valors d'alumne i de categories si s'escau, per a complir amb la restriccio de la base de
             # dades:
-            if len(self.nous_alumnes) > 0:
-                AlumnesBbdd(1).registrar_alumne(self.nous_alumnes)
-            if len(self.noves_categories) > 0:
-                CategoriesBbdd(1).crear_categoria(self.noves_categories)
-            for registre in self.registres_tractar:
-                # Intercanviem el nom de l'alumne pel seu id a la base de dades:
-                registre[0] = self.obtencio_id_alumne(registre[0])
-                # Intercanviem el nom de la categoria pel seu id a la base de dades:
-                registre[1] = self.obtencio_id_categoria(registre[1])
-                self.nous_registres.append(Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]))
+        if len(self.nous_alumnes) > 0:
+            AlumnesBbdd(1).registrar_alumne(self.nous_alumnes)
+        if len(self.noves_categories) > 0:
+            CategoriesBbdd(1).crear_categoria(self.noves_categories)
+        for registre in self.registres_tractar:
+            # Intercanviem el nom de l'alumne pel seu id a la base de dades:
+            registre[0] = self.obtencio_id_alumne(registre[0])
+            # Intercanviem el nom de la categoria pel seu id a la base de dades:
+            registre[1] = self.obtencio_id_categoria(str(registre[1]))
+        self.nous_registres = [Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]) for registre in
+                               self.registres_tractar if registre not in self.registres_existents]
+        # if registre not in self.registres_existents:
+        #     self.nous_registres.append(Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]))
+        if len(self.nous_registres) > 0:
             RegistresBbdd(1).crear_registre(self.nous_registres)
         return True

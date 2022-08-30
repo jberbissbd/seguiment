@@ -169,18 +169,6 @@ class AlumnesBbdd(ModelDao):
         except sqlite3.OperationalError:
             return False
 
-    def consultar_camp(self, camp: str):
-        """Obtindre els registres d'un camp de la taula"""
-        parametre: str = camp
-        self.cursor = self.conn.cursor()
-        try:
-            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = self.cursor.execute(ordre_consultar).fetchall()
-            self.cursor.close()
-            return consulta
-        except sqlite3.OperationalError:
-            return False
-
     def llegir_alumnes(self):
         """Llegeix les dades de la taula alumnes."""
         parametre: str = "id,nom_alumne"
@@ -240,8 +228,8 @@ class AlumnesBbdd(ModelDao):
         for element in missatge_consulta:
             try:
                 nom = element.nom
-                ordre_consultar = f"SELECT {parametre} FROM alumnes WHERE nom_alumne = '{nom}'"
-                consulta = self.cursor.execute(ordre_consultar).fetchone()
+                ordre_consultar = f"SELECT {parametre} FROM alumnes WHERE nom_alumne = ?"
+                consulta = self.cursor.execute(ordre_consultar, (nom,)).fetchone()
                 if consulta is not None:
                     persona = Alumne_comm(consulta[0], consulta[1])
                     lectura_consulta.append(persona)
@@ -262,8 +250,8 @@ class AlumnesBbdd(ModelDao):
             nom_alumne = element.nom.strip()
             self.cursor = self.conn.cursor()
             try:
-                ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES ('{nom_alumne}')"
-                self.cursor.execute(ordre_registrar)
+                ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES (?)"
+                self.cursor.execute(ordre_registrar, (nom_alumne,))
                 self.conn.commit()
                 self.cursor.close()
 
@@ -508,19 +496,6 @@ class CategoriesBbdd(ModelDao):
                 return False
         self.conn.close()
         return True
-
-    def consultar_camp(self, camp: str):
-        """Obtindre els registres d'un camp de la taula de categories"""
-        parametre: str = camp
-        self.cursor = self.conn.cursor()
-        try:
-            ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
-            consulta = self.cursor.execute(ordre_consultar).fetchall()
-            self.cursor.close()
-            return consulta
-        except sqlite3.OperationalError:
-            return False
-
     def lectura_categories(self):
         """Llegeix tota la taula de categories"""
         parametre: str = "id,categoria"
@@ -546,13 +521,13 @@ class CategoriesBbdd(ModelDao):
         for element in llista_lectura:
             try:
                 categoria_consultar = element.nom
-                ordre_consultar = f"SELECT {parametre} FROM {self.taula} WHERE categoria='{categoria_consultar}'"
-                consulta = self.cursor.execute(ordre_consultar).fetchall()
-                missatge.append(CategoriaComm(consulta[0], consulta[1]))
+                ordre_consultar = f"SELECT id,categoria FROM {self.taula} WHERE categoria=?"
+                consulta = self.cursor.execute(ordre_consultar, (categoria_consultar,)).fetchall()
+                missatge.append(CategoriaComm(consulta[0][0], consulta[0][1]))
                 self.cursor.close()
+                return missatge
             except sqlite3.OperationalError:
                 return False
-        return missatge
 
     def test_lectura_categories(self):
         """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
