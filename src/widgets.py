@@ -267,6 +267,21 @@ class DialegEliminar(QMessageBox):
         self.setIcon(QMessageBox.Warning)
 
 
+class DialegInformacio(QMessageBox):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.setWindowTitle("LLicencies")
+        self.text_mostrar = "Tutopy: <a href='https://github.com/jberbissbd/seguiment'>repositori</a>\nIcones: " \
+                            "Papirus <a href='https://github.com/PapirusDevelopmentTeam/papirus-icon-theme" \
+                            "/'>repositori</a> \nLLicencia: GPL-3.0<a " \
+                            "href='https://www.gnu.org/licenses/gpl-3.0.ca.html'> GPL-3.0</a>"
+        self.setText(self.text_mostrar)
+        self.setStandardButtons(QMessageBox.Yes)
+        self.setButtonText(QMessageBox.Yes, "D'acord")
+        self.setIcon(QMessageBox.Information)
+
+
 class EditorDates(QtWidgets.QWidget):
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)

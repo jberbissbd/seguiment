@@ -1,16 +1,17 @@
 # -*- coding:utf-8 -*-
 import json
 import os
-import sys
+
 import dateutil
 import numpy as np
 import openpyxl
 import pandas
 from dateutil import parser
 from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
+
 from agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
-from formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, \
-    Registres_bbdd_nou, RegistresBbddComm, AlumneNou, DataNova, CategoriaNova
+from formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, Registres_bbdd_nou
+from formats import RegistresBbddComm, AlumneNou, DataNova, CategoriaNova
 
 
 class Comprovador:
@@ -144,10 +145,13 @@ class Comptable:
         for element in registre_input:
             if not isinstance(element, Registresguicomm):
                 raise TypeError("Registre no segueix el format establert")
-            element_processat = list
-            element_processat.append(element.id, element.alumne.id, element.categoria.id, element.data,
-                                     element.descripcio)
-            registre_enviar = RegistresBbddComm(dada for dada in element_processat)
+            element_processat = [element.id, element.alumne.id, element.categoria.id, element.data, element.descripcio]
+            registre_enviar = RegistresBbddComm(id=element_processat[0],
+                                                alumne=element_processat[1],
+                                                categoria=element_processat[2],
+                                                data=element_processat[3],
+                                                descripcio=element_processat[4]
+                                                )
             missatge_eliminar_registre.append(registre_enviar)
         self.registrador.eliminar_registre(missatge_eliminar_registre)
 
@@ -380,7 +384,8 @@ def format_alumnes(ruta_arxiu: str):
     full_calcul = openpyxl.load_workbook(ruta_arxiu)
     color_taronja = "F6B26B"
     fulla = full_calcul.active
-    llista_columnes = ['B', 'C', 'D', 'E', 'F']
+    llista_columnes = [cell.column_letter for cell in fulla[1]]
+    llista_columnes.pop(0)
     # Definim els estils:
     titols_trimestres = NamedStyle(name="titols_trimestres")
     titols_trimestres.font = Font(size=12, name="Arial", bold=True)
@@ -396,7 +401,7 @@ def format_alumnes(ruta_arxiu: str):
     titols.fill = PatternFill(fill_type='solid', start_color=color_taronja, end_color=color_taronja)
     continguts = NamedStyle(name="títols")
     continguts.font = Font(size=10, name="Arial", bold=False)
-    continguts.alignment = Alignment(horizontal="justify", vertical="top", wrap_text=False)
+    continguts.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
     vora_simple = Side(border_style='thin')
     continguts.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
     for cell in fulla['A']:
@@ -405,8 +410,8 @@ def format_alumnes(ruta_arxiu: str):
         cell.style = titols
     fulla.column_dimensions['A'].width = 13
     for column in llista_columnes:
+        fulla.column_dimensions[column].autosize = True
         fulla.column_dimensions[column].width = 30
-
     llista_valors = []
     n_index = 0
     # Fusionem les cel·les si tenen el mateix valor:
@@ -579,22 +584,25 @@ class ExportadorImportador:
         self.dict_json = {"dades": []}
         self.alumnes_registrats = [alumne.nom for alumne in AlumnesBbdd(1).llegir_alumnes()]
         self.categories_registrades = [categoria.nom for categoria in CategoriesBbdd(1).lectura_categories()]
+        self.registres_existents = [[registre.alumne, registre.categoria, registre.data, registre.descripcio]
+                                    for registre in self.registres]
         self.nous_alumnes = []
         self.noves_categories = []
+        self.registres_importats = []
         self.nous_registres = []
         self.registres_tractar = []
 
     def obtencio_id_alumne(self, nom: str):
-        alumne_format_comm = AlumnesBbdd(1).llegir_alumne_individual_nom(AlumneNou(nom))
-        nombre_alumne = alumne_format_comm.id
+        alumne_format_comm = AlumnesBbdd(1).llegir_alumne_individual_nom([AlumneNou(nom)])
+        nombre_alumne = alumne_format_comm[0].id
         return nombre_alumne
 
     def obtencio_id_categoria(self, nom: str):
-        categories_format = CategoriesBbdd(1).lectura_categories_individual_nom(CategoriaNova(nom))
-        nombre_categoria = categories_format.id
+        categories_format = CategoriesBbdd(1).lectura_categories_individual_nom([CategoriaNova(nom)])
+        nombre_categoria = categories_format[0].id
         return nombre_categoria
 
-    def exportacio(self, llista_alumnes: list, destinacio):
+    def exportacio(self, llista_alumnes: list, destinacio: str):
         for alumne in llista_alumnes:
             estructura = {}
             registres_alumne = []
@@ -625,22 +633,24 @@ class ExportadorImportador:
                 for registre in alumne["registres"]:
                     registre.insert(0, alumne["nom"])
                     self.registres_tractar.append(registre)
-            for registre in self.registres_tractar:
-                if registre[0] not in self.alumnes_registrats:
-                    self.nous_alumnes.append(AlumneNou(registre[0]))
-                if registre[1] not in self.categories_registrades:
-                    self.noves_categories.append(CategoriaNova(registre[1].strip()))
+        for registre in self.registres_tractar:
+            if registre[0] not in self.alumnes_registrats:
+                self.nous_alumnes.append(AlumneNou(registre[0].strip()))
+            if registre[1] not in self.categories_registrades:
+                self.noves_categories.append(CategoriaNova(registre[1].strip()))
             # Creem nous valors d'alumne i de categories si s'escau, per a complir amb la restriccio de la base de
             # dades:
-            if len(self.nous_alumnes) > 0:
-                AlumnesBbdd(1).registrar_alumne(self.nous_alumnes)
-            if len(self.noves_categories) > 0:
-                CategoriesBbdd(1).crear_categoria(self.noves_categories)
-            for registre in self.registres_tractar:
-                # Intercanviem el nom de l'alumne pel seu id a la base de dades:
-                registre[0] = self.obtencio_id_alumne(registre[0])
-                # Intercanviem el nom de la categoria pel seu id a la base de dades:
-                registre[1] = self.obtencio_id_categoria(registre[1])
-                self.nous_registres.append(Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]))
+        if len(self.nous_alumnes) > 0:
+            AlumnesBbdd(1).registrar_alumne(self.nous_alumnes)
+        if len(self.noves_categories) > 0:
+            CategoriesBbdd(1).crear_categoria(self.noves_categories)
+        for registre in self.registres_tractar:
+            # Intercanviem el nom de l'alumne pel seu id a la base de dades:
+            registre[0] = self.obtencio_id_alumne(registre[0])
+            # Intercanviem el nom de la categoria pel seu id a la base de dades:
+            registre[1] = self.obtencio_id_categoria(str(registre[1]))
+        self.nous_registres = [Registres_bbdd_nou(registre[0], registre[1], registre[2], registre[3]) for registre in
+                               self.registres_tractar if registre not in self.registres_existents]
+        if len(self.nous_registres) > 0:
             RegistresBbdd(1).crear_registre(self.nous_registres)
         return True
