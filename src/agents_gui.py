@@ -385,6 +385,7 @@ def format_alumnes(ruta_arxiu: str):
     color_taronja = "F6B26B"
     fulla = full_calcul.active
     llista_columnes = [cell.column_letter for cell in fulla[1]]
+    llista_columnes.pop(0)
     # Definim els estils:
     titols_trimestres = NamedStyle(name="titols_trimestres")
     titols_trimestres.font = Font(size=12, name="Arial", bold=True)
@@ -407,11 +408,10 @@ def format_alumnes(ruta_arxiu: str):
         cell.style = titols_trimestres
     for cell in fulla['1']:
         cell.style = titols
+    fulla.column_dimensions['A'].width = 13
     for column in llista_columnes:
         fulla.column_dimensions[column].autosize = True
         fulla.column_dimensions[column].width = 30
-    fulla.column_dimensions['A'].width = 13
-
     llista_valors = []
     n_index = 0
     # Fusionem les cel·les si tenen el mateix valor:
