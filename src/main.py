@@ -9,7 +9,8 @@ from PySide6.QtWidgets import (QApplication, QToolBar, QMainWindow, QStackedWidg
 from agents_bbdd import AjudantDirectoris
 from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Destructor, Comprovador
 from formats import Registres_gui_nou
-from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres
+from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres, \
+    DialegInformacio
 from widgets import obtenir_registres_alumnes, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats
 from widgets import obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
 
@@ -91,6 +92,7 @@ class MainWindow(QMainWindow):
         self.widget_visualitzacio()
         self.editor_dates = EditorDates()
         self.widget_informes()
+        self.missatge_infor = DialegInformacio()
         # Introduim la barra d'eines:
         self.barra_superior = QToolBar()
         self.barra_superior.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
@@ -140,8 +142,13 @@ class MainWindow(QMainWindow):
         self.boto_editor_alumnes.triggered.connect(self.mostrar_editor_alumnes)
         self.boto_dates.triggered.connect(self.mostrar_dates)
         self.boto_informes.triggered.connect(self.mostrar_informes)
+        self.boto_informacio.triggered.connect(self.mostrar_informacio)
         self.boto_sortir.triggered.connect(sortir)
         self.boto_purgar.triggered.connect(self.eliminar_dades)
+
+    def mostrar_informacio(self):
+        self.missatge_infor.show()
+
 
     def eliminar_dades(self):
         """Elimina les dades de la base de dades"""
