@@ -384,7 +384,7 @@ def format_alumnes(ruta_arxiu: str):
     full_calcul = openpyxl.load_workbook(ruta_arxiu)
     color_taronja = "F6B26B"
     fulla = full_calcul.active
-    llista_columnes = ['B', 'C', 'D', 'E', 'F']
+    llista_columnes = [cell.column_letter for cell in fulla[1]]
     # Definim els estils:
     titols_trimestres = NamedStyle(name="titols_trimestres")
     titols_trimestres.font = Font(size=12, name="Arial", bold=True)
@@ -400,16 +400,17 @@ def format_alumnes(ruta_arxiu: str):
     titols.fill = PatternFill(fill_type='solid', start_color=color_taronja, end_color=color_taronja)
     continguts = NamedStyle(name="títols")
     continguts.font = Font(size=10, name="Arial", bold=False)
-    continguts.alignment = Alignment(horizontal="justify", vertical="top", wrap_text=False)
+    continguts.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
     vora_simple = Side(border_style='thin')
     continguts.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
     for cell in fulla['A']:
         cell.style = titols_trimestres
     for cell in fulla['1']:
         cell.style = titols
-    fulla.column_dimensions['A'].width = 13
     for column in llista_columnes:
+        fulla.column_dimensions[column].autosize = True
         fulla.column_dimensions[column].width = 30
+    fulla.column_dimensions['A'].width = 13
 
     llista_valors = []
     n_index = 0
