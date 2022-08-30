@@ -146,7 +146,12 @@ class Comptable:
             if not isinstance(element, Registresguicomm):
                 raise TypeError("Registre no segueix el format establert")
             element_processat = [element.id, element.alumne.id, element.categoria.id, element.data, element.descripcio]
-            registre_enviar = RegistresBbddComm(dada for dada in element_processat)
+            registre_enviar = RegistresBbddComm(id=element_processat[0],
+                                                alumne=element_processat[1],
+                                                categoria=element_processat[2],
+                                                data=element_processat[3],
+                                                descripcio=element_processat[4]
+                                                )
             missatge_eliminar_registre.append(registre_enviar)
         self.registrador.eliminar_registre(missatge_eliminar_registre)
 
