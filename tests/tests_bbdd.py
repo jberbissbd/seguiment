@@ -9,7 +9,7 @@ from os.path import dirname
 from faker import Faker
 
 os.sys.path.append(dirname(dirname(__file__)))
-os.sys.path.append(os.path.join(dirname(dirname(__file__)),"src"))
+os.sys.path.append(os.path.join(dirname(dirname(__file__)), "src"))
 from src.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
 from src.formats import Registres_bbdd_nou, RegistresBbddComm, AlumneNou, Alumne_comm, CategoriaComm, \
     DataGuiComm, DataNova, CategoriaNova
@@ -27,6 +27,7 @@ alumnes.ruta_bbdd = ruta_base_dades
 registres.ruta_bbdd = ruta_base_dades
 categories.ruta_bbdd = ruta_base_dades
 calendari.ruta_bbdd = ruta_base_dades
+resposta_llista = "Els valors de resposta haurien de ser una llista"
 
 
 class test_entrada_dades_bbdd(unittest.TestCase):
@@ -148,6 +149,15 @@ class test_lectura(unittest.TestCase):
         llista_registres = alumnes.llegir_alumnes()
         assert isinstance(llista_registres, list), self.resposta_llista
 
+    def test_lectura_alumnes_individual_id(self):
+        alumne_seleccionat = secrets.choice(alumnes.test_llegir_alumnes())
+        dades_alumne = alumnes.llegir_alumne_individual_id(alumne_seleccionat)
+        assert is_dataclass(dades_alumne), "Els numeros d'alumne haurien de ser un int"
+
+    def test_lectura_alumnes_test(self):
+        llista_registres = alumnes.test_llegir_alumnes()
+        assert isinstance(llista_registres, list), "Els numeros d'alumne haurien de ser un int"
+
     def test_lectura_categories(self):
         llista_registres = categories.lectura_categories()
         assert isinstance(llista_registres, list), self.resposta_llista
@@ -189,6 +199,17 @@ class test_formats_resposta(unittest.TestCase):
         llista_registres = alumnes.llegir_alumnes()
         for element in llista_registres:
             assert is_dataclass(element), "Alumne no te el format Alumne_comm"
+
+    def test_lectura_alumnes_test(self):
+        llista_registres = alumnes.test_llegir_alumnes()
+        for element in llista_registres:
+            assert isinstance(element, int), "El numero d'alumne hauria de ser un int"
+
+    def test_lectura_alumnes_individual_id(self):
+        alumne_seleccionat = secrets.choice(alumnes.test_llegir_alumnes())
+        dades_alumne = alumnes.llegir_alumne_individual_id(alumne_seleccionat)
+        assert isinstance(dades_alumne.id, int), "Els numeros d'alumne haurien de ser un int"
+        assert isinstance(dades_alumne.nom, str), "El nom de l'alumne ha de ser una cadena de text"
 
     def test_categories(self):
         llista_registres = categories.lectura_categories()
