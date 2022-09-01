@@ -10,7 +10,8 @@ from faker import Faker
 
 os.sys.path.append(dirname(dirname(__file__)))
 os.sys.path.append(os.path.join(dirname(dirname(__file__)), "src"))
-from src.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris
+from src.agents_bbdd import AlumnesBbdd, CategoriesBbdd, RegistresBbdd, DatesBbdd, AjudantDirectoris, Iniciador, \
+    obtenir_ruta_config, obtenir_ruta_icones
 from src.formats import Registres_bbdd_nou, RegistresBbddComm, AlumneNou, Alumne_comm, CategoriaComm, \
     DataGuiComm, DataNova, CategoriaNova
 
@@ -22,12 +23,47 @@ categories = CategoriesBbdd(taula="categories", modebbdd=2)
 registres = RegistresBbdd(taula="registres", modebbdd=2)
 calendari = DatesBbdd(taula="dates", modebbdd=2)
 ruta_base_dades = AjudantDirectoris(2).base_dades
+iniciador = Iniciador(2)
 
 alumnes.ruta_bbdd = ruta_base_dades
 registres.ruta_bbdd = ruta_base_dades
 categories.ruta_bbdd = ruta_base_dades
 calendari.ruta_bbdd = ruta_base_dades
 resposta_llista = "Els valors de resposta haurien de ser una llista"
+
+
+class test_integritat_bbdd(unittest.TestCase):
+
+    def test_creacio_taules(self):
+        assert iniciador.crea_taules() is False, "No es detecten correctament les taules creades"
+
+    def test_presencia_taules(self):
+        assert iniciador.presencia_taula_alumne is True, "No s'ha detectat la taula alumnes"
+        assert iniciador.presencia_taula_categories is True, "No s'ha detectat la taula categories"
+        assert iniciador.presencia_taula_dates is True, "No s'ha detectat la taula dates"
+        assert iniciador.presencia_taula_registres is True, "No s'ha detectat la taula registres"
+
+    def test_creacio_individual_taules(self):
+        assert alumnes.crea_taula() is True, "S'esta creant la taula d'alumnes quan no correspon"
+        assert categories.crea_taula() is True, "S'esta creant la taula de categories quan no correspon"
+        assert registres.crea_taula() is True, "S'esta creant la taula de registres quan no correspon"
+        assert calendari.crea_taula() is True, "S'esta creant la taula de dates quan no correspon"
+
+
+
+class test_rutes_acces(unittest.TestCase):
+    def test_bbdd(self):
+        assert AjudantDirectoris(2).base_dades == os.path.join(dirname(os.path.realpath(__file__)), "tests.db")
+        assert AjudantDirectoris(1).base_dades == os.path.join(dirname(dirname(os.path.realpath(__file__))),
+                                                               "src/dades/registre.db")
+
+    def test_config(self):
+        assert obtenir_ruta_config() == os.path.join(dirname(dirname(os.path.realpath(__file__))),
+                                                     "src/config.ini")
+
+    def test_icones(self):
+        assert obtenir_ruta_icones() == os.path.join(dirname(dirname(os.path.realpath(__file__))),
+                                                     "src/icones")
 
 
 class test_entrada_dades_bbdd(unittest.TestCase):

@@ -24,7 +24,7 @@ calendari = Calendaritzador(modegui=2)
 classificador = Classificador(modegui=2)
 
 
-class TestLectura(unittest.TestCase):
+class TestLectura(unittest.TestSuite):
     """Classe per a comprovar les operacions de lectura de dades"""
 
     def test_registres(self):
