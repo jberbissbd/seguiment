@@ -603,8 +603,9 @@ class CategoriesBbdd(ModelDao):
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
-        self.cursor = self.conn.cursor()
         try:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.cursor = self.conn.cursor()
             buidar_categories = f"DROP {self.taula}"
             self.cursor.execute(buidar_categories)
             self.conn.commit()
@@ -641,8 +642,9 @@ class DatesBbdd(ModelDao):
     def lectura_dates(self):
         """Llegeix tota la taula de dates"""
         parametre: str = "id,data"
-        self.cursor = self.conn.cursor()
         try:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.cursor = self.conn.cursor()
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.cursor.close()
@@ -655,13 +657,15 @@ class DatesBbdd(ModelDao):
 
     def crear_data(self, llista_dates: list):
         """Crea una nova data"""
-        self.cursor = self.conn.cursor()
+
         if not isinstance(llista_dates, list):
             raise TypeError("L'entrada de dates ha de ser una llista")
         for item in llista_dates:
             if is_dataclass(item) is False:
                 raise TypeError("La nova data ha de la classe DataNova")
             try:
+                self.conn = sqlite3.connect(self.ruta_bbdd)
+                self.cursor = self.conn.cursor()
                 ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
                 self.cursor.execute(ordre_registrar)
                 self.conn.commit()
@@ -675,8 +679,10 @@ class DatesBbdd(ModelDao):
     def test_dates(self):
         """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA DE DATES PER A FER TESTS"""
         parametre: str = "id"
-        self.cursor = self.conn.cursor()
+
         try:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.cursor = self.conn.cursor()
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.cursor.close()
@@ -689,8 +695,9 @@ class DatesBbdd(ModelDao):
         """Retorna l'id de la darrera data
         :int:
         """
-        self.cursor = self.conn.cursor()
         try:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.cursor = self.conn.cursor()
             ordre_consultar = f"SELECT MAX(id) FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
             self.conn.close()
@@ -706,8 +713,9 @@ class DatesBbdd(ModelDao):
         for element in missatge_actualizacio:
             if is_dataclass(element) is False:
                 raise TypeError("Els elements per actualitzar han de ser de la categoria DataGuiComm")
-            self.cursor = self.conn.cursor()
             try:
+                self.conn = sqlite3.connect(self.ruta_bbdd)
+                self.cursor = self.conn.cursor()
                 data = element.dia
                 num_referencia = element.id
                 actualitzar = f"UPDATE {self.taula} SET data = '{data}' WHERE id = {num_referencia}"
@@ -720,8 +728,9 @@ class DatesBbdd(ModelDao):
 
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
-        self.cursor = self.conn.cursor()
         try:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.cursor = self.conn.cursor()
             buidar_categories = f"DROP FROM {self.taula}"
             self.cursor.execute(buidar_categories)
             self.conn.commit()

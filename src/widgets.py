@@ -3,6 +3,9 @@ import os
 from typing import Union
 
 import dateutil
+import pyexcel_io
+import pyexcel_xls
+import pyexcel_xlsxr
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt, QDate, QSize, QLocale
 from PySide6.QtGui import QIcon
@@ -15,7 +18,6 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QHBoxLayout,
     QVBoxLayout,
-    QTableView,
     QAbstractItemView,
     QDialog,
     QMessageBox,
@@ -38,7 +40,7 @@ def obtenir_llistat_alumnes():
     CapEstudis(1).refrescar_alumnes()
     alumnes_entrada = CapEstudis(1).alumnat
     if alumnes_entrada:
-        llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+        llistat_alumnes = [alumne.nom.strip() for alumne in alumnes_entrada]
         return llistat_alumnes
     return False
 
@@ -161,56 +163,6 @@ class DialegSeleccioCarpeta(QFileDialog):
         self.setFileMode(QFileDialog.Directory)
 
 
-class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
-    """Model de taula per a l'edicio d'alumnes"""
-
-    def __init__(self, data):
-        super().__init__()
-        self._data = data
-
-    def data(self, index, role=Qt.DisplayRole):
-        if index.isValid():
-            if role in (Qt.DisplayRole, Qt.EditRole, Qt.UserRole):
-                # See below for the nested-list data structure.
-                # .row() indexes into the outer list,
-                # .column() indexes into the sub-list
-                value = self._data[index.row()][index.column()]
-                return value
-
-    def rowCount(self, index):
-        # The length of the outer list.
-        return len(self._data)
-
-    def columnCount(self, index):
-        # The following takes the first sub-list, and returns
-        # the length (only works if all rows are an equal length)
-        return len(self._data[0])
-
-    def flags(self, index):
-        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-
-    def setData(self, index, value, role):
-        if role == Qt.EditRole or Qt.UserRole:
-            self._data[index.row()][index.column()] = value
-            return True
-        return False
-
-    def add_row(self, dades):
-        self.beginInsertRows(QtCore.QModelIndex(), self.rowCount(1), self.rowCount(1))
-        self._data.append(dades[0])
-        self.endInsertRows()
-
-    def remove_row(self, row):
-        self.beginRemoveRows(QtCore.QModelIndex(), row, row)
-        self._data.pop(row)
-        self.endRemoveRows()
-
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return "Column {}".format(section + 1)
-        return super().headerData(section, orientation, role)
-
-
 class DialegAfegir(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -321,12 +273,10 @@ class EditorDates(QtWidgets.QWidget):
             self.DATA_SEGON_TRIMESTRE.setDate(QDate.currentDate())
             self.DATA_TERCER_TRIMESTRE.setDate(QDate.currentDate())
         else:
-            DATA_2N_FORMATQT = QDate.fromString(
-                self.calendari_editor_dates.dates[0].dia, "dd/MM/yyyy"
-            )
-            DATA_3ER_FORMATQT = QDate.fromString(
-                self.calendari_editor_dates.dates[1].dia, "dd/MM/yyyy"
-            )
+            data_segon_bbdd = dateutil.parser.parse(self.calendari_editor_dates.dates[0].dia).date()
+            data_tercer_bbdd = dateutil.parser.parse(self.calendari_editor_dates.dates[1].dia).date()
+            DATA_2N_FORMATQT = QDate(data_segon_bbdd)
+            DATA_3ER_FORMATQT = QDate(data_tercer_bbdd)
             self.DATA_SEGON_TRIMESTRE.setDate(DATA_2N_FORMATQT)
             self.DATA_TERCER_TRIMESTRE.setDate(DATA_3ER_FORMATQT)
         # Conectem amb la funcio per garantir resultats coherents:
@@ -361,27 +311,33 @@ class EditorDates(QtWidgets.QWidget):
         """
         estat_actualitzacio = True
         estat_creacio = True
-        data2n = self.DATA_SEGON_TRIMESTRE.date().toString("ISODate")
-        data3er = self.DATA_TERCER_TRIMESTRE.date().toString("ISODate")
+        # Capturem la data del control i la convertim a format ISO:
+        data2n = self.DATA_SEGON_TRIMESTRE.date().toPython()
+
+        data3er = self.DATA_TERCER_TRIMESTRE.date().toPython()
         if self.calendari_editor_dates.dates:
-            data_original_2n = self.calendari_editor_dates.dates[0]
-            data_original_3er = self.calendari_editor_dates.dates[1]
+            # Agafem la vriable dia de l'objecte DataGuiComm i el convertim a data de Python
+            data_original_2n = dateutil.parser.parse(self.calendari_editor_dates.dates[0].dia).date()
+            data_original_2n_id = self.calendari_editor_dates.dates[0].id
+            data_original_3er = dateutil.parser.parse(self.calendari_editor_dates.dates[1].dia).date()
+            data_original_3er_id = self.calendari_editor_dates.dates[1].id
             missatge_actualitzacio = []
-            if data_original_2n.dia != data2n:
-                missatge_actualitzacio.append(DataGuiComm(data_original_2n.id, data2n))
-            if data_original_3er.dia != data3er:
-                missatge_actualitzacio.append(
-                    DataGuiComm(data_original_3er.id, data3er)
-                )
+            if data_original_2n != data2n:
+                missatge_actualitzacio.append(DataGuiComm(data_original_2n_id, data2n.isoformat()))
+            if data_original_3er != data3er:
+                missatge_actualitzacio.append(DataGuiComm(data_original_3er_id, data3er.isoformat()))
             if len(missatge_actualitzacio) > 0:
                 estat_actualitzacio = self.calendari_editor_dates.actualitza_dates(
                     missatge_actualitzacio
                 )
         else:
-            llista_noves_dates = [data2n, data3er]
+            llista_noves_dates = [data2n.isoformat(), data3er.isoformat()]
             missatge_creacio = [DataNova(item) for item in llista_noves_dates]
             estat_creacio = Calendaritzador(1).registra_dates(missatge_creacio)
-        return estat_actualitzacio + estat_creacio
+        if estat_creacio:
+            return estat_creacio
+        elif estat_actualitzacio:
+            return estat_actualitzacio
 
 
 class CreadorRegistres(QtWidgets.QWidget):
@@ -395,9 +351,9 @@ class CreadorRegistres(QtWidgets.QWidget):
         ETIQUETA_ALUMNES = QLabel("Alumnes")
         ETIQUETA_ALUMNES.setMaximumWidth(self.AMPLADA_ETIQUETES)
         self.SELECTOR_ALUMNES = QComboBox()
-
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-
+        if obtenir_llistat_alumnes():
+            self.SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes())
         ETIQUETA_CATEGORIA = QLabel("Motiu:")
         ETIQUETA_CATEGORIA.setMaximumWidth(self.AMPLADA_ETIQUETES)
         self.SELECTOR_CATEGORIA = QComboBox()
@@ -444,26 +400,27 @@ class EditorAlumnes(QtWidgets.QWidget):
         DISTRIBUCIO = QHBoxLayout()
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.setLayout(DISTRIBUCIO)
-        self.TAULA_ALUMNES = QTableView()
+        self.TAULA_ALUMNES = QTableWidget(0, 2)
+        self.etiquetes_columnes = ["ID", "Alumne"]
+        self.TAULA_ALUMNES.setColumnHidden(0, True)
+        self.TAULA_ALUMNES.setHorizontalHeaderLabels(self.etiquetes_columnes)
         self.TAULA_ALUMNES.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.TAULA_ALUMNES.setSelectionMode(QAbstractItemView.SingleSelection)
         self.TAULA_ALUMNES.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.TAULA_ALUMNES.setUpdatesEnabled(True)
         self.INDICADOR_ELIMINAT = None
-        if not dades_alumnes:
-            self.TAULA_ALUMNES_MODEL = ModelEdicioAlumnes([" "])
-            self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
-            self.TAULA_ALUMNES_MODEL.setHeaderData(2, Qt.Horizontal, "Alumne")
-        else:
-            self.TAULA_ALUMNES_MODEL = ModelEdicioAlumnes(dades_alumnes)
-            self.TAULA_ALUMNES_MODEL.setHeaderData(2, Qt.Horizontal, "Alumne")
-            self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
-            self.TAULA_ALUMNES.setColumnHidden(0, True)
-            self.TAULA_ALUMNES.resizeColumnsToContents()
+        self.omplir_taula()
         # Creem els botons:
+        estil_botons = "QPushButton { text-align: left; }"
+        self.BOTO_IMPORTAR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/document-import-symbolic.svg"),
+                                         text="Importar des\nd'arxiu")
+        self.BOTO_IMPORTAR.setStyleSheet(estil_botons)
+        self.BOTO_IMPORTAR.setIconSize(QSize(24, 24))
         self.BOTO_DESAR = QPushButton(
             icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar"
         )
         self.BOTO_DESAR.setIconSize(QSize(24, 24))
+        self.BOTO_DESAR.setStyleSheet(estil_botons)
         self.BOTO_AFEGIR = QPushButton(
             icon=QIcon(
                 f"{AjudantDirectoris(1).ruta_icones}/value-increase-symbolic.svg"
@@ -471,115 +428,168 @@ class EditorAlumnes(QtWidgets.QWidget):
             text="Afegir",
         )
         self.BOTO_AFEGIR.setIconSize(QSize(24, 24))
+        self.BOTO_AFEGIR.setStyleSheet(estil_botons)
         self.BOTO_ELIMINAR = QPushButton(
             icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"),
             text="Eliminar",
         )
         self.BOTO_ELIMINAR.setIconSize(QSize(24, 24))
+        self.BOTO_ELIMINAR.setStyleSheet(estil_botons)
         DISTRIBUCIO_BOTONS = QVBoxLayout()
         DISTRIBUCIO_BOTONS.setAlignment(Qt.AlignTop)
+        DISTRIBUCIO_BOTONS.addWidget(self.BOTO_IMPORTAR)
         DISTRIBUCIO_BOTONS.addWidget(self.BOTO_AFEGIR)
         DISTRIBUCIO_BOTONS.addWidget(self.BOTO_ELIMINAR)
         DISTRIBUCIO_BOTONS.addWidget(self.BOTO_DESAR)
         DISTRIBUCIO.addWidget(self.TAULA_ALUMNES)
         DISTRIBUCIO.addLayout(DISTRIBUCIO_BOTONS)
         # Connectem els botons:
-        self.BOTO_AFEGIR.clicked.connect(self.afegir_alumne)
+        self.BOTO_IMPORTAR.clicked.connect(self.importar_arxius)
+        self.BOTO_AFEGIR.clicked.connect(self.afegir_alumne_boto)
         self.BOTO_ELIMINAR.clicked.connect(self.eliminar_alumne)
         self.BOTO_DESAR.clicked.connect(self.alteracio_alumnes)
         self.TAULA_ALUMNES.doubleClicked.connect(self.modificar_alumne)
+
+    def omplir_taula(self):
+        dades_bbdd = obtenir_registres_alumnes()
+        for fila in range(self.TAULA_ALUMNES.rowCount()):
+            self.TAULA_ALUMNES.removeRow(fila)
+        if dades_bbdd:
+            self.afegir_alumnes_general(dades_bbdd)
 
     def alteracio_alumnes(self):
         """Compara els registres d'alumnes de la gui i els originals, i els classifica per a modificar, eliminar o
         crear-ne un de nou, si correspon. I executa l'operacio corresponent a la base de dades"""
         # LLegim les dades de la base de dades:
-        dades_originals = self.cap_edicio_alumnes.alumnat
-        self.dades_originals_transformades = []
-        llista_ids_originals = []
-        llista_ids_model = []
-        dades_model = self.TAULA_ALUMNES.model()
-        rang_files = list(range(self.TAULA_ALUMNES.model().rowCount(1)))
-        rang_columnes = list(range(self.TAULA_ALUMNES.model().columnCount(1)))
-        self.dades_model_transformades = []
+        dades_originals = obtenir_registres_alumnes()
+        dades_taula = []
+        alumnes_eliminats = []
+        alumnes_modificables = []
         nous_alumnes = []
-        # Comprovem un per un els registres de la gui:
+        files_taula = self.TAULA_ALUMNES.rowCount()
+        columnes_taula = self.TAULA_ALUMNES.columnCount()
+        rang_files = list(range(files_taula))
+        rang_columnes = list(range(columnes_taula))
         for fila in rang_files:
-            registre_model = []
+            registre_fila = []
             for columna in rang_columnes:
-                camp = dades_model.data(
-                    dades_model.index(fila, columna), Qt.DisplayRole
-                )
-                # Comprovem primer el numero de registre:
-                if columna == 0:
-                    # Si es un registre nou i no te id, l'afegim a la llista de nous registres:
-                    if camp == "":
-                        columna += 1
-                        camp = dades_model.data(
-                            dades_model.index(fila, columna), Qt.DisplayRole
-                        )
-                        nous_alumnes.append(AlumneNou(camp))
-                        fila += 1
-                    # Si te id, se l'afegeix a la llista de ID's per a comparar, i a les dades del model.
-                    else:
-                        llista_ids_model.append(camp)
-                        registre_model.append(camp)
-                else:
-                    if camp is not None:
-                        registre_model.append(camp)
-                    # Confeccionem la llista d'ids del model:
-            if registre_model:
-                self.dades_model_transformades.append(registre_model)
-        if len(dades_originals) != 0:
-            for alumne in dades_originals:
-                self.dades_originals_transformades.append([alumne.id, alumne.nom])
-                # Afegim la llista d'ids originals:
-                llista_ids_originals.append(alumne.id)
-        # Ordenem la llista d'ids de les dades:
-        llista_ids_originals.sort()
-        llista_ids_model.sort()
-        self.dades_originals_transformades.sort(key=lambda x: x[0])
-        self.dades_model_transformades.sort(key=lambda x: x[0])
-        # Comprovem si hi ha algun alumne modificat o a eliminar:
-        alumnes_modificar = []
-        missatge_eliminar = []
-        # Fem comparacio de les llistes d'ids. Si estava a les dades inicials i no a les finals, es que s'ha marcat per
-        # eliminar.
-        alumnes_eliminar = list(set(llista_ids_originals).difference(llista_ids_model))
-        # Comprovem els registres que queden al model de taula, per si s'han modificat.
-        for registre in self.dades_model_transformades:
-            if registre not in self.dades_originals_transformades:
-                alumnes_modificar.append(Alumne_comm([registre[0], registre[1]]))
-        # Transformem els alumnes a eliminar a DTO:
-        for alumne in dades_originals:
-            if alumne.id in alumnes_eliminar:
-                missatge_eliminar.append(Alumne_comm(alumne.id, alumne.nom))
-        # Comprovem si hi ha algun alumne nou:
+                valor_taula = self.TAULA_ALUMNES.item(fila, columna).text()
+                if columna == 0 and valor_taula != "":
+                    valor_taula = int(valor_taula)
+                registre_fila.append(valor_taula)
+            dades_taula.append(registre_fila)
+        nous_alumnes = [alumne for alumne in dades_taula if alumne[0] == ""]
+        alumnes_taula = [alumne for alumne in dades_taula if alumne[0] != ""]
+        nous_alumnes = [AlumneNou(alumne[1]) for alumne in nous_alumnes]
+        if dades_originals:
+            llista_ids_originals = [alumne[0] for alumne in dades_originals]
+            llista_ids_originals.sort()
+            llista_ids_taula = [int(alumne[0]) for alumne in alumnes_taula]
+            llista_ids_taula.sort()
+            # Si l'id de l'alumne no esta entre els ID's dels alumnes originals, es que s'ha eliminat:
+            alumnes_eliminats = [item for item in llista_ids_originals if item not in llista_ids_taula]
+            alumnes_eliminats = [Alumne_comm(item[0], item[1]) for item in dades_originals if item[0] in
+                                 alumnes_eliminats]
+            # Si l'id de l'alumne esta entre els id's originals, comparem amb les dades originals:
+            alumnes_modificables = [item for item in dades_taula if item[0] in llista_ids_originals]
+            alumnes_modificables = [alumne for alumne in alumnes_modificables if alumne not in dades_originals]
+            alumnes_modificables = [Alumne_comm(alumne[0], alumne[1]) for alumne in alumnes_modificables]
+        if len(alumnes_modificables) > 0:
+            self.cap_edicio_alumnes.actualitzar_alumnes(alumnes_modificables)
         if len(nous_alumnes) > 0:
             self.cap_edicio_alumnes.afegir_alumnes(nous_alumnes)
-        if len(alumnes_modificar) > 0:
-            self.cap_edicio_alumnes.actualitzar_alumnes(alumnes_modificar)
-        if len(alumnes_eliminar) > 0:
-            self.cap_edicio_alumnes.eliminar_alumnes(missatge_eliminar)
-            # Modifiquem les dades que obte:
-        self.cap_edicio_alumnes.refrescar_alumnes()
-        info_alumnes = self.cap_edicio_alumnes.obtenir_alumnes()
-        dades_actualitzades = [[persona.id, persona.nom] for persona in info_alumnes]
-        self.TAULA_ALUMNES_MODEL = ModelEdicioAlumnes(dades_actualitzades)
-        self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
+        if len(alumnes_eliminats) > 0:
+            self.cap_edicio_alumnes.eliminar_alumnes(alumnes_eliminats)
+        # Forcem el refresc de la taula:
+        files_eliminar = list(range(self.TAULA_ALUMNES.rowCount()))
+        for fila in files_eliminar:
+            self.TAULA_ALUMNES.removeRow(fila)
+        self.TAULA_ALUMNES.setHorizontalHeaderLabels(self.etiquetes_columnes)
+        self.omplir_taula()
 
-    def afegir_alumne(self):
-
+    def afegir_alumne_boto(self):
         dialeg = DialegAfegir(self)
         if dialeg.exec() == QDialog.Accepted:
-            self.TAULA_ALUMNES.model().add_row(dialeg.data)
+            self.afegir_alumnes_general(dialeg.data)
             self.TAULA_ALUMNES.resizeColumnsToContents()
+
+    def comprovacio_existent(self, noms_comprovar):
+        """Comprova si una llista de noms conte alumnes ja existents i retorna els que no consten"""
+        alumnes_existents = obtenir_llistat_alumnes()
+        noms_comprovats = [nom for nom in noms_comprovar if noms_comprovar not in alumnes_existents]
+        return noms_comprovats
+
+    def importar_arxius(self):
+        arxiu = DialegSeleccioCarpeta().getOpenFileNames(self, "Selecciona carpeta", filter="Arxius Excel o csv ("
+                                                                                            "*csv *.xls *.xlsx *.ods)")
+        # Obtenim la ruta a l'arxiu en format string:
+        arxiu = os.path.normpath(arxiu[0][0])
+        nom_arxiu = os.path.basename(arxiu)
+        extensio_arxiu = os.path.splitext(os.path.normpath(arxiu))[1]
+        if extensio_arxiu == ".csv":
+            self.processar_importacio_csv(arxiu, nom_arxiu)
+        elif extensio_arxiu in (".xls", ".ods"):
+            self.processar_importacio_xls(arxiu)
+        elif extensio_arxiu == ".xlsx":
+            self.processar_importacio_xlsx(arxiu)
+
+    def processar_importacio_csv(self, ruta_csv, nom_arxiu):
+        dades_arxiu_csv = pyexcel_io.get_data(afile=ruta_csv)
+        dades_arxiu_csv = dades_arxiu_csv[nom_arxiu]
+        dades_arxiu_transformades = []
+        for registre in dades_arxiu_csv:
+            for element in registre:
+                dades_arxiu_transformades.append(str(element).strip())
+        dades_arxiu_transformades = self.comprovacio_existent(dades_arxiu_transformades)
+        dades_arxiu_transformades = [["", item] for item in dades_arxiu_transformades]
+        self.afegir_alumnes_general(dades_arxiu_transformades)
+
+    def processar_importacio_xls(self, ruta_arxiu):
+        """Processa un arxiu Excel amb extensio xls i els afegeix al widget"""
+        dades_arxiu_excel = pyexcel_xls.get_data(ruta_arxiu)
+        noms_fulls = list(dades_arxiu_excel.keys())
+        dades_processar = []
+        dades_format_llista = []
+        for full in noms_fulls:
+            dades_processar.extend(dades_arxiu_excel[full])
+        for registre in dades_processar:
+            for element in registre:
+                dades_format_llista.append(str(element).strip())
+        dades_format_llista = self.comprovacio_existent(dades_format_llista)
+        dades_format_llista = [["", item] for item in dades_format_llista]
+        self.afegir_alumnes_general(dades_format_llista)
+
+    def processar_importacio_xlsx(self, ruta_arxiu):
+        dades_xlsx = pyexcel_xlsxr.get_data(ruta_arxiu)
+        noms_fulls = list(dades_xlsx.keys())
+        dades_processar = []
+        dades_format_llista = []
+        for full in noms_fulls:
+            dades_processar.extend(dades_xlsx[full])
+        for registre in dades_processar:
+            for element in registre:
+                dades_format_llista.append(str(element).strip())
+        dades_format_llista = self.comprovacio_existent(dades_format_llista)
+        dades_format_llista = [["", item] for item in dades_format_llista]
+        self.afegir_alumnes_general(dades_format_llista)
+
+    def afegir_alumnes_general(self, dades_afegir: list):
+        for alumne in dades_afegir:
+            num_files_taula = self.TAULA_ALUMNES.rowCount()
+            self.TAULA_ALUMNES.insertRow(num_files_taula)
+            for element in alumne:
+                columna = alumne.index(element)
+                if isinstance(element, int):
+                    element = str(element)
+                self.TAULA_ALUMNES.setItem(num_files_taula, columna, QTableWidgetItem(element))
+        self.TAULA_ALUMNES.resizeColumnsToContents()
 
     def eliminar_alumne(self):
         self.confirmacio_eliminar = DialegEliminar()
         self.INDICADOR_ELIMINAT = self.confirmacio_eliminar.Yes
         if self.confirmacio_eliminar.exec() == QMessageBox.Yes:
             index = self.TAULA_ALUMNES.currentIndex()
-            self.TAULA_ALUMNES_MODEL.remove_row(index.row())
+            self.TAULA_ALUMNES.removeRow(index.row())
 
     def modificar_alumne(self):
         # Editar un registre:
@@ -867,28 +877,29 @@ class EditorRegistres(QtWidgets.QWidget):
         self.TAULA.removeRow(self.TAULA.currentRow())
 
     def omplir_taula(self):
-        dades = obtenir_llistat_registres()
-        files = len(dades)
-        columnes = len(dades[0])
-        self.TAULA.setRowCount(files)
-        self.TAULA.setColumnCount(columnes)
-        rang_files = range(files)
-        rang_columnes = range(columnes)
-        desplegable_taula_alumnes = QComboBox()
-        desplegable_taula_alumnes.addItems(obtenir_llistat_alumnes())
-        desplegable_taula_categories = QComboBox()
-        desplegable_taula_categories.addItems(obtenir_categories())
-        for fila in rang_files:
-            for columna in rang_columnes:
-                valor = dades[fila][columna]
-                if isinstance(valor, datetime.date):
-                    nou_item = QTableWidgetItem()
-                    valor = QDate(valor)
-                    nou_item.setData(Qt.DisplayRole, valor)
-                    self.TAULA.setItem(fila, columna, nou_item)
-                else:
-                    nou_item = QTableWidgetItem(str(valor))
-                    self.TAULA.setItem(fila, columna, nou_item)
+        if obtenir_llistat_registres():
+            dades = obtenir_llistat_registres()
+            files = len(dades)
+            columnes = len(dades[0])
+            self.TAULA.setRowCount(files)
+            self.TAULA.setColumnCount(columnes)
+            rang_files = range(files)
+            rang_columnes = range(columnes)
+            desplegable_taula_alumnes = QComboBox()
+            desplegable_taula_alumnes.addItems(obtenir_llistat_alumnes())
+            desplegable_taula_categories = QComboBox()
+            desplegable_taula_categories.addItems(obtenir_categories())
+            for fila in rang_files:
+                for columna in rang_columnes:
+                    valor = dades[fila][columna]
+                    if isinstance(valor, datetime.date):
+                        nou_item = QTableWidgetItem()
+                        valor = QDate(valor)
+                        nou_item.setData(Qt.DisplayRole, valor)
+                        self.TAULA.setItem(fila, columna, nou_item)
+                    else:
+                        nou_item = QTableWidgetItem(str(valor))
+                        self.TAULA.setItem(fila, columna, nou_item)
 
     def alteracio_registres(self):
         """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com

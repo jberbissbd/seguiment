@@ -191,18 +191,8 @@ class Calendaritzador:
     def __init__(self, modegui):
         self.datador = DatesBbdd(modegui)
         self.info_dates = self.datador.lectura_dates()
-        self.dates = self.conversio_dates()
+        self.dates = self.info_dates
         self.maxim_id = self.datador.maxim_id_data()
-
-    def conversio_dates(self):
-        """Obte els registres de dates, els transforma a llista i converteix dates a format dia/mes/any, basades en
-        classe Data """
-        if self.datador.lectura_dates():
-            self.info_dates = self.datador.lectura_dates()
-            for data in self.info_dates:
-                data.dia = dateutil.parser.parse(data.dia).strftime("%d/%m/%Y")
-            return self.info_dates
-        return False
 
     def registra_dates(self, aniversari: list):
         """Crea nous registres a la base de dades amb la data subministrada
@@ -213,18 +203,14 @@ class Calendaritzador:
         Veritat si ha pogut crear els registres, Fals si no.
         """
         if isinstance(aniversari, list):
-            for element in aniversari:
-                if isinstance(element, DataNova):
-                    element.dia = dateutil.parser.parse(element.dia).strftime("%Y-%m-%d")
-                else:
-                    return False
+
             self.datador.crear_data(aniversari)
         else:
             return False
 
     def actualitza_dates(self, aniversari):
         """Actualitza la base de dades amb la data subministrada, comprovant si es una data nova o no
-        :type aniversari: DataGuiComm
+        :type aniversari: list
         """
         if isinstance(aniversari, list):
             for element in aniversari:
