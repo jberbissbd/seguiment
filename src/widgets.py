@@ -867,6 +867,8 @@ class EditorRegistres(QtWidgets.QWidget):
         self.TAULA.removeRow(self.TAULA.currentRow())
 
     def omplir_taula(self):
+        noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
+        self.TAULA.setHorizontalHeaderLabels(noms_columnes)
         dades = obtenir_llistat_registres()
         files = len(dades)
         columnes = len(dades[0])
