@@ -150,7 +150,6 @@ class MainWindow(QMainWindow):
     def mostrar_informacio(self):
         self.missatge_infor.show()
 
-
     def eliminar_dades(self):
         """Elimina les dades de la base de dades"""
         if QMessageBox.question(self, "Eliminar dades", "Estàs segur de que vols eliminar les dades?",

@@ -3,6 +3,9 @@ import os
 from typing import Union
 
 import dateutil
+import pyexcel_io
+import pyexcel_xls
+import pyexcel_xlsxr
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt, QDate, QSize, QLocale
 from PySide6.QtGui import QIcon
@@ -15,7 +18,6 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QHBoxLayout,
     QVBoxLayout,
-    QTableView,
     QAbstractItemView,
     QDialog,
     QMessageBox,
@@ -38,7 +40,7 @@ def obtenir_llistat_alumnes():
     CapEstudis(1).refrescar_alumnes()
     alumnes_entrada = CapEstudis(1).alumnat
     if alumnes_entrada:
-        llistat_alumnes = [alumne.nom for alumne in alumnes_entrada]
+        llistat_alumnes = [alumne.nom.strip() for alumne in alumnes_entrada]
         return llistat_alumnes
     return False
 
@@ -159,56 +161,6 @@ class DialegSeleccioCarpeta(QFileDialog):
     def __init__(self):
         super().__init__()
         self.setFileMode(QFileDialog.Directory)
-
-
-class ModelEdicioAlumnes(QtCore.QAbstractTableModel):
-    """Model de taula per a l'edicio d'alumnes"""
-
-    def __init__(self, data):
-        super().__init__()
-        self._data = data
-
-    def data(self, index, role=Qt.DisplayRole):
-        if index.isValid():
-            if role in (Qt.DisplayRole, Qt.EditRole, Qt.UserRole):
-                # See below for the nested-list data structure.
-                # .row() indexes into the outer list,
-                # .column() indexes into the sub-list
-                value = self._data[index.row()][index.column()]
-                return value
-
-    def rowCount(self, index):
-        # The length of the outer list.
-        return len(self._data)
-
-    def columnCount(self, index):
-        # The following takes the first sub-list, and returns
-        # the length (only works if all rows are an equal length)
-        return len(self._data[0])
-
-    def flags(self, index):
-        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-
-    def setData(self, index, value, role):
-        if role == Qt.EditRole or Qt.UserRole:
-            self._data[index.row()][index.column()] = value
-            return True
-        return False
-
-    def add_row(self, dades):
-        self.beginInsertRows(QtCore.QModelIndex(), self.rowCount(1), self.rowCount(1))
-        self._data.append(dades[0])
-        self.endInsertRows()
-
-    def remove_row(self, row):
-        self.beginRemoveRows(QtCore.QModelIndex(), row, row)
-        self._data.pop(row)
-        self.endRemoveRows()
-
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return "Column {}".format(section + 1)
-        return super().headerData(section, orientation, role)
 
 
 class DialegAfegir(QDialog):
@@ -459,11 +411,16 @@ class EditorAlumnes(QtWidgets.QWidget):
         self.INDICADOR_ELIMINAT = None
         self.omplir_taula()
         # Creem els botons:
-        self.BOTO_IMPORTAR = QPushButton(icon = QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"))
+        estil_botons = "QPushButton { text-align: left; }"
+        self.BOTO_IMPORTAR = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/document-import-symbolic.svg"),
+                                         text="Importar des\nd'arxiu")
+        self.BOTO_IMPORTAR.setStyleSheet(estil_botons)
+        self.BOTO_IMPORTAR.setIconSize(QSize(24, 24))
         self.BOTO_DESAR = QPushButton(
             icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar"
         )
         self.BOTO_DESAR.setIconSize(QSize(24, 24))
+        self.BOTO_DESAR.setStyleSheet(estil_botons)
         self.BOTO_AFEGIR = QPushButton(
             icon=QIcon(
                 f"{AjudantDirectoris(1).ruta_icones}/value-increase-symbolic.svg"
@@ -471,19 +428,23 @@ class EditorAlumnes(QtWidgets.QWidget):
             text="Afegir",
         )
         self.BOTO_AFEGIR.setIconSize(QSize(24, 24))
+        self.BOTO_AFEGIR.setStyleSheet(estil_botons)
         self.BOTO_ELIMINAR = QPushButton(
             icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"),
             text="Eliminar",
         )
         self.BOTO_ELIMINAR.setIconSize(QSize(24, 24))
+        self.BOTO_ELIMINAR.setStyleSheet(estil_botons)
         DISTRIBUCIO_BOTONS = QVBoxLayout()
         DISTRIBUCIO_BOTONS.setAlignment(Qt.AlignTop)
+        DISTRIBUCIO_BOTONS.addWidget(self.BOTO_IMPORTAR)
         DISTRIBUCIO_BOTONS.addWidget(self.BOTO_AFEGIR)
         DISTRIBUCIO_BOTONS.addWidget(self.BOTO_ELIMINAR)
         DISTRIBUCIO_BOTONS.addWidget(self.BOTO_DESAR)
         DISTRIBUCIO.addWidget(self.TAULA_ALUMNES)
         DISTRIBUCIO.addLayout(DISTRIBUCIO_BOTONS)
         # Connectem els botons:
+        self.BOTO_IMPORTAR.clicked.connect(self.importar_arxius)
         self.BOTO_AFEGIR.clicked.connect(self.afegir_alumne_boto)
         self.BOTO_ELIMINAR.clicked.connect(self.eliminar_alumne)
         self.BOTO_DESAR.clicked.connect(self.alteracio_alumnes)
@@ -551,6 +512,66 @@ class EditorAlumnes(QtWidgets.QWidget):
         if dialeg.exec() == QDialog.Accepted:
             self.afegir_alumnes_general(dialeg.data)
             self.TAULA_ALUMNES.resizeColumnsToContents()
+
+    def comprovacio_existent(self, noms_comprovar):
+        """Comprova si una llista de noms conte alumnes ja existents i retorna els que no consten"""
+        alumnes_existents = obtenir_llistat_alumnes()
+        noms_comprovats = [nom for nom in noms_comprovar if noms_comprovar not in alumnes_existents]
+        return noms_comprovats
+
+    def importar_arxius(self):
+        arxiu = DialegSeleccioCarpeta().getOpenFileNames(self, "Selecciona carpeta", filter="Arxius Excel o csv ("
+                                                                                            "*csv *.xls *.xlsx *.ods)")
+        # Obtenim la ruta a l'arxiu en format string:
+        arxiu = os.path.normpath(arxiu[0][0])
+        nom_arxiu = os.path.basename(arxiu)
+        extensio_arxiu = os.path.splitext(os.path.normpath(arxiu))[1]
+        if extensio_arxiu == ".csv":
+            self.processar_importacio_csv(arxiu, nom_arxiu)
+        elif extensio_arxiu in (".xls", ".ods"):
+            self.processar_importacio_xls(arxiu)
+        elif extensio_arxiu == ".xlsx":
+            self.processar_importacio_xlsx(arxiu)
+
+    def processar_importacio_csv(self, ruta_csv, nom_arxiu):
+        dades_arxiu_csv = pyexcel_io.get_data(afile=ruta_csv)
+        dades_arxiu_csv = dades_arxiu_csv[nom_arxiu]
+        dades_arxiu_transformades = []
+        for registre in dades_arxiu_csv:
+            for element in registre:
+                dades_arxiu_transformades.append(str(element).strip())
+        dades_arxiu_transformades = self.comprovacio_existent(dades_arxiu_transformades)
+        dades_arxiu_transformades = [["", item] for item in dades_arxiu_transformades]
+        self.afegir_alumnes_general(dades_arxiu_transformades)
+
+    def processar_importacio_xls(self, ruta_arxiu):
+        """Processa un arxiu Excel amb extensio xls i els afegeix al widget"""
+        dades_arxiu_excel = pyexcel_xls.get_data(ruta_arxiu)
+        noms_fulls = list(dades_arxiu_excel.keys())
+        dades_processar = []
+        dades_format_llista = []
+        for full in noms_fulls:
+            dades_processar.extend(dades_arxiu_excel[full])
+        for registre in dades_processar:
+            for element in registre:
+                dades_format_llista.append(str(element).strip())
+        dades_format_llista = self.comprovacio_existent(dades_format_llista)
+        dades_format_llista = [["", item] for item in dades_format_llista]
+        self.afegir_alumnes_general(dades_format_llista)
+
+    def processar_importacio_xlsx(self, ruta_arxiu):
+        dades_xlsx = pyexcel_xlsxr.get_data(ruta_arxiu)
+        noms_fulls = list(dades_xlsx.keys())
+        dades_processar = []
+        dades_format_llista = []
+        for full in noms_fulls:
+            dades_processar.extend(dades_xlsx[full])
+        for registre in dades_processar:
+            for element in registre:
+                dades_format_llista.append(str(element).strip())
+        dades_format_llista = self.comprovacio_existent(dades_format_llista)
+        dades_format_llista = [["", item] for item in dades_format_llista]
+        self.afegir_alumnes_general(dades_format_llista)
 
     def afegir_alumnes_general(self, dades_afegir: list):
         for alumne in dades_afegir:
