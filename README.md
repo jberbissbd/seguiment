@@ -5,6 +5,7 @@ i exportar-ne els registres en format Excel.
 - Registre d'informacio categoritzada dels alumnes.
 - Creacio d’informes mensuals per categoria i anuals per alumne.
 - Personalització de les categories a utilitzar.
+- Importacio d'alumnes en formats csv, xls, xlsx i ods.
 
 ## Utilització:
 Descomprimiu l'arxiu **tutopy_(sistema operatiu).zip** i executeu el programa.
