@@ -1,18 +1,19 @@
 # -*- coding:utf-8 -*-
 import sys
+
 from PySide6 import QtCore
 from PySide6.QtCore import QSize, Qt, QLocale
 from PySide6.QtGui import QIcon, QFont, QAction
 from PySide6.QtWidgets import (QApplication, QToolBar, QMainWindow, QStackedWidget, QVBoxLayout, QWidget,
                                QSizePolicy, QStatusBar,
                                QStyleFactory, QMessageBox)
+
 from agents_bbdd import AjudantDirectoris
 from agents_gui import Comptable, Classificador, Calendaritzador, CapEstudis, Destructor, Comprovador
 from formats import Registres_gui_nou
-from widgets import EditorDates, CreadorRegistres, EditorAlumnes, GeneradorInformesExportImport, EditorRegistres, \
-    DialegInformacio, EditorAlumnesBis
-from widgets import obtenir_registres_alumnes, obtenir_llistat_registres, obtenir_llistat_alumnes_registrats
-from widgets import obtenir_llistat_categories_registrades, obtenir_llistat_alumnes, obtenir_categories
+from widgets import EditorDates, CreadorRegistres, GeneradorInformesExportImport, EditorRegistres, DialegInformacio
+from widgets import EditorAlumnes, obtenir_llistat_alumnes_registrats, obtenir_llistat_categories_registrades
+from widgets import obtenir_llistat_alumnes, obtenir_categories
 
 
 class MainWindow(QMainWindow):
@@ -168,7 +169,7 @@ class MainWindow(QMainWindow):
 
     def widget_edicio_alumnes(self):
         """Configura el widget d'edicio d'alumnes."""
-        self.editor_alumnes = EditorAlumnesBis()
+        self.editor_alumnes = EditorAlumnes()
         self.editor_alumnes.BOTO_DESAR.clicked.connect(self.senyal_alumnes_actualitzats)
         self.editor_alumnes.BOTO_DESAR.clicked.connect(self.missatge_eliminats)
 
@@ -235,6 +236,8 @@ class MainWindow(QMainWindow):
             self.creacio.SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes())
             self.visualitzador.seleccio_alumnes.clear()
             self.visualitzador.seleccio_alumnes.addItem("* Selecciona un alumne *")
+            self.informes_exportador.INFORMES_SELECTOR_ALUMNES.clear()
+            self.informes_exportador.INFORMES_SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes_registrats())
         if obtenir_llistat_alumnes_registrats():
             self.visualitzador.seleccio_alumnes.addItems(obtenir_llistat_alumnes_registrats())
         # Actualitzem els registres, ja que la base de dades eliminara els registres d'un alumne.

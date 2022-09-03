@@ -436,7 +436,7 @@ class CreadorRegistres(QtWidgets.QWidget):
         DISTRIBUCIO.addWidget(self.BOTO_DESAR, 4, 0, 2, 0)
 
 
-class EditorAlumnesBis(QtWidgets.QWidget):
+class EditorAlumnes(QtWidgets.QWidget):
     def __init__(self, parent=None, dades_alumnes=None):
         self.confirmacio_eliminar = None
         self.dades_model_transformades = None
@@ -459,6 +459,7 @@ class EditorAlumnesBis(QtWidgets.QWidget):
         self.INDICADOR_ELIMINAT = None
         self.omplir_taula()
         # Creem els botons:
+        self.BOTO_IMPORTAR = QPushButton(icon = QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"))
         self.BOTO_DESAR = QPushButton(
             icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar"
         )
@@ -568,161 +569,6 @@ class EditorAlumnesBis(QtWidgets.QWidget):
         if self.confirmacio_eliminar.exec() == QMessageBox.Yes:
             index = self.TAULA_ALUMNES.currentIndex()
             self.TAULA_ALUMNES.removeRow(index.row())
-
-    def modificar_alumne(self):
-        # Editar un registre:
-        index = self.TAULA_ALUMNES.currentIndex()
-        self.TAULA_ALUMNES.edit(index)
-
-
-class EditorAlumnes(QtWidgets.QWidget):
-    def __init__(self, parent=None, dades_alumnes=None):
-        self.confirmacio_eliminar = None
-        self.dades_model_transformades = None
-        self.dades_originals_transformades = None
-        self.cap_edicio_alumnes = CapEstudis(1)
-        QtWidgets.QWidget.__init__(self, parent)
-        self.AMPLADA_ETIQUETES = 75
-        self.AMPLADA_DESPLEGABLES = 200
-        DISTRIBUCIO = QHBoxLayout()
-        DISTRIBUCIO.setAlignment(Qt.AlignTop)
-        self.setLayout(DISTRIBUCIO)
-        self.TAULA_ALUMNES = QTableView()
-        self.TAULA_ALUMNES.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.TAULA_ALUMNES.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.TAULA_ALUMNES.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.INDICADOR_ELIMINAT = None
-        if not dades_alumnes:
-            self.TAULA_ALUMNES_MODEL = ModelEdicioAlumnes([" "])
-            self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
-            self.TAULA_ALUMNES_MODEL.setHeaderData(2, Qt.Horizontal, "Alumne")
-        else:
-            self.TAULA_ALUMNES_MODEL = ModelEdicioAlumnes(dades_alumnes)
-            self.TAULA_ALUMNES_MODEL.setHeaderData(2, Qt.Horizontal, "Alumne")
-            self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
-            self.TAULA_ALUMNES.setColumnHidden(0, True)
-            self.TAULA_ALUMNES.resizeColumnsToContents()
-        # Creem els botons:
-        self.BOTO_DESAR = QPushButton(
-            icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar"
-        )
-        self.BOTO_DESAR.setIconSize(QSize(24, 24))
-        self.BOTO_AFEGIR = QPushButton(
-            icon=QIcon(
-                f"{AjudantDirectoris(1).ruta_icones}/value-increase-symbolic.svg"
-            ),
-            text="Afegir",
-        )
-        self.BOTO_AFEGIR.setIconSize(QSize(24, 24))
-        self.BOTO_ELIMINAR = QPushButton(
-            icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"),
-            text="Eliminar",
-        )
-        self.BOTO_ELIMINAR.setIconSize(QSize(24, 24))
-        DISTRIBUCIO_BOTONS = QVBoxLayout()
-        DISTRIBUCIO_BOTONS.setAlignment(Qt.AlignTop)
-        DISTRIBUCIO_BOTONS.addWidget(self.BOTO_AFEGIR)
-        DISTRIBUCIO_BOTONS.addWidget(self.BOTO_ELIMINAR)
-        DISTRIBUCIO_BOTONS.addWidget(self.BOTO_DESAR)
-        DISTRIBUCIO.addWidget(self.TAULA_ALUMNES)
-        DISTRIBUCIO.addLayout(DISTRIBUCIO_BOTONS)
-        # Connectem els botons:
-        self.BOTO_AFEGIR.clicked.connect(self.afegir_alumne)
-        self.BOTO_ELIMINAR.clicked.connect(self.eliminar_alumne)
-        self.BOTO_DESAR.clicked.connect(self.alteracio_alumnes)
-        self.TAULA_ALUMNES.doubleClicked.connect(self.modificar_alumne)
-
-    def alteracio_alumnes(self):
-        """Compara els registres d'alumnes de la gui i els originals, i els classifica per a modificar, eliminar o
-        crear-ne un de nou, si correspon. I executa l'operacio corresponent a la base de dades"""
-        # LLegim les dades de la base de dades:
-        dades_originals = self.cap_edicio_alumnes.alumnat
-        self.dades_originals_transformades = []
-        llista_ids_originals = []
-        llista_ids_model = []
-        dades_model = self.TAULA_ALUMNES.model()
-        rang_files = list(range(self.TAULA_ALUMNES.model().rowCount(1)))
-        rang_columnes = list(range(self.TAULA_ALUMNES.model().columnCount(1)))
-        self.dades_model_transformades = []
-        nous_alumnes = []
-        # Comprovem un per un els registres de la gui:
-        for fila in rang_files:
-            registre_model = []
-            for columna in rang_columnes:
-                camp = dades_model.data(
-                    dades_model.index(fila, columna), Qt.DisplayRole
-                )
-                # Comprovem primer el numero de registre:
-                if columna == 0:
-                    # Si es un registre nou i no te id, l'afegim a la llista de nous registres:
-                    if camp == "":
-                        columna += 1
-                        camp = dades_model.data(
-                            dades_model.index(fila, columna), Qt.DisplayRole
-                        )
-                        nous_alumnes.append(AlumneNou(camp))
-                        fila += 1
-                    # Si te id, se l'afegeix a la llista de ID's per a comparar, i a les dades del model.
-                    else:
-                        llista_ids_model.append(camp)
-                        registre_model.append(camp)
-                else:
-                    if camp is not None:
-                        registre_model.append(camp)
-                    # Confeccionem la llista d'ids del model:
-            if registre_model:
-                self.dades_model_transformades.append(registre_model)
-        if len(dades_originals) != 0:
-            for alumne in dades_originals:
-                self.dades_originals_transformades.append([alumne.id, alumne.nom])
-                # Afegim la llista d'ids originals:
-                llista_ids_originals.append(alumne.id)
-        # Ordenem la llista d'ids de les dades:
-        llista_ids_originals.sort()
-        llista_ids_model.sort()
-        self.dades_originals_transformades.sort(key=lambda x: x[0])
-        self.dades_model_transformades.sort(key=lambda x: x[0])
-        # Comprovem si hi ha algun alumne modificat o a eliminar:
-        alumnes_modificar = []
-        missatge_eliminar = []
-        # Fem comparacio de les llistes d'ids. Si estava a les dades inicials i no a les finals, es que s'ha marcat per
-        # eliminar.
-        alumnes_eliminar = list(set(llista_ids_originals).difference(llista_ids_model))
-        # Comprovem els registres que queden al model de taula, per si s'han modificat.
-        for registre in self.dades_model_transformades:
-            if registre not in self.dades_originals_transformades:
-                alumnes_modificar.append(Alumne_comm([registre[0], registre[1]]))
-        # Transformem els alumnes a eliminar a DTO:
-        for alumne in dades_originals:
-            if alumne.id in alumnes_eliminar:
-                missatge_eliminar.append(Alumne_comm(alumne.id, alumne.nom))
-        # Comprovem si hi ha algun alumne nou:
-        if len(nous_alumnes) > 0:
-            self.cap_edicio_alumnes.afegir_alumnes(nous_alumnes)
-        if len(alumnes_modificar) > 0:
-            self.cap_edicio_alumnes.actualitzar_alumnes(alumnes_modificar)
-        if len(alumnes_eliminar) > 0:
-            self.cap_edicio_alumnes.eliminar_alumnes(missatge_eliminar)
-            # Modifiquem les dades que obte:
-        self.cap_edicio_alumnes.refrescar_alumnes()
-        info_alumnes = self.cap_edicio_alumnes.obtenir_alumnes()
-        dades_actualitzades = [[persona.id, persona.nom] for persona in info_alumnes]
-        self.TAULA_ALUMNES_MODEL = ModelEdicioAlumnes(dades_actualitzades)
-        self.TAULA_ALUMNES.setModel(self.TAULA_ALUMNES_MODEL)
-
-    def afegir_alumne(self):
-
-        dialeg = DialegAfegir(self)
-        if dialeg.exec() == QDialog.Accepted:
-            self.TAULA_ALUMNES.model().add_row(dialeg.data)
-            self.TAULA_ALUMNES.resizeColumnsToContents()
-
-    def eliminar_alumne(self):
-        self.confirmacio_eliminar = DialegEliminar()
-        self.INDICADOR_ELIMINAT = self.confirmacio_eliminar.Yes
-        if self.confirmacio_eliminar.exec() == QMessageBox.Yes:
-            index = self.TAULA_ALUMNES.currentIndex()
-            self.TAULA_ALUMNES_MODEL.remove_row(index.row())
 
     def modificar_alumne(self):
         # Editar un registre:
