@@ -321,12 +321,10 @@ class EditorDates(QtWidgets.QWidget):
             self.DATA_SEGON_TRIMESTRE.setDate(QDate.currentDate())
             self.DATA_TERCER_TRIMESTRE.setDate(QDate.currentDate())
         else:
-            DATA_2N_FORMATQT = QDate.fromString(
-                self.calendari_editor_dates.dates[0].dia, "dd/MM/yyyy"
-            )
-            DATA_3ER_FORMATQT = QDate.fromString(
-                self.calendari_editor_dates.dates[1].dia, "dd/MM/yyyy"
-            )
+            data_segon_bbdd = dateutil.parser.parse(self.calendari_editor_dates.dates[0].dia).date()
+            data_tercer_bbdd = dateutil.parser.parse(self.calendari_editor_dates.dates[1].dia).date()
+            DATA_2N_FORMATQT = QDate(data_segon_bbdd)
+            DATA_3ER_FORMATQT = QDate(data_tercer_bbdd)
             self.DATA_SEGON_TRIMESTRE.setDate(DATA_2N_FORMATQT)
             self.DATA_TERCER_TRIMESTRE.setDate(DATA_3ER_FORMATQT)
         # Conectem amb la funcio per garantir resultats coherents:
@@ -361,27 +359,33 @@ class EditorDates(QtWidgets.QWidget):
         """
         estat_actualitzacio = True
         estat_creacio = True
-        data2n = self.DATA_SEGON_TRIMESTRE.date().toString("ISODate")
-        data3er = self.DATA_TERCER_TRIMESTRE.date().toString("ISODate")
+        # Capturem la data del control i la convertim a format ISO:
+        data2n = self.DATA_SEGON_TRIMESTRE.date().toPython()
+
+        data3er = self.DATA_TERCER_TRIMESTRE.date().toPython()
         if self.calendari_editor_dates.dates:
-            data_original_2n = self.calendari_editor_dates.dates[0]
-            data_original_3er = self.calendari_editor_dates.dates[1]
+            # Agafem la vriable dia de l'objecte DataGuiComm i el convertim a data de Python
+            data_original_2n = dateutil.parser.parse(self.calendari_editor_dates.dates[0].dia).date()
+            data_original_2n_id = self.calendari_editor_dates.dates[0].id
+            data_original_3er = dateutil.parser.parse(self.calendari_editor_dates.dates[1].dia).date()
+            data_original_3er_id = self.calendari_editor_dates.dates[1].id
             missatge_actualitzacio = []
-            if data_original_2n.dia != data2n:
-                missatge_actualitzacio.append(DataGuiComm(data_original_2n.id, data2n))
-            if data_original_3er.dia != data3er:
-                missatge_actualitzacio.append(
-                    DataGuiComm(data_original_3er.id, data3er)
-                )
+            if data_original_2n != data2n:
+                missatge_actualitzacio.append(DataGuiComm(data_original_2n_id, data2n.isoformat()))
+            if data_original_3er != data3er:
+                missatge_actualitzacio.append(DataGuiComm(data_original_3er_id, data3er.isoformat()))
             if len(missatge_actualitzacio) > 0:
                 estat_actualitzacio = self.calendari_editor_dates.actualitza_dates(
                     missatge_actualitzacio
                 )
         else:
-            llista_noves_dates = [data2n, data3er]
+            llista_noves_dates = [data2n.isoformat(), data3er.isoformat()]
             missatge_creacio = [DataNova(item) for item in llista_noves_dates]
             estat_creacio = Calendaritzador(1).registra_dates(missatge_creacio)
-        return estat_actualitzacio + estat_creacio
+        if estat_creacio:
+            return estat_creacio
+        elif estat_actualitzacio:
+            return estat_actualitzacio
 
 
 class CreadorRegistres(QtWidgets.QWidget):
@@ -395,9 +399,9 @@ class CreadorRegistres(QtWidgets.QWidget):
         ETIQUETA_ALUMNES = QLabel("Alumnes")
         ETIQUETA_ALUMNES.setMaximumWidth(self.AMPLADA_ETIQUETES)
         self.SELECTOR_ALUMNES = QComboBox()
-
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
-
+        if obtenir_llistat_alumnes():
+            self.SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes())
         ETIQUETA_CATEGORIA = QLabel("Motiu:")
         ETIQUETA_CATEGORIA.setMaximumWidth(self.AMPLADA_ETIQUETES)
         self.SELECTOR_CATEGORIA = QComboBox()
@@ -430,6 +434,145 @@ class CreadorRegistres(QtWidgets.QWidget):
         DISTRIBUCIO.addWidget(ETIQUETA_DESCRIPCIO, 3, 0)
         DISTRIBUCIO.addWidget(self.EDICIO_DESCRIPCIO, 3, 1)
         DISTRIBUCIO.addWidget(self.BOTO_DESAR, 4, 0, 2, 0)
+
+
+class EditorAlumnesBis(QtWidgets.QWidget):
+    def __init__(self, parent=None, dades_alumnes=None):
+        self.confirmacio_eliminar = None
+        self.dades_model_transformades = None
+        self.dades_originals_transformades = None
+        self.cap_edicio_alumnes = CapEstudis(1)
+        QtWidgets.QWidget.__init__(self, parent)
+        self.AMPLADA_ETIQUETES = 75
+        self.AMPLADA_DESPLEGABLES = 200
+        DISTRIBUCIO = QHBoxLayout()
+        DISTRIBUCIO.setAlignment(Qt.AlignTop)
+        self.setLayout(DISTRIBUCIO)
+        self.TAULA_ALUMNES = QTableWidget(0, 2)
+        self.etiquetes_columnes = ["ID", "Alumne"]
+        self.TAULA_ALUMNES.setColumnHidden(0, True)
+        self.TAULA_ALUMNES.setHorizontalHeaderLabels(self.etiquetes_columnes)
+        self.TAULA_ALUMNES.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.TAULA_ALUMNES.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.TAULA_ALUMNES.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.TAULA_ALUMNES.setUpdatesEnabled(True)
+        self.INDICADOR_ELIMINAT = None
+        self.omplir_taula()
+        # Creem els botons:
+        self.BOTO_DESAR = QPushButton(
+            icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar"
+        )
+        self.BOTO_DESAR.setIconSize(QSize(24, 24))
+        self.BOTO_AFEGIR = QPushButton(
+            icon=QIcon(
+                f"{AjudantDirectoris(1).ruta_icones}/value-increase-symbolic.svg"
+            ),
+            text="Afegir",
+        )
+        self.BOTO_AFEGIR.setIconSize(QSize(24, 24))
+        self.BOTO_ELIMINAR = QPushButton(
+            icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"),
+            text="Eliminar",
+        )
+        self.BOTO_ELIMINAR.setIconSize(QSize(24, 24))
+        DISTRIBUCIO_BOTONS = QVBoxLayout()
+        DISTRIBUCIO_BOTONS.setAlignment(Qt.AlignTop)
+        DISTRIBUCIO_BOTONS.addWidget(self.BOTO_AFEGIR)
+        DISTRIBUCIO_BOTONS.addWidget(self.BOTO_ELIMINAR)
+        DISTRIBUCIO_BOTONS.addWidget(self.BOTO_DESAR)
+        DISTRIBUCIO.addWidget(self.TAULA_ALUMNES)
+        DISTRIBUCIO.addLayout(DISTRIBUCIO_BOTONS)
+        # Connectem els botons:
+        self.BOTO_AFEGIR.clicked.connect(self.afegir_alumne_boto)
+        self.BOTO_ELIMINAR.clicked.connect(self.eliminar_alumne)
+        self.BOTO_DESAR.clicked.connect(self.alteracio_alumnes)
+        self.TAULA_ALUMNES.doubleClicked.connect(self.modificar_alumne)
+
+    def omplir_taula(self):
+        dades_bbdd = obtenir_registres_alumnes()
+        for fila in range(self.TAULA_ALUMNES.rowCount()):
+            self.TAULA_ALUMNES.removeRow(fila)
+        if dades_bbdd:
+            self.afegir_alumnes_general(dades_bbdd)
+
+    def alteracio_alumnes(self):
+        """Compara els registres d'alumnes de la gui i els originals, i els classifica per a modificar, eliminar o
+        crear-ne un de nou, si correspon. I executa l'operacio corresponent a la base de dades"""
+        # LLegim les dades de la base de dades:
+        dades_originals = obtenir_registres_alumnes()
+        dades_taula = []
+        alumnes_eliminats = []
+        alumnes_modificables = []
+        nous_alumnes = []
+        files_taula = self.TAULA_ALUMNES.rowCount()
+        columnes_taula = self.TAULA_ALUMNES.columnCount()
+        rang_files = list(range(files_taula))
+        rang_columnes = list(range(columnes_taula))
+        for fila in rang_files:
+            registre_fila = []
+            for columna in rang_columnes:
+                valor_taula = self.TAULA_ALUMNES.item(fila, columna).text()
+                if columna == 0 and valor_taula != "":
+                    valor_taula = int(valor_taula)
+                registre_fila.append(valor_taula)
+            dades_taula.append(registre_fila)
+        nous_alumnes = [alumne for alumne in dades_taula if alumne[0] == ""]
+        alumnes_taula = [alumne for alumne in dades_taula if alumne[0] != ""]
+        nous_alumnes = [AlumneNou(alumne[1]) for alumne in nous_alumnes]
+        if dades_originals:
+            llista_ids_originals = [alumne[0] for alumne in dades_originals]
+            llista_ids_originals.sort()
+            llista_ids_taula = [int(alumne[0]) for alumne in alumnes_taula]
+            llista_ids_taula.sort()
+            # Si l'id de l'alumne no esta entre els ID's dels alumnes originals, es que s'ha eliminat:
+            alumnes_eliminats = [item for item in llista_ids_originals if item not in llista_ids_taula]
+            alumnes_eliminats = [Alumne_comm(item[0], item[1]) for item in dades_originals if item[0] in
+                                 alumnes_eliminats]
+            # Si l'id de l'alumne esta entre els id's originals, comparem amb les dades originals:
+            alumnes_modificables = [item for item in dades_taula if item[0] in llista_ids_originals]
+            alumnes_modificables = [alumne for alumne in alumnes_modificables if alumne not in dades_originals]
+            alumnes_modificables = [Alumne_comm(alumne[0], alumne[1]) for alumne in alumnes_modificables]
+        if len(alumnes_modificables) > 0:
+            self.cap_edicio_alumnes.actualitzar_alumnes(alumnes_modificables)
+        if len(nous_alumnes) > 0:
+            self.cap_edicio_alumnes.afegir_alumnes(nous_alumnes)
+        if len(alumnes_eliminats) > 0:
+            self.cap_edicio_alumnes.eliminar_alumnes(alumnes_eliminats)
+        # Forcem el refresc de la taula:
+        files_eliminar = list(range(self.TAULA_ALUMNES.rowCount()))
+        for fila in files_eliminar:
+            self.TAULA_ALUMNES.removeRow(fila)
+        self.TAULA_ALUMNES.setHorizontalHeaderLabels(self.etiquetes_columnes)
+        self.omplir_taula()
+
+    def afegir_alumne_boto(self):
+        dialeg = DialegAfegir(self)
+        if dialeg.exec() == QDialog.Accepted:
+            self.afegir_alumnes_general(dialeg.data)
+            self.TAULA_ALUMNES.resizeColumnsToContents()
+
+    def afegir_alumnes_general(self, dades_afegir: list):
+        for alumne in dades_afegir:
+            num_files_taula = self.TAULA_ALUMNES.rowCount()
+            self.TAULA_ALUMNES.insertRow(num_files_taula)
+            for element in alumne:
+                columna = alumne.index(element)
+                if isinstance(element, int):
+                    element = str(element)
+                self.TAULA_ALUMNES.setItem(num_files_taula, columna, QTableWidgetItem(element))
+        self.TAULA_ALUMNES.resizeColumnsToContents()
+
+    def eliminar_alumne(self):
+        self.confirmacio_eliminar = DialegEliminar()
+        self.INDICADOR_ELIMINAT = self.confirmacio_eliminar.Yes
+        if self.confirmacio_eliminar.exec() == QMessageBox.Yes:
+            index = self.TAULA_ALUMNES.currentIndex()
+            self.TAULA_ALUMNES.removeRow(index.row())
+
+    def modificar_alumne(self):
+        # Editar un registre:
+        index = self.TAULA_ALUMNES.currentIndex()
+        self.TAULA_ALUMNES.edit(index)
 
 
 class EditorAlumnes(QtWidgets.QWidget):
@@ -867,28 +1010,29 @@ class EditorRegistres(QtWidgets.QWidget):
         self.TAULA.removeRow(self.TAULA.currentRow())
 
     def omplir_taula(self):
-        dades = obtenir_llistat_registres()
-        files = len(dades)
-        columnes = len(dades[0])
-        self.TAULA.setRowCount(files)
-        self.TAULA.setColumnCount(columnes)
-        rang_files = range(files)
-        rang_columnes = range(columnes)
-        desplegable_taula_alumnes = QComboBox()
-        desplegable_taula_alumnes.addItems(obtenir_llistat_alumnes())
-        desplegable_taula_categories = QComboBox()
-        desplegable_taula_categories.addItems(obtenir_categories())
-        for fila in rang_files:
-            for columna in rang_columnes:
-                valor = dades[fila][columna]
-                if isinstance(valor, datetime.date):
-                    nou_item = QTableWidgetItem()
-                    valor = QDate(valor)
-                    nou_item.setData(Qt.DisplayRole, valor)
-                    self.TAULA.setItem(fila, columna, nou_item)
-                else:
-                    nou_item = QTableWidgetItem(str(valor))
-                    self.TAULA.setItem(fila, columna, nou_item)
+        if obtenir_llistat_registres():
+            dades = obtenir_llistat_registres()
+            files = len(dades)
+            columnes = len(dades[0])
+            self.TAULA.setRowCount(files)
+            self.TAULA.setColumnCount(columnes)
+            rang_files = range(files)
+            rang_columnes = range(columnes)
+            desplegable_taula_alumnes = QComboBox()
+            desplegable_taula_alumnes.addItems(obtenir_llistat_alumnes())
+            desplegable_taula_categories = QComboBox()
+            desplegable_taula_categories.addItems(obtenir_categories())
+            for fila in rang_files:
+                for columna in rang_columnes:
+                    valor = dades[fila][columna]
+                    if isinstance(valor, datetime.date):
+                        nou_item = QTableWidgetItem()
+                        valor = QDate(valor)
+                        nou_item.setData(Qt.DisplayRole, valor)
+                        self.TAULA.setItem(fila, columna, nou_item)
+                    else:
+                        nou_item = QTableWidgetItem(str(valor))
+                        self.TAULA.setItem(fila, columna, nou_item)
 
     def alteracio_registres(self):
         """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
