@@ -230,7 +230,6 @@ class MainWindow(QMainWindow):
         """Actualitza els noms d'alumnes, i tambe els registres a visualitzar"""
         # Actualitzem els selectors d'alumnes:
         self.cap.refrescar_alumnes()
-        self.creacio.SELECTOR_ALUMNES.clear()
         if obtenir_llistat_alumnes():
             self.creacio.SELECTOR_ALUMNES.clear()
             self.creacio.SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes())
@@ -263,6 +262,9 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Informe generat correctament", 2000)
         elif self.informes_exportador.destinacio_informes is None:
             self.statusBar().showMessage("No s'ha seleccionat cap carpeta de destinacio.", 5000)
+        elif not self.informes_exportador.BOTON_INFORME.isEnabled():
+            self.statusBar().showMessage("No es poden crear informes sense haver introduit les dates d'inici dels "
+                                         "trimestres", 5000)
 
     def missatges_exportacio(self):
         """Configura el missatge a mostrar per a l'exportacio a format json"""
@@ -301,7 +303,7 @@ def sortir():
 
 
 app = QApplication(sys.argv)
-app.setWindowIcon(QIcon("icones/aplicacio.svg"))
+app.setWindowIcon(QIcon(f"{AjudantDirectoris(1).ruta_icones}/aplicacio.svg"))
 QLocale.setDefault(QLocale.Catalan)
 app.setStyle("Fusion")
 window = MainWindow()
