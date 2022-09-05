@@ -24,6 +24,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # Inicialització de la base de dades (es crea si no existeix)
+        self.missatge_infor = None
         execucio_previa = Comprovador(1).estat_global
         if execucio_previa is False:
             QMessageBox.information(self, "Avis", "S'ha detectat que no hi han dades previes. Per al correcte \n"
@@ -233,12 +234,12 @@ class MainWindow(QMainWindow):
         if obtenir_llistat_alumnes():
             self.creacio.SELECTOR_ALUMNES.clear()
             self.creacio.SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes())
+        if obtenir_llistat_alumnes_registrats():
             self.visualitzador.seleccio_alumnes.clear()
             self.visualitzador.seleccio_alumnes.addItem("* Selecciona un alumne *")
             self.informes_exportador.INFORMES_SELECTOR_ALUMNES.clear()
-            self.informes_exportador.INFORMES_SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes_registrats())
-        if obtenir_llistat_alumnes_registrats():
             self.visualitzador.seleccio_alumnes.addItems(obtenir_llistat_alumnes_registrats())
+            self.informes_exportador.INFORMES_SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes_registrats())
         # Actualitzem els registres, ja que la base de dades eliminara els registres d'un alumne.
         self.acces_registres.refrescar_registres()
         self.visualitzador.TAULA.clear()

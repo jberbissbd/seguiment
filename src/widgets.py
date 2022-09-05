@@ -842,10 +842,9 @@ class EditorRegistres(QtWidgets.QWidget):
         self.boto_desar = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/desar.svg"), text="Desar canvis")
         self.boto_eliminar = QPushButton(icon=QIcon(f"{AjudantDirectoris(1).ruta_icones}/edit-delete-symbolic.svg"),
                                          text="Eliminar")
+        self.noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
         if obtenir_llistat_registres() not in [None, False]:
             self.omplir_taula()
-
-        self.noms_columnes = ["ID", "Alumne", "Motiu", "Data", "Descripció"]
         self.TAULA.setHorizontalHeaderLabels(self.noms_columnes)
         # Possibilitat d'establir un ComboBox:
         # https://stackoverflow.com/questions/48105026/how-to-update-a-qtableview-cell-with-a-qcombobox-selection
@@ -878,6 +877,9 @@ class EditorRegistres(QtWidgets.QWidget):
 
     def omplir_taula(self):
         self.TAULA.setHorizontalHeaderLabels(self.noms_columnes)
+        self.TAULA.setColumnHidden(0, True)
+        self.TAULA.setWordWrap(True)
+        self.TAULA.resizeColumnsToContents()
         if obtenir_llistat_registres():
             dades = obtenir_llistat_registres()
             files = len(dades)
