@@ -31,7 +31,7 @@ from dateutil.parser import parser
 
 from agents_bbdd import AjudantDirectoris
 from agents_gui import Calendaritzador, CapEstudis, ExportadorImportador, CreadorInformes, Comptable, Classificador
-from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova, Registresguicomm
+from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova, Registresguicomm, Registres_gui_nou
 
 QLocale.setDefault(QLocale.Catalan)
 
@@ -131,6 +131,7 @@ class DelegatAlumnes(QItemDelegate):
 
     def setEditorData(self, editor, index):
         value = index.data()
+        return value
 
 
 class DelegatCategories(QItemDelegate):
@@ -155,12 +156,14 @@ class DelegatCategories(QItemDelegate):
 
     def setEditorData(self, editor, index):
         value = index.data()
+        return value
 
 
 class DialegSeleccioCarpeta(QFileDialog):
     def __init__(self):
         super().__init__()
         self.setFileMode(QFileDialog.Directory)
+        self.setWindowTitle("Selecciona una carpeta")
 
 
 class DialegAfegir(QDialog):
@@ -354,11 +357,13 @@ class CreadorRegistres(QtWidgets.QWidget):
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         if obtenir_llistat_alumnes():
             self.SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes())
+        self.resultat_creacio = None
         ETIQUETA_CATEGORIA = QLabel("Motiu:")
         ETIQUETA_CATEGORIA.setMaximumWidth(self.AMPLADA_ETIQUETES)
         self.SELECTOR_CATEGORIA = QComboBox()
-
         self.SELECTOR_CATEGORIA.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        if obtenir_categories():
+            self.SELECTOR_CATEGORIA.addItems(obtenir_categories())
         ETIQUETA_DATES = QLabel("Data:")
         self.SELECTOR_DATES = QDateEdit()
         self.SELECTOR_DATES.setDisplayFormat("dd/MM/yyyy")
@@ -386,6 +391,35 @@ class CreadorRegistres(QtWidgets.QWidget):
         DISTRIBUCIO.addWidget(ETIQUETA_DESCRIPCIO, 3, 0)
         DISTRIBUCIO.addWidget(self.EDICIO_DESCRIPCIO, 3, 1)
         DISTRIBUCIO.addWidget(self.BOTO_DESAR, 4, 0, 2, 0)
+        self.EDICIO_DESCRIPCIO.textChanged.connect(self.actualitzar_descripcio)
+        self.BOTO_DESAR.clicked.connect(self.desar_registre)
+
+    def actualitzar_descripcio(self):
+        """Bloqueja el boto desar si no hi ha descripcio."""
+        if self.EDICIO_DESCRIPCIO.toPlainText() == "" or obtenir_llistat_alumnes() is False:
+            self.BOTO_DESAR.setEnabled(False)
+        else:
+            self.BOTO_DESAR.setEnabled(True)
+
+    def desar_registre(self):
+        alumne = self.SELECTOR_ALUMNES.currentText()
+        categoria = self.SELECTOR_CATEGORIA.currentText()
+        data = self.SELECTOR_DATES.date().toString("yyyy-MM-dd")
+        descripcio = self.EDICIO_DESCRIPCIO.toPlainText()
+        self.EDICIO_DESCRIPCIO.clear()
+        self.BOTO_DESAR.setEnabled(False)
+        missatge_creacio_output = []
+        registre_individual = [alumne, categoria, data, descripcio]
+        for persona in CapEstudis(1).alumnat:
+            if persona.nom == registre_individual[0]:
+                registre_individual[0] = persona
+        for motiu in Classificador(1).categories:
+            if motiu.nom == registre_individual[1]:
+                registre_individual[1] = motiu
+        registre_individual = Registres_gui_nou(registre_individual[0], registre_individual[1], registre_individual[2],
+                                                registre_individual[3])
+        missatge_creacio_output.append(registre_individual)
+        self.resultat_creacio = Comptable(1).crear_registre(missatge_creacio_output)
 
 
 class EditorAlumnes(QtWidgets.QWidget):
@@ -393,6 +427,7 @@ class EditorAlumnes(QtWidgets.QWidget):
         self.confirmacio_eliminar = None
         self.dades_model_transformades = None
         self.dades_originals_transformades = None
+        self.titol_carpeta = "Selecciona carpeta"
         self.cap_edicio_alumnes = CapEstudis(1)
         QtWidgets.QWidget.__init__(self, parent)
         self.AMPLADA_ETIQUETES = 75
@@ -401,6 +436,7 @@ class EditorAlumnes(QtWidgets.QWidget):
         DISTRIBUCIO.setAlignment(Qt.AlignTop)
         self.setLayout(DISTRIBUCIO)
         self.TAULA_ALUMNES = QTableWidget(0, 2)
+        self.files_control_taula = None
         self.etiquetes_columnes = ["ID", "Alumne"]
         self.TAULA_ALUMNES.setColumnHidden(0, True)
         self.TAULA_ALUMNES.setHorizontalHeaderLabels(self.etiquetes_columnes)
@@ -452,9 +488,8 @@ class EditorAlumnes(QtWidgets.QWidget):
 
     def omplir_taula(self):
         dades_bbdd = obtenir_registres_alumnes()
-        for fila in range(self.TAULA_ALUMNES.rowCount()):
-            self.TAULA_ALUMNES.removeRow(fila)
         if dades_bbdd:
+            self.files_control_taula = len(dades_bbdd)
             self.afegir_alumnes_general(dades_bbdd)
 
     def alteracio_alumnes(self):
@@ -502,9 +537,10 @@ class EditorAlumnes(QtWidgets.QWidget):
             self.cap_edicio_alumnes.eliminar_alumnes(alumnes_eliminats)
         # Forcem el refresc de la taula:
         files_eliminar = list(range(self.TAULA_ALUMNES.rowCount()))
+        self.TAULA_ALUMNES.setHorizontalHeaderLabels(self.etiquetes_columnes)
         for fila in files_eliminar:
             self.TAULA_ALUMNES.removeRow(fila)
-        self.TAULA_ALUMNES.setHorizontalHeaderLabels(self.etiquetes_columnes)
+        self.TAULA_ALUMNES.setRowCount(0)
         self.omplir_taula()
 
     def afegir_alumne_boto(self):
@@ -516,12 +552,14 @@ class EditorAlumnes(QtWidgets.QWidget):
     def comprovacio_existent(self, noms_comprovar):
         """Comprova si una llista de noms conte alumnes ja existents i retorna els que no consten"""
         alumnes_existents = obtenir_llistat_alumnes()
-        noms_comprovats = [nom for nom in noms_comprovar if noms_comprovar not in alumnes_existents]
-        return noms_comprovats
+        if isinstance(alumnes_existents, list):
+            noms_comprovats = [nom for nom in noms_comprovar if nom not in alumnes_existents]
+            return noms_comprovats
+        return noms_comprovar
 
     def importar_arxius(self):
-        arxiu = DialegSeleccioCarpeta().getOpenFileNames(self, "Selecciona carpeta", filter="Arxius Excel o csv ("
-                                                                                            "*csv *.xls *.xlsx *.ods)")
+        arxiu = DialegSeleccioCarpeta().getOpenFileNames(self, self.titol_carpeta, filter="Arxius Excel o csv ("
+                                                                                          "*csv *.xls *.xlsx *.ods)")
         # Obtenim la ruta a l'arxiu en format string:
         arxiu = os.path.normpath(arxiu[0][0])
         nom_arxiu = os.path.basename(arxiu)
@@ -603,11 +641,14 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.importacio = None
+        self.icona_carpeta = "inode-directory-symbolic.svg"
+        self.titol_carpeta = "Selecciona carpeta"
         self.selcarpeta = None
         self.tipus_informes = None
         self.desti_json = None
         self.resultat_exportacio = None
         self.resultat_informes = None
+        self.dates_informe = Calendaritzador(1).info_dates
         self.AMPLADA_DESPLEGABLES = 200
         self.resize(300, 300)
         DISTRIBUCIO = QGridLayout()
@@ -663,19 +704,20 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
         self.INFORMES_SELECTOR_CATEGORIES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         # Creem els botons per a l'exportacio o importacio:
         self.export_seleccio_carpeta = QPushButton(
-            QIcon(os.path.join(AjudantDirectoris(1).ruta_icones, "inode-directory-symbolic.svg")), "")
+            QIcon(os.path.join(AjudantDirectoris(1).ruta_icones, self.icona_carpeta)), "")
         self.boto_exportar_json = QPushButton("Exportar")
         self.boto_exportar_json.setVisible(False)
         self.export_seleccio_carpeta.setVisible(False)
         self.import_seleccio_arxiu = QPushButton(
-            QIcon(os.path.join(AjudantDirectoris(1).ruta_icones, "inode-directory-symbolic.svg")), "Seleccioneu arxiu")
+            QIcon(os.path.join(AjudantDirectoris(1).ruta_icones, self.icona_carpeta)), "Seleccioneu arxiu")
         self.import_seleccio_arxiu.setVisible(False)
         # Creem els botons per a la creacio d'informes en Excel:
         self.BOTON_INFORME = QPushButton("Generar informe")
         self.BOTON_INFORME.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         self.BOTON_INFORME.setVisible(False)
+        self.BOTON_INFORME.setEnabled(False)
         self.SELECCIO_CARPETA = QPushButton(QIcon(os.path.join(AjudantDirectoris(1).ruta_icones,
-                                                               "inode-directory-symbolic.svg")), "")
+                                                               self.icona_carpeta)), "")
         self.SELECCIO_CARPETA.setIconSize(QSize(24, 24))
         self.SELECCIO_CARPETA.setVisible(False)
         # Distribuim els elements:
@@ -713,6 +755,7 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
         self.import_seleccio_arxiu.setVisible(False)
         if self.informe_seleccionat.checkedId() == 0:
             self.BOTON_INFORME.setVisible(True)
+            self.BOTON_INFORME.setEnabled(True)
             self.SELECCIO_CARPETA.setVisible(True)
             self.export_seleccio_carpeta.setVisible(False)
             self.tipus_informes = 0
@@ -724,6 +767,10 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
             self.BOTON_INFORME.setVisible(True)
             self.SELECCIO_CARPETA.setVisible(True)
             self.tipus_informes = 1
+            if isinstance(self.dates_informe, list) and len(self.dates_informe) == 2:
+                self.BOTON_INFORME.setEnabled(True)
+            else:
+                self.BOTON_INFORME.setEnabled(False)
             self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
             self.INFORMES_SELECTOR_ALUMNES.setVisible(True)
             self.INFORMES_SELECTOR_CATEGORIES.setCurrentIndex(0)
@@ -749,13 +796,13 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
             self.import_seleccio_arxiu.setVisible(True)
 
     def seleccionar_carpeta_exportacio_json(self):
-        self.desti_json = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
+        self.desti_json = DialegSeleccioCarpeta().getExistingDirectory(self, self.titol_carpeta)
         if self.desti_json:
             self.carpeta_exportacio = self.desti_json
 
     def seleccionar_carpeta_informes(self):
         """Funcio per a seleccionar la carpeta on es guardaran els informes."""
-        self.selcarpeta = DialegSeleccioCarpeta().getExistingDirectory(self, "Selecciona carpeta")
+        self.selcarpeta = DialegSeleccioCarpeta().getExistingDirectory(self, self.titol_carpeta)
         if self.selcarpeta:
             self.destinacio_informes = self.selcarpeta
 
@@ -779,8 +826,8 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
                 self.resultat_exportacio = False
 
     def importar(self):
-        self.importacio = DialegSeleccioCarpeta().getOpenFileNames(self, "Selecciona carpeta", filter="Arxius json("
-                                                                                                      "*.json)")
+        self.importacio = DialegSeleccioCarpeta().getOpenFileNames(self, self.titol_carpeta, filter="Arxius json("
+                                                                                                    "*.json)")
         arxius_importacio = self.importacio[0]
         ExportadorImportador(1).importacio(arxius_importacio)
 
@@ -903,6 +950,7 @@ class EditorRegistres(QtWidgets.QWidget):
                     else:
                         nou_item = QTableWidgetItem(str(valor))
                         self.TAULA.setItem(fila, columna, nou_item)
+            self.TAULA.resizeColumnsToContents()
 
     def alteracio_registres(self):
         """Funcio per a comparar els registres de la taula quan hi ha canvis i gestionar-los, tant si s'eliminen com
