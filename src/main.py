@@ -162,9 +162,7 @@ class MainWindow(QMainWindow):
         """Configurem el widget de creacio de registres"""
         # Creem el widget de creacio de nous registres:
         self.creacio = CreadorRegistres()
-        self.creacio.SELECTOR_CATEGORIA.addItems(obtenir_categories())
-        self.creacio.EDICIO_DESCRIPCIO.textChanged.connect(self.actualitzar_descripcio)
-        self.creacio.BOTO_DESAR.clicked.connect(self.desar_registre)
+        self.creacio.BOTO_DESAR.clicked.connect(self.missatge_registre)
         self.creacio.BOTO_DESAR.clicked.connect(self.senyal_registres_actualitzats)
 
     def widget_edicio_alumnes(self):
@@ -178,33 +176,12 @@ class MainWindow(QMainWindow):
         if self.editor_alumnes.INDICADOR_ELIMINAT:
             self.statusBar().showMessage("Alumnes eliminats", 2000)
 
-    def actualitzar_descripcio(self):
-        """Bloqueja el boto desar si no hi ha descripcio."""
-        if self.creacio.EDICIO_DESCRIPCIO.toPlainText() == "":
-            self.creacio.BOTO_DESAR.setEnabled(False)
-        self.creacio.BOTO_DESAR.setEnabled(True)
-
-    def desar_registre(self):
+    def missatge_registre(self):
         """Tracta els elements de la gui i transmet l'ordre de crear una nova entrada a la taula de registres"""
-        # Desar un nou registre:
-        alumne = self.creacio.SELECTOR_ALUMNES.currentText()
-        categoria = self.creacio.SELECTOR_CATEGORIA.currentText()
-        data = self.creacio.SELECTOR_DATES.date().toString("yyyy-MM-dd")
-        descripcio = self.creacio.EDICIO_DESCRIPCIO.toPlainText()
-        self.creacio.EDICIO_DESCRIPCIO.clear()
-        missatge_creacio_output = []
-        registre_individual = [alumne, categoria, data, descripcio]
-        for persona in self.cap.alumnat:
-            if persona.nom == registre_individual[0]:
-                registre_individual[0] = persona
-        for motiu in self.categoritzador.categories:
-            if motiu.nom == registre_individual[1]:
-                registre_individual[1] = motiu
-        registre_individual = Registres_gui_nou(registre_individual[0], registre_individual[1], registre_individual[2],
-                                                registre_individual[3])
-        missatge_creacio_output.append(registre_individual)
-        self.acces_registres.crear_registre(missatge_creacio_output)
-        self.statusBar().showMessage("Registre desat correctament", 2000)
+        if self.creacio.resultat_creacio is True:
+            self.statusBar().showMessage("Registre desat correctament", 2000)
+        elif self.creacio.EDICIO_DESCRIPCIO.toPlainText() == "":
+            self.statusBar().showMessage("S'ha de proporcionar una descripcio", 2000)
 
     def widget_visualitzacio(self):
         """Funcio per a que es mostri el widget per a visualitzar i editar els registres"""

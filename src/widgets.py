@@ -31,7 +31,7 @@ from dateutil.parser import parser
 
 from agents_bbdd import AjudantDirectoris
 from agents_gui import Calendaritzador, CapEstudis, ExportadorImportador, CreadorInformes, Comptable, Classificador
-from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova, Registresguicomm
+from formats import Alumne_comm, AlumneNou, DataGuiComm, DataNova, Registresguicomm, Registres_gui_nou
 
 QLocale.setDefault(QLocale.Catalan)
 
@@ -357,11 +357,13 @@ class CreadorRegistres(QtWidgets.QWidget):
         self.SELECTOR_ALUMNES.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
         if obtenir_llistat_alumnes():
             self.SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes())
+        self.resultat_creacio = None
         ETIQUETA_CATEGORIA = QLabel("Motiu:")
         ETIQUETA_CATEGORIA.setMaximumWidth(self.AMPLADA_ETIQUETES)
         self.SELECTOR_CATEGORIA = QComboBox()
-
         self.SELECTOR_CATEGORIA.setMaximumWidth(self.AMPLADA_DESPLEGABLES)
+        if obtenir_categories():
+            self.SELECTOR_CATEGORIA.addItems(obtenir_categories())
         ETIQUETA_DATES = QLabel("Data:")
         self.SELECTOR_DATES = QDateEdit()
         self.SELECTOR_DATES.setDisplayFormat("dd/MM/yyyy")
@@ -389,6 +391,35 @@ class CreadorRegistres(QtWidgets.QWidget):
         DISTRIBUCIO.addWidget(ETIQUETA_DESCRIPCIO, 3, 0)
         DISTRIBUCIO.addWidget(self.EDICIO_DESCRIPCIO, 3, 1)
         DISTRIBUCIO.addWidget(self.BOTO_DESAR, 4, 0, 2, 0)
+        self.EDICIO_DESCRIPCIO.textChanged.connect(self.actualitzar_descripcio)
+        self.BOTO_DESAR.clicked.connect(self.desar_registre)
+
+    def actualitzar_descripcio(self):
+        """Bloqueja el boto desar si no hi ha descripcio."""
+        if self.EDICIO_DESCRIPCIO.toPlainText() == "" or obtenir_llistat_alumnes() is False:
+            self.BOTO_DESAR.setEnabled(False)
+        else:
+            self.BOTO_DESAR.setEnabled(True)
+
+    def desar_registre(self):
+        alumne = self.SELECTOR_ALUMNES.currentText()
+        categoria = self.SELECTOR_CATEGORIA.currentText()
+        data = self.SELECTOR_DATES.date().toString("yyyy-MM-dd")
+        descripcio = self.EDICIO_DESCRIPCIO.toPlainText()
+        self.EDICIO_DESCRIPCIO.clear()
+        self.BOTO_DESAR.setEnabled(False)
+        missatge_creacio_output = []
+        registre_individual = [alumne, categoria, data, descripcio]
+        for persona in CapEstudis(1).alumnat:
+            if persona.nom == registre_individual[0]:
+                registre_individual[0] = persona
+        for motiu in Classificador(1).categories:
+            if motiu.nom == registre_individual[1]:
+                registre_individual[1] = motiu
+        registre_individual = Registres_gui_nou(registre_individual[0], registre_individual[1], registre_individual[2],
+                                                registre_individual[3])
+        missatge_creacio_output.append(registre_individual)
+        self.resultat_creacio = Comptable(1).crear_registre(missatge_creacio_output)
 
 
 class EditorAlumnes(QtWidgets.QWidget):
@@ -521,8 +552,10 @@ class EditorAlumnes(QtWidgets.QWidget):
     def comprovacio_existent(self, noms_comprovar):
         """Comprova si una llista de noms conte alumnes ja existents i retorna els que no consten"""
         alumnes_existents = obtenir_llistat_alumnes()
-        noms_comprovats = [nom for nom in noms_comprovar if nom not in alumnes_existents]
-        return noms_comprovats
+        if isinstance(alumnes_existents, list):
+            noms_comprovats = [nom for nom in noms_comprovar if nom not in alumnes_existents]
+            return noms_comprovats
+        return noms_comprovar
 
     def importar_arxius(self):
         arxiu = DialegSeleccioCarpeta().getOpenFileNames(self, self.titol_carpeta, filter="Arxius Excel o csv ("
