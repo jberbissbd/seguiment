@@ -25,6 +25,7 @@ a = Analysis(
     ('icones/aplicacio.icns','icones'),
     ('icones/aplicacio.ico','icones'),
     ('icones/aplicacio.svg','icones'),
+    ('icones/document-import-symbolic.svg','icones'),
     ('config.ini','.')],
     datas=[],
     hiddenimports=[],
