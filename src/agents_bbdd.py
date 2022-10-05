@@ -390,18 +390,18 @@ class RegistresBbdd(ModelDao):
             return False
         for element in input_creacio_registre:
             if is_dataclass(element) is False:
-                raise TypeError("Els registres a introdui han de tenir el format Registre_bbdd_nou")
+                raise TypeError("Els registres a introduir han de tenir el format Registre_bbdd_nou")
             self.cursor = self.conn.cursor()
             descripcio = element.descripcio.strip()
             try:
-                ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio)" \
-                                  f"VALUES ({element.alumne},{element.categoria},'{element.data}'," \
-                                  f"'{descripcio}')"
-                self.cursor.execute(ordre_registrar)
+                ordre_registrar = f"INSERT INTO {self.taula} (id_alumne,id_categoria,data,descripcio) VALUES (?,?,?,?)"
+                valors = (element.alumne, element.categoria, element.data, descripcio)
+                self.cursor.execute(ordre_registrar, valors)
                 self.conn.commit()
                 self.cursor.close()
                 return True
-            except sqlite3.OperationalError:
+            except sqlite3.OperationalError as e:
+                print(e)
                 return False
 
     def actualitzar_registre(self, missatge_actualitzar: list):
