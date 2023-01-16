@@ -413,10 +413,10 @@ class RegistresBbdd(ModelDao):
                 raise TypeError(ERROR_FORMAT)
             self.cursor = self.conn.cursor()
             try:
-                ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne = {element.alumne}," \
-                                    f" id_categoria = {element.categoria}, data = '{element.data}'," \
-                                    f" descripcio = '{element.descripcio}' WHERE id = {element.id} "
-                self.cursor.execute(ordre_actualitzar)
+                ordre_actualitzar = f"UPDATE {self.taula} SET id_alumne=?,id_categoria = ?,data=?,descripcio = ? " \
+                                        f" WHERE id = ?"
+                valors_actualitzacio =(element.alumne,element.categoria,element.data,element.descripcio,element.id)
+                self.cursor.execute(ordre_actualitzar,valors_actualitzacio)
                 self.conn.commit()
                 self.cursor.close()
                 return True
