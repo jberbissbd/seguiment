@@ -767,10 +767,7 @@ class GeneradorInformesExportImport(QtWidgets.QWidget):
             self.BOTON_INFORME.setVisible(True)
             self.SELECCIO_CARPETA.setVisible(True)
             self.tipus_informes = 1
-            if isinstance(self.dates_informe, list) and len(self.dates_informe) == 2:
-                self.BOTON_INFORME.setEnabled(True)
-            else:
-                self.BOTON_INFORME.setEnabled(False)
+            self.BOTON_INFORME.setEnabled(True)
             self.INFORMES_SELECTOR_CATEGORIES.setVisible(False)
             self.INFORMES_SELECTOR_ALUMNES.setVisible(True)
             self.INFORMES_SELECTOR_CATEGORIES.setCurrentIndex(0)
