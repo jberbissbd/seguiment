@@ -521,7 +521,8 @@ class CreadorInformes:
                             trimestre = self.data_a_trimestre(registre.data)
                             data_python = dateutil.parser.parse(registre.data)
                             data_format = data_python.strftime('%d/%m/%Y')
-                            text_afegir = f"{data_format} - {registre.descripcio}"
+                            registre_codi = str(registre.descripcio.encode('utf8').decode('utf8'))
+                            text_afegir = f"{data_format} - {str(registre_codi)}"
                             # Afegim la data i la descripció al diccionari provisional si coincideix amb la categoria:
                             # Si la categoria es diferent, afegim un element buit, per poder tractar-lo amb el pandas.
                             n_reg_trimestres = len(diccionari_provisional['Trimestre'])
@@ -554,7 +555,8 @@ class CreadorInformes:
                 nom_alumne = element[0]
                 dades = element[1]
                 ruta_exportacio = os.path.join(self.desti, f"{nom_alumne}.xlsx")
-                dades.to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
+                dades.to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True,
+                               encoding='utf8')
                 # Apliquem format als informes:
                 format_alumnes(ruta_exportacio)
             return True
