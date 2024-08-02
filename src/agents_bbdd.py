@@ -189,6 +189,7 @@ class AlumnesBbdd(ModelDao):
     def test_llegir_alumnes(self):
         """EXCLUSIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
         parametre: str = "id"
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
@@ -330,6 +331,7 @@ class RegistresBbdd(ModelDao):
     def test_id_registre(self):
         """Obtindre la llista d'id's de la taula de registres"""
         parametre: str = "id"
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
