@@ -244,7 +244,9 @@ class AlumnesBbdd(ModelDao):
         """Registra tots els alumnes de la llista de missatge registrar"""
         if not isinstance(missatge_registrar, list):
             raise TypeError("El missatge d'entrada ha de ser una llista")
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         for element in missatge_registrar:
+            self.cursor = self.conn.cursor()
             if is_dataclass(element) is False:
                 raise TypeError("El format de cada element de l'entrada ha de ser AlumneNou")
             nom_alumne = element.nom.strip()
@@ -253,10 +255,10 @@ class AlumnesBbdd(ModelDao):
                 ordre_registrar = f"INSERT INTO {self.taula} (nom_alumne) VALUES (?)"
                 self.cursor.execute(ordre_registrar, (nom_alumne,))
                 self.conn.commit()
-                self.cursor.close()
-
             except sqlite3.OperationalError:
+                self.cursor.close()
                 return False
+        self.cursor.close()
         return True
 
     def eliminar_alumne(self, missatge: list):
@@ -393,6 +395,7 @@ class RegistresBbdd(ModelDao):
         if not isinstance(input_creacio_registre, list):
             return False
         for element in input_creacio_registre:
+            self.conn = sqlite3.connect(self.ruta_bbdd)
             if is_dataclass(element) is False:
                 raise TypeError("Els registres a introduir han de tenir el format Registre_bbdd_nou")
             self.cursor = self.conn.cursor()
@@ -554,6 +557,7 @@ class CategoriesBbdd(ModelDao):
         :returns Fals si no es pot realitzar l'operacio.
         :raises TypeError si els formats d'entrada no son correctes.
         """
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         if not isinstance(missatge, list):
             raise TypeError("Les dades han de tenir format de llista")
