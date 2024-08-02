@@ -170,6 +170,7 @@ class AlumnesBbdd(ModelDao):
     def llegir_alumnes(self):
         """Llegeix les dades de la taula alumnes."""
         parametre: str = "id,nom_alumne"
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         try:
             llista_alumnes = []
@@ -354,6 +355,7 @@ class RegistresBbdd(ModelDao):
     def lectura_registres(self):
         """Llegeix tota la taula de registres"""
         parametre: str = "id,id_alumne,id_categoria,data,descripcio"
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula} ORDER BY data ASC"
@@ -498,6 +500,7 @@ class CategoriesBbdd(ModelDao):
     def lectura_categories(self):
         """Llegeix tota la taula de categories"""
         parametre: str = "id,categoria"
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         try:
             missatge = []
@@ -512,7 +515,7 @@ class CategoriesBbdd(ModelDao):
 
     def lectura_categories_individual_nom(self, llista_lectura):
         """Llegeix tota la taula de categories"""
-
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         if not isinstance(llista_lectura, list):
             raise TypeError("El missatge per a la lectura individual ha de ser una llista")
@@ -531,6 +534,7 @@ class CategoriesBbdd(ModelDao):
     def test_lectura_categories(self):
         """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
         parametre: str = "id"
+        self.conn = sqlite3.connect(self.ruta_bbdd)
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
