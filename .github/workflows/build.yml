@@ -14,7 +14,7 @@ jobs:
           - os: macos-latest
             TARGET: macos
             CMD_BUILD: >
-                pyinstaller --onefile -F -w -n src/build.spec -i icones/aplicacio.icns main.py &&
+                pyinstaller --onefile -F -w -n src/build.spec -i icones/aplicacio.icns src/main.py &&
                 cd dist/ &&
                 zip -r9 build . -i icones/aplicacio.icns  build.app/
             OUT_FILE_NAME: tutopy_macos
