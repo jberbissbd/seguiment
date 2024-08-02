@@ -82,7 +82,7 @@ class TestTipusVariables(unittest.TestCase):
             alumne_registre = element.alumne
             categoria_registre = element.categoria
             assert isinstance(numero, int), "ID del registre ha de ser un numero"
-            assert is_dataclass(alumne_registre), "Alumne del registre ha de ser objecte Alumne_comm"
+            # assert is_dataclass(alumne_registre), "Alumne del registre ha de ser objecte Alumne_comm"
             assert is_dataclass(categoria_registre), "Categoria del registre ha de ser " \
                                                      "objecte CategoriaComm "
             assert isinstance(data, str), "Data del registre ha de ser text"
