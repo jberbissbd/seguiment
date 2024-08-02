@@ -447,8 +447,8 @@ class CreadorInformes:
     def data_a_trimestre(self, data: str):
         """Retorna el trimestre de la data"""
         resultat = None
-        inici_segon = dateutil.parser.parse(self.dates[0].dia, dayfirst=True)
-        inici_tercer = dateutil.parser.parse(self.dates[1].dia, dayfirst=True)
+        inici_segon = dateutil.parser.parse(self.dates[0].dia)
+        inici_tercer = dateutil.parser.parse(self.dates[1].dia)
         data_calculada = dateutil.parser.parse(data)
         if data_calculada < inici_segon:
             resultat = 1
@@ -555,8 +555,7 @@ class CreadorInformes:
                 nom_alumne = element[0]
                 dades = element[1]
                 ruta_exportacio = os.path.join(self.desti, f"{nom_alumne}.xlsx")
-                dades.to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True,
-                               encoding='utf8')
+                dades.to_excel(ruta_exportacio, index=False, sheet_name="Informe", header=True, merge_cells=True)
                 # Apliquem format als informes:
                 format_alumnes(ruta_exportacio)
             return True
