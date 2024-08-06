@@ -13,7 +13,7 @@ jobs:
         include:
           - os: windows-latest
             TARGET: windows
-            CMD_BUILD: pyinstaller --onefile src/build.spec
+            CMD_BUILD: pyinstaller src/build.spec
             OUT_FILE_NAME: tutopy_windows
             ASSET_MIME: application/vnd.microsoft.portable-executable
 
