@@ -17,11 +17,10 @@ jobs:
             OUT_FILE_NAME: tutopy_windows
             ASSET_MIME: application/vnd.microsoft.portable-executable
 
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.12
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.12.4
     - name: Install dependencies
