@@ -11,14 +11,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
-            TARGET: macos
-            CMD_BUILD: >
-                pyinstaller --onefile -F -w -n src/build.spec -i icones/aplicacio.icns main.py &&
-                cd dist/ &&
-                zip -r9 build . -i icones/aplicacio.icns  build.app/
-            OUT_FILE_NAME: tutopy_macos
-            ASSET_MIME: application/zip
+
+          - os: ubuntu-latest
+            TARGET: linux
+            CMD_BUILD: pyinstaller --onefile src/build.spec
+            OUT_FILE_NAME: tutopy_linux
           - os: windows-latest
             TARGET: windows
             CMD_BUILD: pyinstaller --onefile src/build.spec
