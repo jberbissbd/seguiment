@@ -414,6 +414,7 @@ def format_alumnes(ruta_arxiu: str):
     for row in fulla.iter_rows(min_row=2, max_row=fulla.max_row, min_col=2, max_col=fulla.max_column):
         for cell in row:
             cell.style = continguts
+            fulla.row_dimensions[cell.row].height = None
     full_calcul.save(ruta_arxiu)
 
 
