@@ -11,7 +11,7 @@ from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFi
 
 from agents_bbdd import AlumnesBbdd, RegistresBbdd, CategoriesBbdd, DatesBbdd, Iniciador, Liquidador
 from formats import DataGuiComm, Registresguicomm, Alumne_comm, Registres_gui_nou, Registres_bbdd_nou
-from formats import RegistresBbddComm, AlumneNou, DataNova, CategoriaNova
+from formats import RegistresBbddComm, AlumneNou, CategoriaNova
 
 
 class Comprovador:
@@ -375,12 +375,12 @@ def format_alumnes(ruta_arxiu: str):
     # Definim els estils:
     titols_trimestres = NamedStyle(name="titols_trimestres")
     titols_trimestres.font = Font(size=12, name="Arial", bold=True)
-    titols_trimestres.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
+    titols_trimestres.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False)
     vora_simple = Side(border_style='thin')
     titols_trimestres.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
     titols = NamedStyle(name="titols")
     titols.font = Font(size=12, name="Arial", bold=True)
-    titols.alignment = Alignment(horizontal="left", vertical="top", wrap_text=False)
+    titols.alignment = Alignment(horizontal="center", vertical="top", wrap_text=False)
     vora_simple = Side(border_style='thin')
     titols.border = Border(top=vora_simple, right=vora_simple, bottom=vora_simple, left=vora_simple)
 
