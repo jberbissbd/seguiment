@@ -190,9 +190,13 @@ class MainWindow(QMainWindow):
 
     def senyal_canvi_registres(self):
         """Funcio per a que s'actualitzin els regitres a la gui quan aquests es modifiquen"""
+        # TODO: Afegir funcio per a que s'actualitzi el desplegable dels alumnes de la llista d'alumnes per a exportar
         self.acces_registres.refrescar_registres()
         self.visualitzador.TAULA.clear()
         self.visualitzador.omplir_taula()
+        self.informes_exportador.INFORMES_SELECTOR_ALUMNES.clear()
+        self.informes_exportador.INFORMES_SELECTOR_ALUMNES.addItem("*Tots*")
+        self.informes_exportador.INFORMES_SELECTOR_ALUMNES.addItems(obtenir_llistat_alumnes_registrats())
         self.visualitzador.seleccio_alumnes.clear()
         self.visualitzador.seleccio_alumnes.addItem("* Filtrar per alumne *")
         self.cap.refrescar_alumnes()
@@ -202,6 +206,7 @@ class MainWindow(QMainWindow):
         self.categoritzador.refrescar_categories_registres()
         self.visualitzador.seleccio_categories.addItem("* Filtrar per categoria *")
         self.visualitzador.seleccio_categories.addItems(obtenir_llistat_categories_registrades())
+
 
     def senyal_canvi_alumnes(self):
         """Actualitza els noms d'alumnes, i tambe els registres a visualitzar"""
@@ -232,6 +237,7 @@ class MainWindow(QMainWindow):
             self.informes_exportador.INFORMES_SELECTOR_CATEGORIES.addItems(obtenir_llistat_categories_registrades())
         self.informes_exportador.boto_exportar_json.clicked.connect(self.missatges_exportacio)
         self.informes_exportador.BOTON_INFORME.clicked.connect(self.missatges_informe)
+
 
     def missatges_informe(self):
         """Configura el missatge a mostrar en el moment d'exportar els informes"""
