@@ -5,6 +5,7 @@ hiddenimports += collect_submodules('dateutil')
 
 block_cipher = None
 
+files = [('config.ini','.')]
 
 a = Analysis(
     ['main.py'],
@@ -26,7 +27,7 @@ a = Analysis(
     ('icones/aplicacio.ico','icones'),
     ('icones/aplicacio.svg','icones'),
     ('icones/document-import-symbolic.svg','icones')],
-    datas=[],
+    datas=files,
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
