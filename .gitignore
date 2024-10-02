@@ -15,7 +15,7 @@ seguiment.sublime-project
 seguiment.sublime-workspace
 Pipfile
 Pipfile.lock
-/src/build/
+/src/build/*.*
 /src/htmlcov/
 /src/dades
 !/dist/
