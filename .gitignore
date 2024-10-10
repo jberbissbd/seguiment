@@ -20,3 +20,7 @@ Pipfile.lock
 /src/htmlcov/
 /src/dades
 !/dist/*.*
+/src/__pycache__
+/src/gui/__pycache__
+/src/agents/__pycache__
+/tests/tests.db
