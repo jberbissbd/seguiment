@@ -24,3 +24,5 @@ Pipfile.lock
 /src/gui/__pycache__
 /src/agents/__pycache__
 /tests/tests.db
+tests/unit/__pycache__
+tests/__pycache__
