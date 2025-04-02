@@ -1,0 +1,9 @@
+[project]
+name = "tutopy"
+version = "0.0.1"
+authors = [
+  { name="Jordi Berbis", email="jberbis@xtec.cat" },
+]
+
+[tool.setuptools]
+py-modules = []
