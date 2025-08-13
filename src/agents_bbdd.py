@@ -3,6 +3,7 @@ import os
 import sqlite3
 import sys
 from os.path import dirname
+from abc import ABC, abstractmethod
 
 from pandas.core.dtypes.inference import is_dataclass
 
@@ -58,15 +59,39 @@ class AjudantDirectoris:
         return ruta
 
 
+class DatabaseConnector(ABC):
+    """Abstraccio per a la creacio de connexions a la base de dades."""
+
+    @abstractmethod
+    def connect(self):
+        """Retorna una connexio a la base de dades."""
+        raise NotImplementedError
+
+
+class SQLiteConnector(DatabaseConnector):
+    """Connector concret per a SQLite."""
+
+    def __init__(self, database_path: str):
+        self.database_path = database_path
+
+    def connect(self):  # pragma: no cover - delega en sqlite3
+        return sqlite3.connect(self.database_path)
+
+
 class ModelDao:
     """Patro per als DAO's subsequents"""
 
-    def __init__(self, modebbdd: int):
+    def __init__(self, modebbdd: int, connector: DatabaseConnector | None = None):
         super().__init__()
         self.ruta_bbdd = AjudantDirectoris(modebbdd).base_dades
         self.taula = ""
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.connector = connector or SQLiteConnector(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
+
+    def _connect(self):
+        """Obte una nova connexio utilitzant el connector configurat."""
+        return self.connector.connect()
 
 
 class Liquidador(ModelDao):
@@ -147,7 +172,7 @@ class AlumnesBbdd(ModelDao):
     def crea_taula(self):
         """Crea la taula si no existeix"""
         try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             self.cursor = self.conn.cursor()
             ordre_creacio = "CREATE TABLE IF NOT EXISTS alumnes (id INTEGER PRIMARY KEY AUTOINCREMENT, nom_alumne BLOB)"
             self.cursor.execute(ordre_creacio)
@@ -172,7 +197,7 @@ class AlumnesBbdd(ModelDao):
     def llegir_alumnes(self):
         """Llegeix les dades de la taula alumnes."""
         parametre: str = "id,nom_alumne"
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         try:
             llista_alumnes = []
@@ -191,7 +216,7 @@ class AlumnesBbdd(ModelDao):
     def test_llegir_alumnes(self):
         """EXCLUSIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
         parametre: str = "id"
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
@@ -246,7 +271,7 @@ class AlumnesBbdd(ModelDao):
         """Registra tots els alumnes de la llista de missatge registrar"""
         if not isinstance(missatge_registrar, list):
             raise TypeError("El missatge d'entrada ha de ser una llista")
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         for element in missatge_registrar:
             self.cursor = self.conn.cursor()
             if is_dataclass(element) is False:
@@ -306,9 +331,9 @@ class RegistresBbdd(ModelDao):
     def crea_taula(self):
         """Crea la taula si no existeix"""
         try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             self.cursor = self.conn.cursor()
-            ordre_creacio = """CREATE TABLE IF NOT EXISTS "registres" ("id" INTEGER NOT NULL PRIMARY KEY 
+            ordre_creacio = """CREATE TABLE IF NOT EXISTS "registres" ("id" INTEGER NOT NULL PRIMARY KEY
             AUTOINCREMENT UNIQUE, "data"
             INTEGER date, "descripcio" BLOB, "id_alumne" INTEGER NOT NULL, "id_categoria" INTEGER NOT
             NULL, FOREIGN KEY("id_categoria") REFERENCES "categories"("id") ON DELETE CASCADE, FOREIGN KEY(
@@ -335,7 +360,7 @@ class RegistresBbdd(ModelDao):
     def test_id_registre(self):
         """Obtindre la llista d'id's de la taula de registres"""
         parametre: str = "id"
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
@@ -361,7 +386,7 @@ class RegistresBbdd(ModelDao):
     def lectura_registres(self):
         """Llegeix tota la taula de registres"""
         parametre: str = "id,id_alumne,id_categoria,data,descripcio"
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula} ORDER BY data ASC"
@@ -397,7 +422,7 @@ class RegistresBbdd(ModelDao):
         if not isinstance(input_creacio_registre, list):
             return False
         for element in input_creacio_registre:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             if is_dataclass(element) is False:
                 raise TypeError("Els registres a introduir han de tenir el format Registre_bbdd_nou")
             self.cursor = self.conn.cursor()
@@ -480,7 +505,7 @@ class CategoriesBbdd(ModelDao):
 
     def crea_taula(self):
         """Crea la taula si no existeix"""
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         try:
 
@@ -507,7 +532,7 @@ class CategoriesBbdd(ModelDao):
     def lectura_categories(self):
         """Llegeix tota la taula de categories"""
         parametre: str = "id,categoria"
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         try:
             missatge = []
@@ -522,7 +547,7 @@ class CategoriesBbdd(ModelDao):
 
     def lectura_categories_individual_nom(self, llista_lectura):
         """Llegeix tota la taula de categories"""
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         if not isinstance(llista_lectura, list):
             raise TypeError("El missatge per a la lectura individual ha de ser una llista")
@@ -541,7 +566,7 @@ class CategoriesBbdd(ModelDao):
     def test_lectura_categories(self):
         """EXCLUSIIU PER A TEST: OBTENIR EL REGISTRE MAXIM DE LA TAULA D'ALUMNES PER A FER TESTS"""
         parametre: str = "id"
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         try:
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
@@ -559,7 +584,7 @@ class CategoriesBbdd(ModelDao):
         :returns Fals si no es pot realitzar l'operacio.
         :raises TypeError si els formats d'entrada no son correctes.
         """
-        self.conn = sqlite3.connect(self.ruta_bbdd)
+        self.conn = self._connect()
         self.cursor = self.conn.cursor()
         if not isinstance(missatge, list):
             raise TypeError("Les dades han de tenir format de llista")
@@ -616,7 +641,7 @@ class CategoriesBbdd(ModelDao):
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
         try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             self.cursor = self.conn.cursor()
             buidar_categories = f"DROP {self.taula}"
             self.cursor.execute(buidar_categories)
@@ -640,7 +665,7 @@ class DatesBbdd(ModelDao):
     def crea_taula(self):
         """Crea la taula si no existeix"""
         try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             self.cursor = self.conn.cursor()
             ordre_creacio = "CREATE TABLE IF NOT EXISTS dates (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT)"
             self.cursor.execute(ordre_creacio)
@@ -655,7 +680,7 @@ class DatesBbdd(ModelDao):
         """Llegeix tota la taula de dates"""
         parametre: str = "id,data"
         try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             self.cursor = self.conn.cursor()
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
@@ -676,7 +701,7 @@ class DatesBbdd(ModelDao):
             if is_dataclass(item) is False:
                 raise TypeError("La nova data ha de la classe DataNova")
             try:
-                self.conn = sqlite3.connect(self.ruta_bbdd)
+                self.conn = self._connect()
                 self.cursor = self.conn.cursor()
                 ordre_registrar = f"INSERT INTO {self.taula} (data) VALUES ('{item.dia}')"
                 self.cursor.execute(ordre_registrar)
@@ -693,7 +718,7 @@ class DatesBbdd(ModelDao):
         parametre: str = "id"
 
         try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             self.cursor = self.conn.cursor()
             ordre_consultar = f"SELECT {parametre} FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
@@ -708,7 +733,7 @@ class DatesBbdd(ModelDao):
         :int:
         """
         try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             self.cursor = self.conn.cursor()
             ordre_consultar = f"SELECT MAX(id) FROM {self.taula}"
             consulta = self.cursor.execute(ordre_consultar).fetchall()
@@ -726,7 +751,7 @@ class DatesBbdd(ModelDao):
             if is_dataclass(element) is False:
                 raise TypeError("Els elements per actualitzar han de ser de la categoria DataGuiComm")
             try:
-                self.conn = sqlite3.connect(self.ruta_bbdd)
+                self.conn = self._connect()
                 self.cursor = self.conn.cursor()
                 data = element.dia
                 num_referencia = element.id
@@ -741,7 +766,7 @@ class DatesBbdd(ModelDao):
     def destruir_taula(self):
         """Eliminar tots els registres de la taula"""
         try:
-            self.conn = sqlite3.connect(self.ruta_bbdd)
+            self.conn = self._connect()
             self.cursor = self.conn.cursor()
             buidar_categories = f"DROP FROM {self.taula}"
             self.cursor.execute(buidar_categories)
