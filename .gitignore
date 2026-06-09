@@ -24,3 +24,8 @@ Pipfile.lock
 /src/gui/__pycache__
 /src/agents/__pycache__
 /tests/tests.db
+/tutopy/entities/__pycache__
+.pytest_cache
+tutopy.egg-info
+tests/__pycache__
+tests/entities/__pycache__/

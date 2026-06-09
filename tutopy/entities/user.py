@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+import datetime
 
 
 @dataclass
@@ -11,6 +12,14 @@ class Category:
     """
     id: int
     name: str
+
+
+    def __post_init__(self):
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if not isinstance(value, field.type):
+                raise ValueError(f'Expected {field.name} to be {field.type}, '
+                                f'got {repr(value)}')
 
 
 @dataclass
@@ -27,6 +36,14 @@ class Student:
     first_name: str
     last_name: str
     group_name: str
+
+
+    def __post_init__(self):
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if not isinstance(value, field.type):
+                raise ValueError(f'Expected {field.name} to be {field.type}, '
+                                f'got {repr(value)}')
 
     @property
     def full_name(self) -> str:
@@ -52,6 +69,17 @@ class Note:
     content: str
 
 
+    def __post_init__(self):
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if not isinstance(value, field.type):
+                raise ValueError(f'Expected {field.name} to be {field.type}, '
+                                f'got {repr(value)}')
+        try:
+            datetime.date.fromisoformat(self.date)
+        except ValueError:
+            raise ValueError("Incorrect data format, should be YYYY-MM-DD")
+
 @dataclass
 class NoteRecord:
     """Nota amb dades desnormalitzades per a visualització en taula.
@@ -67,3 +95,16 @@ class NoteRecord:
     content: str
     student_id: int
     category_id: int
+
+
+
+    def __post_init__(self):
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if not isinstance(value, field.type):
+                raise ValueError(f'Expected {field.name} to be {field.type}, '
+                                f'got {repr(value)}')
+        try:
+            datetime.date.fromisoformat(self.date)
+        except ValueError:
+            raise ValueError("Incorrect data format, should be YYYY-MM-DD")
