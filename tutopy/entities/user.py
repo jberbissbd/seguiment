@@ -28,13 +28,13 @@ class Student:
 
     Attributes:
         id: Identificador únic.
-        first_name: Nom de l'alumne.
-        last_name: Cognom o cognoms de l'alumne.
+        name: Nom de l'alumne.
+        surnames: Cognom o cognoms de l'alumne.
         group_name: Curs o grup al qual pertany (ex: "2n ESO A").
     """
     id: int
-    first_name: str
-    last_name: str
+    name: str
+    surnames: str
     group_name: str
 
 
@@ -47,8 +47,8 @@ class Student:
 
     @property
     def full_name(self) -> str:
-        """Retorna el nom complet: ``first_name`` + ``last_name``."""
-        return f"{self.first_name} {self.last_name}".strip()
+        """Retorna el nom complet: ``name`` + ``surnames``."""
+        return f"{self.name}"+" "+f"{self.surnames}".strip()
 
 
 @dataclass
@@ -119,7 +119,6 @@ class Contact:
         student_id: Referència a l'alumne.
         name: Nom de la persona
         description: Descripció, per a descriure la relació amb l'alumne.
-        category_id: Referència a la categoria.
         phone: Numero de telèfon de la persona de contacte.
         email: Correu electrònic de la persona de contacte.
     """

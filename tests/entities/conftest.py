@@ -1,5 +1,5 @@
 import pytest
-from tutopy.entities.user import Category, Student, Note, NoteRecord
+from tutopy.entities.user import Category, Student, Note, NoteRecord, Contact, StudentAnnotation
 
 
 
@@ -10,7 +10,7 @@ def categoria_dataclass():
 
 @pytest.fixture(scope='module')
 def estudiant_dataclass():
-    estudiant_prova = Student(1,"primer cognom","segon cognom","grup A")
+    estudiant_prova = Student(1,"Toni","Cognom 1 Cognom 2","grup A")
     return estudiant_prova
 
 @pytest.fixture(scope='module')
@@ -22,4 +22,9 @@ def nota_dataclass():
 def notes_dataclass():
     registres_prova = NoteRecord(1,"2026-01-01","Pep","A","Acadèmic","un registre d'exemple",1,1)
     return registres_prova
+
+@pytest.fixture(scope='module')
+def contacte_dataclass():
+    contacte_prova = Contact(1,1,"Pep","Pare","937982091","something@company.com")
+    return contacte_prova
 
