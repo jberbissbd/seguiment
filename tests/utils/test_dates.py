@@ -2,7 +2,7 @@ from tutopy.services.utils import DateConverter
 
 
 class Test_conversio():
-      
+
     def test_isotouser(self, iso_date_example):
         conversor = DateConverter()
         assert conversor.iso_to_display(iso_date_example) == "01/01/2026"

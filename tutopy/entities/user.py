@@ -13,13 +13,12 @@ class Category:
     id: int
     name: str
 
-
     def __post_init__(self):
         for field in fields(self):
             value = getattr(self, field.name)
             if not isinstance(value, field.type):
                 raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                f'got {repr(value)}')
+                                 f'got {repr(value)}')
 
 
 @dataclass
@@ -37,13 +36,12 @@ class Student:
     surnames: str
     group_name: str
 
-
     def __post_init__(self):
         for field in fields(self):
             value = getattr(self, field.name)
             if not isinstance(value, field.type):
                 raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                f'got {repr(value)}')
+                                 f'got {repr(value)}')
 
     @property
     def full_name(self) -> str:
@@ -68,17 +66,17 @@ class Note:
     date: str
     content: str
 
-
     def __post_init__(self):
         for field in fields(self):
             value = getattr(self, field.name)
             if not isinstance(value, field.type):
                 raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                f'got {repr(value)}')
+                                 f'got {repr(value)}')
         try:
             datetime.date.fromisoformat(self.date)
         except ValueError:
             raise ValueError("Incorrect data format, should be YYYY-MM-DD")
+
 
 @dataclass
 class NoteRecord:
@@ -96,14 +94,12 @@ class NoteRecord:
     student_id: int
     category_id: int
 
-
-
     def __post_init__(self):
         for field in fields(self):
             value = getattr(self, field.name)
             if not isinstance(value, field.type):
                 raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                f'got {repr(value)}')
+                                 f'got {repr(value)}')
         try:
             datetime.date.fromisoformat(self.date)
         except ValueError:
@@ -112,7 +108,8 @@ class NoteRecord:
 
 @dataclass
 class Contact:
-    """Persones de contacte associats a l'aulmne. Familiars o altres professionals externs al centre.
+    """Persones de contacte associats a l'aulmne. Familiars o altres
+    professionals externs al centre.
 
     Attributes:
         id: Identificador únic.
@@ -126,15 +123,16 @@ class Contact:
     student_id: int
     name: str
     description: str
-    phone: str =""
-    email: str=""
+    phone: str = ""
+    email: str = ""
 
     def __post_init__(self):
         for field in fields(self):
             value = getattr(self, field.name)
             if not isinstance(value, field.type):
                 raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                f'got {repr(value)}')
+                                 f'got {repr(value)}')
+
 
 @dataclass
 class StudentAnnotation:
@@ -154,4 +152,4 @@ class StudentAnnotation:
             value = getattr(self, field.name)
             if not isinstance(value, field.type):
                 raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                f'got {repr(value)}')
+                                 f'got {repr(value)}')
