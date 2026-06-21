@@ -1,3 +1,4 @@
+import pytest
 from tutopy.services.utils import DateConverter
 
 
@@ -15,3 +16,15 @@ class TestConversio():
         """Comprova que la conversió a format ISO es faci correctament"""
         conversor = DateConverter()
         assert conversor.display_to_iso(user_date_example) == "2026-01-01"
+
+    def test_error_isotouser(self):
+        """Verifica que genera Value Error si al conversor no se li proporciona una cadena de text"""
+        conversor_exemple_usuari = DateConverter()
+        with pytest.raises(ValueError):
+            a = conversor_exemple_usuari.display_to_iso(5)
+ 
+    def test_error_user_to_iso(self):
+        """Verifica que genera Value Error si al conversor no se li proporciona una cadena de text"""
+        conversor_exemple_iso = DateConverter()
+        with pytest.raises(ValueError):
+            b = conversor_exemple_iso.iso_to_display(5)
