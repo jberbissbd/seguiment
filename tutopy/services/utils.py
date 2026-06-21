@@ -17,3 +17,24 @@ class DateConverter():
                              "text")
         data_conversio = tuple(iso_date.split("/"))
         return f"{data_conversio[2]}-{data_conversio[1]}-{data_conversio[0]}"
+
+class AcademicCourseDeterminator():
+    """Determina el curs acadèmic"""
+
+    def curs_academic_singular(self,date: str) -> str:
+        """Determina el curs acadèmic a partir d'una data ISO.
+
+        El curs va de setembre a agost (ex: 2026-05-14 → 2025-2026).
+
+        Args:
+            date_str: Data en format ``YYYY-MM-DD``.
+
+        Returns:
+            Curs acadèmic en format ``"YYYY-YYYY"``, o cadena buida si
+            el format no és vàlid.
+        """
+        parts_curs = date.split("-")
+        year, month = int(parts_curs[0]),int(parts_curs[1])
+        if month>=9:
+            return f"{year}-{year+1}"
+        return f"{year-1}-{year}"
