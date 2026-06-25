@@ -110,11 +110,6 @@ class StudentNew:
                 raise ValueError(f'Expected {field.name} to be {field.type}, '
                                  f'got {repr(value)}')
 
-    @property
-    def full_name(self) -> str:
-        """Retorna el nom complet: ``name`` + ``surnames``."""
-        return f"{self.name}"+" "+f"{self.surnames}".strip()
-
 
 @dataclass
 class Note:

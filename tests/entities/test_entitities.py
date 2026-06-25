@@ -1,5 +1,5 @@
 import pytest
-from tutopy.entities.user import Category, Student, Note, NoteRecord, Contact, StudentAnnotation
+from tutopy.entities.user import Category, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation
 
 class TestCategories():
     """Tests de categoríes"""
@@ -21,9 +21,9 @@ class TestCategories():
 class TestEstudiants():
     """Col·lecció de tests per a estudiants"""
 
-    def test_blanc(self, estudiant_dataclass):
+    def test_blanc(self, estudiant_existent_dataclass):
         """Comprova els valors d'un Student per verificar que s'ha creat correctament"""
-        alumne_exemple = estudiant_dataclass
+        alumne_exemple = estudiant_existent_dataclass
         assert alumne_exemple.id == 1
         assert alumne_exemple.uuid == "a"
         assert alumne_exemple.name == "Toni"
@@ -31,19 +31,35 @@ class TestEstudiants():
         assert alumne_exemple.group_name == "grup A"
 
 
-    def test_nom_complet(self,estudiant_dataclass):
-        """Comprova que el nom complet es genera correctament"""
-        assert estudiant_dataclass.full_name == "Toni Cognom 1 Cognom 2"
+    def test_blanc_nou(self, estudiant_nou_dataclass):
+        """Comprova els valors d'un StudentNew per verificar que s'ha creat correctament"""
+        alumne_exemple = estudiant_nou_dataclass
+        assert alumne_exemple.name == "Toni"
+        assert alumne_exemple.surnames == "Cognom 1 Cognom 2"
+        assert alumne_exemple.group_name == "grup A"
 
-    def test_error_parametres(self):
+
+    def test_nom_complet(self,estudiant_existent_dataclass):
+        """Comprova que el nom complet es genera correctament"""
+        assert estudiant_existent_dataclass.full_name == "Toni Cognom 1 Cognom 2"
+
+    def test_error_parametres_existent(self):
         """Comprova que genera un error al intentar crear un estudiant amb la tipologia de 
         valors incorrecta.
         """
         with pytest.raises(ValueError):
             exemple_2=Student(id="a",uuid=5,name=2,surnames=3,group_name=4)
 
+    def test_error_parametres_nou(self):
+        """Comprova que genera un error al intentar crear un estudiant amb la tipologia de 
+        valors incorrecta.
+        """
+        with pytest.raises(ValueError):
+            exemple_3=StudentNew(name=2,surnames=3,group_name=4)
+
 
 class TestRegistreIndividual():
+    """Tests respecte als registres individuals"""
 
     def test_blanc(self, nota_dataclass):
         """Comprova els valors d'un Note per verificar que s'ha creat correctament"""

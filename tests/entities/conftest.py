@@ -1,5 +1,5 @@
 import pytest
-from tutopy.entities.user import Category, Student, Note, NoteRecord, Contact, StudentAnnotation
+from tutopy.entities.user import Category, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation
 
 
 
@@ -9,8 +9,15 @@ def categoria_dataclass():
     return categoria_prova
 
 @pytest.fixture(scope='module')
-def estudiant_dataclass():
+def estudiant_existent_dataclass():
+    """Estudiant d'exemple, ja existent"""
     estudiant_prova = Student(1,"a","Toni","Cognom 1 Cognom 2","grup A")
+    return estudiant_prova
+
+@pytest.fixture(scope='module')
+def estudiant_nou_dataclass():
+    """Fixture per a estudiants nous"""
+    estudiant_prova = StudentNew("Toni","Cognom 1 Cognom 2","grup A")
     return estudiant_prova
 
 @pytest.fixture(scope='module')
