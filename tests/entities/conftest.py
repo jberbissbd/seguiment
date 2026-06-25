@@ -10,7 +10,7 @@ def categoria_dataclass():
 
 @pytest.fixture(scope='module')
 def estudiant_dataclass():
-    estudiant_prova = Student(1,"Toni","Cognom 1 Cognom 2","grup A")
+    estudiant_prova = Student(1,"a","Toni","Cognom 1 Cognom 2","grup A")
     return estudiant_prova
 
 @pytest.fixture(scope='module')

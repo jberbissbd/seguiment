@@ -65,6 +65,7 @@ class Student:
 
     Attributes:
         id: Identificador únic.
+        uuid: uuid(4) de l'alumne, generat al vol.
         name: Nom de l'alumne.
         surnames: Cognom o cognoms de l'alumne.
         group_name: Curs o grup al qual pertany (ex: "2n ESO A").

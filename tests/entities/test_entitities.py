@@ -2,6 +2,7 @@ import pytest
 from tutopy.entities.user import Category, Student, Note, NoteRecord, Contact, StudentAnnotation
 
 class TestCategories():
+    """Tests de categoríes"""
 
     def test_blanc(self, categoria_dataclass):
         """Comprova que una 'Category' es crea correctament"""
@@ -18,11 +19,13 @@ class TestCategories():
             exemple_2=Category(id="a",name=2)
 
 class TestEstudiants():
+    """Col·lecció de tests per a estudiants"""
 
     def test_blanc(self, estudiant_dataclass):
         """Comprova els valors d'un Student per verificar que s'ha creat correctament"""
         alumne_exemple = estudiant_dataclass
         assert alumne_exemple.id == 1
+        assert alumne_exemple.uuid == "a"
         assert alumne_exemple.name == "Toni"
         assert alumne_exemple.surnames == "Cognom 1 Cognom 2"
         assert alumne_exemple.group_name == "grup A"
@@ -37,7 +40,7 @@ class TestEstudiants():
         valors incorrecta.
         """
         with pytest.raises(ValueError):
-            exemple_2=Student(id="a",name=2,surnames=3,group_name=4)
+            exemple_2=Student(id="a",uuid=5,name=2,surnames=3,group_name=4)
 
 
 class TestRegistreIndividual():
@@ -68,6 +71,7 @@ class TestRegistreIndividual():
             exemple_registre=Note(id=1,student_id=1,category_id=1,date="06-06-2026",content="a")
 
 class TestRegistresCombinats():
+    """Tests per als registres combinats"""
 
     def test_blanc(self, notes_dataclass):
         """Comprova els valors d'un NoteRecord per verificar que s'ha creat correctament"""
