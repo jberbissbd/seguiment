@@ -95,8 +95,10 @@ class TestRegistresCombinats():
 
 
 class TestContactes():
+    """Tests per a la dataclass 'Contact'"""
 
     def test_blanc(self, contacte_dataclass):
+        """Test que comprova que el contacte_dataclass es crea correctament"""
         assert contacte_dataclass.id == 1
         assert contacte_dataclass.student_id == 1
         assert contacte_dataclass.name == "Pep"
