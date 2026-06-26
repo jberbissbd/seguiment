@@ -1,5 +1,5 @@
 import pytest
-from tutopy.entities.user import Category, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation
+from tutopy.entities.user import Category,CategoryNew, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation, AcademicCourse, AcademicCourseNew
 
 class TestCategories():
     """Tests de categoríes"""
@@ -11,12 +11,43 @@ class TestCategories():
         assert exemple.name == "prova"
 
 
-    def test_error_parametres(self):
+    def test_error_parametres__categoria_existent(self):
         """Comprova que genera un error al intentar crear una categoria amb la tipologia de 
         valors incorrecta.
         """
         with pytest.raises(ValueError):
             exemple_2=Category(id="a",name=2)
+
+
+    def test_error_parametres__categoria_nova(self):
+        """Comprova que genera un error al intentar crear una categoria amb la tipologia de 
+        valors incorrecta.
+        """
+        with pytest.raises(ValueError):
+            exemple_2=CategoryNew(name=2)
+
+class TestCursosAcademics():
+    """Tests relacionats als cursos acadèmics"""
+    def test_blanc_existent(self,curs_existent_dataclass):
+        assert curs_existent_dataclass.id == 1
+        assert curs_existent_dataclass.course == "2026-2027"
+
+    def test_blanc_nou(self,curs_nou_dataclass):
+        """Testeig de la classe AcademicCourseNew"""
+        assert curs_nou_dataclass.course == "2026-2027"
+
+    def test_error_existent(self):
+        """Comprova que genera en error quan s'intenta crear amb tipologies de dades incrrectes"""
+        with pytest.raises(ValueError):
+            exemple_curs = AcademicCourse(id="a",course=5)
+
+    def test_error_nou(self):
+        """Comprova que genera en error quan s'intenta crear amb tipologies de dades incrrectes"""
+        with pytest.raises(ValueError):
+            exemple_curs_2 = AcademicCourseNew(course=5)
+
+
+
 
 class TestEstudiants():
     """Col·lecció de tests per a estudiants"""

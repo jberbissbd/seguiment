@@ -1,12 +1,24 @@
 import pytest
-from tutopy.entities.user import Category, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation
-
+from tutopy.entities.user import AcademicCourse, AcademicCourseNew, Category, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation
 
 
 @pytest.fixture(scope='module')
 def categoria_dataclass():
     categoria_prova = Category(1,"prova")
     return categoria_prova
+
+
+
+@pytest.fixture(scope='module')
+def curs_existent_dataclass():
+    curs_prova = AcademicCourse(id=1,course="2026-2027")
+    return curs_prova
+
+@pytest.fixture(scope='module')
+def curs_nou_dataclass():
+    curs_nou_prova= AcademicCourseNew("2026-2027")
+    return curs_nou_prova
+
 
 @pytest.fixture(scope='module')
 def estudiant_existent_dataclass():

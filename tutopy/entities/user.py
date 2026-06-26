@@ -20,7 +20,7 @@ class Category:
                 raise ValueError(f'Expected {field.name} to be {field.type}, '
                                  f'got {repr(value)}')
 
-                                
+
 @dataclass
 class CategoryNew:
     """Categoria per classificar les notes de seguiment.
@@ -49,6 +49,13 @@ class AcademicCourse:
     id: int
     course: str
 
+    def __post_init__(self):
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if not isinstance(value, field.type):
+                raise ValueError(f'Expected {field.name} to be {field.type}, '
+                                 f'got {repr(value)}')
+
 @dataclass
 class AcademicCourseNew:
     """Curs acadèmic, generat de manera automàtica a partir dels registres
@@ -57,6 +64,10 @@ class AcademicCourseNew:
         course: curs acadèmic, en format YYYY-YYYYY
     """
     course: str
+
+    def __post_init__(self):
+        if not isinstance(self.course, str):
+            raise ValueError(f'Expected course to be string got {type(self.course)}')
 
 
 @dataclass
