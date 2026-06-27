@@ -1,5 +1,5 @@
 import pytest
-from tutopy.entities.user import Category,CategoryNew, Student, StudentNew, Note, NoteNew, NoteRecord, Contact, ContactNew, StudentAnnotation, StudentAnnotationNew,AcademicCourse, AcademicCourseNew
+from tutopy.models.messaging import Category,CategoryNew, Student, StudentNew, Note, NoteNew, NoteRecord, Contact, ContactNew, StudentAnnotation, StudentAnnotationNew,AcademicCourse, AcademicCourseNew
 
 class TestCategories():
     """Tests de categoríes"""

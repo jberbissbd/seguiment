@@ -1,5 +1,5 @@
 import pytest
-from tutopy.entities.user import AcademicCourse, AcademicCourseNew, Category, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation
+from tutopy.models.messaging import AcademicCourse, AcademicCourseNew, Category, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation
 
 
 @pytest.fixture(scope='module')
