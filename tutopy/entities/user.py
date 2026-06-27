@@ -286,11 +286,9 @@ class StudentAnnotationNew:
     """Característiques o descriptores de l'alumne.
 
     Attributes:
-        id: Identificador únic.
         student_id: Referència a l'alumne.
         content: Descripció.
     """
-    id: int
     student_id: int
     content: str
 

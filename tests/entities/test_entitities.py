@@ -1,5 +1,5 @@
 import pytest
-from tutopy.entities.user import Category,CategoryNew, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation, AcademicCourse, AcademicCourseNew
+from tutopy.entities.user import Category,CategoryNew, Student, StudentNew, Note, NoteNew, NoteRecord, Contact, ContactNew, StudentAnnotation, StudentAnnotationNew,AcademicCourse, AcademicCourseNew
 
 class TestCategories():
     """Tests de categoríes"""
@@ -45,8 +45,6 @@ class TestCursosAcademics():
         """Comprova que genera en error quan s'intenta crear amb tipologies de dades incrrectes"""
         with pytest.raises(ValueError):
             exemple_curs_2 = AcademicCourseNew(course=5)
-
-
 
 
 class TestEstudiants():
@@ -101,14 +99,23 @@ class TestRegistreIndividual():
         assert nota_dataclass.content == "un registre d'exemple"
 
 
-    def test_error_parametres(self):
+    def test_error_parametres_existent(self):
+        """Comprova que genera un error al intentar crear un Note amb la tipologia de 
+        valors incorrecta.
+        """
+        with pytest.raises(ValueError):
+            exemple_registre=NoteNew(student_id="b",category_id="b",date=1,content=4)
+
+
+    def test_error_parametres_nou(self):
         """Comprova que genera un error al intentar crear un Note amb la tipologia de 
         valors incorrecta.
         """
         with pytest.raises(ValueError):
             exemple_registre=Note(id="a",student_id="b",category_id="b",date=1,content=4)
 
-    def test_format_data(self):
+
+    def test_format_data_existent(self):
         """Comprova que el camp de data tan sols admet una data convertible a format ISO
         >>>exemple_registre=Note(id=1,student_id=1,category_id=1,date="06-06-2026",content="a")
         Traceback(most recent call last:)
@@ -116,6 +123,16 @@ class TestRegistreIndividual():
         """
         with pytest.raises(ValueError):
             exemple_registre=Note(id=1,student_id=1,category_id=1,date="06-06-2026",content="a")
+
+    def test_format_data_nou(self):
+        """Comprova que el camp de data tan sols admet una data convertible a format ISO
+        >>>exemple_registre=Note(id=1,student_id=1,category_id=1,date="06-06-2026",content="a")
+        Traceback(most recent call last:)
+        ValueError
+        """
+        with pytest.raises(ValueError):
+            exemple_registre=NoteNew(student_id=1,category_id=1,date="06-06-2026",content="a")
+
 
 class TestRegistresCombinats():
     """Tests per als registres combinats"""
@@ -158,9 +175,32 @@ class TestContactes():
         assert contacte_dataclass.email == "something@company.com"
 
 
-    def test_error_parametres(self):
+    def test_error_parametres_existent(self):
         """Comprova que genera un error al intentar crear un Contacte amb la tipologia de 
         valors incorrecta.
         """
         with pytest.raises(ValueError):
             exemple_registre=Contact(id="a",student_id="b",name=2,description=2,phone=10,email=3)
+
+    def test_error_parametres_nou(self):
+        """Comprova que genera un error al intentar crear un Contacte amb la tipologia de 
+        valors incorrecta.
+        """
+        with pytest.raises(ValueError):
+            exemple_registre=ContactNew(student_id="b",name=2,description=2,phone=10,email=3)
+
+class TestAnotations():
+
+    def test_error_parametres_existent(self):
+        """Comprova que genera un error al intentar crear un Contacte amb la tipologia de 
+        valors incorrecta.
+        """
+        with pytest.raises(ValueError):
+            exemple_registre=StudentAnnotation(id="a",student_id="b",content=3)
+
+    def test_error_parametres_nou(self):
+        """Comprova que genera un error al intentar crear un Contacte amb la tipologia de 
+        valors incorrecta.
+        """
+        with pytest.raises(ValueError):
+            exemple_registre=StudentAnnotationNew(student_id="b",content=3)
