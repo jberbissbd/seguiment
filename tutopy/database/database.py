@@ -58,7 +58,7 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE
             );
-            CREATE TABLE IF NOT EXISTS academiccourse (
+            CREATE TABLE IF NOT EXISTS academic_courses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 course TEXT NOT NULL UNIQUE
             );
@@ -74,9 +74,11 @@ class Database:
                 student_id INTEGER NOT NULL,
                 category_id INTEGER NOT NULL,
                 date TEXT NOT NULL,
+                course INTEGER NOT NULL DEFAULT 0,
                 content TEXT NOT NULL,
                 FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-                FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+                FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
+                FOREIGN KEY (course_id) REFERENCES academic_courses(id) ON DELETE RESTRICT
             );
             CREATE TABLE IF NOT EXISTS contacts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

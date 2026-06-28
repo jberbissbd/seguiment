@@ -137,6 +137,7 @@ class Note:
     student_id: int
     category_id: int
     date: str
+    course: int
     content: str
 
     def __post_init__(self):
@@ -164,6 +165,7 @@ class NoteNew:
     student_id: int
     category_id: int
     date: str
+    course: int
     content: str
 
     def __post_init__(self):

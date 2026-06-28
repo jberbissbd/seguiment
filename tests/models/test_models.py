@@ -96,6 +96,7 @@ class TestRegistreIndividual():
         assert nota_dataclass.student_id == 1
         assert nota_dataclass.category_id == 1
         assert nota_dataclass.date == "2026-01-01"
+        assert nota_dataclass.course == 1
         assert nota_dataclass.content == "un registre d'exemple"
 
 
@@ -104,7 +105,7 @@ class TestRegistreIndividual():
         valors incorrecta.
         """
         with pytest.raises(ValueError):
-            exemple_registre=NoteNew(student_id="b",category_id="b",date=1,content=4)
+            exemple_registre=NoteNew(student_id="b",category_id="b",date=1,course="a",content=4)
 
 
     def test_error_parametres_nou(self):
@@ -112,7 +113,7 @@ class TestRegistreIndividual():
         valors incorrecta.
         """
         with pytest.raises(ValueError):
-            exemple_registre=Note(id="a",student_id="b",category_id="b",date=1,content=4)
+            exemple_registre=Note(id="a",student_id="b",category_id="b",course="a", date=1,content=4)
 
 
     def test_format_data_existent(self):
@@ -122,7 +123,7 @@ class TestRegistreIndividual():
         ValueError
         """
         with pytest.raises(ValueError):
-            exemple_registre=Note(id=1,student_id=1,category_id=1,date="06-06-2026",content="a")
+            exemple_registre=Note(id=1,student_id=1,category_id=1,date="06-06-2026",course=1,content="a")
 
     def test_format_data_nou(self):
         """Comprova que el camp de data tan sols admet una data convertible a format ISO
@@ -131,7 +132,7 @@ class TestRegistreIndividual():
         ValueError
         """
         with pytest.raises(ValueError):
-            exemple_registre=NoteNew(student_id=1,category_id=1,date="06-06-2026",content="a")
+            exemple_registre=NoteNew(student_id=1,category_id=1,date="06-06-2026",course=1,content="a")
 
 
 class TestRegistresCombinats():

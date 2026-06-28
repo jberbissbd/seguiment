@@ -34,7 +34,7 @@ def estudiant_nou_dataclass():
 
 @pytest.fixture(scope='module')
 def nota_dataclass():
-    registre_prova = Note(1,1,1,"2026-01-01","un registre d'exemple")
+    registre_prova = Note(1,1,1,"2026-01-01",1,"un registre d'exemple")
     return registre_prova
 
 @pytest.fixture(scope='module')
