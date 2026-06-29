@@ -6,9 +6,9 @@ class AcademicCourseDAO:
     def __init__(self, conn):
         self.conn = conn
 
-    def get_by_id(self, id: int) -> Optional[AcademicCourse]:
+    def get_by_id(self, id_course: int) -> Optional[AcademicCourse]:
         row = self.conn.execute(
-            "SELECT * FROM academic_courses WHERE id = ?", (id,)
+            "SELECT * FROM academic_courses WHERE id = ?", (id_course,)
         ).fetchone()
         return AcademicCourse(**row) if row else None
 
@@ -38,6 +38,6 @@ class AcademicCourseDAO:
             return existing
         return self.create(AcademicCourseNew(course=course))
 
-    def delete(self, id: int):
-        self.conn.execute("DELETE FROM academic_courses WHERE id = ?", (id,))
+    def delete(self, id_course: int):
+        self.conn.execute("DELETE FROM academic_courses WHERE id = ?", (id_course,))
         self.conn.commit()
