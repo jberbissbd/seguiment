@@ -1,6 +1,15 @@
 from dataclasses import dataclass, fields
 import datetime
 
+def _validate(dataclass_obj):
+    for field in fields(dataclass_obj):
+        value = getattr(dataclass_obj, field.name)
+        if not isinstance(value, field.type):
+            raise ValueError(
+                f"Expected {field.name} to be {field.type}, "
+                f"got {repr(value)}"
+            )
+
 
 @dataclass
 class Category:
@@ -14,11 +23,7 @@ class Category:
     name: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
 
 
 @dataclass
@@ -32,11 +37,7 @@ class CategoryNew:
     name: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
 
 @dataclass
 class AcademicCourse:
@@ -50,11 +51,7 @@ class AcademicCourse:
     course: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
 
 @dataclass
 class AcademicCourseNew:
@@ -66,8 +63,7 @@ class AcademicCourseNew:
     course: str
 
     def __post_init__(self):
-        if not isinstance(self.course, str):
-            raise ValueError(f'Expected course to be string got {type(self.course)}')
+        _validate(self)
 
 
 @dataclass
@@ -88,11 +84,7 @@ class Student:
     group_name: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
 
     @property
     def full_name(self) -> str:
@@ -115,11 +107,7 @@ class StudentNew:
     group_name: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
 
 
 @dataclass
@@ -141,11 +129,7 @@ class Note:
     content: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
         except ValueError:
@@ -169,11 +153,7 @@ class NoteNew:
     content: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
         except ValueError:
@@ -197,11 +177,7 @@ class NoteRecord:
     category_id: int
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
         except ValueError:
@@ -229,11 +205,7 @@ class Contact:
     email: str = ""
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
 
 @dataclass
 class ContactNew:
@@ -254,11 +226,7 @@ class ContactNew:
     email: str = ""
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
 
 
 
@@ -276,17 +244,12 @@ class StudentAnnotation:
     content: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
-
+        _validate(self)
 
 @dataclass
 class StudentAnnotationNew:
     """Característiques o descriptores de l'alumne.
-
+    Entrada nova.
     Attributes:
         student_id: Referència a l'alumne.
         content: Descripció.
@@ -295,8 +258,30 @@ class StudentAnnotationNew:
     content: str
 
     def __post_init__(self):
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if not isinstance(value, field.type):
-                raise ValueError(f'Expected {field.name} to be {field.type}, '
-                                 f'got {repr(value)}')
+        _validate(self)
+
+@dataclass
+class StudentDocument:
+    id: int
+    student_id: int
+    name: str
+    description: str
+    uuid_filename: str
+    original_filename: str
+    file_path: str = ""
+
+    def __post_init__(self):
+        _validate(self)
+
+
+@dataclass
+class StudentDocumentNew:
+    student_id: int
+    name: str
+    description: str
+    uuid_filename: str
+    original_filename: str
+    file_path: str = ""
+
+    def __post_init__(self):
+        _validate(self)
