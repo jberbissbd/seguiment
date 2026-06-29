@@ -4,7 +4,7 @@ class DateConverter():
     """Classe per a convertir dates entre formats"""
     def iso_to_display(self, iso_date: str):
         """Converteix dates del format YYYY-MM-DD a DD/MM/YYYY"""
-        if isinstance(iso_date, str) is False:
+        if not isinstance(iso_date, str):
             raise ValueError("L'input de la funció ha de ser una cadena de"
                              "text")
         elements_display = tuple(iso_date.split("-"))
@@ -12,7 +12,7 @@ class DateConverter():
 
     def display_to_iso(self, iso_date: str):
         """Converteix dates del format DD/MM/YYYY a YYYY-MM-DD"""
-        if isinstance(iso_date, str) is False:
+        if not isinstance(iso_date, str):
             raise ValueError("L'input de la funció ha de ser una cadena de"
                              "text")
         data_conversio = tuple(iso_date.split("/"))
