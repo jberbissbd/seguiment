@@ -3,12 +3,19 @@ from pathlib import Path
 from tutopy.database.daos import academic_course_dao
 
 
-class TestDatabase:
+class TestDatabasePaths:
+    """
+    Comprova que la base de dades es crea en el directori correcte
+    """
 
     def test_directori_correcte(self, db):
         assert Path(db.path).name == "database.db"
         assert Path(db.path).parent.exists()
 
+class TestDatabaseTables:
+    """
+    Comprova que les taules es creen correctament
+    """
     def test_creacio_taula_academic_courses(self, db):
         """Comprova que s'ha creat la taula academic_courses"""
         nom_taula = 'academic_courses'
