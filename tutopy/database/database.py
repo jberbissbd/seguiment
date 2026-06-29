@@ -3,7 +3,7 @@ import sqlite3
 import sys
 import uuid
 from typing import Optional
-from daos import (
+from .daos import (
     AcademicCourseDAO,
     CategoryDAO,
     StudentDAO,
