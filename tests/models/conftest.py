@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from tutopy.models.messaging import AcademicCourse, AcademicCourseNew, Category, Student, StudentNew, Note, NoteRecord, Contact, StudentAnnotation
 
 
@@ -7,6 +8,10 @@ def categoria_dataclass():
     categoria_prova = Category(1,"prova")
     return categoria_prova
 
+@pytest.fixture(scope='module')
+def uuid_test():
+    uuid_prova = str(uuid.uuid4())
+    return uuid_prova
 
 
 @pytest.fixture(scope='module')
@@ -27,9 +32,9 @@ def estudiant_existent_dataclass():
     return estudiant_prova
 
 @pytest.fixture(scope='module')
-def estudiant_nou_dataclass():
+def estudiant_nou_dataclass(uuid_test):
     """Fixture per a estudiants nous"""
-    estudiant_prova = StudentNew("Toni","Cognom 1 Cognom 2","grup A")
+    estudiant_prova = StudentNew(uuid_test, "Toni", "Cognom 1 Cognom 2", "grup A")
     return estudiant_prova
 
 @pytest.fixture(scope='module')

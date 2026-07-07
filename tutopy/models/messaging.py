@@ -97,11 +97,12 @@ class StudentNew:
     """Alumne del qual es fa el seguiment.
 
     Attributes:
-        id: Identificador únic.
+        uuid: Uuid, aleatori
         name: Nom de l'alumne.
         surnames: Cognom o cognoms de l'alumne.
         group_name: Curs o grup al qual pertany (ex: "2n ESO A").
     """
+    uuid: str
     name: str
     surnames: str
     group_name: str
@@ -125,7 +126,7 @@ class Note:
     student_id: int
     category_id: int
     date: str
-    course: int
+    course_id: int
     content: str
 
     def __post_init__(self):
@@ -149,7 +150,7 @@ class NoteNew:
     student_id: int
     category_id: int
     date: str
-    course: int
+    course_id: int
     content: str
 
     def __post_init__(self):
