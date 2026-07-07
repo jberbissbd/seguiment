@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from tutopy.database.daos import academic_course_dao
-
 
 class TestDatabasePaths:
     """
