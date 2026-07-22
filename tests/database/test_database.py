@@ -1,6 +1,6 @@
 from pathlib import Path
 import uuid
-from tutopy.models.messaging import CategoryNew, Category, AcademicCourse, AcademicCourseNew, Student, StudentNew, Note, NoteNew
+from tutopy.models.messaging import CategoryNew, Category, AcademicCourse, AcademicCourseNew, Student, StudentNew, Note, NoteNew, ContactNew, Contact, StudentAnnotation, StudentAnnotationNew
 
 class TestDatabasePaths:
     """
@@ -8,6 +8,9 @@ class TestDatabasePaths:
     """
 
     def test_directori_correcte(self, db):
+        """
+        Comprova els directoris per a la base de dades.
+        """
         assert Path(db.path).name == "database.db"
         assert Path(db.path).parent.exists()
 
@@ -86,10 +89,82 @@ class TestCreateRegisters:
             '4t A',
         )
 
-    def test_creacio_anotacions(self,db):
+    def test_creacio_registre(self,db):
         """Verifica la creació d'una anotacio"""
         anotacio_exemple = NoteNew(1,1,"2026-01-01",1,"Anotació exemple")
         db.notes.create(anotacio_exemple)
         registre = db.notes.get_all()[0]
         assert registre == Note(id=1,student_id=1,category_id=1,date='2026-01-01',course_id=1,content='Anotació exemple')
 
+
+    def test_creacio_contactes(self,db):
+        """Verifica la creació d'un contacte d'alumne"""
+        contacte_exemple = ContactNew(1,"Joan","Pare","999999999","correu@example.com")
+        db.contacts.create(contacte_exemple)
+        registre_contactes = db.contacts.get_by_student(1)[0]
+        assert registre_contactes == Contact(1,1,'Joan','Pare','999999999','correu@example.com')
+
+    def test_creacio_anotacions(self,db):
+        """Verifica la creació d'una anotació sobre un alumne"""
+        anotacio_exemple = StudentAnnotationNew(1,"Anotació prova")
+        db.annotations.create(anotacio_exemple)
+        registre_annotacions = db.annotations.get_by_student(1)[0]
+        assert registre_annotacions == StudentAnnotation(1,1,'Anotació prova')
+
+
+class TestUpdateRegisters:
+    """Comprovació sobre actualitzacions de registres."""
+
+    def test_categoria(self,db):
+        """Comprova que les categories s'actualitzen correctament"""
+        categoria_actualitzada = Category(1,'Acadèmic primària')
+        db.categories.rename(categoria_actualitzada)
+        assert db.categories.get_all()[0]== categoria_actualitzada
+
+    def test_alumne(self,db):
+        """Test per a comprovar que un alumne s'actualitza correctament"""
+        uuid_alumne_test = db.students.get_by_id(1).uuid
+        alumne_test_actualitzacio = Student(1,uuid_alumne_test, "Josep", "Garcia", "4t A")
+        db.students.update(alumne_test_actualitzacio)
+        assert db.students.get_all()[0] == Student(
+            1,
+            uuid_alumne_test,
+            'Josep',
+            'Garcia',
+            '4t A',
+        )
+    
+    def test_registres(self,db):
+        """Test per a comprovar que els registres de les anotacion s'actualitzen correctament"""
+        registre_actualitzat = Note(1,1,1,"2026-01-08",1,"Anotació exemple")
+        db.notes.update(registre_actualitzat)
+        assert db.notes.get_by_id(1) == registre_actualitzat
+
+   
+    def test_contactes(self,db):
+        """Test en què s'actualitza el telèfon d'un contacte"""
+        contacte_actualitzat = Contact(1,1,"Joan","Pare","999999998","correu@example.com")
+        db.contacts.update(contacte_actualitzat)
+        assert db.contacts.get_by_student(1)[0] == contacte_actualitzat
+
+    def test_anotacions(self,db):
+        """Test per a comprovar l'actualització dels descriptors d'alumnes"""
+        anotacio_actualitzada = StudentAnnotation(1,1,"Anotació actualitzada")
+        db.annotations.update(anotacio_actualitzada)
+        assert db.annotations.get_by_student(1)[0]==anotacio_actualitzada
+
+class TestReadingOperations:
+
+    def test_lectura_categories(self,db):
+        categories_registrades=db.categories.get_by_name("Acadèmic primària")
+        assert categories_registrades == Category(1,'Acadèmic primària')
+
+    def test_lectura_cursos_academics(self,db):
+        cursos_registrats_general = db.academic_courses.get_all()
+        curs_individual_id=db.academic_courses.get_by_id(1)
+        curs_individual_text = db.academic_courses.get_by_course("2025-2026")
+        nou_curs = AcademicCourse(2,'2026-2027')
+        assert isinstance(cursos_registrats_general,list) is True
+        assert curs_individual_id == AcademicCourse(1,"2025-2026")
+        assert curs_individual_text == AcademicCourse(1,"2025-2026")
+        assert db.academic_courses.get_or_create("2026-2027") == nou_curs

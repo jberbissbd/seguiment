@@ -25,7 +25,9 @@ class CategoryDAO:
         self.conn.commit()
         return Category(id=cur.lastrowid, name=data.name)
 
-    def rename(self, id: int, new_name: str):
+    def rename(self, data: Category):
+        id = data.id
+        new_name = data.name
         self.conn.execute(
             "UPDATE categories SET name = ? WHERE id = ?", (new_name, id)
         )
