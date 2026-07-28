@@ -21,6 +21,7 @@ class NoteDAO:
         self.academic_courses = academic_courses
 
     def _resolve_course_id(self, date_str: str) -> int:
+        """Crea el curs acadèmic si no existieix i, en tot cas, en retorna l'id"""
         year_str = _get_academic_year(date_str)
         if year_str and self.academic_courses:
             return self.academic_courses.get_or_create(year_str).id
@@ -86,7 +87,6 @@ class NoteDAO:
     def get_records(self) -> list[NoteRecord]:
         rows = self.conn.execute("""
             SELECT n.id AS note_id, n.date,
-                   COALESCE(ac.course, '') AS course_name,
                    s.name || ' ' || s.surnames AS student_name,
                    s.group_name,
                    c.name AS category_name, n.content,
@@ -94,7 +94,6 @@ class NoteDAO:
             FROM notes n
             JOIN students s ON n.student_id = s.id
             JOIN categories c ON n.category_id = c.id
-            LEFT JOIN academic_courses ac ON n.course_id = ac.id
             ORDER BY n.date DESC, n.id DESC
         """).fetchall()
         return [NoteRecord(**row) for row in rows]

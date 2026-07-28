@@ -1,6 +1,6 @@
 from pathlib import Path
-import uuid
-from tutopy.models.messaging import CategoryNew, Category, AcademicCourse, AcademicCourseNew, Student, StudentNew, Note, NoteNew, ContactNew, Contact, StudentAnnotation, StudentAnnotationNew
+import uuid, pytest
+from tutopy.models.messaging import CategoryNew, Category, AcademicCourse, AcademicCourseNew, Student, StudentNew, Note, NoteNew,NoteRecord, ContactNew, Contact, StudentAnnotation, StudentAnnotationNew
 
 class TestDatabasePaths:
     """
@@ -95,6 +95,7 @@ class TestCreateRegisters:
         db.notes.create(anotacio_exemple)
         registre = db.notes.get_all()[0]
         assert registre == Note(id=1,student_id=1,category_id=1,date='2026-01-01',course_id=1,content='Anotació exemple')
+        assert db.academic_courses.get_by_id(registre.course_id) == AcademicCourse(1,"2025-2026")
 
 
     def test_creacio_contactes(self,db):
@@ -156,10 +157,12 @@ class TestUpdateRegisters:
 class TestReadingOperations:
 
     def test_lectura_categories(self,db):
+        """Testeig de les operacions de lectura de les categories"""
         categories_registrades=db.categories.get_by_name("Acadèmic primària")
         assert categories_registrades == Category(1,'Acadèmic primària')
 
     def test_lectura_cursos_academics(self,db):
+        """Testeig de les operacions de lectura dels cursos"""
         cursos_registrats_general = db.academic_courses.get_all()
         curs_individual_id=db.academic_courses.get_by_id(1)
         curs_individual_text = db.academic_courses.get_by_course("2025-2026")
@@ -168,3 +171,57 @@ class TestReadingOperations:
         assert curs_individual_id == AcademicCourse(1,"2025-2026")
         assert curs_individual_text == AcademicCourse(1,"2025-2026")
         assert db.academic_courses.get_or_create("2026-2027") == nou_curs
+
+    def test_lectura_alumne(self,db):
+        alumne_cerca = Student(1,db.students.get_by_id(1).uuid,"Josep", "Garcia","4t A")
+        assert db.students.search("Josep")[0] == alumne_cerca
+        assert db.students.get_by_full_name("Josep","Garcia","4t A") == alumne_cerca
+        assert db.students.get_by_id(1) == alumne_cerca
+        assert db.students.get_groups()[0] == '4t A'
+
+    def test_lectura_anotacions(self,db):
+        alumne_cerca = Student(1,db.students.get_by_id(1).uuid,"Josep", "Garcia","4t A")
+        nota_registrada = Note(1,1,1,"2026-01-08",1,"Anotació exemple")
+        registre_combinat=NoteRecord(1,'2026-01-08','Josep Garcia','4t A','Acadèmic primària','Anotació exemple',1,1)
+        assert db.notes.get_by_student(alumne_cerca.id)[0] == nota_registrada
+        assert db.notes.exists(alumne_cerca.id,nota_registrada.category_id,'2026-01-08','Anotació exemple') is True
+        assert db.notes.get_records()[0]== registre_combinat
+
+class TestDeleting:
+    """Verifica les operacions d'eliminiació"""
+    
+    def test_categories_amb_registres(self,db):
+        """Verifica que es genera un error si s'intenten esborrar categories associades a registres"""
+        with pytest.raises(ValueError):
+            db.categories.delete(1)
+
+
+    def test_delete_notes(self,db):
+        """Verifica que els registres s'eliminen correctament"""
+        db.notes.delete(1)
+        assert db.notes.get_all()== []
+
+    def test_delete_categories(self,db):
+        """Verifica que les categories s'eliminen correctament"""
+        db.categories.delete(1)
+        assert db.categories.get_all() == []
+
+    def test_delete_annotations(self,db):
+        """Verifica que les anotacions s'eliminen correctament"""
+        db.annotations.delete(1)
+        assert db.annotations.get_by_student(1) == []
+
+    def test_delete_contacts(self,db):
+        """Verifica que els contactes s'eliminen correctament"""
+        db.contacts.delete(1)
+        assert db.contacts.get_by_student(1) == []
+
+    def test_delete_courses(self,db):
+        """Verifica que els cursos s'eliminen correctament"""
+        db.academic_courses.delete(1)
+        assert db.academic_courses.get_by_id(1) is None
+
+    def test_delete_students(self,db):
+        """Verifica que els estudiants s'eliminen correctament"""
+        db.students.delete(1)
+        assert db.students.get_by_id(1) is None
