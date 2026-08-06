@@ -9,7 +9,7 @@ def directori_proves():
     return str(Path(__file__).parent / "test_data")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def db(tmp_path_factory):
     db_dir = tmp_path_factory.mktemp("test_data")
     db_path = db_dir / "database.db"

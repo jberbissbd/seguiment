@@ -1,7 +1,6 @@
 import os
 import sqlite3
 import sys
-import uuid
 from typing import Optional
 from .daos import (
     AcademicCourseDAO,
