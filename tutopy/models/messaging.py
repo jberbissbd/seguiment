@@ -1,4 +1,5 @@
 from dataclasses import dataclass, fields
+from typing import Optional
 import datetime
 
 def _validate(dataclass_obj):
@@ -286,3 +287,65 @@ class StudentDocumentNew:
 
     def __post_init__(self):
         _validate(self)
+
+
+@dataclass
+class StudentGroupHistory:
+    """Històric de grups d'un alumne.
+    
+    Attributes:
+        id: Identificador únic.
+        student_id: Referència a l'alumne.
+        group_name: Nom del grup (ex: "4t A").
+        start_date: Data d'inici en format YYYY-MM-DD.
+        end_date: Data de final en format YYYY-MM-DD (NULL si és el grup actual).
+        academic_course_id: Referència al curs acadèmic (opcional).
+    """
+    id: int
+    student_id: int
+    group_name: str
+    start_date: str
+    end_date: Optional[str] = None
+    academic_course_id: Optional[int] = None
+
+    def __post_init__(self):
+        _validate(self)
+        try:
+            datetime.date.fromisoformat(self.start_date)
+        except ValueError:
+            raise ValueError("Incorrect start_date format, should be YYYY-MM-DD")
+        if self.end_date:
+            try:
+                datetime.date.fromisoformat(self.end_date)
+            except ValueError:
+                raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None")
+
+
+@dataclass
+class StudentGroupHistoryNew:
+    """Nou registre d'històric de grup d'un alumne.
+    
+    Attributes:
+        student_id: Referència a l'alumne.
+        group_name: Nom del grup (ex: "4t A").
+        start_date: Data d'inici en format YYYY-MM-DD.
+        end_date: Data de final en format YYYY-MM-DD (NULL si és el grup actual).
+        academic_course_id: Referència al curs acadèmic (opcional).
+    """
+    student_id: int
+    group_name: str
+    start_date: str
+    end_date: Optional[str] = None
+    academic_course_id: Optional[int] = None
+
+    def __post_init__(self):
+        _validate(self)
+        try:
+            datetime.date.fromisoformat(self.start_date)
+        except ValueError:
+            raise ValueError("Incorrect start_date format, should be YYYY-MM-DD")
+        if self.end_date:
+            try:
+                datetime.date.fromisoformat(self.end_date)
+            except ValueError:
+                raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None")

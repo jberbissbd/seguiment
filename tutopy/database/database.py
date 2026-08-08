@@ -10,6 +10,7 @@ from .daos import (
     ContactDAO,
     AnnotationDAO,
     DocumentDAO,
+    StudentGroupHistoryDAO,
 )
 
 
@@ -36,6 +37,7 @@ class Database:
         self.contacts: ContactDAO = None
         self.annotations: AnnotationDAO = None
         self.documents: DocumentDAO = None
+        self.student_group_history: StudentGroupHistoryDAO = None
 
     def connect(self):
         self.conn = sqlite3.connect(self.path)
@@ -63,6 +65,7 @@ class Database:
         self.contacts = ContactDAO(self.conn)
         self.annotations = AnnotationDAO(self.conn)
         self.documents = DocumentDAO(self.conn)
+        self.student_group_history = StudentGroupHistoryDAO(self.conn)
 
     def _create_tables(self):
         self.conn.executescript("""
@@ -116,5 +119,15 @@ class Database:
                 original_filename TEXT NOT NULL DEFAULT '',
                 file_path TEXT NOT NULL DEFAULT '',
                 FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS student_group_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL,
+                group_name TEXT NOT NULL,
+                academic_course_id INTEGER,
+                start_date TEXT NOT NULL,
+                end_date TEXT,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (academic_course_id) REFERENCES academic_courses(id) ON DELETE SET NULL
             );
         """)
