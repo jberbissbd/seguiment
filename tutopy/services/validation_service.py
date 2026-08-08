@@ -22,6 +22,6 @@ class ValidationService:
 
     def can_delete_category(self, category_id: int) -> bool:
         """Comprova si una categoria es pot eliminar (no té notes associades)."""
-        # A NoteDAO hi ha un mètode `exists` que comprova si hi ha notes amb aquesta categoria
-        # Podríem afegir un mètode similar a CategoryDAO o usar NoteDAO
-        return True  # Implementació pendent
+        if self.category_dao.is_deletable(category_id):
+            return True
+        return False

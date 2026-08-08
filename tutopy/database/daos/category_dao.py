@@ -39,6 +39,14 @@ class CategoryDAO:
         )
         self.conn.commit()
 
+    def is_deletable(self,id:int):
+        records = self.conn.execute(
+            "SELECT COUNT(*) FROM notes WHERE category_id = ?", (id,)
+        ).fetchone()[0]
+        if records is 0:
+            return True
+        return False
+    
     def delete(self, id: int):
         count = self.conn.execute(
             "SELECT COUNT(*) FROM notes WHERE category_id = ?", (id,)

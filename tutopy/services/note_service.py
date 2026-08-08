@@ -1,16 +1,17 @@
 from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.models.messaging import Note, NoteNew
-from tutopy.services.validation_service import validate_note
+from tutopy.services.validation_service import ValidationService
 
 
 class NoteService:
     def __init__(self, note_dao: NoteDAO, academic_course_dao: AcademicCourseDAO):
         self.note_dao = note_dao
         self.academic_course_dao = academic_course_dao
+        self.validate_note = ValidationService.validate_note
 
     def create_note(self, note_data: NoteNew):
-        validate_note(note_data)
+        self.validate_note(note_data: NoteNew)
         # Si course_id és 0, resol el curs a partir de la data
         if note_data.course_id == 0:
             note_data.course_id = self._resolve_academic_course(note_data.date)
