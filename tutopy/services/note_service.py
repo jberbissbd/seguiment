@@ -1,17 +1,19 @@
 from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
+from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.models.messaging import Note, NoteNew
 from tutopy.services.validation_service import ValidationService
+from tutopy.services.utils import AcademicCourseDeterminator
 
 
 class NoteService:
-    def __init__(self, note_dao: NoteDAO, academic_course_dao: AcademicCourseDAO):
+    def __init__(self, note_dao: NoteDAO, academic_course_dao: AcademicCourseDAO, category_dao: CategoryDAO):
         self.note_dao = note_dao
         self.academic_course_dao = academic_course_dao
-        self.validate_note = ValidationService.validate_note
+        self.validation_service = ValidationService(category_dao)
 
     def create_note(self, note_data: NoteNew):
-        self.validate_note(note_data: NoteNew)
+        self.validation_service.validate_note(note_data)
         # Si course_id és 0, resol el curs a partir de la data
         if note_data.course_id == 0:
             note_data.course_id = self._resolve_academic_course(note_data.date)
@@ -19,7 +21,6 @@ class NoteService:
 
     def _resolve_academic_course(self, date_str: str) -> int:
         """Resol el curs acadèmic a partir d'una data (ex: 2026-09-01 → 2026-2027)."""
-        from tutopy.services.utils import AcademicCourseDeterminator
         course_str = AcademicCourseDeterminator().curs_academic_singular(date_str)
         course = self.academic_course_dao.get_or_create(course_str)
         return course.id
