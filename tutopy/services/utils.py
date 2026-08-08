@@ -1,4 +1,16 @@
+import os
+import sys
 
+def get_app_dir() -> str:
+    """Retorna el directori on es troba l'executable o el script principal.
+
+    Funciona tant en desenvolupament com en executables PyInstaller (--onefile).
+    """
+    if getattr(sys, "frozen", False):
+        # PyInstaller bundle
+        return os.path.dirname(sys.executable)
+    # Desenvolupament: directori del projecte (arrel)
+    return os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 class DateConverter():
     """Classe per a convertir dates entre formats"""
