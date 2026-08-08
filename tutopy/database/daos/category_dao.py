@@ -5,6 +5,12 @@ from tutopy.models.messaging import Category, CategoryNew
 class CategoryDAO:
     def __init__(self, conn):
         self.conn = conn
+    
+    def _get_notes_count(self, id: int) -> int:
+        """Retorna el nombre de notes associades a una categoria."""
+        return self.conn.execute(
+        "SELECT COUNT(*) FROM notes WHERE category_id = ?", (id,)
+        ).fetchone()[0]
 
     def get_all(self) -> list[Category]:
         rows = self.conn.execute(
@@ -39,18 +45,11 @@ class CategoryDAO:
         )
         self.conn.commit()
 
-    def is_deletable(self,id:int):
-        records = self.conn.execute(
-            "SELECT COUNT(*) FROM notes WHERE category_id = ?", (id,)
-        ).fetchone()[0]
-        if records is 0:
-            return True
-        return False
+    def is_deletable(self,id:int) -> bool:
+        return self._get_notes_count(id) == 0
     
     def delete(self, id: int):
-        count = self.conn.execute(
-            "SELECT COUNT(*) FROM notes WHERE category_id = ?", (id,)
-        ).fetchone()[0]
+        count = self._get_notes_count(id)
         if count > 0:
             raise ValueError(
                 f"No es pot eliminar: {count} notes usen aquesta categoria"
