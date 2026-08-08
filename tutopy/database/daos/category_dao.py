@@ -18,6 +18,12 @@ class CategoryDAO:
         ).fetchone()
         return Category(**row) if row else None
 
+    def get_by_id(self, id: str) -> Optional[Category]:
+        row = self.conn.execute(
+            "SELECT * FROM categories WHERE id = ?", (id,)
+        ).fetchone()
+        return Category(**row) if row else None
+
     def create(self, data: CategoryNew) -> Category:
         cur = self.conn.execute(
             "INSERT INTO categories (name) VALUES (?)", (data.name,)
