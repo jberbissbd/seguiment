@@ -455,6 +455,29 @@ class TestDeleting:
         db.students.delete(alumne.id)
         assert db.students.get_by_id(alumne.id) is None
 
+    def test_is_deletable_with_no_dependencies(self, db):
+        """Verifica que is_deletable retorna True per categories sense notes associades"""
+        categoria = db.categories.create(CategoryNew("Esport"))
+        assert db.categories.is_deletable(categoria.id) is True
+
+    def test_is_deletable_with_dependencies(self, db):
+        """Verifica que is_deletable retorna False per categories amb notes associades"""
+        categoria = db.categories.create(CategoryNew("Esport"))
+        curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
+        uuid_alumne = str(uuid.uuid4())
+        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        
+        # Crear una nota que usa aquesta categoria
+        db.notes.create(NoteNew(
+            alumne.id,
+            categoria.id,
+            "2026-01-01",
+            curs.id,
+            "Anotació exemple"
+        ))
+        
+        assert db.categories.is_deletable(categoria.id) is False
+
 
 class TestDocumentOperations:
     """Tests per operacions amb documents d'estudiants"""
