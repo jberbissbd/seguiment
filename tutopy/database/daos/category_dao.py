@@ -18,7 +18,7 @@ class CategoryDAO:
         ).fetchone()
         return Category(**row) if row else None
 
-    def get_by_id(self, id: str) -> Optional[Category]:
+    def get_by_id(self, id: int) -> Optional[Category]:
         row = self.conn.execute(
             "SELECT * FROM categories WHERE id = ?", (id,)
         ).fetchone()
