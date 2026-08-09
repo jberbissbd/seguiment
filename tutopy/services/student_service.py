@@ -1,14 +1,18 @@
+from datetime import datetime
+from typing import Optional
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.contact_dao import ContactDAO
 from tutopy.database.daos.document_dao import DocumentDAO
 from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
-from tutopy.models.messaging import Student, StudentNew, Contact, ContactNew, StudentDocument, StudentDocumentNew, StudentGroupHistory
-from datetime import datetime
-from typing import Optional
+from tutopy.models.messaging import (Student, StudentNew, Contact, ContactNew, StudentDocument,
+    StudentDocumentNew, StudentGroupHistoryNew, StudentGroupHistory)
+from tutopy.services.utils import AcademicCourseDeterminator
+
 
 
 class StudentService:
-    def __init__(self, student_dao: StudentDAO, contact_dao: ContactDAO, document_dao: DocumentDAO, group_history_dao: StudentGroupHistoryDAO):
+    def __init__(self, student_dao: StudentDAO, contact_dao: ContactDAO,
+        document_dao: DocumentDAO, group_history_dao: StudentGroupHistoryDAO):
         self.student_dao = student_dao
         self.contact_dao = contact_dao
         self.document_dao = document_dao
@@ -65,7 +69,6 @@ class StudentService:
 
         # Resoldre el curs acadèmic si no s'especifica
         if academic_course_id is None:
-            from tutopy.services.utils import AcademicCourseDeterminator
             course_str = AcademicCourseDeterminator().curs_academic_singular(change_date)
             academic_course_id = self.group_history_dao.conn.execute(
                 "SELECT id FROM academic_courses WHERE course = ?", (course_str,)
@@ -73,7 +76,6 @@ class StudentService:
             academic_course_id = academic_course_id[0] if academic_course_id else None
 
         # Crear el nou registre
-        from tutopy.models.messaging import StudentGroupHistoryNew
         new_history = StudentGroupHistoryNew(
             student_id=student_id,
             group_name=new_group,
