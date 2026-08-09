@@ -18,7 +18,8 @@ def main() -> int:
     app = QApplication(sys.argv)
     database = Database(str(get_db_path())).connect()
     services = create_services(database)
-    window = MainWindow(services)
+    window = MainWindow()
+    # Els controladors rebran ``services`` quan s'implementi la UI funcional.
     app.aboutToQuit.connect(database.close)
     window.show()
     return app.exec()
