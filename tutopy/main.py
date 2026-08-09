@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication
 from tutopy.application import create_services
 from tutopy.controllers.main_controller import MainController
 from tutopy.controllers.student_controller import StudentController
+from tutopy.controllers.note_controller import NoteController
 from tutopy.database.database import Database
 from tutopy.services.directories import get_db_path
 from tutopy.ui.main_window import MainWindow
@@ -23,8 +24,16 @@ def main() -> int:
     window = MainWindow()
     main_controller = MainController(window)
     student_controller = StudentController(window, services.students)
+    note_controller = NoteController(
+        window,
+        services.notes,
+        services.students,
+        services.categories,
+        services.academic_courses,
+    )
     main_controller.start()
     student_controller.start()
+    note_controller.start()
     app.aboutToQuit.connect(database.close)
     window.show()
     return app.exec()

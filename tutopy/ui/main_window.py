@@ -98,3 +98,13 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.No,
         )
         return answer == QMessageBox.StandardButton.Yes
+
+    def confirm_note_deletion(self) -> bool:
+        answer = QMessageBox.question(
+            self,
+            "Eliminar nota",
+            "Vols eliminar aquesta nota de seguiment?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return answer == QMessageBox.StandardButton.Yes

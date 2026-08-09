@@ -139,6 +139,14 @@ La gestió d'alumnes de la fase 2 està implementada:
 - Canvis de grup sincronitzats amb l'historial.
 - Tractament independent d'alumnes homònims.
 
+Les notes de seguiment de la fase 3 estan implementades:
+
+- Taula de notes dins del detall de l'alumne.
+- Alta, edició i eliminació amb confirmació.
+- Resolució automàtica del curs acadèmic a partir de la data.
+- Filtres combinables per alumne, categoria, curs, dates i contingut.
+- Selectors d'alumnes que distingeixen homònims mitjançant el UUID.
+
 Encara no estan implementats:
 
 - Controladors CRUD específics.
@@ -217,15 +225,17 @@ Estat: completada.
 
 ### Fase 3: notes de seguiment
 
-- Taula basada en `NoteService.get_records()`.
-- Alta, edició i eliminació.
-- Filtres combinables:
+Estat: completada.
+
+- [x] Taula basada en `NoteService.get_records()`.
+- [x] Alta, edició i eliminació.
+- [x] Filtres combinables:
   - Alumne.
   - Categoria.
   - Curs acadèmic.
   - Data inicial i final.
   - Contingut.
-- Persistència dels filtres fins que l'usuari els netegi.
+- [x] Persistència dels filtres fins que l'usuari els netegi.
 
 ### Fase 4: dades complementàries
 

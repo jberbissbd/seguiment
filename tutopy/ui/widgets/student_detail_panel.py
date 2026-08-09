@@ -2,6 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFormLayout, QFrame, QLabel, QTabWidget, QVBoxLayout, QWidget,
 )
+from tutopy.ui.tabs.notes_tab import NotesTab
 
 
 class StudentDetailPanel(QFrame):
@@ -37,7 +38,10 @@ class StudentDetailPanel(QFrame):
         info_layout.addRow("UUID:", self.uuid_value)
         self.tabs.addTab(self.info_page, "Informació")
 
-        for name in self.TAB_NAMES[1:]:
+        self.notes_tab = NotesTab()
+        self.tabs.addTab(self.notes_tab, "Notes")
+
+        for name in self.TAB_NAMES[2:]:
             page = QWidget()
             page_layout = QVBoxLayout(page)
             label = QLabel(f"{name}: contingut pendent d'implementar")
