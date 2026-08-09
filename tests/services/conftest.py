@@ -25,7 +25,7 @@ def db(tmp_path_factory):
 @pytest.fixture
 def note_dao(db):
     """Retorna una instància de NoteDAO."""
-    return NoteDAO(db.conn, db.academic_courses)
+    return NoteDAO(db.conn)
 
 
 @pytest.fixture

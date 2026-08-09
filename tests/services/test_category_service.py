@@ -1,7 +1,7 @@
 import pytest
 from tutopy.services.category_service import CategoryService
 from tutopy.services.validation_service import ValidationService
-from tutopy.models.messaging import Category, CategoryNew
+from tutopy.models.messaging import AcademicCourseNew, Category, CategoryNew
 
 
 class TestCategoryService:
@@ -152,11 +152,12 @@ class TestCategoryService:
             surnames="User",
             group_name="1r A"
         ))
+        course = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         db.notes.create(NoteNew(
             student_id=student.id,
             category_id=category.id,
             date="2026-01-01",
-            course_id=0,
+            course_id=course.id,
             content="Test note"
         ))
         
@@ -189,11 +190,12 @@ class TestCategoryService:
             surnames="User",
             group_name="1r A"
         ))
+        course = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         db.notes.create(NoteNew(
             student_id=student.id,
             category_id=category.id,
             date="2026-01-01",
-            course_id=0,
+            course_id=course.id,
             content="Test note"
         ))
         

@@ -2,12 +2,13 @@ import uuid
 import pytest
 from tutopy.models.messaging import NoteNew, CategoryNew, AcademicCourseNew, StudentNew, Note
 from tutopy.services.note_service import NoteService
+from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 
 
 class TestNoteService:
     """Tests per a NoteService."""
 
-    def test_create_note_with_existing_course(self, note_dao, academic_course_dao, category_dao, db):
+    def test_create_note_with_existing_course(self, note_dao, academic_course_dao, category_dao, student_dao, db):
         """Testa la creació d'una nota amb un curs acadèmic existent."""
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Acadèmic"))
@@ -16,7 +17,7 @@ class TestNoteService:
         alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear el servei
-        service = NoteService(note_dao, academic_course_dao, category_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
         
         # Crear nota amb course_id existent
         note_data = NoteNew(
@@ -38,7 +39,7 @@ class TestNoteService:
         assert created_note.content == "Nota de prova"
         assert created_note.date == "2026-01-15"
 
-    def test_create_note_resolves_course_from_september_date(self, note_dao, academic_course_dao, category_dao, db):
+    def test_create_note_resolves_course_from_september_date(self, note_dao, academic_course_dao, category_dao, student_dao, db):
         """Testa que una nota amb course_id=0 i data de setembre resol el curs automàticament."""
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Conducta"))
@@ -46,7 +47,7 @@ class TestNoteService:
         alumne = db.students.create(StudentNew("Anna", "Martínez", "3r B"))
         
         # Crear el servei
-        service = NoteService(note_dao, academic_course_dao, category_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
         
         # Crear nota amb course_id=0 (per resoldre automàticament)
         note_data = NoteNew(
@@ -65,7 +66,7 @@ class TestNoteService:
         curs = db.academic_courses.get_by_id(created_note.course_id)
         assert curs.course == "2026-2027"
 
-    def test_create_note_resolves_course_from_january_date(self, note_dao, academic_course_dao, category_dao, db):
+    def test_create_note_resolves_course_from_january_date(self, note_dao, academic_course_dao, category_dao, student_dao, db):
         """Testa que una nota amb course_id=0 i data de gener resol el curs anterior."""
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Incidència"))
@@ -73,7 +74,7 @@ class TestNoteService:
         alumne = db.students.create(StudentNew("Pere", "López", "2n A"))
         
         # Crear el servei
-        service = NoteService(note_dao, academic_course_dao, category_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
         
         # Crear nota amb course_id=0 i data de gener
         note_data = NoteNew(
@@ -92,7 +93,7 @@ class TestNoteService:
         curs = db.academic_courses.get_by_id(created_note.course_id)
         assert curs.course == "2025-2026"
 
-    def test_get_notes_by_student(self, note_dao, academic_course_dao, category_dao, db):
+    def test_get_notes_by_student(self, note_dao, academic_course_dao, category_dao, student_dao, db):
         """Testa l'obtenció de notes per un alumne específic."""
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Acadèmic"))
@@ -128,7 +129,7 @@ class TestNoteService:
         ))
         
         # Crear el servei i obtenir notes
-        service = NoteService(note_dao, academic_course_dao, category_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
         notes = service.get_notes_by_student(alumne.id)
         
         # Verificar
@@ -139,17 +140,95 @@ class TestNoteService:
         assert "2026-01-01" in dates
         assert "2026-01-02" in dates
 
-    def test_get_notes_by_student_empty(self, note_dao, academic_course_dao, category_dao, db):
+    def test_get_notes_by_student_empty(self, note_dao, academic_course_dao, category_dao, student_dao, db):
         """Testa l'obtenció de notes per un alumne sense notes."""
         # Crear un alumne sense notes
         uuid_alumne = str(uuid.uuid4())
         alumne = db.students.create(StudentNew("Maria", "Sánchez", "1r A"))
         
         # Crear el servei
-        service = NoteService(note_dao, academic_course_dao, category_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
         
         # Obtenir notes
         notes = service.get_notes_by_student(alumne.id)
-        
+
         # Verificar
         assert notes == []
+
+    def test_crud_complet(self, note_dao, academic_course_dao, category_dao,
+        student_dao, db):
+        category = db.categories.create(CategoryNew("Acadèmic"))
+        student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        service = NoteService(
+            note_dao, academic_course_dao, category_dao, student_dao
+        )
+        created = service.create(NoteNew(
+            student.id, category.id, "2026-01-15", 0, "  Nota inicial  "
+        ))
+
+        assert created.content == "Nota inicial"
+        assert service.get_by_id(created.id) == created
+        assert service.get_all() == [created]
+
+        created.date = "2026-09-01"
+        created.course_id = 0
+        created.content = "Actualitzada"
+        updated = service.update(created)
+        assert db.academic_courses.get_by_id(updated.course_id).course == "2026-2027"
+
+        service.delete(created.id)
+        with pytest.raises(EntityNotFoundError):
+            service.get_by_id(created.id)
+
+    def test_rebutja_alumne_inexistent(self, note_dao, academic_course_dao,
+        category_dao, student_dao, db):
+        category = db.categories.create(CategoryNew("Acadèmic"))
+        service = NoteService(
+            note_dao, academic_course_dao, category_dao, student_dao
+        )
+
+        with pytest.raises(EntityNotFoundError, match="alumne"):
+            service.create(NoteNew(
+                999, category.id, "2026-01-15", 0, "Nota"
+            ))
+
+    def test_filtres_combinables(self, note_dao, academic_course_dao,
+        category_dao, student_dao, db):
+        academic = db.categories.create(CategoryNew("Acadèmic"))
+        behaviour = db.categories.create(CategoryNew("Conducta"))
+        student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        other = db.students.create(StudentNew("Anna", "Serra", "4t B"))
+        service = NoteService(
+            note_dao, academic_course_dao, category_dao, student_dao
+        )
+        service.create(NoteNew(
+            student.id, academic.id, "2026-01-10", 0, "Progrés notable"
+        ))
+        service.create(NoteNew(
+            student.id, behaviour.id, "2026-02-10", 0, "Incidència"
+        ))
+        service.create(NoteNew(
+            other.id, academic.id, "2026-01-20", 0, "Progrés"
+        ))
+
+        records = service.get_records({
+            "student_id": student.id,
+            "category_id": academic.id,
+            "date_from": "2026-01-01",
+            "date_to": "2026-01-31",
+            "content": "NOTABLE",
+        })
+
+        assert len(records) == 1
+        assert records[0].student_id == student.id
+        assert records[0].category_id == academic.id
+
+    def test_filtre_rebutja_interval_invertit(self, note_dao,
+        academic_course_dao, category_dao, student_dao, db):
+        service = NoteService(
+            note_dao, academic_course_dao, category_dao, student_dao
+        )
+        with pytest.raises(ValidationError, match="data inicial"):
+            service.get_records({
+                "date_from": "2026-02-01", "date_to": "2026-01-01"
+            })

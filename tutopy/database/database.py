@@ -61,7 +61,7 @@ class Database:
         self.academic_courses = AcademicCourseDAO(self.conn)
         self.categories = CategoryDAO(self.conn)
         self.students = StudentDAO(self.conn)
-        self.notes = NoteDAO(self.conn, self.academic_courses)
+        self.notes = NoteDAO(self.conn)
         self.contacts = ContactDAO(self.conn)
         self.annotations = AnnotationDAO(self.conn)
         self.documents = DocumentDAO(self.conn)
