@@ -35,3 +35,25 @@ def test_document_service_valida_relacions_i_nom(document_dao, student_dao, db):
         service.create(StudentDocumentNew(
             student.id, " ", "", "uuid.pdf", "informe.pdf"
         ))
+
+
+def test_document_service_importa_i_elimina_fitxer_gestionat(
+    document_dao, student_dao, db, tmp_path
+):
+    student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+    source = tmp_path / "informe.pdf"
+    source.write_bytes(b"contingut")
+    storage = tmp_path / "documents"
+    service = DocumentService(document_dao, student_dao, storage_dir=storage)
+
+    document = service.import_file(student.id, "Informe", "", str(source))
+
+    managed_file = storage / document.uuid_filename
+    assert managed_file.read_bytes() == b"contingut"
+    assert document.original_filename == "informe.pdf"
+    assert source.exists()
+
+    service.delete(document.id)
+
+    assert not managed_file.exists()
+    assert source.exists()

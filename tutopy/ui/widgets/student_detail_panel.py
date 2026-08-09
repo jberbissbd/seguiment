@@ -3,6 +3,10 @@ from PySide6.QtWidgets import (
     QFormLayout, QFrame, QLabel, QTabWidget, QVBoxLayout, QWidget,
 )
 from tutopy.ui.tabs.notes_tab import NotesTab
+from tutopy.ui.tabs.annotation_tab import AnnotationTab
+from tutopy.ui.tabs.contact_tab import ContactTab
+from tutopy.ui.tabs.document_tab import DocumentTab
+from tutopy.ui.tabs.history_tab import HistoryTab
 
 
 class StudentDetailPanel(QFrame):
@@ -40,15 +44,14 @@ class StudentDetailPanel(QFrame):
 
         self.notes_tab = NotesTab()
         self.tabs.addTab(self.notes_tab, "Notes")
-
-        for name in self.TAB_NAMES[2:]:
-            page = QWidget()
-            page_layout = QVBoxLayout(page)
-            label = QLabel(f"{name}: contingut pendent d'implementar")
-            label.setObjectName("mutedText")
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            page_layout.addWidget(label)
-            self.tabs.addTab(page, name)
+        self.annotation_tab = AnnotationTab()
+        self.contact_tab = ContactTab()
+        self.document_tab = DocumentTab()
+        self.history_tab = HistoryTab()
+        self.tabs.addTab(self.annotation_tab, "Descriptors")
+        self.tabs.addTab(self.contact_tab, "Contactes")
+        self.tabs.addTab(self.document_tab, "Documents")
+        self.tabs.addTab(self.history_tab, "Històric")
         self.tabs.hide()
         layout.addWidget(self.tabs, 1)
 

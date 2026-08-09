@@ -102,9 +102,8 @@ grup també ha d'actualitzar `students.group_name` dins la mateixa transacció.
 ### Composició
 
 `tutopy.application.create_services()` és l'arrel de composició de la capa de
-negoci. `tutopy.main` crea la base de dades, el contenidor de serveis i la
-finestra. Quan existeixin els controladors, `main` els construirà injectant-los
-els serveis i les vistes corresponents.
+negoci. `tutopy.main` crea la base de dades, el contenidor de serveis, la
+finestra i els controladors, als quals injecta els serveis corresponents.
 
 ## Estat actual
 
@@ -147,13 +146,13 @@ Les notes de seguiment de la fase 3 estan implementades:
 - Filtres combinables per alumne, categoria, curs, dates i contingut.
 - Selectors d'alumnes que distingeixen homònims mitjançant el UUID.
 
-Encara no estan implementats:
+Les dades complementàries de la fase 4 estan implementades:
 
-- Controladors CRUD específics.
-- Formularis i widgets CRUD.
-- Diàlegs.
-- Pestanyes de detall.
-- Estils globals definitius.
+- Pestanyes CRUD de descriptors, contactes i documents.
+- Historial de grups de només lectura dins del detall de l'alumne.
+- Pantalles CRUD de categories i cursos acadèmics.
+- Documents copiats a un directori gestionat per Tutopy.
+- Controladors connectats exclusivament als serveis de negoci.
 
 ## Tecnologies i requisits
 
@@ -173,8 +172,8 @@ tutopy/
 │   ├── main_controller.py
 │   ├── student_controller.py
 │   ├── note_controller.py
-│   ├── category_controller.py
-│   └── academic_course_controller.py
+│   ├── catalog_controller.py
+│   └── student_related_controller.py
 └── ui/
     ├── main_window.py
     ├── styles.py
@@ -182,13 +181,13 @@ tutopy/
     │   ├── sidebar.py
     │   ├── student_list.py
     │   ├── student_detail_panel.py
-    │   └── note_filter.py
+    │   └── crud_views.py
     ├── tabs/
     │   ├── information_tab.py
     │   ├── notes_tab.py
-    │   ├── annotations_tab.py
-    │   ├── contacts_tab.py
-    │   ├── documents_tab.py
+    │   ├── annotation_tab.py
+    │   ├── contact_tab.py
+    │   ├── document_tab.py
     │   └── history_tab.py
     └── dialogs/
         ├── student_dialog.py
@@ -196,8 +195,7 @@ tutopy/
         ├── annotation_dialog.py
         ├── contact_dialog.py
         ├── document_dialog.py
-        ├── category_dialog.py
-        └── academic_course_dialog.py
+        └── text_value_dialog.py
 ```
 
 ## Fases d'implementació de la UI
@@ -239,11 +237,14 @@ Estat: completada.
 
 ### Fase 4: dades complementàries
 
-- Descriptors generals.
-- Contactes.
-- Documents.
-- Categories.
-- Cursos acadèmics.
+Estat: completada.
+
+- [x] Descriptors generals.
+- [x] Contactes.
+- [x] Documents amb emmagatzematge gestionat.
+- [x] Historial de grups.
+- [x] Categories.
+- [x] Cursos acadèmics.
 
 ## Convencions visuals
 

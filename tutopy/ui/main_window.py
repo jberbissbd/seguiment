@@ -8,6 +8,7 @@ from tutopy.ui.styles import MAIN_STYLESHEET
 from tutopy.ui.widgets.sidebar import Sidebar
 from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
 from tutopy.ui.widgets.student_list import StudentList
+from tutopy.ui.widgets.crud_views import CrudListView
 
 
 class MainWindow(QMainWindow):
@@ -36,14 +37,12 @@ class MainWindow(QMainWindow):
 
         self.student_list = StudentList()
         self.student_detail = StudentDetailPanel()
+        self.category_view = CrudListView("Nova categoria")
+        self.course_view = CrudListView("Nou curs")
         self._pages = {
             "students": self._create_students_page(),
-            "categories": self._create_placeholder_page(
-                "Categories", "La gestió de categories s'implementarà en una fase posterior."
-            ),
-            "courses": self._create_placeholder_page(
-                "Cursos acadèmics", "La gestió de cursos s'implementarà en una fase posterior."
-            ),
+            "categories": self._create_management_page("Categories", self.category_view),
+            "courses": self._create_management_page("Cursos acadèmics", self.course_view),
         }
         for page in self._pages.values():
             self.content_stack.addWidget(page)
@@ -76,6 +75,16 @@ class MainWindow(QMainWindow):
         layout.addWidget(body, 1)
         return page
 
+    def _create_management_page(self, title: str, view: QWidget) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(24, 24, 24, 24)
+        heading = QLabel(title)
+        heading.setObjectName("sectionTitle")
+        layout.addWidget(heading)
+        layout.addWidget(view, 1)
+        return page
+
     def show_section(self, section: str) -> None:
         page = self._pages.get(section)
         if page is None:
@@ -104,6 +113,14 @@ class MainWindow(QMainWindow):
             self,
             "Eliminar nota",
             "Vols eliminar aquesta nota de seguiment?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return answer == QMessageBox.StandardButton.Yes
+
+    def confirm_deletion(self, entity_name: str) -> bool:
+        answer = QMessageBox.question(
+            self, "Confirmar eliminació", f"Vols eliminar {entity_name}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

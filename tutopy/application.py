@@ -8,6 +8,7 @@ from tutopy.services.contact_service import ContactService
 from tutopy.services.document_service import DocumentService
 from tutopy.services.note_service import NoteService
 from tutopy.services.student_service import StudentService
+from tutopy.services.directories import get_app_data_dir
 
 
 @dataclass(frozen=True)
@@ -48,5 +49,9 @@ def create_services(database: Database) -> ServiceContainer:
         academic_courses=AcademicCourseService(database.academic_courses),
         annotations=AnnotationService(database.annotations, database.students),
         contacts=ContactService(database.contacts, database.students),
-        documents=DocumentService(database.documents, database.students),
+        documents=DocumentService(
+            database.documents,
+            database.students,
+            storage_dir=get_app_data_dir() / "documents",
+        ),
     )
