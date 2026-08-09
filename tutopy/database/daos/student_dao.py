@@ -21,6 +21,13 @@ class StudentDAO:
         ).fetchone()
         return Student(**row) if row else None
 
+    def get_by_uuid(self, uuid: str) -> Optional[Student]:
+        row = self.conn.execute(
+            "SELECT id, uuid, name, surnames, group_name FROM students WHERE uuid = ?",
+            (uuid,),
+        ).fetchone()
+        return Student(**row) if row else None
+
     def create(self, data: StudentNew) -> Student:
         """Persisteix un alumne nou i li assigna el seu UUID intern."""
         uid = str(uuid_mod.uuid4())

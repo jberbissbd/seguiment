@@ -3,14 +3,15 @@ import pytest
 from datetime import datetime
 from tutopy.models.messaging import Student, StudentNew, Contact, ContactNew, StudentDocument, StudentDocumentNew, StudentGroupHistory, StudentGroupHistoryNew
 from tutopy.services.student_service import StudentService
+from tutopy.services.exceptions import EntityNotFoundError
 
 
 class TestStudentService:
     """Tests per a StudentService."""
 
-    def test_create_student_valid(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_create_student_valid(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa la creació d'un alumne vàlid."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Dades vàlides
         student_data = StudentNew(name="Jordi",
@@ -28,9 +29,9 @@ class TestStudentService:
         assert created_student.surnames == "Garcia López"
         assert created_student.group_name == "4t A"
 
-    def test_create_student_multiple(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_create_student_multiple(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa la creació de múltiples alumnes."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear diversos alumnes
         student1 = service.create_student(StudentNew(name="Anna",
@@ -46,9 +47,51 @@ class TestStudentService:
         assert student1.id != student2.id
         assert len(db.students.get_all()) == 2
 
-    def test_get_student_with_contacts_no_contacts(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_homonims_tenen_identitats_diferents(self, student_dao, contact_dao,
+        document_dao, group_history_dao, academic_course_dao, db):
+        service = StudentService(
+            student_dao, contact_dao, document_dao, group_history_dao,
+            academic_course_dao,
+        )
+        data = StudentNew("Alex", "Garcia", "2n A")
+
+        first = service.create(data)
+        second = service.create(StudentNew("Alex", "Garcia", "2n A"))
+
+        assert first.id != second.id
+        assert first.uuid != second.uuid
+        assert service.get_by_uuid(first.uuid) == first
+        assert service.get_by_uuid(second.uuid) == second
+        assert len(service.search("Alex Garcia")) == 2
+
+    def test_crud_i_cerca_a_traves_del_servei(self, student_dao, contact_dao,
+        document_dao, group_history_dao, academic_course_dao, db):
+        service = StudentService(
+            student_dao, contact_dao, document_dao, group_history_dao,
+            academic_course_dao,
+        )
+        created = service.create(StudentNew("  Joana ", " Serra ", " 1r B "))
+        original_uuid = created.uuid
+
+        assert service.get_by_id(created.id) == created
+        assert service.get_all() == [created]
+        assert service.get_groups() == ["1r B"]
+
+        created.name = "Joan"
+        created.group_name = "2n B"
+        updated = service.update(created)
+        assert updated.name == "Joan"
+        assert service.get_current_group(created.id) == "2n B"
+        assert updated.uuid == original_uuid
+
+        service.delete(created.id)
+        assert service.get_all() == []
+        with pytest.raises(EntityNotFoundError):
+            service.delete(created.id)
+
+    def test_get_student_with_contacts_no_contacts(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa l'obtenció d'un alumne sense contactes ni documents."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne sense contactes ni documents
         student_data = StudentNew(name="Maria",
@@ -68,9 +111,9 @@ class TestStudentService:
         assert student_with_contacts.contacts == []
         assert student_with_contacts.documents == []
 
-    def test_get_student_with_contacts_with_contacts(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_get_student_with_contacts_with_contacts(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa l'obtenció d'un alumne amb contactes associats."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne
         student_data = StudentNew(name="Jordi",
@@ -104,9 +147,9 @@ class TestStudentService:
         assert len(student_with_contacts.contacts) == 2
         assert all(c.student_id == created_student.id for c in student_with_contacts.contacts)
 
-    def test_get_student_with_contacts_with_documents(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_get_student_with_contacts_with_documents(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa l'obtenció d'un alumne amb documents associats."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne
         student_data = StudentNew(name="Pere",
@@ -142,9 +185,9 @@ class TestStudentService:
         assert len(student_with_contacts.documents) == 2
         assert all(d.student_id == created_student.id for d in student_with_contacts.documents)
 
-    def test_get_student_with_contacts_complete(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_get_student_with_contacts_complete(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa l'obtenció d'un alumne amb contactes i documents."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne
         student_data = StudentNew(name="Anna",
@@ -181,9 +224,9 @@ class TestStudentService:
         assert len(student_with_contacts.contacts) == 1
         assert len(student_with_contacts.documents) == 1
 
-    def test_get_student_with_contacts_nonexistent(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_get_student_with_contacts_nonexistent(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa l'obtenció d'un alumne inexistent."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Executar amb ID inexistent
         result = service.get_student_with_contacts(99999)
@@ -191,9 +234,9 @@ class TestStudentService:
         # Verificar
         assert result is None
 
-    def test_get_student_with_contacts_other_student_contacts(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_get_student_with_contacts_other_student_contacts(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa que els contactes i documents són només els de l'alumne especificat."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear dos alumnes
         student1 = db.students.create(StudentNew(name="Alumne1",
@@ -252,9 +295,9 @@ class TestStudentService:
 class TestStudentGroupHistory:
     """Tests per als mètodes de gestió de grups dinàmics."""
 
-    def test_change_student_group(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_change_student_group(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa el canvi de grup d'un alumne."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne
         student = db.students.create(StudentNew(name="Jordi",
@@ -282,10 +325,12 @@ class TestStudentGroupHistory:
         
         # Verificar que el grup actual és el nou
         assert service.get_current_group(student.id) == "4t A"
+        assert service.get_by_id(student.id).group_name == "4t A"
+        assert db.academic_courses.get_by_course("2025-2026") is not None
 
-    def test_change_student_group_multiple_times(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_change_student_group_multiple_times(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa múltiples canvis de grup d'un alumne."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne
         student = db.students.create(StudentNew(name="Anna",
@@ -316,10 +361,10 @@ class TestStudentGroupHistory:
         # Verificar el grup actual
         assert service.get_current_group(student.id) == "3r A"
 
-    def test_change_student_group_during_course(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_change_student_group_during_course(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa el canvi de grup DURANT el mateix curs."""
         from tutopy.models.messaging import AcademicCourseNew
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne i un curs
         student = db.students.create(StudentNew(name="Pere",
@@ -352,9 +397,9 @@ class TestStudentGroupHistory:
         assert history[1].end_date is None
         assert history[1].start_date == "2026-01-15"
 
-    def test_change_student_group_to_next_course(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_change_student_group_to_next_course(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa el canvi de grup AL CURS SEGÜENT."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne
         student = db.students.create(StudentNew(name="Maria",
@@ -377,9 +422,9 @@ class TestStudentGroupHistory:
         # Verificar el grup actual
         assert service.get_current_group(student.id) == "3r A"
 
-    def test_get_current_group_no_history(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_get_current_group_no_history(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa que get_current_group retorna None si no hi ha històric."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne sense històric de grups
         student = db.students.create(StudentNew(name="Test",
@@ -390,9 +435,9 @@ class TestStudentGroupHistory:
         # No hi ha registres a student_group_history
         assert service.get_current_group(student.id) is None
 
-    def test_get_group_history_empty(self, student_dao, contact_dao, document_dao, group_history_dao, db):
+    def test_get_group_history_empty(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa que get_group_history retorna llista buida si no hi ha històric."""
-        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
+        service = StudentService(student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao)
         
         # Crear un alumne sense històric
         student = db.students.create(StudentNew(name="Test",

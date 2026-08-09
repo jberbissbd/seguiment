@@ -79,7 +79,7 @@ class Database:
             );
             CREATE TABLE IF NOT EXISTS students (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                uuid TEXT NOT NULL,
+                uuid TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 surnames TEXT DEFAULT '',
                 group_name TEXT DEFAULT ''

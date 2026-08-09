@@ -10,7 +10,7 @@ ACADEMIC_COURSE_PATTERN = re.compile(r"^(\d{4})-(\d{4})$")
 
 
 class ValidationService:
-    def __init__(self, category_dao: CategoryDAO):
+    def __init__(self, category_dao: CategoryDAO = None):
         self.category_dao = category_dao
 
     def validate_student(self, student: StudentNew) -> None:
@@ -33,6 +33,8 @@ class ValidationService:
         self.positive_id(note.category_id, "L'identificador de la categoria no és vàlid.")
         if note.course_id < 0:
             raise ValidationError("L'identificador del curs acadèmic no és vàlid.")
+        if self.category_dao is None:
+            raise RuntimeError("Cal un CategoryDAO per validar notes.")
         if not self.category_dao.get_by_id(note.category_id):
             raise EntityNotFoundError(
                 f"La categoria amb ID {note.category_id} no existeix."
