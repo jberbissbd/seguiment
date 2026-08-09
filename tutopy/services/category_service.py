@@ -2,6 +2,9 @@ from typing import Optional
 from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.models.messaging import Category, CategoryNew
 from tutopy.services.validation_service import ValidationService
+from tutopy.services.exceptions import (
+    DuplicateEntityError, EntityInUseError, EntityNotFoundError,
+)
 
 
 class CategoryService:
@@ -11,9 +14,9 @@ class CategoryService:
     i lògica de negoci addicional.
     """
 
-    def __init__(self, category_dao: CategoryDAO, validation_service: ValidationService):
+    def __init__(self, category_dao: CategoryDAO, validation_service: ValidationService = None):
         self.category_dao = category_dao
-        self.validation_service = validation_service
+        self.validation_service = validation_service or ValidationService(category_dao)
 
     def get_all(self) -> list[Category]:
         """Retorna totes les categories ordenades per nom."""
@@ -39,9 +42,12 @@ class CategoryService:
         Raises:
             ValueError: Si ja existeix una categoria amb el mateix nom.
         """
-        if self.category_dao.get_by_name(data.name):
-            raise ValueError(f"Ja existeix una categoria amb el nom '{data.name}'")
-        return self.category_dao.create(data)
+        name = self.validation_service.required_text(
+            data.name, "El nom de la categoria no pot estar buit."
+        )
+        if self.category_dao.get_by_name(name):
+            raise DuplicateEntityError(f"Ja existeix una categoria amb el nom '{name}'")
+        return self.category_dao.create(CategoryNew(name))
 
     def rename(self, category: Category) -> None:
         """Renomena una categoria existent amb validació.
@@ -54,17 +60,17 @@ class CategoryService:
         """
         existing = self.category_dao.get_by_id(category.id)
         if not existing:
-            raise ValueError(f"No existeix la categoria amb ID {category.id}")
+            raise EntityNotFoundError(f"No existeix la categoria amb ID {category.id}")
+        category.name = self.validation_service.required_text(
+            category.name, "El nom de la categoria no pot estar buit."
+        )
         
         # Verificar que no hi hagi una altra categoria amb el mateix nom
         existing_with_name = self.category_dao.get_by_name(category.name)
         if existing_with_name and existing_with_name.id != category.id:
-            raise ValueError(f"Ja existeix una categoria amb el nom '{category.name}'")
-        
-        # Verificar que es pot eliminar (és a dir, que es pot modificar)
-        if not self.validation_service.can_delete_category(category.id):
-            raise ValueError("No es pot renomenar: la categoria té notes associades")
-            
+            raise DuplicateEntityError(
+                f"Ja existeix una categoria amb el nom '{category.name}'"
+            )
         self.category_dao.rename(category)
 
     def can_delete(self, id: int) -> bool:
@@ -87,6 +93,8 @@ class CategoryService:
         Raises:
             ValueError: Si la categoria té notes associades.
         """
+        if self.category_dao.get_by_id(id) is None:
+            raise EntityNotFoundError(f"No existeix la categoria amb ID {id}")
         if not self.validation_service.can_delete_category(id):
-            raise ValueError("No es pot eliminar: la categoria té notes associades")
+            raise EntityInUseError("No es pot eliminar: la categoria té notes associades")
         self.category_dao.delete(id)

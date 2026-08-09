@@ -1,3 +1,4 @@
+from typing import Optional
 from tutopy.models.messaging import Contact, ContactNew
 
 
@@ -11,6 +12,12 @@ class ContactDAO:
             (student_id,),
         ).fetchall()
         return [Contact(**row) for row in rows]
+
+    def get_by_id(self, contact_id: int) -> Optional[Contact]:
+        row = self.conn.execute(
+            "SELECT * FROM contacts WHERE id = ?", (contact_id,)
+        ).fetchone()
+        return Contact(**row) if row else None
 
     def create(self, data: ContactNew) -> Contact:
         cur = self.conn.execute(

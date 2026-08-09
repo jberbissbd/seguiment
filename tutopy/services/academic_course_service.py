@@ -1,6 +1,10 @@
 from typing import Optional
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.models.messaging import AcademicCourse, AcademicCourseNew
+from tutopy.services.exceptions import (
+    DuplicateEntityError, EntityInUseError, EntityNotFoundError,
+)
+from tutopy.services.validation_service import ValidationService
 
 
 class AcademicCourseService:
@@ -10,8 +14,10 @@ class AcademicCourseService:
     lògica de negoci addicional.
     """
 
-    def __init__(self, academic_course_dao: AcademicCourseDAO):
+    def __init__(self, academic_course_dao: AcademicCourseDAO,
+        validation_service: ValidationService = None):
         self.academic_course_dao = academic_course_dao
+        self.validation_service = validation_service or ValidationService()
 
     def get_all(self) -> list[AcademicCourse]:
         """Retorna tots els cursos acadèmics ordenats per any (descendent)."""
@@ -41,6 +47,7 @@ class AcademicCourseService:
         Returns:
             AcademicCourse: El curs existent o el nou creat.
         """
+        course = self.validation_service.academic_course(course)
         return self.academic_course_dao.get_or_create(course)
 
     def create(self, data: AcademicCourseNew) -> AcademicCourse:
@@ -55,10 +62,16 @@ class AcademicCourseService:
         Raises:
             ValueError: Si ja existeix un curs amb el mateix nom.
         """
-        existing = self.academic_course_dao.get_by_course(data.course)
+        course = self.validation_service.academic_course(data.course)
+        existing = self.academic_course_dao.get_by_course(course)
         if existing:
-            raise ValueError(f"Ja existeix un curs acadèmic amb el nom '{data.course}'")
-        return self.academic_course_dao.create(data)
+            raise DuplicateEntityError(
+                f"Ja existeix un curs acadèmic amb el nom '{course}'"
+            )
+        return self.academic_course_dao.create(AcademicCourseNew(course))
+
+    def can_delete(self, id: int) -> bool:
+        return self.academic_course_dao.is_deletable(id)
 
     def delete(self, id: int) -> None:
         """Elimina un curs acadèmic pel seu ID.
@@ -66,4 +79,8 @@ class AcademicCourseService:
         Args:
             id: ID del curs a eliminar.
         """
+        if self.academic_course_dao.get_by_id(id) is None:
+            raise EntityNotFoundError(f"No existeix el curs acadèmic amb ID {id}")
+        if not self.can_delete(id):
+            raise EntityInUseError("No es pot eliminar: el curs acadèmic està en ús.")
         self.academic_course_dao.delete(id)

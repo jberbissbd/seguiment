@@ -1,6 +1,7 @@
 import pytest
 from tutopy.services.academic_course_service import AcademicCourseService
 from tutopy.models.messaging import AcademicCourse, AcademicCourseNew
+from tutopy.services.exceptions import EntityInUseError, ValidationError
 
 
 class TestAcademicCourseService:
@@ -130,3 +131,24 @@ class TestAcademicCourseService:
         # Verificar que ja no existeix
         result = service.get_by_id(created.id)
         assert result is None
+
+    @pytest.mark.parametrize("course", ["2026", "2026-2028", "abcd-efgh"])
+    def test_create_rebutja_format_invalid(self, academic_course_dao, db, course):
+        service = AcademicCourseService(academic_course_dao)
+        with pytest.raises(ValidationError):
+            service.create(AcademicCourseNew(course))
+
+    def test_delete_rebutja_curs_en_us(self, academic_course_dao, db):
+        from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew
+
+        service = AcademicCourseService(academic_course_dao)
+        course = service.create(AcademicCourseNew("2025-2026"))
+        category = db.categories.create(CategoryNew("Acadèmic"))
+        student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        db.notes.create(NoteNew(
+            student.id, category.id, "2026-01-01", course.id, "Nota"
+        ))
+
+        assert service.can_delete(course.id) is False
+        with pytest.raises(EntityInUseError):
+            service.delete(course.id)

@@ -201,3 +201,18 @@ class TestCategoryService:
         
         with pytest.raises(ValueError, match="No es pot eliminar: la categoria té notes associades"):
             service.delete(category.id)
+
+    def test_rename_categoria_amb_notes(self, category_dao, db):
+        """Renomenar és segur perquè les notes referencien l'ID."""
+        from tutopy.models.messaging import StudentNew, NoteNew
+        service = CategoryService(category_dao)
+        category = db.categories.create(CategoryNew("Antiga"))
+        student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        course = db.academic_courses.create(AcademicCourseNew("2025-2026"))
+        db.notes.create(NoteNew(
+            student.id, category.id, "2026-01-01", course.id, "Nota"
+        ))
+
+        service.rename(Category(category.id, "Nova"))
+
+        assert service.get_by_id(category.id).name == "Nova"
