@@ -5,6 +5,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
 
 from tutopy.application import create_services
+from tutopy.controllers.main_controller import MainController
 from tutopy.database.database import Database
 from tutopy.services.directories import get_db_path
 from tutopy.ui.main_window import MainWindow
@@ -19,7 +20,8 @@ def main() -> int:
     database = Database(str(get_db_path())).connect()
     services = create_services(database)
     window = MainWindow()
-    # Els controladors rebran ``services`` quan s'implementi la UI funcional.
+    controller = MainController(window, services)
+    controller.start()
     app.aboutToQuit.connect(database.close)
     window.show()
     return app.exec()

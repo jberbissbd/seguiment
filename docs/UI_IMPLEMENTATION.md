@@ -120,10 +120,19 @@ La base prèvia a la UI està implementada:
 - Punt d'entrada Qt i finestra principal mínima.
 - Empaquetament instal·lable.
 
+La infraestructura visual de la fase 1 també està implementada:
+
+- Estils globals i paleta inicial.
+- Layout principal amb sidebar i navegació entre seccions.
+- Llista d'alumnes amb cerca i identitat basada en ID.
+- Panell de detall amb les pestanyes previstes.
+- Controlador principal connectat a `StudentService`.
+- Proves Qt executables en mode offscreen.
+
 Encara no estan implementats:
 
-- Controladors.
-- Widgets funcionals.
+- Controladors CRUD específics.
+- Formularis i widgets CRUD.
 - Diàlegs.
 - Pestanyes de detall.
 - Estils globals definitius.
@@ -177,12 +186,14 @@ tutopy/
 
 ### Fase 1: infraestructura visual
 
-- Estils globals i paleta.
-- Layout de `MainWindow`.
-- Sidebar.
-- Àrea de llista i detall.
-- Controlador principal.
-- Proves d'arrencada en mode Qt offscreen.
+Estat: completada.
+
+- [x] Estils globals i paleta.
+- [x] Layout de `MainWindow`.
+- [x] Sidebar.
+- [x] Àrea de llista i detall.
+- [x] Controlador principal.
+- [x] Proves d'arrencada en mode Qt offscreen.
 
 ### Fase 2: alumnes
 
