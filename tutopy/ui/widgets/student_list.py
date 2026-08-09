@@ -9,6 +9,8 @@ class StudentList(QFrame):
     """Llista visual d'alumnes; no consulta directament cap servei."""
 
     student_selected = Signal(int)
+    edit_requested = Signal(int)
+    delete_requested = Signal(int)
     search_changed = Signal(str)
     create_requested = Signal()
 
@@ -37,9 +39,28 @@ class StudentList(QFrame):
         self.search_input.textChanged.connect(self.search_changed)
         layout.addWidget(self.search_input)
 
+        actions = QHBoxLayout()
+        self.edit_button = QPushButton("Editar")
+        self.edit_button.setObjectName("secondaryButton")
+        self.delete_button = QPushButton("Eliminar")
+        self.delete_button.setObjectName("dangerButton")
+        self.edit_button.setEnabled(False)
+        self.delete_button.setEnabled(False)
+        self.edit_button.clicked.connect(self._request_edit)
+        self.delete_button.clicked.connect(self._request_delete)
+        actions.addWidget(self.edit_button)
+        actions.addWidget(self.delete_button)
+        actions.addStretch()
+        layout.addLayout(actions)
+
         self.list_widget = QListWidget()
         self.list_widget.setAlternatingRowColors(False)
         self.list_widget.currentItemChanged.connect(self._emit_selection)
+        self.list_widget.itemDoubleClicked.connect(
+            lambda item: self.edit_requested.emit(
+                item.data(Qt.ItemDataRole.UserRole)
+            )
+        )
         layout.addWidget(self.list_widget, 1)
 
         self.empty_label = QLabel("Encara no hi ha alumnes.")
@@ -69,5 +90,18 @@ class StudentList(QFrame):
         return item.data(Qt.ItemDataRole.UserRole) if item else None
 
     def _emit_selection(self, current, previous=None) -> None:
+        has_selection = current is not None
+        self.edit_button.setEnabled(has_selection)
+        self.delete_button.setEnabled(has_selection)
         if current is not None:
             self.student_selected.emit(current.data(Qt.ItemDataRole.UserRole))
+
+    def _request_edit(self) -> None:
+        student_id = self.current_student_id()
+        if student_id is not None:
+            self.edit_requested.emit(student_id)
+
+    def _request_delete(self) -> None:
+        student_id = self.current_student_id()
+        if student_id is not None:
+            self.delete_requested.emit(student_id)

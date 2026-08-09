@@ -67,6 +67,10 @@ QLabel#mutedText {{
     color: {TEXT_SECONDARY};
 }}
 
+QLabel#errorText {{
+    color: {ERROR_COLOR};
+}}
+
 QLineEdit {{
     background-color: white;
     border: 1px solid {BORDER_COLOR};
@@ -90,6 +94,22 @@ QPushButton#primaryButton {{
 
 QPushButton#primaryButton:hover {{
     background-color: {SECONDARY_COLOR};
+}}
+
+QPushButton#secondaryButton {{
+    background-color: white;
+    color: {PRIMARY_COLOR};
+    border: 1px solid {PRIMARY_COLOR};
+    border-radius: 6px;
+    padding: 8px 12px;
+}}
+
+QPushButton#dangerButton {{
+    background-color: white;
+    color: {ERROR_COLOR};
+    border: 1px solid {ERROR_COLOR};
+    border-radius: 6px;
+    padding: 8px 12px;
 }}
 
 QListWidget {{

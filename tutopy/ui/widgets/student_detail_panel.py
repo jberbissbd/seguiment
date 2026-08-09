@@ -1,5 +1,7 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QLabel, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QFormLayout, QFrame, QLabel, QTabWidget, QVBoxLayout, QWidget,
+)
 
 
 class StudentDetailPanel(QFrame):
@@ -22,7 +24,20 @@ class StudentDetailPanel(QFrame):
 
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
-        for name in self.TAB_NAMES:
+        self.info_page = QWidget()
+        info_layout = QFormLayout(self.info_page)
+        self.name_value = QLabel()
+        self.surnames_value = QLabel()
+        self.group_value = QLabel()
+        self.uuid_value = QLabel()
+        self.uuid_value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        info_layout.addRow("Nom:", self.name_value)
+        info_layout.addRow("Cognoms:", self.surnames_value)
+        info_layout.addRow("Grup:", self.group_value)
+        info_layout.addRow("UUID:", self.uuid_value)
+        self.tabs.addTab(self.info_page, "Informació")
+
+        for name in self.TAB_NAMES[1:]:
             page = QWidget()
             page_layout = QVBoxLayout(page)
             label = QLabel(f"{name}: contingut pendent d'implementar")
@@ -39,7 +54,10 @@ class StudentDetailPanel(QFrame):
             return
         self.placeholder.hide()
         self.tabs.show()
-        self.tabs.setTabText(0, student.full_name)
+        self.name_value.setText(student.name)
+        self.surnames_value.setText(student.surnames)
+        self.group_value.setText(student.group_name or "—")
+        self.uuid_value.setText(student.uuid)
 
     def clear(self) -> None:
         self.tabs.hide()

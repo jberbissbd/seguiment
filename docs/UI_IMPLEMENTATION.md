@@ -129,6 +129,16 @@ La infraestructura visual de la fase 1 també està implementada:
 - Controlador principal connectat a `StudentService`.
 - Proves Qt executables en mode offscreen.
 
+La gestió d'alumnes de la fase 2 està implementada:
+
+- Controlador d'alumnes separat del controlador de navegació.
+- Creació i edició mitjançant un diàleg validat.
+- Eliminació amb confirmació explícita.
+- Cerca, selecció i actualització dinàmica de la llista.
+- Informació bàsica, grup i UUID al panell de detall.
+- Canvis de grup sincronitzats amb l'historial.
+- Tractament independent d'alumnes homònims.
+
 Encara no estan implementats:
 
 - Controladors CRUD específics.
@@ -197,11 +207,13 @@ Estat: completada.
 
 ### Fase 2: alumnes
 
-- Llista, cerca i selecció d'alumnes.
-- Creació, edició i eliminació mitjançant `StudentService`.
-- Detall bàsic.
-- Canvi de grup i historial.
-- Suport correcte d'alumnes homònims.
+Estat: completada.
+
+- [x] Llista, cerca i selecció d'alumnes.
+- [x] Creació, edició i eliminació mitjançant `StudentService`.
+- [x] Detall bàsic.
+- [x] Canvi de grup i sincronització de l'historial.
+- [x] Suport correcte d'alumnes homònims.
 
 ### Fase 3: notes de seguiment
 

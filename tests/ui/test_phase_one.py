@@ -2,6 +2,7 @@ from PySide6.QtCore import Qt
 
 from tutopy.application import create_services
 from tutopy.controllers.main_controller import MainController
+from tutopy.controllers.student_controller import StudentController
 from tutopy.database.database import Database
 from tutopy.models.messaging import StudentNew
 from tutopy.ui.main_window import MainWindow
@@ -58,8 +59,10 @@ def test_main_controller_carrega_cerca_i_selecciona_alumnes(qtbot, tmp_path):
         services.students.create(StudentNew("Anna", "Serra", "3r B"))
         window = MainWindow()
         qtbot.addWidget(window)
-        controller = MainController(window, services)
+        main_controller = MainController(window)
+        controller = StudentController(window, services.students)
 
+        main_controller.start()
         controller.start()
         assert window.student_list.list_widget.count() == 2
 

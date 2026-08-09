@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QMainWindow, QSplitter, QStackedWidget, QVBoxLayout,
-    QWidget,
+    QWidget, QMessageBox,
 )
 
 from tutopy.ui.styles import MAIN_STYLESHEET
@@ -85,3 +85,16 @@ class MainWindow(QMainWindow):
 
     def show_status(self, message: str, timeout: int = 3000) -> None:
         self.statusBar().showMessage(message, timeout)
+
+    def show_error(self, message: str) -> None:
+        QMessageBox.critical(self, "Error", message)
+
+    def confirm_student_deletion(self, full_name: str) -> bool:
+        answer = QMessageBox.question(
+            self,
+            "Eliminar alumne",
+            f"Vols eliminar {full_name} i totes les seves dades associades?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return answer == QMessageBox.StandardButton.Yes
