@@ -2,6 +2,7 @@ import uuid
 import pytest
 from tutopy.models.messaging import StudentNew, NoteNew, CategoryNew, AcademicCourseNew
 from tutopy.services.validation_service import ValidationService
+from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 
 
 class TestValidationService:
@@ -20,6 +21,18 @@ class TestValidationService:
         
         # No hauria de llançar cap excepció
         service.validate_student(student_data)
+
+    def test_validate_student_normalitza_text(self, category_dao, db):
+        service = ValidationService(category_dao)
+        student_data = StudentNew(
+            name="  Jordi  ", surnames="  Garcia López ", group_name=" 4t A "
+        )
+
+        service.validate_student(student_data)
+
+        assert student_data.name == "Jordi"
+        assert student_data.surnames == "Garcia López"
+        assert student_data.group_name == "4t A"
 
     def test_validate_student_empty_name(self, category_dao, db):
         """Testa que la validació falla si el nom està buit."""
@@ -160,7 +173,21 @@ class TestValidationService:
             content="Nota amb categoria inexistent"
         )
         
-        with pytest.raises(ValueError, match="La categoria amb ID 99999 no existeix"):
+        with pytest.raises(EntityNotFoundError, match="La categoria amb ID 99999 no existeix"):
+            service.validate_note(note)
+
+    def test_validate_note_rebutja_identificadors_no_positius(self, category_dao, db):
+        categoria = db.categories.create(CategoryNew("Acadèmic"))
+        service = ValidationService(category_dao)
+        note = NoteNew(
+            student_id=0,
+            category_id=categoria.id,
+            date="2026-01-15",
+            course_id=0,
+            content="Nota",
+        )
+
+        with pytest.raises(ValidationError, match="identificador de l'alumne"):
             service.validate_note(note)
 
     def test_can_delete_category_true(self, category_dao, db):
@@ -199,3 +226,17 @@ class TestValidationService:
         
         # Verificar que NO es pot eliminar
         assert service.can_delete_category(categoria.id) is False
+
+
+class TestCommonValidation:
+    def test_required_text_rebutja_espais(self):
+        with pytest.raises(ValidationError):
+            ValidationService.required_text("   ", "Camp obligatori")
+
+    @pytest.mark.parametrize("value", ["2026", "2026-2028", "abcd-efgh"])
+    def test_academic_course_rebutja_formats_invalids(self, value):
+        with pytest.raises(ValidationError):
+            ValidationService.academic_course(value)
+
+    def test_academic_course_accepta_anys_consecutius(self):
+        assert ValidationService.academic_course(" 2026-2027 ") == "2026-2027"

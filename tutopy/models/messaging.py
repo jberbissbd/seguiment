@@ -1,11 +1,22 @@
 from dataclasses import dataclass, fields
-from typing import Optional
+from typing import Optional, Union, get_args, get_origin
 import datetime
+
+
+def _matches_type(value, expected_type) -> bool:
+    """Comprova tipus simples i unions com ``Optional[T]``."""
+    origin = get_origin(expected_type)
+    if origin is Union:
+        return any(_matches_type(value, option) for option in get_args(expected_type))
+    if expected_type is int and isinstance(value, bool):
+        return False
+    return isinstance(value, expected_type)
+
 
 def _validate(dataclass_obj):
     for field in fields(dataclass_obj):
         value = getattr(dataclass_obj, field.name)
-        if not isinstance(value, field.type):
+        if not _matches_type(value, field.type):
             raise ValueError(
                 f"Expected {field.name} to be {field.type}, "
                 f"got {repr(value)}"

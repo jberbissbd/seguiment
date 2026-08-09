@@ -91,6 +91,10 @@ class TestEstudiants():
         with pytest.raises(TypeError):
             StudentNew(uuid="extern", name="Toni", surnames="Cognoms", group_name="A")
 
+    def test_identificador_boolea_no_es_un_enter_valid(self):
+        with pytest.raises(ValueError):
+            Student(id=True, uuid="uuid", name="Toni", surnames="Cognoms", group_name="A")
+
 
 class TestRegistreIndividual():
     """Tests respecte als registres individuals"""
