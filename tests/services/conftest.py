@@ -8,6 +8,7 @@ from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.contact_dao import ContactDAO
 from tutopy.database.daos.document_dao import DocumentDAO
 from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
+from tutopy.database.daos.annotation_dao import AnnotationDAO
 
 
 @pytest.fixture(scope="function")
@@ -61,3 +62,9 @@ def document_dao(db):
 def group_history_dao(db):
     """Retorna una instància de StudentGroupHistoryDAO."""
     return StudentGroupHistoryDAO(db.conn)
+
+
+@pytest.fixture
+def annotation_dao(db):
+    """Retorna una instància de AnnotationDAO."""
+    return AnnotationDAO(db.conn)
