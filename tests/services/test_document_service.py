@@ -57,3 +57,39 @@ def test_document_service_importa_i_elimina_fitxer_gestionat(
 
     assert not managed_file.exists()
     assert source.exists()
+
+
+def test_document_service_valida_obertura_i_exporta_fitxer(
+    document_dao, student_dao, db, tmp_path
+):
+    student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+    source = tmp_path / "informe.txt"
+    source.write_text("Informe", encoding="utf-8")
+    service = DocumentService(
+        document_dao, student_dao, storage_dir=tmp_path / "documents"
+    )
+    document = service.import_file(student.id, "Informe", "", str(source))
+    destination = tmp_path / "exportats" / "copia.txt"
+
+    assert service.get_readable_path(document.id).is_file()
+    exported = service.export_file(document.id, str(destination))
+
+    assert exported == destination
+    assert destination.read_text(encoding="utf-8") == "Informe"
+
+
+def test_document_service_rebutja_fitxer_extern_al_magatzem(
+    document_dao, student_dao, db, tmp_path
+):
+    student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+    external = tmp_path / "extern.txt"
+    external.write_text("Extern", encoding="utf-8")
+    service = DocumentService(
+        document_dao, student_dao, storage_dir=tmp_path / "documents"
+    )
+    document = service.create(StudentDocumentNew(
+        student.id, "Extern", "", "extern.txt", "extern.txt", str(external)
+    ))
+
+    with pytest.raises(ValidationError):
+        service.get_readable_path(document.id)

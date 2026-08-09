@@ -83,6 +83,11 @@ QLineEdit:focus {{
     border-color: {PRIMARY_COLOR};
 }}
 
+QLineEdit:disabled {{
+    background-color: #EEF2F6;
+    color: {TEXT_SECONDARY};
+}}
+
 QPushButton#primaryButton {{
     background-color: {PRIMARY_COLOR};
     color: white;
@@ -102,6 +107,12 @@ QPushButton#secondaryButton {{
     border: 1px solid {PRIMARY_COLOR};
     border-radius: 6px;
     padding: 8px 12px;
+}}
+
+QPushButton:disabled {{
+    background-color: #EEF2F6;
+    color: #94A3B8;
+    border-color: #CBD5E1;
 }}
 
 QPushButton#dangerButton {{
@@ -126,6 +137,25 @@ QListWidget::item {{
 QListWidget::item:selected {{
     background-color: #E5F1FB;
     color: {TEXT_PRIMARY};
+}}
+
+QTableWidget {{
+    background-color: white;
+    alternate-background-color: #F8FAFC;
+    border: 1px solid {BORDER_COLOR};
+    gridline-color: #E8EDF2;
+    selection-background-color: #DCECF9;
+    selection-color: {TEXT_PRIMARY};
+}}
+
+QHeaderView::section {{
+    background-color: #E9EFF5;
+    color: {TEXT_PRIMARY};
+    border: none;
+    border-right: 1px solid {BORDER_COLOR};
+    border-bottom: 1px solid {BORDER_COLOR};
+    padding: 8px;
+    font-weight: 600;
 }}
 
 QTabWidget::pane {{

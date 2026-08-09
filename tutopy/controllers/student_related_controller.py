@@ -1,4 +1,6 @@
-from PySide6.QtWidgets import QDialog
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
+from PySide6.QtWidgets import QDialog, QFileDialog
 
 from tutopy.models.messaging import (
     Contact, ContactNew, StudentAnnotation, StudentAnnotationNew, StudentDocument,
@@ -23,7 +25,8 @@ class StudentRelatedController:
         documents: DocumentService, courses: AcademicCourseService,
         annotation_dialog=AnnotationDialog,
         contact_dialog=ContactDialog, document_dialog=DocumentDialog,
-        confirm_delete=None, error_handler=None):
+        confirm_delete=None, error_handler=None, document_opener=None,
+        export_destination=None):
         self.window = window
         self.students = students
         self.annotations = annotations
@@ -35,6 +38,8 @@ class StudentRelatedController:
         self.document_dialog = document_dialog
         self.confirm_delete = confirm_delete or window.confirm_deletion
         self.error_handler = error_handler or window.show_error
+        self.document_opener = document_opener or self._open_local_file
+        self.export_destination = export_destination or self._choose_export_destination
         self.student_id = None
         self._connect()
 
@@ -52,6 +57,8 @@ class StudentRelatedController:
         document.create_requested.connect(self.create_document)
         document.edit_requested.connect(self.edit_document)
         document.delete_requested.connect(self.delete_document)
+        document.open_requested.connect(self.open_document)
+        document.export_requested.connect(self.export_document)
 
     def set_student(self, student_id: int):
         self.student_id = student_id
@@ -153,6 +160,37 @@ class StudentRelatedController:
     def delete_document(self, entity_id):
         if self.confirm_delete("aquest document"):
             self._run(lambda: self.documents.delete(entity_id), "Document eliminat")
+
+    def open_document(self, entity_id):
+        try:
+            path = self.documents.get_readable_path(entity_id)
+            opened = self.document_opener(str(path))
+            if opened is False:
+                self.error_handler("No s'ha trobat cap aplicació per obrir el document.")
+        except DomainError as error:
+            self.error_handler(str(error))
+
+    def export_document(self, entity_id):
+        try:
+            document = self.documents.get_by_id(entity_id)
+            destination = self.export_destination(document.original_filename)
+            if not destination:
+                return
+            self.documents.export_file(entity_id, destination)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self.window.show_status("Document exportat")
+
+    @staticmethod
+    def _open_local_file(path):
+        return QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    def _choose_export_destination(self, filename):
+        path, _ = QFileDialog.getSaveFileName(
+            self.window, "Exportar document", filename
+        )
+        return path
 
     def _run(self, operation, success_message):
         try:

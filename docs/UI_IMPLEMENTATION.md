@@ -154,6 +154,13 @@ Les dades complementàries de la fase 4 estan implementades:
 - Documents copiats a un directori gestionat per Tutopy.
 - Controladors connectats exclusivament als serveis de negoci.
 
+El poliment funcional de la fase 5 està implementat:
+
+- Obertura de documents amb l'aplicació predeterminada del sistema.
+- Exportació de documents a una ubicació escollida per l'usuari.
+- Validació que els fitxers oberts pertanyen al magatzem gestionat.
+- Millores visuals i d'estat de botons, taules i seleccions.
+
 ## Tecnologies i requisits
 
 - Python 3.10 o superior.
@@ -245,6 +252,16 @@ Estat: completada.
 - [x] Historial de grups.
 - [x] Categories.
 - [x] Cursos acadèmics.
+
+### Fase 5: poliment i documents
+
+Estat: completada.
+
+- [x] Obertura segura de documents.
+- [x] Exportació de documents.
+- [x] Estats visuals dels controls desactivats.
+- [x] Llegibilitat i selecció de les taules.
+- [x] Proves de seguretat de rutes i integració del controlador.
 
 ## Convencions visuals
 

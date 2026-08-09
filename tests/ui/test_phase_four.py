@@ -80,6 +80,8 @@ def test_controlador_de_dades_relacionades_crea_i_mostra_elements(qtbot, tmp_pat
         window = MainWindow()
         qtbot.addWidget(window)
         errors = []
+        opened = []
+        exported = tmp_path / "exportat.txt"
         controller = StudentRelatedController(
             window, services.students, services.annotations, services.contacts,
             services.documents, services.academic_courses,
@@ -88,6 +90,8 @@ def test_controlador_de_dades_relacionades_crea_i_mostra_elements(qtbot, tmp_pat
             document_dialog=AcceptedDocumentDialog,
             confirm_delete=lambda _name: True,
             error_handler=errors.append,
+            document_opener=lambda path: opened.append(path) or True,
+            export_destination=lambda _filename: str(exported),
         )
         controller.set_student(student.id)
 
@@ -100,6 +104,10 @@ def test_controlador_de_dades_relacionades_crea_i_mostra_elements(qtbot, tmp_pat
         assert window.student_detail.document_tab.table.rowCount() == 1
         document = services.documents.get_by_student(student.id)[0]
         assert (tmp_path / "documents" / document.uuid_filename).exists()
+        controller.open_document(document.id)
+        controller.export_document(document.id)
+        assert opened == [str(tmp_path / "documents" / document.uuid_filename)]
+        assert exported.read_text(encoding="utf-8") == "Informe"
         controller.delete_document(document.id)
         assert services.documents.get_by_student(student.id) == []
         assert errors == []

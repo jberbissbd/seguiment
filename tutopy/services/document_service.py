@@ -82,6 +82,38 @@ class DocumentService:
         self.document_dao.update(document)
         return document
 
+    def get_readable_path(self, document_id: int) -> Path:
+        """Retorna el fitxer gestionat després de validar-ne ubicació i existència."""
+        document = self.get_by_id(document_id)
+        if self.storage_dir is None or not document.file_path:
+            raise ValidationError("El document no té cap fitxer gestionat.")
+        path = Path(document.file_path)
+        try:
+            managed = path.resolve()
+            storage = self.storage_dir.resolve()
+        except OSError as error:
+            raise ValidationError("No s'ha pogut localitzar el document.") from error
+        if managed.parent != storage or not managed.is_file():
+            raise ValidationError("El fitxer del document no existeix o no és accessible.")
+        return managed
+
+    def export_file(self, document_id: int, destination_path: str) -> Path:
+        """Copia un document gestionat a una ubicació escollida per l'usuari."""
+        source = self.get_readable_path(document_id)
+        destination = Path(destination_path)
+        if not destination.name:
+            raise ValidationError("Cal indicar una destinació per exportar el document.")
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if source == destination.resolve():
+                raise ValidationError("El document ja es troba en aquesta ubicació.")
+            shutil.copy2(source, destination)
+        except ValidationError:
+            raise
+        except OSError as error:
+            raise ValidationError("No s'ha pogut exportar el document.") from error
+        return destination
+
     def delete(self, document_id: int) -> StudentDocument:
         document = self.get_by_id(document_id)
         self.document_dao.delete(document_id)
