@@ -84,7 +84,12 @@ class TestEstudiants():
         valors incorrecta.
         """
         with pytest.raises(ValueError):
-            exemple_3 = StudentNew(uuid=5, name=2, surnames=3, group_name=4)
+            exemple_3 = StudentNew(name=2, surnames=3, group_name=4)
+
+    def test_student_new_no_accepta_uuid_extern(self):
+        """L'UUID és intern i no forma part del contracte de creació."""
+        with pytest.raises(TypeError):
+            StudentNew(uuid="extern", name="Toni", surnames="Cognoms", group_name="A")
 
 
 class TestRegistreIndividual():

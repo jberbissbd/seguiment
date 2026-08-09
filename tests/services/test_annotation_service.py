@@ -11,9 +11,7 @@ class TestAnnotationService:
         service = AnnotationService(annotation_dao)
         
         # Crear un alumne sense anotacions
-        student = db.students.create(StudentNew(
-            uuid="test-uuid-1",
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -27,9 +25,7 @@ class TestAnnotationService:
         service = AnnotationService(annotation_dao)
         
         # Crear un alumne i anotacions
-        student = db.students.create(StudentNew(
-            uuid="test-uuid-2",
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -55,15 +51,11 @@ class TestAnnotationService:
         service = AnnotationService(annotation_dao)
         
         # Crear dos alumnes
-        student1 = db.students.create(StudentNew(
-            uuid="test-uuid-3",
-            name="Test1",
+        student1 = db.students.create(StudentNew(name="Test1",
             surnames="User",
             group_name="1r A"
         ))
-        student2 = db.students.create(StudentNew(
-            uuid="test-uuid-4",
-            name="Test2",
+        student2 = db.students.create(StudentNew(name="Test2",
             surnames="User",
             group_name="1r B"
         ))
@@ -92,9 +84,7 @@ class TestAnnotationService:
         service = AnnotationService(annotation_dao)
         
         # Crear un alumne
-        student = db.students.create(StudentNew(
-            uuid="test-uuid-5",
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -119,9 +109,7 @@ class TestAnnotationService:
         service = AnnotationService(annotation_dao)
         
         # Crear un alumne
-        student = db.students.create(StudentNew(
-            uuid="test-uuid-6",
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -146,9 +134,7 @@ class TestAnnotationService:
         service = AnnotationService(annotation_dao)
         
         # Crear un alumne i una anotació
-        student = db.students.create(StudentNew(
-            uuid="test-uuid-7",
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -175,9 +161,7 @@ class TestAnnotationService:
         service = AnnotationService(annotation_dao)
         
         # Crear un alumne i una anotació
-        student = db.students.create(StudentNew(
-            uuid="test-uuid-8",
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))

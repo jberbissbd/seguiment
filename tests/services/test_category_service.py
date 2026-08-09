@@ -148,9 +148,7 @@ class TestCategoryService:
         
         # Crear categoria i una nota que l'usa
         category = db.categories.create(CategoryNew(name="Test"))
-        student = db.students.create(StudentNew(
-            uuid="test-uuid",
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -187,9 +185,7 @@ class TestCategoryService:
         
         # Crear categoria i una nota que l'usa
         category = db.categories.create(CategoryNew(name="Test"))
-        student = db.students.create(StudentNew(
-            uuid="test-uuid",
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))

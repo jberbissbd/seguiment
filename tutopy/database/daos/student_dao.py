@@ -22,6 +22,7 @@ class StudentDAO:
         return Student(**row) if row else None
 
     def create(self, data: StudentNew) -> Student:
+        """Persisteix un alumne nou i li assigna el seu UUID intern."""
         uid = str(uuid_mod.uuid4())
         cur = self.conn.execute(
             "INSERT INTO students (uuid, name, surnames, group_name) VALUES (?, ?, ?, ?)",

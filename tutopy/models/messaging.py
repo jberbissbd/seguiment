@@ -98,12 +98,10 @@ class StudentNew:
     """Alumne del qual es fa el seguiment.
 
     Attributes:
-        uuid: Uuid, aleatori
         name: Nom de l'alumne.
         surnames: Cognom o cognoms de l'alumne.
         group_name: Curs o grup al qual pertany (ex: "2n ESO A").
     """
-    uuid: str
     name: str
     surnames: str
     group_name: str
@@ -114,7 +112,7 @@ class StudentNew:
 
 @dataclass
 class Note:
-    """Nota de seguiment associada a un alumne i una categoria.
+    """Registre de seguiment datat, classificat i associat a un alumne.
 
     Attributes:
         id: Identificador únic.
@@ -140,7 +138,7 @@ class Note:
 
 @dataclass
 class NoteNew:
-    """Nota de seguiment associada a un alumne i una categoria.
+    """Dades d'entrada per crear un registre de seguiment datat.
 
     Attributes:
         student_id: Referència a l'alumne.
@@ -234,7 +232,9 @@ class ContactNew:
 
 @dataclass
 class StudentAnnotation:
-    """Característiques o descriptores de l'alumne.
+    """Descriptor general i no datat d'un alumne.
+
+    No és una nota de seguiment: no té data, categoria ni curs acadèmic.
 
     Attributes:
         id: Identificador únic.
@@ -250,7 +250,7 @@ class StudentAnnotation:
 
 @dataclass
 class StudentAnnotationNew:
-    """Característiques o descriptores de l'alumne.
+    """Dades d'entrada per a un descriptor general i no datat de l'alumne.
     Entrada nova.
     Attributes:
         student_id: Referència a l'alumne.

@@ -13,9 +13,7 @@ class TestStudentService:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Dades vàlides
-        student_data = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Jordi",
+        student_data = StudentNew(name="Jordi",
             surnames="Garcia López",
             group_name="4t A"
         )
@@ -35,15 +33,11 @@ class TestStudentService:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear diversos alumnes
-        student1 = service.create_student(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Anna",
+        student1 = service.create_student(StudentNew(name="Anna",
             surnames="Martínez Sánchez",
             group_name="3r B"
         ))
-        student2 = service.create_student(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Pere",
+        student2 = service.create_student(StudentNew(name="Pere",
             surnames="López García",
             group_name="2n A"
         ))
@@ -57,9 +51,7 @@ class TestStudentService:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne sense contactes ni documents
-        student_data = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Maria",
+        student_data = StudentNew(name="Maria",
             surnames="Sánchez Pérez",
             group_name="1r A"
         )
@@ -81,9 +73,7 @@ class TestStudentService:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne
-        student_data = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Jordi",
+        student_data = StudentNew(name="Jordi",
             surnames="Garcia López",
             group_name="4t A"
         )
@@ -119,9 +109,7 @@ class TestStudentService:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne
-        student_data = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Pere",
+        student_data = StudentNew(name="Pere",
             surnames="López Martínez",
             group_name="2n B"
         )
@@ -159,9 +147,7 @@ class TestStudentService:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne
-        student_data = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Anna",
+        student_data = StudentNew(name="Anna",
             surnames="Martínez Sánchez",
             group_name="3r A"
         )
@@ -210,15 +196,11 @@ class TestStudentService:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear dos alumnes
-        student1 = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Alumne1",
+        student1 = db.students.create(StudentNew(name="Alumne1",
             surnames="Test1",
             group_name="4t A"
         ))
-        student2 = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Alumne2",
+        student2 = db.students.create(StudentNew(name="Alumne2",
             surnames="Test2",
             group_name="4t A"
         ))
@@ -275,9 +257,7 @@ class TestStudentGroupHistory:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Jordi",
+        student = db.students.create(StudentNew(name="Jordi",
             surnames="Garcia López",
             group_name="3r A"
         ))
@@ -308,9 +288,7 @@ class TestStudentGroupHistory:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Anna",
+        student = db.students.create(StudentNew(name="Anna",
             surnames="Martínez",
             group_name="2n A"
         ))
@@ -344,9 +322,7 @@ class TestStudentGroupHistory:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne i un curs
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Pere",
+        student = db.students.create(StudentNew(name="Pere",
             surnames="López",
             group_name="4t A"
         ))
@@ -381,9 +357,7 @@ class TestStudentGroupHistory:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Maria",
+        student = db.students.create(StudentNew(name="Maria",
             surnames="Sánchez",
             group_name="2n A"
         ))
@@ -408,9 +382,7 @@ class TestStudentGroupHistory:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne sense històric de grups
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -423,9 +395,7 @@ class TestStudentGroupHistory:
         service = StudentService(student_dao, contact_dao, document_dao, group_history_dao)
         
         # Crear un alumne sense històric
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))

@@ -20,9 +20,22 @@
 Aplicació de seguiment d'alumnes amb interfície gràfica que permet:
 - Visualitzar llistat d'alumnes
 - Consultar detalls de cada alumne
-- Afegir, editar i eliminar anotacions/notes de seguiment
-- Filtrar anotacions per diferents paràmetres (combinables)
+- Afegir, editar i eliminar notes de seguiment
+- Filtrar notes de seguiment per diferents paràmetres (combinables)
+- Gestionar descriptors generals i no datats de cada alumne
 - Gestionar categories i cursos acadèmics
+
+### Terminologia del domini
+
+- **Nota de seguiment (`Note`)**: registre datat associat a un alumne, una
+  categoria i un curs acadèmic. És l'entitat que admet els filtres de la UI.
+- **Descriptor de l'alumne (`StudentAnnotation`)**: característica general i
+  no datada de l'alumne. No té categoria ni curs acadèmic i es gestiona
+  separadament de les notes de seguiment.
+
+La UI i els controladors han de conservar aquesta distinció. En particular,
+els filtres per categoria, curs i data treballen amb `NoteService`, no amb
+`AnnotationService`.
 
 ---
 
@@ -161,12 +174,12 @@ tutopy/
 
 ---
 
-### Fase 3: Anotacions i Filtres (Prioritat Alta)
+### Fase 3: Notes de seguiment i Filtres (Prioritat Alta)
 
-**Objectiu**: Implementar el visor d'anotacions amb filtres
+**Objectiu**: Implementar el visor de notes de seguiment amb filtres
 
 #### Tasques:
-1. Pestanya d'anotacions amb taula
+1. Pestanya de notes de seguiment amb taula
 2. Filtres per:
    - Alumne
    - Categoria
@@ -174,8 +187,8 @@ tutopy/
    - Data (rang)
    - Text de contingut
 3. Lògica AND per a filtres combinats
-4. Diàleg d'anotació
-5. Connexió amb AnnotationService
+4. Diàleg de nota de seguiment
+5. Connexió amb NoteService
 
 ---
 

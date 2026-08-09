@@ -34,7 +34,7 @@ def estudiant_existent_dataclass():
 @pytest.fixture(scope='module')
 def estudiant_nou_dataclass(uuid_test):
     """Fixture per a estudiants nous"""
-    estudiant_prova = StudentNew(uuid_test, "Toni", "Cognom 1 Cognom 2", "grup A")
+    estudiant_prova = StudentNew("Toni", "Cognom 1 Cognom 2", "grup A")
     return estudiant_prova
 
 @pytest.fixture(scope='module')
@@ -51,4 +51,3 @@ def notes_dataclass():
 def contacte_dataclass():
     contacte_prova = Contact(1,1,"Pep","Pare","937982091","something@company.com")
     return contacte_prova
-

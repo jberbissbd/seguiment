@@ -13,9 +13,7 @@ class TestValidationService:
         service = ValidationService(category_dao)
         
         # Dades vàlides
-        student_data = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Jordi",
+        student_data = StudentNew(name="Jordi",
             surnames="Garcia López",
             group_name="4t A"
         )
@@ -27,9 +25,7 @@ class TestValidationService:
         """Testa que la validació falla si el nom està buit."""
         service = ValidationService(category_dao)
         
-        student_data = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="",
+        student_data = StudentNew(name="",
             surnames="Garcia López",
             group_name="4t A"
         )
@@ -42,9 +38,7 @@ class TestValidationService:
         service = ValidationService(category_dao)
         
         # Crear un objecte vàlid i després modificar-lo per bypassar el dataclass
-        student = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Jordi",
+        student = StudentNew(name="Jordi",
             surnames="Garcia López",
             group_name="4t A"
         )
@@ -58,9 +52,7 @@ class TestValidationService:
         service = ValidationService(category_dao)
         
         # Crear un objecte vàlid i després modificar-lo
-        student = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Jordi",
+        student = StudentNew(name="Jordi",
             surnames="Garcia López",
             group_name="4t A"
         )
@@ -74,9 +66,7 @@ class TestValidationService:
         service = ValidationService(category_dao)
         
         # Crear un objecte vàlid i després modificar-lo
-        student = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Jordi",
+        student = StudentNew(name="Jordi",
             surnames="Garcia López",
             group_name="4t A"
         )
@@ -90,9 +80,7 @@ class TestValidationService:
         service = ValidationService(category_dao)
         
         # Crear un objecte vàlid i després modificar-lo
-        student = StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Jordi",
+        student = StudentNew(name="Jordi",
             surnames="Garcia López",
             group_name="4t A"
         )
@@ -195,7 +183,7 @@ class TestValidationService:
         from tutopy.models.messaging import AcademicCourseNew
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear una nota que usa aquesta categoria
         db.notes.create(NoteNew(

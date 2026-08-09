@@ -9,9 +9,7 @@ class TestStudentGroupHistoryDAO:
 
     def test_create(self, db):
         """Testa la creació d'un registre d'històric de grup."""
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -37,9 +35,7 @@ class TestStudentGroupHistoryDAO:
 
     def test_get_by_id(self, db):
         """Testa l'obtenció d'un registre pel seu ID."""
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -66,9 +62,7 @@ class TestStudentGroupHistoryDAO:
 
     def test_get_current(self, db):
         """Testa l'obtenció del grup actual (end_date IS NULL)."""
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -100,9 +94,7 @@ class TestStudentGroupHistoryDAO:
 
     def test_get_current_no_active(self, db):
         """Testa que get_current retorna None si no hi ha cap grup actiu."""
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -123,9 +115,7 @@ class TestStudentGroupHistoryDAO:
 
     def test_get_by_student(self, db):
         """Testa l'obtenció de tot l'històric d'un alumne."""
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -162,9 +152,7 @@ class TestStudentGroupHistoryDAO:
 
     def test_get_by_student_empty(self, db):
         """Testa que get_by_student retorna llista buida si no hi ha registres."""
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -176,9 +164,7 @@ class TestStudentGroupHistoryDAO:
 
     def test_update(self, db):
         """Testa l'actualització d'un registre."""
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -201,9 +187,7 @@ class TestStudentGroupHistoryDAO:
 
     def test_delete(self, db):
         """Testa l'eliminació d'un registre."""
-        student = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test",
+        student = db.students.create(StudentNew(name="Test",
             surnames="User",
             group_name="1r A"
         ))
@@ -224,15 +208,11 @@ class TestStudentGroupHistoryDAO:
 
     def test_get_by_course(self, db):
         """Testa l'obtenció de registres per curs acadèmic."""
-        student1 = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test1",
+        student1 = db.students.create(StudentNew(name="Test1",
             surnames="User",
             group_name="1r A"
         ))
-        student2 = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test2",
+        student2 = db.students.create(StudentNew(name="Test2",
             surnames="User",
             group_name="1r A"
         ))
@@ -265,15 +245,11 @@ class TestStudentGroupHistoryDAO:
 
     def test_get_by_course_and_date(self, db):
         """Testa l'obtenció de grups actius en una data concreta."""
-        student1 = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test1",
+        student1 = db.students.create(StudentNew(name="Test1",
             surnames="User",
             group_name="1r A"
         ))
-        student2 = db.students.create(StudentNew(
-            uuid=str(uuid.uuid4()),
-            name="Test2",
+        student2 = db.students.create(StudentNew(name="Test2",
             surnames="User",
             group_name="1r A"
         ))

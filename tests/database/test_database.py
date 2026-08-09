@@ -91,7 +91,7 @@ class TestCreateRegisters:
     def test_creacio_registre_alumne(self, db):
         """Verifica la creació d'un sol registre de la taula d'alumnes"""
         uuid_alumne_test = str(uuid.uuid4())
-        alumne_test_individual = StudentNew(uuid_alumne_test, "Jordi", "Garcia", "4t A")
+        alumne_test_individual = StudentNew("Jordi", "Garcia", "4t A")
         alumne_creat = db.students.create(alumne_test_individual)
         assert db.students.get_all()[0] == Student(
             alumne_creat.id,
@@ -107,7 +107,7 @@ class TestCreateRegisters:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear la nota
         anotacio_exemple = NoteNew(alumne.id, categoria.id, "2026-01-01", curs.id, "Anotació exemple")
@@ -128,7 +128,7 @@ class TestCreateRegisters:
         """Verifica la creació d'un contacte d'alumne"""
         # Crear alumne primer
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         contacte_exemple = ContactNew(alumne.id, "Joan", "Pare", "999999999", "correu@example.com")
         registre_contactes = db.contacts.create(contacte_exemple)
@@ -146,7 +146,7 @@ class TestCreateRegisters:
         """Verifica la creació d'una anotació sobre un alumne"""
         # Crear alumne primer
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         anotacio_exemple = StudentAnnotationNew(alumne.id, "Anotació prova")
         registre_annotacions = db.annotations.create(anotacio_exemple)
@@ -174,7 +174,7 @@ class TestUpdateRegisters:
         """Test per a comprovar que un alumne s'actualitza correctament"""
         # Crear alumne primer
         uuid_alumne_test = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne_test, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         alumne_test_actualitzacio = Student(
             alumne.id,
@@ -192,7 +192,7 @@ class TestUpdateRegisters:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         nota = db.notes.create(NoteNew(
             alumne.id,
@@ -217,7 +217,7 @@ class TestUpdateRegisters:
         """Test en què s'actualitza el telèfon d'un contacte"""
         # Crear dependencies
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         contacte = db.contacts.create(ContactNew(
             alumne.id,
             "Joan",
@@ -241,7 +241,7 @@ class TestUpdateRegisters:
         """Test per a comprovar l'actualització dels descriptors d'alumnes"""
         # Crear dependencies
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         anotacio = db.annotations.create(StudentAnnotationNew(alumne.id, "Anotació prova"))
         
         anotacio_actualitzada = StudentAnnotation(
@@ -284,7 +284,7 @@ class TestReadingOperations:
         """Testeig de les operacions de lectura d'alumnes"""
         # Crear alumne
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Josep", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Josep", "Garcia", "4t A"))
         
         alumne_cerca = Student(alumne.id, alumne.uuid, "Josep", "Garcia", "4t A")
         assert db.students.search("Josep")[0] == alumne_cerca
@@ -299,7 +299,7 @@ class TestReadingOperations:
         db.categories.rename(Category(categoria.id, "Acadèmic primària"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Josep", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Josep", "Garcia", "4t A"))
         
         nota_registrada = db.notes.create(NoteNew(
             alumne.id,
@@ -350,7 +350,7 @@ class TestDeleting:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear nota que usa aquesta categoria
         db.notes.create(NoteNew(
@@ -371,7 +371,7 @@ class TestDeleting:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         nota = db.notes.create(NoteNew(
             alumne.id,
             categoria.id,
@@ -402,7 +402,7 @@ class TestDeleting:
         """Verifica que les anotacions s'eliminen correctament"""
         # Crear dependencies
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         anotacio = db.annotations.create(StudentAnnotationNew(alumne.id, "Anotació prova"))
         
         # Verificar que existeix
@@ -416,7 +416,7 @@ class TestDeleting:
         """Verifica que els contactes s'eliminen correctament"""
         # Crear dependencies
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         contacte = db.contacts.create(ContactNew(
             alumne.id,
             "Joan",
@@ -446,7 +446,7 @@ class TestDeleting:
     def test_delete_students(self, db):
         """Verifica que els estudiants s'eliminen correctament"""
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Verificar que existeix
         assert db.students.get_by_id(alumne.id) is not None
@@ -465,7 +465,7 @@ class TestDeleting:
         categoria = db.categories.create(CategoryNew("Esport"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear una nota que usa aquesta categoria
         db.notes.create(NoteNew(
@@ -490,7 +490,7 @@ class TestDocumentOperations:
         """Verifica la creació d'un document d'estudiant"""
         # Crear alumne primer
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         doc_data = StudentDocumentNew(
             student_id=alumne.id,
@@ -514,7 +514,7 @@ class TestDocumentOperations:
         """Verifica la lectura d'un document per ID"""
         # Crear document
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         doc = db.documents.create(StudentDocumentNew(
             student_id=alumne.id,
             name="Document test",
@@ -538,7 +538,7 @@ class TestDocumentOperations:
         """Verifica la lectura de documents per estudiant"""
         # Crear alumne i documents
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         doc1 = db.documents.create(StudentDocumentNew(
             student_id=alumne.id,
@@ -564,14 +564,14 @@ class TestDocumentOperations:
     def test_get_by_student_empty(self, db):
         """Test que get_by_student retorna lista buida quan l'estudiant no té documents"""
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         assert db.documents.get_by_student(alumne.id) == []
 
     def test_update_document(self, db):
         """Verifica l'actualització d'un document"""
         # Crear document
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         doc = db.documents.create(StudentDocumentNew(
             student_id=alumne.id,
             name="Document vell",
@@ -604,7 +604,7 @@ class TestDocumentOperations:
         """Verifica l'eliminació d'un document"""
         # Crear document
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         doc = db.documents.create(StudentDocumentNew(
             student_id=alumne.id,
             name="Document a esborrar",
@@ -627,7 +627,7 @@ class TestDocumentOperations:
         """Verifica que l'eliminació d'un alumne elimina els seus documents (CASCADE)"""
         # Crear alumne i document
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         doc = db.documents.create(StudentDocumentNew(
             student_id=alumne.id,
             name="Document",
@@ -674,13 +674,13 @@ class TestEdgeCases:
     def test_get_all_empty_contacts(self, db):
         """Test que get_by_student retorna lista buida per alumne sense contactes"""
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         assert db.contacts.get_by_student(alumne.id) == []
 
     def test_get_all_empty_annotations(self, db):
         """Test que get_by_student retorna lista buida per alumne sense anotacions"""
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         assert db.annotations.get_by_student(alumne.id) == []
 
     def test_search_no_results(self, db):
@@ -718,7 +718,7 @@ class TestNoteEdgeCases:
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear nota amb data de setembre (ha de crear curs 2026-2027 automàticament)
         anotacio = NoteNew(
@@ -740,7 +740,7 @@ class TestNoteEdgeCases:
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear nota amb data d'agost (ha de crear curs 2025-2026)
         anotacio = NoteNew(
@@ -763,7 +763,7 @@ class TestNoteEdgeCases:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs_antic = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear nota amb curs antic
         anotacio = NoteNew(

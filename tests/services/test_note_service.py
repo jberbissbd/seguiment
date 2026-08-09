@@ -13,7 +13,7 @@ class TestNoteService:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear el servei
         service = NoteService(note_dao, academic_course_dao, category_dao)
@@ -43,7 +43,7 @@ class TestNoteService:
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Conducta"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Anna", "Martínez", "3r B"))
+        alumne = db.students.create(StudentNew("Anna", "Martínez", "3r B"))
         
         # Crear el servei
         service = NoteService(note_dao, academic_course_dao, category_dao)
@@ -70,7 +70,7 @@ class TestNoteService:
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Incidència"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Pere", "López", "2n A"))
+        alumne = db.students.create(StudentNew("Pere", "López", "2n A"))
         
         # Crear el servei
         service = NoteService(note_dao, academic_course_dao, category_dao)
@@ -98,7 +98,7 @@ class TestNoteService:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Jordi", "Garcia", "4t A"))
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear algunes notes per aquest alumne
         note1 = db.notes.create(NoteNew(
@@ -118,7 +118,7 @@ class TestNoteService:
         
         # Crear una nota per un altre alumne (per verificar que no es retorni)
         uuid_altre = str(uuid.uuid4())
-        altre = db.students.create(StudentNew(uuid_altre, "Anna", "Martínez", "4t A"))
+        altre = db.students.create(StudentNew("Anna", "Martínez", "4t A"))
         db.notes.create(NoteNew(
             student_id=altre.id,
             category_id=categoria.id,
@@ -143,7 +143,7 @@ class TestNoteService:
         """Testa l'obtenció de notes per un alumne sense notes."""
         # Crear un alumne sense notes
         uuid_alumne = str(uuid.uuid4())
-        alumne = db.students.create(StudentNew(uuid_alumne, "Maria", "Sánchez", "1r A"))
+        alumne = db.students.create(StudentNew("Maria", "Sánchez", "1r A"))
         
         # Crear el servei
         service = NoteService(note_dao, academic_course_dao, category_dao)
