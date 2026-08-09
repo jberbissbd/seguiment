@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import sys
+from contextlib import contextmanager
 from typing import Optional
 from .daos import (
     AcademicCourseDAO,
@@ -20,6 +21,56 @@ def _default_db_path() -> str:
     return "seguiment.db"
 
 
+class ManagedConnection:
+    """Fa que els ``commit`` dels DAOs respectin una transacció exterior."""
+
+    def __init__(self, connection: sqlite3.Connection):
+        self._connection = connection
+        self._transaction_depth = 0
+
+    @property
+    def row_factory(self):
+        return self._connection.row_factory
+
+    @row_factory.setter
+    def row_factory(self, value):
+        self._connection.row_factory = value
+
+    def execute(self, *args, **kwargs):
+        return self._connection.execute(*args, **kwargs)
+
+    def executescript(self, *args, **kwargs):
+        return self._connection.executescript(*args, **kwargs)
+
+    def commit(self):
+        if self._transaction_depth == 0:
+            self._connection.commit()
+
+    def rollback(self):
+        self._connection.rollback()
+
+    def close(self):
+        self._connection.close()
+
+    @contextmanager
+    def transaction(self):
+        outermost = self._transaction_depth == 0
+        if outermost:
+            self._connection.execute("BEGIN")
+        self._transaction_depth += 1
+        try:
+            yield
+        except Exception:
+            self._transaction_depth -= 1
+            if outermost:
+                self._connection.rollback()
+            raise
+        else:
+            self._transaction_depth -= 1
+            if outermost:
+                self._connection.commit()
+
+
 class Database:
     """Gestor de la connexió SQLite.
 
@@ -29,7 +80,7 @@ class Database:
 
     def __init__(self, path: str = None):
         self.path = path or _default_db_path()
-        self.conn: Optional[sqlite3.Connection] = None
+        self.conn: Optional[ManagedConnection] = None
         self.academic_courses: AcademicCourseDAO = None
         self.categories: CategoryDAO = None
         self.students: StudentDAO = None
@@ -40,7 +91,7 @@ class Database:
         self.student_group_history: StudentGroupHistoryDAO = None
 
     def connect(self):
-        self.conn = sqlite3.connect(self.path)
+        self.conn = ManagedConnection(sqlite3.connect(self.path))
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self._create_tables()
@@ -56,6 +107,12 @@ class Database:
     def commit(self):
         if self.conn:
             self.conn.commit()
+
+    def transaction(self):
+        """Context transaccional compartit pels serveis coordinadors."""
+        if self.conn is None:
+            raise RuntimeError("La base de dades no està connectada.")
+        return self.conn.transaction()
 
     def _init_daos(self):
         self.academic_courses = AcademicCourseDAO(self.conn)
@@ -89,7 +146,7 @@ class Database:
                 student_id INTEGER NOT NULL,
                 category_id INTEGER NOT NULL,
                 date TEXT NOT NULL,
-                course_id INTEGER NOT NULL DEFAULT 0,
+                course_id INTEGER NOT NULL,
                 content TEXT NOT NULL,
                 FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
                 FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
@@ -127,7 +184,22 @@ class Database:
                 academic_course_id INTEGER,
                 start_date TEXT NOT NULL,
                 end_date TEXT,
+                CHECK (end_date IS NULL OR end_date >= start_date),
                 FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
                 FOREIGN KEY (academic_course_id) REFERENCES academic_courses(id) ON DELETE SET NULL
             );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_students_uuid
+                ON students(uuid);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_one_current_group_per_student
+                ON student_group_history(student_id) WHERE end_date IS NULL;
+            CREATE INDEX IF NOT EXISTS idx_notes_student ON notes(student_id);
+            CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category_id);
+            CREATE INDEX IF NOT EXISTS idx_notes_course ON notes(course_id);
+            CREATE INDEX IF NOT EXISTS idx_contacts_student ON contacts(student_id);
+            CREATE INDEX IF NOT EXISTS idx_annotations_student
+                ON student_annotations(student_id);
+            CREATE INDEX IF NOT EXISTS idx_documents_student
+                ON student_documents(student_id);
+            CREATE INDEX IF NOT EXISTS idx_group_history_student
+                ON student_group_history(student_id);
         """)

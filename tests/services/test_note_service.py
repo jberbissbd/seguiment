@@ -17,7 +17,7 @@ class TestNoteService:
         alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear el servei
-        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao, db.transaction)
         
         # Crear nota amb course_id existent
         note_data = NoteNew(
@@ -47,7 +47,7 @@ class TestNoteService:
         alumne = db.students.create(StudentNew("Anna", "Martínez", "3r B"))
         
         # Crear el servei
-        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao, db.transaction)
         
         # Crear nota amb course_id=0 (per resoldre automàticament)
         note_data = NoteNew(
@@ -74,7 +74,7 @@ class TestNoteService:
         alumne = db.students.create(StudentNew("Pere", "López", "2n A"))
         
         # Crear el servei
-        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao, db.transaction)
         
         # Crear nota amb course_id=0 i data de gener
         note_data = NoteNew(
@@ -129,7 +129,7 @@ class TestNoteService:
         ))
         
         # Crear el servei i obtenir notes
-        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao, db.transaction)
         notes = service.get_notes_by_student(alumne.id)
         
         # Verificar
@@ -147,7 +147,7 @@ class TestNoteService:
         alumne = db.students.create(StudentNew("Maria", "Sánchez", "1r A"))
         
         # Crear el servei
-        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao)
+        service = NoteService(note_dao, academic_course_dao, category_dao, student_dao, db.transaction)
         
         # Obtenir notes
         notes = service.get_notes_by_student(alumne.id)
@@ -160,7 +160,7 @@ class TestNoteService:
         category = db.categories.create(CategoryNew("Acadèmic"))
         student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         service = NoteService(
-            note_dao, academic_course_dao, category_dao, student_dao
+            note_dao, academic_course_dao, category_dao, student_dao, db.transaction
         )
         created = service.create(NoteNew(
             student.id, category.id, "2026-01-15", 0, "  Nota inicial  "
@@ -184,7 +184,7 @@ class TestNoteService:
         category_dao, student_dao, db):
         category = db.categories.create(CategoryNew("Acadèmic"))
         service = NoteService(
-            note_dao, academic_course_dao, category_dao, student_dao
+            note_dao, academic_course_dao, category_dao, student_dao, db.transaction
         )
 
         with pytest.raises(EntityNotFoundError, match="alumne"):
@@ -199,7 +199,7 @@ class TestNoteService:
         student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         other = db.students.create(StudentNew("Anna", "Serra", "4t B"))
         service = NoteService(
-            note_dao, academic_course_dao, category_dao, student_dao
+            note_dao, academic_course_dao, category_dao, student_dao, db.transaction
         )
         service.create(NoteNew(
             student.id, academic.id, "2026-01-10", 0, "Progrés notable"
@@ -226,9 +226,30 @@ class TestNoteService:
     def test_filtre_rebutja_interval_invertit(self, note_dao,
         academic_course_dao, category_dao, student_dao, db):
         service = NoteService(
-            note_dao, academic_course_dao, category_dao, student_dao
+            note_dao, academic_course_dao, category_dao, student_dao, db.transaction
         )
         with pytest.raises(ValidationError, match="data inicial"):
             service.get_records({
                 "date_from": "2026-02-01", "date_to": "2026-01-01"
             })
+
+    def test_create_es_atomic_si_falla_despres_de_crear_el_curs(self, note_dao,
+        academic_course_dao, category_dao, student_dao, db, monkeypatch):
+        category = db.categories.create(CategoryNew("Acadèmic"))
+        student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        service = NoteService(
+            note_dao, academic_course_dao, category_dao, student_dao,
+            db.transaction,
+        )
+
+        def fail_create(_data):
+            raise RuntimeError("fallada simulada")
+
+        monkeypatch.setattr(note_dao, "create", fail_create)
+        with pytest.raises(RuntimeError, match="fallada simulada"):
+            service.create(NoteNew(
+                student.id, category.id, "2026-09-01", 0, "Nota"
+            ))
+
+        assert academic_course_dao.get_by_course("2026-2027") is None
+        assert note_dao.get_all() == []

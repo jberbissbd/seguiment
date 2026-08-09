@@ -16,12 +16,14 @@ class StudentService:
     def __init__(self, student_dao: StudentDAO, contact_dao: ContactDAO,
         document_dao: DocumentDAO, group_history_dao: StudentGroupHistoryDAO,
         academic_course_dao: AcademicCourseDAO,
+        transaction_factory,
         validation_service: ValidationService = None):
         self.student_dao = student_dao
         self.contact_dao = contact_dao
         self.document_dao = document_dao
         self.group_history_dao = group_history_dao
         self.academic_course_dao = academic_course_dao
+        self.transaction_factory = transaction_factory
         self.validation_service = validation_service or ValidationService()
 
     def get_all(self) -> list[Student]:
@@ -60,18 +62,19 @@ class StudentService:
 
     def update(self, student: Student) -> Student:
         """Valida i actualitza un alumne existent, conservant el seu UUID."""
-        existing = self._require_student(student.id)
-        data = StudentNew(student.name, student.surnames, student.group_name)
-        self.validation_service.validate_student(data)
-        requested_group = data.group_name
-        student.uuid = existing.uuid
-        student.name = data.name
-        student.surnames = data.surnames
-        student.group_name = existing.group_name
-        self.student_dao.update(student)
-        if requested_group != existing.group_name:
-            self.change_student_group(student.id, requested_group)
-            student.group_name = requested_group
+        with self.transaction_factory():
+            existing = self._require_student(student.id)
+            data = StudentNew(student.name, student.surnames, student.group_name)
+            self.validation_service.validate_student(data)
+            requested_group = data.group_name
+            student.uuid = existing.uuid
+            student.name = data.name
+            student.surnames = data.surnames
+            student.group_name = existing.group_name
+            self.student_dao.update(student)
+            if requested_group != existing.group_name:
+                self.change_student_group(student.id, requested_group)
+                student.group_name = requested_group
         return student
 
     def delete(self, student_id: int) -> None:
@@ -119,40 +122,38 @@ class StudentService:
         Returns:
             StudentGroupHistory: El registre creat.
         """
-        change_date = change_date or datetime.now().strftime("%Y-%m-%d")
-        student = self._require_student(student_id)
-        new_group = self.validation_service.required_text(
-            new_group, "El grup no pot estar buit."
-        )
-        self.validation_service.iso_date(change_date)
-
-        # Obtenir el grup actual per tancar-lo
-        current_history = self.group_history_dao.get_current(student_id)
-        if current_history:
-            current_history.end_date = change_date
-            self.group_history_dao.update(current_history)
-
-        # Resoldre el curs acadèmic si no s'especifica
-        if academic_course_id is None:
-            course_str = AcademicCourseDeterminator().curs_academic_singular(change_date)
-            academic_course_id = self.academic_course_dao.get_or_create(course_str).id
-        elif not self.academic_course_dao.get_by_id(academic_course_id):
-            raise EntityNotFoundError(
-                f"El curs acadèmic amb ID {academic_course_id} no existeix."
+        with self.transaction_factory():
+            change_date = change_date or datetime.now().strftime("%Y-%m-%d")
+            student = self._require_student(student_id)
+            new_group = self.validation_service.required_text(
+                new_group, "El grup no pot estar buit."
             )
+            self.validation_service.iso_date(change_date)
 
-        # Crear el nou registre
-        new_history = StudentGroupHistoryNew(
-            student_id=student_id,
-            group_name=new_group,
-            academic_course_id=academic_course_id,
-            start_date=change_date,
-            end_date=None  # Es marca com a grup actual
-        )
-        history = self.group_history_dao.create(new_history)
-        student.group_name = new_group
-        self.student_dao.update(student)
-        return history
+            current_history = self.group_history_dao.get_current(student_id)
+            if current_history:
+                current_history.end_date = change_date
+                self.group_history_dao.update(current_history)
+
+            if academic_course_id is None:
+                course_str = AcademicCourseDeterminator().curs_academic_singular(change_date)
+                academic_course_id = self.academic_course_dao.get_or_create(course_str).id
+            elif not self.academic_course_dao.get_by_id(academic_course_id):
+                raise EntityNotFoundError(
+                    f"El curs acadèmic amb ID {academic_course_id} no existeix."
+                )
+
+            new_history = StudentGroupHistoryNew(
+                student_id=student_id,
+                group_name=new_group,
+                academic_course_id=academic_course_id,
+                start_date=change_date,
+                end_date=None,
+            )
+            history = self.group_history_dao.create(new_history)
+            student.group_name = new_group
+            self.student_dao.update(student)
+            return history
 
     def _require_student(self, student_id: int) -> Student:
         self.validation_service.positive_id(student_id)

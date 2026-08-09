@@ -10,17 +10,19 @@ from tutopy.services.utils import AcademicCourseDeterminator
 
 class NoteService:
     def __init__(self, note_dao: NoteDAO, academic_course_dao: AcademicCourseDAO,
-        category_dao: CategoryDAO, student_dao: StudentDAO):
+        category_dao: CategoryDAO, student_dao: StudentDAO, transaction_factory):
         self.note_dao = note_dao
         self.academic_course_dao = academic_course_dao
         self.category_dao = category_dao
         self.student_dao = student_dao
+        self.transaction_factory = transaction_factory
         self.validation_service = ValidationService(category_dao)
 
     def create_note(self, note_data: NoteNew) -> Note:
         """Valida i crea una nota de seguiment."""
-        prepared = self._prepare(note_data)
-        return self.note_dao.create(prepared)
+        with self.transaction_factory():
+            prepared = self._prepare(note_data)
+            return self.note_dao.create(prepared)
 
     def create(self, note_data: NoteNew) -> Note:
         return self.create_note(note_data)
@@ -50,21 +52,22 @@ class NoteService:
         return note
 
     def update(self, note: Note) -> Note:
-        self.get_by_id(note.id)
-        prepared = self._prepare(NoteNew(
-            student_id=note.student_id,
-            category_id=note.category_id,
-            date=note.date,
-            course_id=note.course_id,
-            content=note.content,
-        ))
-        note.student_id = prepared.student_id
-        note.category_id = prepared.category_id
-        note.date = prepared.date
-        note.course_id = prepared.course_id
-        note.content = prepared.content
-        self.note_dao.update(note)
-        return note
+        with self.transaction_factory():
+            self.get_by_id(note.id)
+            prepared = self._prepare(NoteNew(
+                student_id=note.student_id,
+                category_id=note.category_id,
+                date=note.date,
+                course_id=note.course_id,
+                content=note.content,
+            ))
+            note.student_id = prepared.student_id
+            note.category_id = prepared.category_id
+            note.date = prepared.date
+            note.course_id = prepared.course_id
+            note.content = prepared.content
+            self.note_dao.update(note)
+            return note
 
     def delete(self, note_id: int) -> None:
         self.get_by_id(note_id)
