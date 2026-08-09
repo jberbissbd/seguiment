@@ -26,3 +26,5 @@ packages = ["tutopy"]
 
 [pytest]
 testpaths = 'tests'
+qt_api = 'pyside6'
+addopts = '--tb=short'
