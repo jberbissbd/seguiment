@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=69.0", "wheel>=0.43"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,21 +8,37 @@ version = "0.0.1"
 authors = [
   { name="Jordi Berbis", email="jberbis@xtec.cat" },
 ]
-description = "Una eina per al seguiment d'alumnes a centre eudcatius"
+description = "Una eina per al seguiment d'alumnes en centres educatius"
 readme = "README.md"
-license = { file="LICENSE" }
-requires-python = ">=3.7"
+requires-python = ">=3.10"
+dependencies = [
+  "PySide6==6.11.1",
+]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: GNU General Public License v3 (GPLv3)"]
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
 
-[tool.setuptools]
-packages = ["tutopy"]
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+  "pytest-qt>=4.0",
+]
+
+[project.scripts]
+tutopy = "tutopy.main:main"
+
+[tool.setuptools.packages.find]
+include = ["tutopy*"]
 
 [project.urls]
 "Homepage" = "https://github.com/jberbissbd/seguiment"
 "Bug Tracker" = "https://github.com/jberbissbd/seguiment/issues"
 
-[pytest]
-testpaths = 'tests'
+[tool.pytest.ini_options]
+testpaths = ["tests"]

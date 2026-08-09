@@ -75,7 +75,7 @@ def get_app_data_dir(app_name: str = "tutopy") -> Path:
     return Path.home() / f".{app_name}"
 
 
-def get_db_path(db_name: str = "app.db") -> Path:
+def get_db_path(db_name: str = "seguiment.db") -> Path:
     """Retorna el path per a la base de dades.
 
     Intenta posar la BD al costat de l'executable (o arrel del projecte en dev).

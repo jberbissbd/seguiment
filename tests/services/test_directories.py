@@ -121,9 +121,9 @@ class TestGetDbPath:
         assert isinstance(result, Path)
 
     def test_default_db_name(self):
-        """Testa que el nom per defecte de la BD és 'app.db'."""
+        """Testa el nom per defecte de la base de dades de l'aplicació."""
         result = get_db_path()
-        assert result.name == "app.db"
+        assert result.name == "seguiment.db"
 
     def test_custom_db_name(self):
         """Testa que accepta un nom de BD personalitzat."""
