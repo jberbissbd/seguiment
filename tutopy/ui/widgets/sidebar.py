@@ -1,5 +1,7 @@
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QSize, Signal
 from PySide6.QtWidgets import QButtonGroup, QFrame, QLabel, QPushButton, QVBoxLayout
+
+from tutopy.ui.resources import icon
 
 
 class Sidebar(QFrame):
@@ -8,9 +10,9 @@ class Sidebar(QFrame):
     section_changed = Signal(str)
 
     SECTIONS = (
-        ("students", "Alumnes"),
-        ("categories", "Categories"),
-        ("data", "Gestió de dades"),
+        ("students", "Alumnes", "students.svg"),
+        ("categories", "Categories", "categories.svg"),
+        ("data", "Gestió de dades", "data.svg"),
     )
 
     def __init__(self, parent=None):
@@ -28,8 +30,10 @@ class Sidebar(QFrame):
         self.button_group = QButtonGroup(self)
         self.button_group.setExclusive(True)
         self.buttons = {}
-        for key, text in self.SECTIONS:
+        for key, text, icon_name in self.SECTIONS:
             button = QPushButton(text)
+            button.setIcon(icon(icon_name))
+            button.setIconSize(QSize(19, 19))
             button.setCheckable(True)
             button.setProperty("navButton", True)
             button.setObjectName(f"nav_{key}")

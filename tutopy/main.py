@@ -14,6 +14,7 @@ from tutopy.controllers.data_management_controller import DataManagementControll
 from tutopy.database.database import Database
 from tutopy.services.directories import get_db_path
 from tutopy.ui.main_window import MainWindow
+from tutopy.ui.resources import application_icon
 
 
 def main() -> int:
@@ -22,6 +23,8 @@ def main() -> int:
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
     app = QApplication(sys.argv)
+    app.setApplicationName("Tutopy")
+    app.setWindowIcon(application_icon())
     database = Database(str(get_db_path())).connect()
     services = create_services(database)
     window = MainWindow()

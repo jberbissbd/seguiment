@@ -33,6 +33,7 @@ dev = [
 ]
 build = [
   "pyinstaller==6.21.0",
+  "Pillow>=10,<13",
   "tomli>=2.0; python_version < '3.11'",
 ]
 

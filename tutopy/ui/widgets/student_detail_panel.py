@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
@@ -11,6 +11,7 @@ from tutopy.ui.tabs.history_tab import HistoryTab
 from tutopy.ui.tabs.notes_tab import NotesTab
 from tutopy.ui.widgets.avatar import avatar_stylesheet, initials
 from tutopy.ui.widgets.flow_layout import FlowLayout
+from tutopy.ui.resources import icon
 
 
 class StudentDetailPanel(QFrame):
@@ -73,16 +74,17 @@ class StudentDetailPanel(QFrame):
 
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
+        self.tabs.setIconSize(QSize(18, 18))
         self.notes_tab = NotesTab()
         self.annotation_tab = AnnotationTab()
         self.contact_tab = ContactTab()
         self.document_tab = DocumentTab()
         self.history_tab = HistoryTab()
-        self.tabs.addTab(self.notes_tab, "Notes")
-        self.tabs.addTab(self.annotation_tab, "Descriptors")
-        self.tabs.addTab(self.contact_tab, "Contactes")
-        self.tabs.addTab(self.document_tab, "Documents")
-        self.tabs.addTab(self.history_tab, "Històric")
+        self.tabs.addTab(self.notes_tab, icon("notes.svg"), "Notes")
+        self.tabs.addTab(self.annotation_tab, icon("descriptors.svg"), "Descriptors")
+        self.tabs.addTab(self.contact_tab, icon("contacts.svg"), "Contactes")
+        self.tabs.addTab(self.document_tab, icon("documents.svg"), "Documents")
+        self.tabs.addTab(self.history_tab, icon("history.svg"), "Històric")
         self.tabs.hide()
         layout.addWidget(self.tabs, 1)
 

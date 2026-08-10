@@ -4,7 +4,7 @@ a = Analysis(
     ["tutopy/main.py"],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[("tutopy/ui/assets", "tutopy/ui/assets")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -32,4 +32,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon="tutopy/ui/assets/tutopy.svg",
 )

@@ -10,6 +10,7 @@ from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
 from tutopy.ui.widgets.student_list import StudentList
 from tutopy.ui.widgets.crud_views import CrudListView
 from tutopy.ui.widgets.data_tools import DataToolsView
+from tutopy.ui.resources import application_icon
 
 
 class MainWindow(QMainWindow):
@@ -18,6 +19,7 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Tutopy — Seguiment d'alumnes")
+        self.setWindowIcon(application_icon())
         self.resize(1100, 700)
         self.setMinimumSize(900, 600)
         self.setStyleSheet(MAIN_STYLESHEET)

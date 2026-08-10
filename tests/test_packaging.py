@@ -34,6 +34,12 @@ def test_spec_es_onefile_i_no_inclou_base_de_dades():
     assert "console=False" in spec
 
 
+def test_spec_inclou_icona_i_recursos_visuals():
+    spec = (ROOT / "tutopy.spec").read_text(encoding="utf-8")
+    assert '("tutopy/ui/assets", "tutopy/ui/assets")' in spec
+    assert 'icon="tutopy/ui/assets/tutopy.svg"' in spec
+
+
 def test_versio_de_pyinstaller_esta_fixada():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     dependencies = project["project"]["optional-dependencies"]["build"]

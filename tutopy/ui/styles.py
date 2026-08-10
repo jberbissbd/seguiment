@@ -44,7 +44,7 @@ QPushButton[navButton="true"] {{
     color: #DCEAF7;
     border: none;
     border-radius: 6px;
-    padding: 11px 14px;
+    padding: 11px 12px;
     text-align: left;
     min-height: 24px;
 }}
