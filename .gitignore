@@ -40,3 +40,4 @@ tutopy/seguiment.db
 /build/
 /dist/
 *.log
+tutopy/__pycache__/__init__.cpython-312.pyc
