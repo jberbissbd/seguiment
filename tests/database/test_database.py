@@ -1,4 +1,5 @@
 from pathlib import Path
+import sqlite3
 import uuid, pytest
 from tutopy.models.messaging import (
     CategoryNew, Category, 
@@ -697,7 +698,7 @@ class TestEdgeCases:
         
         # Intentar crear una altra amb el mateix nom - hauria de fallar
         duplicate = CategoryNew("Acadèmic")
-        with pytest.raises(Exception):  # SQLiteIntegrationError o similar
+        with pytest.raises(sqlite3.IntegrityError):
             db.categories.create(duplicate)
 
     def test_academic_course_unique_constraint(self, db):
@@ -707,5 +708,5 @@ class TestEdgeCases:
         
         # Intentar crear un altre amb el mateix nom - hauria de fallar
         duplicate = AcademicCourseNew("2025-2026")
-        with pytest.raises(Exception):
+        with pytest.raises(sqlite3.IntegrityError):
             db.academic_courses.create(duplicate)

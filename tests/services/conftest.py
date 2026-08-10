@@ -11,7 +11,7 @@ from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDA
 from tutopy.database.daos.annotation_dao import AnnotationDAO
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def db(tmp_path_factory):
     """Crea una base de dades temporal per a cada test."""
     db_dir = tmp_path_factory.mktemp("test_data")
