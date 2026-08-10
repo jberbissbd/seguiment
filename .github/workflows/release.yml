@@ -1,0 +1,93 @@
+name: Build release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e ".[dev]"
+      - name: Validate tag and project version
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python scripts/check_release_version.py "$RELEASE_TAG"
+      - name: Run tests
+        run: python -m pytest -q
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            source: dist/Tutopy.exe
+            filename: Tutopy-Windows-x86_64.exe
+            artifact: tutopy-windows-x86_64
+          - os: ubuntu-22.04
+            source: dist/Tutopy
+            filename: Tutopy-Linux-x86_64
+            artifact: tutopy-linux-x86_64
+          - os: macos-15-intel
+            source: dist/Tutopy
+            filename: Tutopy-macOS-x86_64
+            artifact: tutopy-macos-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - name: Install build dependencies
+        run: python -m pip install -e ".[build]"
+      - name: Build one-file executable
+        run: pyinstaller --clean --noconfirm tutopy.spec
+      - name: Stage release artifact
+        env:
+          SOURCE_FILE: ${{ matrix.source }}
+          OUTPUT_FILE: ${{ matrix.filename }}
+        run: python scripts/stage_release_artifact.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release/${{ matrix.filename }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: tutopy-*
+          path: release
+          merge-multiple: true
+      - name: Generate checksums
+        working-directory: release
+        run: sha256sum Tutopy-* > SHA256SUMS.txt
+      - name: Create release and upload executables
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" release/* --verify-tag --generate-notes --title "Tutopy $RELEASE_TAG"

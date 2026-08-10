@@ -99,9 +99,9 @@ class TestGetAppDataDir:
         assert "test_app" in str(result)
 
     def test_default_app_name(self):
-        """Testa que el nom per defecte és 'tutopy'."""
+        """Testa que el nom per defecte és estable encara que canviï el binari."""
         result = get_app_data_dir()
-        assert "tutopy" in str(result)
+        assert result.name == "Tutopy"
 
     def test_linux_path_structure(self):
         """Testa l'estructura del path en Linux."""
@@ -115,24 +115,27 @@ class TestGetAppDataDir:
 class TestGetDbPath:
     """Tests per a la funció get_db_path."""
 
-    def test_returns_path(self):
+    def test_returns_path(self, tmp_path, monkeypatch):
         """Testa que retorna un objecte Path."""
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
         result = get_db_path()
         assert isinstance(result, Path)
+        assert result.parent.exists()
 
-    def test_default_db_name(self):
+    def test_default_db_name(self, tmp_path, monkeypatch):
         """Testa el nom per defecte de la base de dades de l'aplicació."""
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
         result = get_db_path()
         assert result.name == "seguiment.db"
 
-    def test_custom_db_name(self):
+    def test_custom_db_name(self, tmp_path, monkeypatch):
         """Testa que accepta un nom de BD personalitzat."""
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
         result = get_db_path("custom.db")
         assert result.name == "custom.db"
 
-    def test_db_path_in_project_root(self):
-        """Testa que la BD es col·loca a l'arrel del projecte en desenvolupament."""
-        if not getattr(__import__("sys"), "frozen", False):
-            result = get_db_path()
-            project_root = get_project_root()
-            assert result.parent == project_root
+    def test_db_path_in_app_data(self, tmp_path, monkeypatch):
+        """La BD no depèn de la carpeta del codi ni de l'executable."""
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+        result = get_db_path()
+        assert result.parent == tmp_path / "Tutopy"

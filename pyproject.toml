@@ -28,6 +28,11 @@ classifiers = [
 dev = [
   "pytest>=7.0",
   "pytest-qt>=4.0",
+  "tomli>=2.0; python_version < '3.11'",
+]
+build = [
+  "pyinstaller==6.21.0",
+  "tomli>=2.0; python_version < '3.11'",
 ]
 
 [project.scripts]

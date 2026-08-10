@@ -2,6 +2,8 @@ import os
 import sys
 from pathlib import Path
 
+APP_NAME = "Tutopy"
+
 # Marcadors per identificar l'arrel del projecte
 PROJECT_ROOT_MARKERS = ["main.py", "requirements.txt", "pyproject.toml", ".git"]
 
@@ -38,21 +40,13 @@ def get_executable_dir() -> Path:
     return get_project_root()
 
 
-def get_app_data_dir(app_name: str = "tutopy") -> Path:
+def get_app_data_dir(app_name: str = APP_NAME) -> Path:
     """Retorna el directori estàndard del SO per dades d'aplicació.
 
     Windows: %LOCALAPPDATA%/%app_name% o %APPDATA%/%app_name%
     macOS: ~/Library/Application Support/%app_name%
     Linux/Unix: ~/.local/share/%app_name% (o $XDG_DATA_HOME/%app_name%)
     """
-    if getattr(sys, "frozen", False):
-        # En mode PyInstaller, obtenir el nom de l'executable sense extensió
-        exe_name = os.path.basename(sys.executable)
-        if exe_name.endswith(".exe"):
-            app_name = exe_name[:-4]
-        else:
-            app_name = exe_name
-
     if sys.platform == "win32":
         # Windows: prioritzar LOCALAPPDATA sobre APPDATA
         local_app_data = os.environ.get("LOCALAPPDATA")
@@ -76,24 +70,10 @@ def get_app_data_dir(app_name: str = "tutopy") -> Path:
 
 
 def get_db_path(db_name: str = "seguiment.db") -> Path:
-    """Retorna el path per a la base de dades.
-
-    Intenta posar la BD al costat de l'executable (o arrel del projecte en dev).
-    Si no hi ha permisos d'escriptura, cau al directori estàndard del SO.
-    """
-    if getattr(sys, "frozen", False):
-        exe_dir = Path(sys.executable).parent
-        if _is_writable(exe_dir):
-            return exe_dir / db_name
-        else:
-            # Fallback segur si no hi ha permisos (ex: Program Files)
-            return get_app_data_dir() / db_name
-    else:
-        project_root = get_project_root()
-        if _is_writable(project_root):
-            return project_root / db_name
-        else:
-            return get_app_data_dir() / db_name
+    """Retorna una ruta persistent, independent de la ubicació de l'executable."""
+    app_data_dir = get_app_data_dir()
+    app_data_dir.mkdir(parents=True, exist_ok=True)
+    return app_data_dir / db_name
 
 
 def _is_writable(path: Path) -> bool:
