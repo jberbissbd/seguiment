@@ -28,6 +28,10 @@ class TestStudentService:
         assert created_student.name == "Jordi"
         assert created_student.surnames == "Garcia López"
         assert created_student.group_name == "4t A"
+        history = service.get_group_history(created_student.id)
+        assert len(history) == 1
+        assert history[0].group_name == "4t A"
+        assert history[0].end_date is None
 
     def test_create_student_multiple(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa la creació de múltiples alumnes."""
@@ -445,9 +449,10 @@ class TestStudentGroupHistory:
             group_name="1r A"
         ))
         
-        # Obtenir històric
+        # El servei repara el registre inicial absent creat fora de la capa de negoci.
         history = service.get_group_history(student.id)
-        assert history == []
+        assert len(history) == 1
+        assert history[0].group_name == "1r A"
 
     def test_change_group_es_atomic(self, student_dao, contact_dao, document_dao,
         group_history_dao, academic_course_dao, db, monkeypatch):

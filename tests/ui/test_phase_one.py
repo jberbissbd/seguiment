@@ -32,6 +32,13 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         widget.set_students([first, second])
 
         assert widget.list_widget.count() == 2
+        first_item = widget.list_widget.item(0)
+        first_widget = widget.list_widget.itemWidget(first_item)
+        assert first_item.toolTip() == ""
+        assert first_item.sizeHint().height() >= 52
+        assert first_widget.minimumHeight() == 52
+        assert first_widget.avatar.text() == "AG"
+        assert "background-color" in first_widget.avatar.styleSheet()
         with qtbot.waitSignal(widget.student_selected) as signal:
             widget.list_widget.setCurrentRow(1)
         assert signal.args == [second.id]
@@ -48,7 +55,7 @@ def test_main_window_conte_els_components_de_la_fase_un(qtbot):
     assert isinstance(window.student_list, StudentList)
     assert isinstance(window.student_detail, StudentDetailPanel)
     assert window.content_stack.currentWidget() is window._pages["students"]
-    assert window.student_detail.tabs.count() == 6
+    assert window.student_detail.tabs.count() == 5
 
 
 def test_main_controller_carrega_cerca_i_selecciona_alumnes(qtbot, tmp_path):
@@ -71,6 +78,7 @@ def test_main_controller_carrega_cerca_i_selecciona_alumnes(qtbot, tmp_path):
 
         window.student_list.list_widget.setCurrentRow(0)
         assert window.student_list.current_student_id() == jordi.id
+        assert window.student_detail.student_summary.isVisibleTo(window.student_detail)
         assert window.student_detail.tabs.isVisibleTo(window.student_detail)
     finally:
         database.close()

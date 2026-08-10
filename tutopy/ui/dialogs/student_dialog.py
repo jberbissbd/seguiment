@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit,
-    QVBoxLayout,
+    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QLabel,
+    QLineEdit, QToolButton, QVBoxLayout,
 )
 
 
@@ -26,10 +26,21 @@ class StudentDialog(QDialog):
         self.group_input.setEditable(True)
         self.group_input.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.group_input.addItems(groups)
+        self.group_selector_button = QToolButton()
+        self.group_selector_button.setText("▾")
+        self.group_selector_button.setObjectName("selectorButton")
+        self.group_selector_button.setToolTip("Mostrar els grups existents")
+        self.group_selector_button.setAccessibleName("Seleccionar un grup existent")
+        self.group_selector_button.clicked.connect(self.group_input.showPopup)
+        group_layout = QHBoxLayout()
+        group_layout.setContentsMargins(0, 0, 0, 0)
+        group_layout.setSpacing(4)
+        group_layout.addWidget(self.group_input, 1)
+        group_layout.addWidget(self.group_selector_button)
 
         form.addRow("Nom:", self.name_input)
         form.addRow("Cognoms:", self.surnames_input)
-        form.addRow("Grup:", self.group_input)
+        form.addRow("Grup:", group_layout)
         layout.addLayout(form)
 
         self.validation_label = QLabel("El nom i els cognoms són obligatoris.")

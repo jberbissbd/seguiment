@@ -12,11 +12,19 @@ BORDER_COLOR = "#D8E0E8"
 
 
 MAIN_STYLESHEET = f"""
-QMainWindow, QWidget#applicationRoot {{
+QMainWindow, QDialog, QWidget#applicationRoot {{
     background-color: {BACKGROUND_COLOR};
     color: {TEXT_PRIMARY};
     font-family: "Segoe UI", "Noto Sans", Arial, sans-serif;
     font-size: 14px;
+}}
+
+QDialog {{
+    background-color: {SURFACE_COLOR};
+}}
+
+QDialog QLabel {{
+    color: {TEXT_PRIMARY};
 }}
 
 QFrame#sidebar {{
@@ -57,6 +65,37 @@ QFrame#panel {{
     border-radius: 8px;
 }}
 
+QFrame#studentSummary {{
+    background-color: #F8FAFC;
+    border: 1px solid {BORDER_COLOR};
+    border-radius: 6px;
+}}
+
+QFrame#studentSummary QLabel {{
+    background: transparent;
+    border: none;
+}}
+
+QLabel#studentAvatar {{
+    background-color: #E8EEFF;
+    color: #405CF5;
+    border: none;
+    border-radius: 23px;
+    font-size: 14px;
+    font-weight: 700;
+}}
+
+QLabel#studentName {{
+    color: {TEXT_PRIMARY};
+    font-size: 16px;
+    font-weight: 700;
+}}
+
+QLabel#studentMeta {{
+    color: {TEXT_SECONDARY};
+    font-size: 13px;
+}}
+
 QLabel#sectionTitle {{
     color: {TEXT_PRIMARY};
     font-size: 20px;
@@ -71,21 +110,85 @@ QLabel#errorText {{
     color: {ERROR_COLOR};
 }}
 
-QLineEdit {{
+QLineEdit, QComboBox, QDateEdit, QPlainTextEdit {{
     background-color: white;
     border: 1px solid {BORDER_COLOR};
     border-radius: 6px;
     padding: 8px 10px;
     min-height: 22px;
+    selection-background-color: {PRIMARY_COLOR};
 }}
 
-QLineEdit:focus {{
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QPlainTextEdit:focus {{
     border-color: {PRIMARY_COLOR};
 }}
 
-QLineEdit:disabled {{
+QLineEdit:disabled, QComboBox:disabled, QDateEdit:disabled,
+QPlainTextEdit:disabled {{
     background-color: #EEF2F6;
     color: {TEXT_SECONDARY};
+}}
+
+QComboBox, QDateEdit {{
+    padding-right: 28px;
+}}
+
+QComboBox::drop-down, QDateEdit::drop-down {{
+    border: none;
+    width: 26px;
+}}
+
+QComboBox QAbstractItemView {{
+    background-color: white;
+    color: {TEXT_PRIMARY};
+    border: 1px solid {BORDER_COLOR};
+    selection-background-color: #E5F1FB;
+    selection-color: {TEXT_PRIMARY};
+    padding: 4px;
+}}
+
+QToolButton#calendarButton, QToolButton#selectorButton {{
+    background-color: white;
+    color: {PRIMARY_COLOR};
+    border: 1px solid {PRIMARY_COLOR};
+    border-radius: 6px;
+    padding: 7px;
+    min-width: 26px;
+}}
+
+QToolButton#calendarButton:hover, QToolButton#selectorButton:hover {{
+    background-color: #EEF6FC;
+}}
+
+QPlainTextEdit {{
+    min-height: 90px;
+}}
+
+QDialogButtonBox {{
+    border-top: 1px solid #EDF1F5;
+    padding-top: 12px;
+}}
+
+QDialogButtonBox QPushButton {{
+    background-color: white;
+    color: {PRIMARY_COLOR};
+    border: 1px solid {PRIMARY_COLOR};
+    border-radius: 6px;
+    padding: 8px 16px;
+    min-width: 76px;
+}}
+
+QDialogButtonBox QPushButton:hover {{
+    background-color: #EEF6FC;
+}}
+
+QDialogButtonBox QPushButton:default {{
+    background-color: {PRIMARY_COLOR};
+    color: white;
+}}
+
+QDialogButtonBox QPushButton:default:hover {{
+    background-color: {SECONDARY_COLOR};
 }}
 
 QPushButton#primaryButton {{
@@ -137,6 +240,21 @@ QListWidget::item {{
 QListWidget::item:selected {{
     background-color: #E5F1FB;
     color: {TEXT_PRIMARY};
+}}
+
+QListWidget#studentListWidget::item {{
+    padding: 0;
+    min-height: 52px;
+}}
+
+QLabel#studentListName {{
+    color: {TEXT_PRIMARY};
+    font-weight: 600;
+}}
+
+QLabel#studentListGroup {{
+    color: {TEXT_SECONDARY};
+    font-size: 12px;
 }}
 
 QTableWidget {{

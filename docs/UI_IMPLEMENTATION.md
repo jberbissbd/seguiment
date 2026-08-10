@@ -150,7 +150,8 @@ Les dades complementàries de la fase 4 estan implementades:
 
 - Pestanyes CRUD de descriptors, contactes i documents.
 - Historial de grups de només lectura dins del detall de l'alumne.
-- Pantalles CRUD de categories i cursos acadèmics.
+- Pantalla CRUD de categories.
+- Cursos acadèmics derivats i creats automàticament des de les dates.
 - Documents copiats a un directori gestionat per Tutopy.
 - Controladors connectats exclusivament als serveis de negoci.
 
@@ -235,7 +236,6 @@ Estat: completada.
 - [x] Taula basada en `NoteService.get_records()`.
 - [x] Alta, edició i eliminació.
 - [x] Filtres combinables:
-  - Alumne.
   - Categoria.
   - Curs acadèmic.
   - Data inicial i final.
@@ -251,7 +251,7 @@ Estat: completada.
 - [x] Documents amb emmagatzematge gestionat.
 - [x] Historial de grups.
 - [x] Categories.
-- [x] Cursos acadèmics.
+- [x] Cursos acadèmics gestionats automàticament, sense pantalla CRUD.
 
 ### Fase 5: poliment i documents
 

@@ -1,9 +1,6 @@
 from PySide6.QtWidgets import QDialog
 
-from tutopy.models.messaging import (
-    AcademicCourse, AcademicCourseNew, Category, CategoryNew,
-)
-from tutopy.services.academic_course_service import AcademicCourseService
+from tutopy.models.messaging import Category, CategoryNew
 from tutopy.services.category_service import CategoryService
 from tutopy.services.exceptions import DomainError
 from tutopy.ui.dialogs.text_value_dialog import TextValueDialog
@@ -90,29 +87,3 @@ class CategoryController(_CatalogController):
 
     def _update(self, entity_id, value):
         return self.service.rename(Category(entity_id, value))
-
-
-class AcademicCourseController(_CatalogController):
-    entity_label = "aquest curs acadèmic"
-    create_status = "Curs acadèmic creat"
-    update_status = "Curs acadèmic actualitzat"
-    delete_status = "Curs acadèmic eliminat"
-
-    def __init__(self, window: MainWindow, service: AcademicCourseService, **kwargs):
-        super().__init__(window, service, window.course_view, **kwargs)
-
-    def _dialog(self, value=""):
-        return self.dialog_factory(
-            parent=self.window, title="Curs acadèmic",
-            label="Curs (AAAA-AAAA):", value=value,
-        )
-
-    @staticmethod
-    def _text(course):
-        return course.course
-
-    def _create(self, value):
-        return self.service.create(AcademicCourseNew(value))
-
-    def _update(self, entity_id, value):
-        return self.service.update(AcademicCourse(entity_id, value))

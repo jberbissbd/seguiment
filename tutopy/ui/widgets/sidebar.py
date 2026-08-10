@@ -10,7 +10,6 @@ class Sidebar(QFrame):
     SECTIONS = (
         ("students", "Alumnes"),
         ("categories", "Categories"),
-        ("courses", "Cursos acadèmics"),
     )
 
     def __init__(self, parent=None):

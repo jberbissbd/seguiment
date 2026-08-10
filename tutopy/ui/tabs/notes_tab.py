@@ -20,12 +20,11 @@ class NotesTab(QWidget):
         layout.setSpacing(10)
 
         filters = QFormLayout()
-        self.student_filter = QComboBox()
+        self.current_student_id = None
         self.category_filter = QComboBox()
         self.course_filter = QComboBox()
         self.content_filter = QLineEdit()
         self.content_filter.setPlaceholderText("Cercar en el contingut…")
-        filters.addRow("Alumne:", self.student_filter)
         filters.addRow("Categoria:", self.category_filter)
         filters.addRow("Curs acadèmic:", self.course_filter)
 
@@ -62,9 +61,9 @@ class NotesTab(QWidget):
         actions.addWidget(self.clear_button)
         layout.addLayout(actions)
 
-        self.table = QTableWidget(0, 5)
+        self.table = QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels(
-            ["Data", "Alumne", "Grup", "Categoria", "Contingut"]
+            ["Data", "Categoria", "Contingut"]
         )
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -72,9 +71,9 @@ class NotesTab(QWidget):
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().hide()
         header = self.table.horizontalHeader()
-        for column in range(4):
+        for column in range(2):
             header.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self.table, 1)
 
         self._connect_signals()
@@ -86,7 +85,6 @@ class NotesTab(QWidget):
         return edit
 
     def _connect_signals(self) -> None:
-        self.student_filter.currentIndexChanged.connect(self._emit_filters)
         self.category_filter.currentIndexChanged.connect(self._emit_filters)
         self.course_filter.currentIndexChanged.connect(self._emit_filters)
         self.content_filter.textChanged.connect(self._emit_filters)
@@ -105,20 +103,11 @@ class NotesTab(QWidget):
             lambda row, _column: self.edit_requested.emit(self._note_id_at(row))
         )
 
-    def set_options(self, students, categories, courses) -> None:
+    def set_options(self, categories, courses) -> None:
         blockers = [
-            QSignalBlocker(self.student_filter),
             QSignalBlocker(self.category_filter),
             QSignalBlocker(self.course_filter),
         ]
-        self.student_filter.clear()
-        self.student_filter.addItem("Tots els alumnes", None)
-        for student in students:
-            label = (
-                f"{student.full_name} · {student.group_name or 'Sense grup'} "
-                f"· {student.uuid[:8]}"
-            )
-            self.student_filter.addItem(label, student.id)
         self.category_filter.clear()
         self.category_filter.addItem("Totes les categories", None)
         for category in categories:
@@ -129,13 +118,12 @@ class NotesTab(QWidget):
             self.course_filter.addItem(course.course, course.id)
         del blockers
 
-    def set_student_filter(self, student_id) -> None:
-        index = self.student_filter.findData(student_id)
-        self.student_filter.setCurrentIndex(max(index, 0))
+    def set_student_context(self, student_id) -> None:
+        self.current_student_id = student_id
 
     def filters(self) -> dict:
         result = {
-            "student_id": self.student_filter.currentData(),
+            "student_id": self.current_student_id,
             "category_id": self.category_filter.currentData(),
             "course_id": self.course_filter.currentData(),
             "content": self.content_filter.text().strip() or None,
@@ -149,7 +137,6 @@ class NotesTab(QWidget):
         return result
 
     def clear_filters(self) -> None:
-        self.student_filter.setCurrentIndex(0)
         self.category_filter.setCurrentIndex(0)
         self.course_filter.setCurrentIndex(0)
         self.date_from_enabled.setChecked(False)
@@ -164,8 +151,7 @@ class NotesTab(QWidget):
             row = self.table.rowCount()
             self.table.insertRow(row)
             values = (
-                self._display_date(record.date), record.student_name,
-                record.group_name, record.category_name, record.content,
+                self._display_date(record.date), record.category_name, record.content,
             )
             for column, value in enumerate(values):
                 item = QTableWidgetItem(value)

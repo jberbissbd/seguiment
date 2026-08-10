@@ -70,20 +70,6 @@ class AcademicCourseService:
             )
         return self.academic_course_dao.create(AcademicCourseNew(course))
 
-    def update(self, data: AcademicCourse) -> AcademicCourse:
-        existing = self.academic_course_dao.get_by_id(data.id)
-        if existing is None:
-            raise EntityNotFoundError(f"No existeix el curs acadèmic amb ID {data.id}")
-        course = self.validation_service.academic_course(data.course)
-        duplicate = self.academic_course_dao.get_by_course(course)
-        if duplicate and duplicate.id != data.id:
-            raise DuplicateEntityError(
-                f"Ja existeix un curs acadèmic amb el nom '{course}'"
-            )
-        data.course = course
-        self.academic_course_dao.update(data)
-        return data
-
     def can_delete(self, id: int) -> bool:
         return self.academic_course_dao.is_deletable(id)
 

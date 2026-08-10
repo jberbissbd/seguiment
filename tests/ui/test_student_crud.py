@@ -52,6 +52,9 @@ def test_student_dialog_valida_i_retorna_valors(qtbot):
     assert dialog.values() == {
         "name": "Jordi", "surnames": "Garcia", "group_name": "2n B"
     }
+    assert dialog.group_input.isEditable()
+    assert dialog.group_input.count() == 2
+    assert not dialog.group_selector_button.isHidden()
 
 
 def test_student_dialog_no_accepta_camps_obligatoris_buits(qtbot):
@@ -75,7 +78,9 @@ def test_controller_crea_i_selecciona_alumne(qtbot, tmp_path):
         students = services.students.get_all()
         assert len(students) == 1
         assert window.student_list.current_student_id() == students[0].id
-        assert window.student_detail.name_value.text() == "Jordi"
+        assert window.student_detail.name_value.text() == "Jordi Garcia"
+        assert window.student_detail.avatar_value.text() == "JG"
+        assert not hasattr(window.student_detail, "uuid_value")
         assert errors == []
     finally:
         database.close()

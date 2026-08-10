@@ -52,9 +52,13 @@ class StudentService:
         return self.student_dao.get_groups()
 
     def create_student(self, student_data: StudentNew) -> Student:
-        """Valida i crea un alumne amb un UUID nou generat pel DAO."""
-        self.validation_service.validate_student(student_data)
-        return self.student_dao.create(student_data)
+        """Crea l'alumne i registra també el seu grup inicial."""
+        with self.transaction_factory():
+            self.validation_service.validate_student(student_data)
+            student = self.student_dao.create(student_data)
+            if student.group_name:
+                self.change_student_group(student.id, student.group_name)
+        return student
 
     def create(self, student_data: StudentNew) -> Student:
         """Àlies CRUD de :meth:`create_student`."""
@@ -100,8 +104,13 @@ class StudentService:
         return history.group_name if history else None
 
     def get_group_history(self, student_id: int) -> list[StudentGroupHistory]:
-        """Obté tot l'històric de grups d'un alumne, ordenat per data."""
-        return self.group_history_dao.get_by_student(student_id)
+        """Obté l'històric i repara alumnes antics sense registre inicial."""
+        student = self._require_student(student_id)
+        history = self.group_history_dao.get_by_student(student_id)
+        if not history and student.group_name:
+            self.change_student_group(student_id, student.group_name)
+            history = self.group_history_dao.get_by_student(student_id)
+        return history
 
     def change_student_group(
         self,

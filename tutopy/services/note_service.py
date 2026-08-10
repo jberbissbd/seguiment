@@ -87,13 +87,8 @@ class NoteService:
         )
         self.validation_service.validate_note(prepared)
         self._require_student(prepared.student_id)
-        course_id = prepared.course_id
-        if course_id == 0:
-            course_id = self._resolve_academic_course(prepared.date)
-        elif self.academic_course_dao.get_by_id(course_id) is None:
-            raise EntityNotFoundError(
-                f"El curs acadèmic amb ID {course_id} no existeix."
-            )
+        # El curs és una dada derivada de la data, no una elecció manual.
+        course_id = self._resolve_academic_course(prepared.date)
         return NoteNew(
             student_id=prepared.student_id,
             category_id=prepared.category_id,

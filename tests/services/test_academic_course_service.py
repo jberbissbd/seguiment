@@ -132,15 +132,6 @@ class TestAcademicCourseService:
         result = service.get_by_id(created.id)
         assert result is None
 
-    def test_update(self, academic_course_dao, db):
-        service = AcademicCourseService(academic_course_dao)
-        created = service.create(AcademicCourseNew("2024-2025"))
-
-        updated = service.update(AcademicCourse(created.id, "2025-2026"))
-
-        assert updated.course == "2025-2026"
-        assert service.get_by_id(created.id).course == "2025-2026"
-
     @pytest.mark.parametrize("course", ["2026", "2026-2028", "abcd-efgh"])
     def test_create_rebutja_format_invalid(self, academic_course_dao, db, course):
         service = AcademicCourseService(academic_course_dao)

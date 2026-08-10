@@ -39,6 +39,23 @@ class TestNoteService:
         assert created_note.content == "Nota de prova"
         assert created_note.date == "2026-01-15"
 
+    def test_create_note_ignora_curs_manual_i_utilitza_el_de_la_data(
+        self, note_dao, academic_course_dao, category_dao, student_dao, db
+    ):
+        category = db.categories.create(CategoryNew("Acadèmic"))
+        wrong_course = db.academic_courses.create(AcademicCourseNew("2024-2025"))
+        student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        service = NoteService(
+            note_dao, academic_course_dao, category_dao, student_dao, db.transaction
+        )
+
+        note = service.create(NoteNew(
+            student.id, category.id, "2026-09-15", wrong_course.id, "Seguiment"
+        ))
+
+        assert note.course_id != wrong_course.id
+        assert db.academic_courses.get_by_id(note.course_id).course == "2026-2027"
+
     def test_create_note_resolves_course_from_september_date(self, note_dao, academic_course_dao, category_dao, student_dao, db):
         """Testa que una nota amb course_id=0 i data de setembre resol el curs automàticament."""
         # Crear dependencies

@@ -34,7 +34,6 @@ def build_note_controller(qtbot, tmp_path, confirm_delete=lambda: True):
     controller = NoteController(
         window,
         services.notes,
-        services.students,
         services.categories,
         services.academic_courses,
         dialog_factory=AcceptedNoteDialog,
@@ -53,7 +52,7 @@ def test_note_dialog_retorna_valors_valids(qtbot):
         student = services.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         category = services.categories.create(CategoryNew("Acadèmic"))
         dialog = NoteDialog(
-            students=[student], categories=[category], default_student_id=student.id
+            student_id=student.id, categories=[category]
         )
         qtbot.addWidget(dialog)
         dialog.date_input.setDate(QDate(2026, 1, 15))
@@ -73,6 +72,26 @@ def test_note_dialog_retorna_valors_valids(qtbot):
         database.close()
 
 
+def test_note_dialog_accepta_la_data_escrita_directament(qtbot):
+    database = Database(":memory:").connect()
+    try:
+        services = create_services(database)
+        student = services.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        category = services.categories.create(CategoryNew("Acadèmic"))
+        dialog = NoteDialog(student_id=student.id, categories=[category])
+        qtbot.addWidget(dialog)
+        editor = dialog.date_input.lineEdit()
+
+        editor.selectAll()
+        qtbot.keyClicks(editor, "15/01/2026")
+        dialog.date_input.interpretText()
+        dialog.content_input.setPlainText("Seguiment")
+
+        assert dialog.values()["date"] == "2026-01-15"
+    finally:
+        database.close()
+
+
 def test_notes_tab_construeix_filtres_combinables(qtbot):
     database = Database(":memory:").connect()
     try:
@@ -82,8 +101,8 @@ def test_notes_tab_construeix_filtres_combinables(qtbot):
         course = services.academic_courses.get_or_create("2025-2026")
         tab = NotesTab()
         qtbot.addWidget(tab)
-        tab.set_options([student], [category], [course])
-        tab.student_filter.setCurrentIndex(1)
+        tab.set_options([category], [course])
+        tab.set_student_context(student.id)
         tab.category_filter.setCurrentIndex(1)
         tab.course_filter.setCurrentIndex(1)
         tab.date_from.setDate(QDate(2026, 1, 1))
@@ -148,14 +167,15 @@ def test_note_controller_aplica_filtres_de_la_vista(qtbot, tmp_path):
             student.id, other_category.id, "2026-01-20", 0, "Incidència"
         ))
         controller.refresh_options()
-        controller.view.set_student_filter(student.id)
+        controller.view.set_student_context(student.id)
         controller.view.category_filter.setCurrentIndex(
             controller.view.category_filter.findData(category.id)
         )
         controller.view.content_filter.setText("notable")
 
         assert controller.view.table.rowCount() == 1
-        assert controller.view.table.item(0, 4).text() == "Progrés notable"
+        assert controller.view.table.columnCount() == 3
+        assert controller.view.table.item(0, 2).text() == "Progrés notable"
         assert errors == []
     finally:
         database.close()

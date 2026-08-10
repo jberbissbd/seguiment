@@ -38,11 +38,9 @@ class MainWindow(QMainWindow):
         self.student_list = StudentList()
         self.student_detail = StudentDetailPanel()
         self.category_view = CrudListView("Nova categoria")
-        self.course_view = CrudListView("Nou curs")
         self._pages = {
             "students": self._create_students_page(),
             "categories": self._create_management_page("Categories", self.category_view),
-            "courses": self._create_management_page("Cursos acadèmics", self.course_view),
         }
         for page in self._pages.values():
             self.content_stack.addWidget(page)

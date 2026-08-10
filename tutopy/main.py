@@ -8,9 +8,7 @@ from tutopy.application import create_services
 from tutopy.controllers.main_controller import MainController
 from tutopy.controllers.student_controller import StudentController
 from tutopy.controllers.note_controller import NoteController
-from tutopy.controllers.catalog_controller import (
-    AcademicCourseController, CategoryController,
-)
+from tutopy.controllers.catalog_controller import CategoryController
 from tutopy.controllers.student_related_controller import StudentRelatedController
 from tutopy.database.database import Database
 from tutopy.services.directories import get_db_path
@@ -31,7 +29,6 @@ def main() -> int:
     note_controller = NoteController(
         window,
         services.notes,
-        services.students,
         services.categories,
         services.academic_courses,
     )
@@ -47,14 +44,10 @@ def main() -> int:
     category_controller = CategoryController(
         window, services.categories, on_changed=refresh_note_catalogs
     )
-    course_controller = AcademicCourseController(
-        window, services.academic_courses, on_changed=refresh_note_catalogs
-    )
     main_controller.start()
     student_controller.start()
     note_controller.start()
     category_controller.start()
-    course_controller.start()
     app.aboutToQuit.connect(database.close)
     window.show()
     return app.exec()

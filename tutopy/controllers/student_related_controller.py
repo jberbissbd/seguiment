@@ -68,6 +68,7 @@ class StudentRelatedController:
         if self.student_id is None:
             return
         annotations = self.annotations.get_by_student(self.student_id)
+        self.window.student_detail.set_descriptors(annotations)
         self.window.student_detail.annotation_tab.set_items(
             [(item.id, item.content) for item in annotations]
         )
@@ -81,8 +82,8 @@ class StudentRelatedController:
             (item.id, (item.name, item.description, item.original_filename))
             for item in documents
         ])
-        courses = {course.id: course.course for course in self.courses.get_all()}
         history = self.students.get_group_history(self.student_id)
+        courses = {course.id: course.course for course in self.courses.get_all()}
         self.window.student_detail.history_tab.set_history([
             (item.group_name, courses.get(item.academic_course_id, "—"),
              item.start_date, item.end_date or "Actual")

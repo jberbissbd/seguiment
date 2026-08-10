@@ -38,13 +38,6 @@ class AcademicCourseDAO:
             return existing
         return self.create(AcademicCourseNew(course=course))
 
-    def update(self, course: AcademicCourse):
-        self.conn.execute(
-            "UPDATE academic_courses SET course = ? WHERE id = ?",
-            (course.course, course.id),
-        )
-        self.conn.commit()
-
     def is_deletable(self, id_course: int) -> bool:
         notes = self.conn.execute(
             "SELECT COUNT(*) FROM notes WHERE course_id = ?", (id_course,)

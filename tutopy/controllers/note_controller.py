@@ -5,7 +5,6 @@ from tutopy.services.academic_course_service import AcademicCourseService
 from tutopy.services.category_service import CategoryService
 from tutopy.services.exceptions import DomainError
 from tutopy.services.note_service import NoteService
-from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.note_dialog import NoteDialog
 from tutopy.ui.main_window import MainWindow
 
@@ -14,13 +13,12 @@ class NoteController:
     """Gestiona notes i filtres entre la vista i els serveis."""
 
     def __init__(self, window: MainWindow, note_service: NoteService,
-        student_service: StudentService, category_service: CategoryService,
-        course_service: AcademicCourseService, dialog_factory=NoteDialog,
+        category_service: CategoryService, course_service: AcademicCourseService,
+        dialog_factory=NoteDialog,
         confirm_delete=None, error_handler=None):
         self.window = window
         self.view = window.student_detail.notes_tab
         self.note_service = note_service
-        self.student_service = student_service
         self.category_service = category_service
         self.course_service = course_service
         self.dialog_factory = dialog_factory
@@ -42,14 +40,14 @@ class NoteController:
 
     def refresh_options(self) -> None:
         self.view.set_options(
-            self.student_service.get_all(),
             self.category_service.get_all(),
             self.course_service.get_all(),
         )
 
     def set_student_context(self, student_id: int) -> None:
         self.current_student_id = student_id
-        self.view.set_student_filter(student_id)
+        self.view.set_student_context(student_id)
+        self.refresh()
 
     def refresh(self, filters=None) -> None:
         try:
@@ -60,30 +58,29 @@ class NoteController:
         self.view.set_records(records)
 
     def create(self) -> None:
-        students = self.student_service.get_all()
         categories = self.category_service.get_all()
-        if not students:
-            self.error_handler("Cal crear un alumne abans d'afegir notes.")
+        if self.current_student_id is None:
+            self.error_handler("Cal seleccionar un alumne abans d'afegir notes.")
             return
         if not categories:
             self.error_handler("Cal crear una categoria abans d'afegir notes.")
             return
         dialog = self.dialog_factory(
             parent=self.window,
-            students=students,
             categories=categories,
-            courses=self.course_service.get_all(),
-            default_student_id=self.current_student_id,
+            student_id=self.current_student_id,
         )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         try:
-            note = self.note_service.create(NoteNew(**dialog.values()))
+            values = dialog.values()
+            values["student_id"] = self.current_student_id
+            note = self.note_service.create(NoteNew(**values))
         except DomainError as error:
             self.error_handler(str(error))
             return
         self.refresh_options()
-        self.view.set_student_filter(note.student_id)
+        self.view.set_student_context(note.student_id)
         self.refresh()
         self._select_note(note.id)
         self.window.show_status("Nota creada correctament")
@@ -97,13 +94,12 @@ class NoteController:
         dialog = self.dialog_factory(
             parent=self.window,
             note=note,
-            students=self.student_service.get_all(),
             categories=self.category_service.get_all(),
-            courses=self.course_service.get_all(),
         )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         values = dialog.values()
+        values["student_id"] = note.student_id
         updated = Note(id=note.id, **values)
         try:
             self.note_service.update(updated)
@@ -111,7 +107,7 @@ class NoteController:
             self.error_handler(str(error))
             return
         self.refresh_options()
-        self.view.set_student_filter(updated.student_id)
+        self.view.set_student_context(updated.student_id)
         self.refresh()
         self._select_note(note_id)
         self.window.show_status("Nota actualitzada correctament")

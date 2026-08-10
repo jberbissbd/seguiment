@@ -1,8 +1,33 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QPushButton, QVBoxLayout,
+    QPushButton, QVBoxLayout, QWidget,
 )
+
+from tutopy.ui.widgets.avatar import avatar_stylesheet, initials
+
+
+class StudentListItem(QWidget):
+    def __init__(self, student, parent=None):
+        super().__init__(parent)
+        self.setMinimumHeight(52)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(10)
+        self.avatar = QLabel(initials(student.name, student.surnames))
+        self.avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.avatar.setFixedSize(36, 36)
+        self.avatar.setStyleSheet(avatar_stylesheet(student.id, 18))
+        layout.addWidget(self.avatar)
+        text_layout = QVBoxLayout()
+        text_layout.setSpacing(1)
+        self.name = QLabel(student.full_name)
+        self.name.setObjectName("studentListName")
+        self.group = QLabel(student.group_name or "Sense grup")
+        self.group.setObjectName("studentListGroup")
+        text_layout.addWidget(self.name)
+        text_layout.addWidget(self.group)
+        layout.addLayout(text_layout, 1)
 
 
 class StudentList(QFrame):
@@ -54,6 +79,7 @@ class StudentList(QFrame):
         layout.addLayout(actions)
 
         self.list_widget = QListWidget()
+        self.list_widget.setObjectName("studentListWidget")
         self.list_widget.setAlternatingRowColors(False)
         self.list_widget.currentItemChanged.connect(self._emit_selection)
         self.list_widget.itemDoubleClicked.connect(
@@ -72,13 +98,14 @@ class StudentList(QFrame):
         selected_id = self.current_student_id()
         self.list_widget.clear()
         for student in students:
-            text = student.full_name
-            if student.group_name:
-                text = f"{text}\n{student.group_name}"
-            item = QListWidgetItem(text)
+            item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, student.id)
-            item.setToolTip(f"UUID: {student.uuid}")
+            widget = StudentListItem(student)
+            size = widget.sizeHint()
+            size.setHeight(max(size.height(), 52))
+            item.setSizeHint(size)
             self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(item, widget)
             if student.id == selected_id:
                 self.list_widget.setCurrentItem(item)
         has_students = self.list_widget.count() > 0
