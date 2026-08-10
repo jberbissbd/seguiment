@@ -6,6 +6,7 @@ from .contact_dao import ContactDAO
 from .annotation_dao import AnnotationDAO
 from .document_dao import DocumentDAO
 from .student_group_history_dao import StudentGroupHistoryDAO
+from .data_management_dao import DataManagementDAO
 
 __all__ = [
     "AcademicCourseDAO",
@@ -16,4 +17,5 @@ __all__ = [
     "AnnotationDAO",
     "DocumentDAO",
     "StudentGroupHistoryDAO",
+    "DataManagementDAO",
 ]

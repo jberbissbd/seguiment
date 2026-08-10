@@ -12,6 +12,7 @@ from .daos import (
     AnnotationDAO,
     DocumentDAO,
     StudentGroupHistoryDAO,
+    DataManagementDAO,
 )
 
 
@@ -89,6 +90,7 @@ class Database:
         self.annotations: AnnotationDAO = None
         self.documents: DocumentDAO = None
         self.student_group_history: StudentGroupHistoryDAO = None
+        self.data_management: DataManagementDAO = None
 
     def connect(self):
         self.conn = ManagedConnection(sqlite3.connect(self.path))
@@ -123,6 +125,7 @@ class Database:
         self.annotations = AnnotationDAO(self.conn)
         self.documents = DocumentDAO(self.conn)
         self.student_group_history = StudentGroupHistoryDAO(self.conn)
+        self.data_management = DataManagementDAO(self.conn)
 
     def _create_tables(self):
         self.conn.executescript("""

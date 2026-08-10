@@ -8,6 +8,8 @@ from tutopy.services.contact_service import ContactService
 from tutopy.services.document_service import DocumentService
 from tutopy.services.note_service import NoteService
 from tutopy.services.student_service import StudentService
+from tutopy.services.bulk_import_service import BulkImportService
+from tutopy.services.data_management_service import DataManagementService
 from tutopy.services.directories import get_app_data_dir
 
 
@@ -22,6 +24,8 @@ class ServiceContainer:
     annotations: AnnotationService
     contacts: ContactService
     documents: DocumentService
+    bulk_import: BulkImportService
+    data_management: DataManagementService
 
 
 def create_services(database: Database) -> ServiceContainer:
@@ -29,15 +33,18 @@ def create_services(database: Database) -> ServiceContainer:
     if database.conn is None:
         raise RuntimeError("La base de dades ha d'estar connectada.")
 
-    return ServiceContainer(
-        students=StudentService(
+    students = StudentService(
             database.students,
             database.contacts,
             database.documents,
             database.student_group_history,
             database.academic_courses,
             database.transaction,
-        ),
+        )
+    categories = CategoryService(database.categories)
+    storage_dir = get_app_data_dir() / "documents"
+    return ServiceContainer(
+        students=students,
         notes=NoteService(
             database.notes,
             database.academic_courses,
@@ -45,13 +52,20 @@ def create_services(database: Database) -> ServiceContainer:
             database.students,
             database.transaction,
         ),
-        categories=CategoryService(database.categories),
+        categories=categories,
         academic_courses=AcademicCourseService(database.academic_courses),
         annotations=AnnotationService(database.annotations, database.students),
         contacts=ContactService(database.contacts, database.students),
         documents=DocumentService(
             database.documents,
             database.students,
-            storage_dir=get_app_data_dir() / "documents",
+            storage_dir=storage_dir,
+        ),
+        bulk_import=BulkImportService(
+            students, categories, database.transaction,
+        ),
+        data_management=DataManagementService(
+            database.data_management, database.documents,
+            database.transaction, storage_dir,
         ),
     )

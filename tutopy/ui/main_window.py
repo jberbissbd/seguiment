@@ -9,6 +9,7 @@ from tutopy.ui.widgets.sidebar import Sidebar
 from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
 from tutopy.ui.widgets.student_list import StudentList
 from tutopy.ui.widgets.crud_views import CrudListView
+from tutopy.ui.widgets.data_tools import DataToolsView
 
 
 class MainWindow(QMainWindow):
@@ -38,9 +39,11 @@ class MainWindow(QMainWindow):
         self.student_list = StudentList()
         self.student_detail = StudentDetailPanel()
         self.category_view = CrudListView("Nova categoria")
+        self.data_tools = DataToolsView()
         self._pages = {
             "students": self._create_students_page(),
             "categories": self._create_management_page("Categories", self.category_view),
+            "data": self._create_management_page("Gestió de dades", self.data_tools),
         }
         for page in self._pages.values():
             self.content_stack.addWidget(page)
@@ -95,6 +98,13 @@ class MainWindow(QMainWindow):
 
     def show_error(self, message: str) -> None:
         QMessageBox.critical(self, "Error", message)
+
+    def show_import_issues(self, issues) -> None:
+        QMessageBox.critical(
+            self, "Errors al full de càlcul",
+            "No s’ha importat cap dada. Revisa aquestes files:\n\n"
+            + "\n".join(str(issue) for issue in issues),
+        )
 
     def confirm_student_deletion(self, full_name: str) -> bool:
         answer = QMessageBox.question(
