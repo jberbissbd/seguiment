@@ -12,7 +12,7 @@ ROOT = Path(__file__).parents[1]
 
 
 def test_release_tag_ha_de_coincidir_amb_pyproject(capsys):
-    assert check_release_version("v1.0.0") == 0
+    assert check_release_version("v1.0.2") == 0
     assert check_release_version("v9.9.9") == 1
     assert "no coincideix" in capsys.readouterr().err
 
