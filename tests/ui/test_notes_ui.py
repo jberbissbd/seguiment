@@ -24,6 +24,7 @@ class AcceptedNoteDialog:
 
 
 def build_note_controller(qtbot, tmp_path, confirm_delete=lambda: True):
+    """Construeix l'escenari d'UI compartit per les proves de notes."""
     database = Database(str(tmp_path / "notes-ui.db")).connect()
     services = create_services(database)
     student = services.students.create(StudentNew("Jordi", "Garcia", "4t A"))

@@ -47,7 +47,7 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         database.close()
 
 
-def test_main_window_conte_els_components_de_la_fase_un(qtbot):
+def test_main_window_conte_la_navegacio_i_el_detall_de_l_alumne(qtbot):
     window = MainWindow()
     qtbot.addWidget(window)
 

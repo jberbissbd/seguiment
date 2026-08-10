@@ -64,7 +64,7 @@ class AcceptedTextDialog:
 
 
 def test_controlador_de_dades_relacionades_crea_i_mostra_elements(qtbot, tmp_path):
-    database = Database(str(tmp_path / "phase-four.db")).connect()
+    database = Database(str(tmp_path / "student-related.db")).connect()
     try:
         services = create_services(database)
         services.documents.storage_dir = tmp_path / "documents"
