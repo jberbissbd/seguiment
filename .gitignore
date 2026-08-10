@@ -35,3 +35,4 @@ tests/entities/__pycache__/
 tests/utils/__pycache__
 */__pycache__
 *.pyc
+tutopy/seguiment.db
