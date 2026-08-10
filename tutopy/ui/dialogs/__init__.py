@@ -1,0 +1,1 @@
+"""Diàlegs de la interfície."""
