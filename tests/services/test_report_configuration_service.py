@@ -49,21 +49,18 @@ def test_sense_configuracio_no_assigna_trimestre(db, reporting):
 
 def test_rebutja_dates_invertides_o_fora_del_curs(db, reporting):
     course = db.academic_courses.get_or_create("2025-2026")
+    inverted = TermConfigurationNew(course.id, "4t A", "2026-04-07", "2026-01-08")
     with pytest.raises(ValidationError, match="tercer trimestre"):
-        reporting.save_term_configuration(TermConfigurationNew(
-            course.id, "4t A", "2026-04-07", "2026-01-08"
-        ))
+        reporting.save_term_configuration(inverted)
+    outside_course = TermConfigurationNew(course.id, "4t A", "2026-01-08", "2026-09-01")
     with pytest.raises(ValidationError, match="pertànyer al curs"):
-        reporting.save_term_configuration(TermConfigurationNew(
-            course.id, "4t A", "2026-01-08", "2026-09-01"
-        ))
+        reporting.save_term_configuration(outside_course)
 
 
 def test_rebutja_curs_inexistent(db, reporting):
+    configuration = TermConfigurationNew(999, "4t A", "2026-01-08", "2026-04-07")
     with pytest.raises(EntityNotFoundError):
-        reporting.save_term_configuration(TermConfigurationNew(
-            999, "4t A", "2026-01-08", "2026-04-07"
-        ))
+        reporting.save_term_configuration(configuration)
 
 
 def test_elimina_configuracio(db, reporting):

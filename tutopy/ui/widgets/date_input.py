@@ -9,6 +9,7 @@ class DateInput(QWidget):
     """Entrada de data per teclat amb un calendari emergent alternatiu."""
 
     dateChanged = Signal(QDate)
+    DATE_FORMAT = "dd/MM/yyyy"
 
     def __init__(self, date=None, parent=None):
         super().__init__(parent)
@@ -17,7 +18,7 @@ class DateInput(QWidget):
         layout.setSpacing(4)
         self.editor = QLineEdit()
         self.editor.setPlaceholderText("DD/MM/AAAA")
-        self.editor.setText((date or QDate.currentDate()).toString("dd/MM/yyyy"))
+        self.editor.setText((date or QDate.currentDate()).toString(self.DATE_FORMAT))
         self.calendar_button = QToolButton()
         self.calendar_button.setText("📅")
         self.calendar_button.setToolTip("Obrir el calendari")
@@ -39,12 +40,12 @@ class DateInput(QWidget):
         return self.editor
 
     def date(self) -> QDate:
-        return QDate.fromString(self.editor.text().strip(), "dd/MM/yyyy")
+        return QDate.fromString(self.editor.text().strip(), self.DATE_FORMAT)
 
     def setDate(self, date: QDate) -> None:
         if not date.isValid():
             return
-        self.editor.setText(date.toString("dd/MM/yyyy"))
+        self.editor.setText(date.toString(self.DATE_FORMAT))
         self.calendar.setSelectedDate(date)
         self.dateChanged.emit(date)
         self.menu.close()

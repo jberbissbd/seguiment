@@ -67,10 +67,10 @@ def test_student_dialog_no_accepta_camps_obligatoris_buits(qtbot):
     assert not dialog.validation_label.isHidden()
 
 
-def test_controller_crea_i_selecciona_alumne(qtbot, tmp_path):
-    AcceptedDialog.values_to_return = {
+def test_controller_crea_i_selecciona_alumne(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(AcceptedDialog, "values_to_return", {
         "name": "Jordi", "surnames": "Garcia", "group_name": "4t A"
-    }
+    })
     database, services, window, controller, errors = build_controller(qtbot, tmp_path)
     try:
         controller.create()
@@ -86,13 +86,13 @@ def test_controller_crea_i_selecciona_alumne(qtbot, tmp_path):
         database.close()
 
 
-def test_controller_edita_alumne_i_grup(qtbot, tmp_path):
+def test_controller_edita_alumne_i_grup(qtbot, tmp_path, monkeypatch):
     database, services, window, controller, errors = build_controller(qtbot, tmp_path)
     try:
         student = services.students.create(StudentNew("Jordi", "Garcia", "3r A"))
-        AcceptedDialog.values_to_return = {
+        monkeypatch.setattr(AcceptedDialog, "values_to_return", {
             "name": "Jordi", "surnames": "Serra", "group_name": "4t B"
-        }
+        })
 
         controller.edit(student.id)
 

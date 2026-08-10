@@ -63,7 +63,9 @@ class AcceptedTextDialog:
         return self.values.pop(0)
 
 
-def test_controlador_de_dades_relacionades_crea_i_mostra_elements(qtbot, tmp_path):
+def test_controlador_de_dades_relacionades_crea_i_mostra_elements(
+    qtbot, tmp_path, monkeypatch
+):
     database = Database(str(tmp_path / "student-related.db")).connect()
     try:
         services = create_services(database)
@@ -71,10 +73,10 @@ def test_controlador_de_dades_relacionades_crea_i_mostra_elements(qtbot, tmp_pat
         student = services.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         source = tmp_path / "informe.txt"
         source.write_text("Informe", encoding="utf-8")
-        AcceptedDocumentDialog.values_to_return = {
+        monkeypatch.setattr(AcceptedDocumentDialog, "values_to_return", {
             "name": "Informe", "description": "Trimestral",
             "source_path": str(source),
-        }
+        })
         window = MainWindow()
         qtbot.addWidget(window)
         errors = []
@@ -122,14 +124,14 @@ def test_controlador_de_dades_relacionades_crea_i_mostra_elements(qtbot, tmp_pat
         database.close()
 
 
-def test_controlador_de_categories_fa_crud(qtbot, tmp_path):
+def test_controlador_de_categories_fa_crud(qtbot, tmp_path, monkeypatch):
     database = Database(str(tmp_path / "catalogs.db")).connect()
     try:
         services = create_services(database)
         window = MainWindow()
         qtbot.addWidget(window)
         errors = []
-        AcceptedTextDialog.values = ["Acadèmic", "Convivència"]
+        monkeypatch.setattr(AcceptedTextDialog, "values", ["Acadèmic", "Convivència"])
         categories = CategoryController(
             window, services.categories, dialog_factory=AcceptedTextDialog,
             confirm_delete=lambda _name: True, error_handler=errors.append,

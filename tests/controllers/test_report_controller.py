@@ -71,16 +71,17 @@ def test_controlador_crea_edita_i_elimina_configuracio(db, qtbot, tmp_path, monk
     services, _student, _category, course, window, controller, _path, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
-    AcceptedTermDialog.values_to_return = {
+    values = {
         "academic_course_id": course.id,
         "group_name": "4t A",
         "second_term_start": "2026-01-08",
         "third_term_start": "2026-04-07",
     }
+    monkeypatch.setattr(AcceptedTermDialog, "values_to_return", values)
     controller.create_term_configuration()
     configuration = services.report_configuration.get_term_configurations()[0]
     assert window.data_tools.term_table.rowCount() == 1
-    AcceptedTermDialog.values_to_return["third_term_start"] = "2026-04-10"
+    values["third_term_start"] = "2026-04-10"
     controller.edit_term_configuration(configuration.id)
     assert services.report_configuration.get_term_configurations()[0].third_term_start == "2026-04-10"
     controller.delete_term_configuration(configuration.id)
@@ -93,8 +94,8 @@ def test_controlador_exporta_i_recorda_ordre(db, qtbot, tmp_path, monkeypatch):
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
     family = services.categories.create(CategoryNew("Família"))
-    AcceptedExportDialog.order = [family.id, academic.id]
-    AcceptedExportDialog.include = False
+    monkeypatch.setattr(AcceptedExportDialog, "order", [family.id, academic.id])
+    monkeypatch.setattr(AcceptedExportDialog, "include", False)
     controller.export_student(student.id)
     assert destination.is_file()
     assert [item.id for item in services.report_configuration.get_ordered_categories()] == [

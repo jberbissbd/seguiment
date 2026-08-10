@@ -92,50 +92,63 @@ class BulkImportService:
                 "Falten decisions per a les files d’alumnes: "
                 + ", ".join(map(str, missing))
             )
-        created = updated = skipped = categories_created = categories_reused = 0
         with self.transaction_factory():
-            for row in preview.students:
-                decision = decision_by_row.get(
-                    row.row, ImportDecision(row.row, ImportAction.CREATE)
-                )
-                try:
-                    if decision.action == ImportAction.SKIP:
-                        skipped += 1
-                    elif decision.action == ImportAction.UPDATE:
-                        target = self.students.get_by_id(decision.student_id or 0)
-                        allowed = conflict_rows.get(row.row)
-                        if target is None or allowed is None or target.id not in {
-                            item.id for item in allowed.matches
-                        }:
-                            raise ValidationError("l’alumne seleccionat no és una coincidència vàlida")
-                        self.students.update(Student(target.id, target.uuid, row.name,
-                                                     row.surnames, row.group_name))
-                        updated += 1
-                    else:
-                        self.students.create(StudentNew(row.name, row.surnames, row.group_name))
-                        created += 1
-                except Exception as error:
-                    raise ValidationError(
-                        f"{self.STUDENTS_SHEET} — fila {row.row}: {error}"
-                    ) from error
-
-            existing_categories = {
-                self._category_key(category.name): category for category in self.categories.get_all()
-            }
-            for row in preview.categories:
-                key = self._category_key(row.name)
-                if key in existing_categories:
-                    categories_reused += 1
-                    continue
-                try:
-                    category = self.categories.create(CategoryNew(row.name))
-                    existing_categories[key] = category
-                    categories_created += 1
-                except Exception as error:
-                    raise ValidationError(
-                        f"{self.CATEGORIES_SHEET} — fila {row.row}: {error}"
-                    ) from error
+            created, updated, skipped = self._execute_students(
+                preview.students, decision_by_row, conflict_rows
+            )
+            categories_created, categories_reused = self._execute_categories(
+                preview.categories
+            )
         return ImportResult(created, updated, skipped, categories_created, categories_reused)
+
+    def _execute_students(self, rows, decisions, conflicts):
+        created = updated = skipped = 0
+        for row in rows:
+            decision = decisions.get(row.row, ImportDecision(row.row, ImportAction.CREATE))
+            try:
+                if decision.action == ImportAction.SKIP:
+                    skipped += 1
+                elif decision.action == ImportAction.UPDATE:
+                    self._update_student(row, decision, conflicts.get(row.row))
+                    updated += 1
+                else:
+                    self.students.create(StudentNew(row.name, row.surnames, row.group_name))
+                    created += 1
+            except Exception as error:
+                raise ValidationError(
+                    f"{self.STUDENTS_SHEET} — fila {row.row}: {error}"
+                ) from error
+        return created, updated, skipped
+
+    def _update_student(self, row, decision, conflict) -> None:
+        target = self.students.get_by_id(decision.student_id or 0)
+        allowed_ids = {item.id for item in conflict.matches} if conflict else set()
+        if target is None or target.id not in allowed_ids:
+            raise ValidationError("l’alumne seleccionat no és una coincidència vàlida")
+        self.students.update(Student(
+            target.id, target.uuid, row.name, row.surnames, row.group_name
+        ))
+
+    def _execute_categories(self, rows):
+        existing = {
+            self._category_key(category.name): category
+            for category in self.categories.get_all()
+        }
+        created = reused = 0
+        for row in rows:
+            key = self._category_key(row.name)
+            if key in existing:
+                reused += 1
+                continue
+            try:
+                category = self.categories.create(CategoryNew(row.name))
+                existing[key] = category
+                created += 1
+            except Exception as error:
+                raise ValidationError(
+                    f"{self.CATEGORIES_SHEET} — fila {row.row}: {error}"
+                ) from error
+        return created, reused
 
     def _read_students(self, workbook, output, issues) -> None:
         sheet = self._sheet(workbook, self.STUDENTS_SHEET, issues)

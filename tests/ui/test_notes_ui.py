@@ -120,30 +120,30 @@ def test_notes_tab_construeix_filtres_combinables(qtbot):
         database.close()
 
 
-def test_note_controller_crud(qtbot, tmp_path):
+def test_note_controller_crud(qtbot, tmp_path, monkeypatch):
     database, services, student, category, window, controller, errors = (
         build_note_controller(qtbot, tmp_path)
     )
     try:
-        AcceptedNoteDialog.values_to_return = {
+        monkeypatch.setattr(AcceptedNoteDialog, "values_to_return", {
             "student_id": student.id,
             "category_id": category.id,
             "date": "2026-01-15",
             "course_id": 0,
             "content": "Nota inicial",
-        }
+        })
         controller.create()
         notes = services.notes.get_all()
         assert len(notes) == 1
         assert controller.view.table.rowCount() == 1
 
-        AcceptedNoteDialog.values_to_return = {
+        monkeypatch.setattr(AcceptedNoteDialog, "values_to_return", {
             "student_id": student.id,
             "category_id": category.id,
             "date": "2026-02-10",
             "course_id": 0,
             "content": "Nota actualitzada",
-        }
+        })
         controller.edit(notes[0].id)
         assert services.notes.get_by_id(notes[0].id).content == "Nota actualitzada"
 

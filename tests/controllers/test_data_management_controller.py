@@ -147,7 +147,7 @@ def test_importacio_mostra_errors(controller_env, monkeypatch):
     assert window.errors == ["full incorrecte"]
 
 
-def test_esborrat_cancel_lacio_error_i_exit(controller_env):
+def test_esborrat_cancel_lacio_error_i_exit(controller_env, monkeypatch):
     window, _, data, controller, changed, messages = controller_env
 
     class Dialog:
@@ -158,7 +158,7 @@ def test_esborrat_cancel_lacio_error_i_exit(controller_env):
     controller.clear_dialog = Dialog
     controller.clear_all()
     assert not data.called
-    Dialog.result = QDialog.DialogCode.Accepted
+    monkeypatch.setattr(Dialog, "result", QDialog.DialogCode.Accepted)
     data.error = ValidationError("no s’ha pogut eliminar")
     controller.clear_all()
     assert window.errors == ["no s’ha pogut eliminar"]

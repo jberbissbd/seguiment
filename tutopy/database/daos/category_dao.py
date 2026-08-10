@@ -6,10 +6,10 @@ class CategoryDAO:
     def __init__(self, conn):
         self.conn = conn
     
-    def _get_notes_count(self, id: int) -> int:
+    def _get_notes_count(self, category_id: int) -> int:
         """Retorna el nombre de notes associades a una categoria."""
         return self.conn.execute(
-        "SELECT COUNT(*) FROM notes WHERE category_id = ?", (id,)
+        "SELECT COUNT(*) FROM notes WHERE category_id = ?", (category_id,)
         ).fetchone()[0]
 
     def get_all(self) -> list[Category]:
@@ -24,9 +24,9 @@ class CategoryDAO:
         ).fetchone()
         return Category(**row) if row else None
 
-    def get_by_id(self, id: int) -> Optional[Category]:
+    def get_by_id(self, category_id: int) -> Optional[Category]:
         row = self.conn.execute(
-            "SELECT * FROM categories WHERE id = ?", (id,)
+            "SELECT * FROM categories WHERE id = ?", (category_id,)
         ).fetchone()
         return Category(**row) if row else None
 
@@ -38,21 +38,21 @@ class CategoryDAO:
         return Category(id=cur.lastrowid, name=data.name)
 
     def rename(self, data: Category):
-        id = data.id
+        category_id = data.id
         new_name = data.name
         self.conn.execute(
-            "UPDATE categories SET name = ? WHERE id = ?", (new_name, id)
+            "UPDATE categories SET name = ? WHERE id = ?", (new_name, category_id)
         )
         self.conn.commit()
 
-    def is_deletable(self,id:int) -> bool:
-        return self._get_notes_count(id) == 0
+    def is_deletable(self, category_id: int) -> bool:
+        return self._get_notes_count(category_id) == 0
     
-    def delete(self, id: int):
-        count = self._get_notes_count(id)
+    def delete(self, category_id: int):
+        count = self._get_notes_count(category_id)
         if count > 0:
             raise ValueError(
                 f"No es pot eliminar: {count} notes usen aquesta categoria"
             )
-        self.conn.execute("DELETE FROM categories WHERE id = ?", (id,))
+        self.conn.execute("DELETE FROM categories WHERE id = ?", (category_id,))
         self.conn.commit()

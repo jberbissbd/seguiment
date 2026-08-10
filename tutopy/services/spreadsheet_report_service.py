@@ -1,10 +1,10 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-import re
 import unicodedata
 
 from openpyxl import Workbook
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
@@ -21,9 +21,6 @@ class SpreadsheetReportService:
     """Genera l'informe XLSX de les notes de seguiment d'un alumne."""
 
     EXCEL_CELL_LIMIT = 32_767
-    ILLEGAL_XML_CHARACTERS = re.compile(
-        "[\x00-\x08\x0B\x0C\x0E-\x1F]"
-    )
 
     def __init__(self, students: StudentDAO, notes: NoteDAO,
                  courses: AcademicCourseDAO, group_history: StudentGroupHistoryDAO,
@@ -53,9 +50,6 @@ class SpreadsheetReportService:
             raise ValidationError("Cal indicar una destinació per a l’informe.")
 
         categories = self.configuration.get_ordered_categories()
-        category_columns = {
-            category.id: index for index, category in enumerate(categories, 3 if include_terms else 2)
-        }
         histories = self.group_history.get_by_student(student_id)
         by_course = defaultdict(list)
         for note in student_notes:
@@ -66,54 +60,10 @@ class SpreadsheetReportService:
         for course_id, course_notes in sorted(
             by_course.items(), key=lambda item: self._course_name(item[0])
         ):
-            course_name = self._course_name(course_id)
-            sheet = workbook.create_sheet(self._sheet_title(course_name))
-            rows = [
-                (note, self._group_for(note.date, histories, student.group_name))
-                for note in course_notes
-            ]
-            groups = list(dict.fromkeys(group for _note, group in rows if group))
-            group_summary = ", ".join(groups) if groups else "Sense grup"
-            last_column = len(categories) + (2 if include_terms else 1)
-            sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_column)
-            title = sheet.cell(1, 1)
-            self._set_text(title, f"{student.full_name} — {group_summary}")
-            title.font = Font(bold=True, size=14, color="FFFFFF")
-            title.fill = PatternFill("solid", fgColor="173A5E")
-            title.alignment = Alignment(horizontal="center", vertical="center")
-            sheet.row_dimensions[1].height = 25
-
-            headers = (["Trimestre"] if include_terms else []) + ["Grup"] + [
-                category.name for category in categories
-            ]
-            for column, header in enumerate(headers, 1):
-                cell = sheet.cell(2, column)
-                self._set_text(cell, header)
-                cell.font = Font(bold=True, color="FFFFFF")
-                cell.fill = PatternFill("solid", fgColor="2B73B7")
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-
-            for row_number, (note, group) in enumerate(rows, 3):
-                if include_terms:
-                    term_cell = sheet.cell(row_number, 1)
-                    self._set_text(
-                        term_cell,
-                        self.configuration.term_for_date(course_id, group, note.date)
-                        if group else "",
-                    )
-                    group_column = 2
-                else:
-                    group_column = 1
-                self._set_text(sheet.cell(row_number, group_column), group)
-                category_column = category_columns.get(note.category_id)
-                if category_column is not None:
-                    display_date = date.fromisoformat(note.date).strftime("%d/%m/%Y")
-                    cell = sheet.cell(row_number, category_column)
-                    self._set_text(cell, f"{display_date} - {note.content}")
-                    cell.alignment = Alignment(wrap_text=True, vertical="top")
-            if include_terms:
-                self._merge_consecutive_terms(sheet, 3, 2 + len(rows))
-            self._format_sheet(sheet, last_column)
+            self._add_course_sheet(
+                workbook, student, course_id, course_notes, histories,
+                categories, include_terms,
+            )
 
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,6 +71,54 @@ class SpreadsheetReportService:
         except OSError as error:
             raise ValidationError("No s’ha pogut desar l’informe.") from error
         return path
+
+    def _add_course_sheet(self, workbook, student, course_id, notes, histories,
+                          categories, include_terms: bool) -> None:
+        sheet = workbook.create_sheet(self._sheet_title(self._course_name(course_id)))
+        rows = [(note, self._group_for(note.date, histories, student.group_name))
+                for note in notes]
+        groups = list(dict.fromkeys(group for _note, group in rows if group))
+        last_column = len(categories) + (2 if include_terms else 1)
+        sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_column)
+        title = sheet.cell(1, 1)
+        self._set_text(title, f"{student.full_name} — {', '.join(groups) or 'Sense grup'}")
+        title.font = Font(bold=True, size=14, color="FFFFFF")
+        title.fill = PatternFill("solid", fgColor="173A5E")
+        title.alignment = Alignment(horizontal="center", vertical="center")
+        sheet.row_dimensions[1].height = 25
+
+        headers = (["Trimestre"] if include_terms else []) + ["Grup"] + [
+            category.name for category in categories
+        ]
+        for column, header in enumerate(headers, 1):
+            cell = sheet.cell(2, column)
+            self._set_text(cell, header)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="2B73B7")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        category_columns = {
+            category.id: index
+            for index, category in enumerate(categories, 3 if include_terms else 2)
+        }
+        for row_number, (note, group) in enumerate(rows, 3):
+            group_column = self._write_term(sheet, row_number, course_id, group, note.date) \
+                if include_terms else 1
+            self._set_text(sheet.cell(row_number, group_column), group)
+            category_column = category_columns.get(note.category_id)
+            if category_column is not None:
+                display_date = date.fromisoformat(note.date).strftime("%d/%m/%Y")
+                cell = sheet.cell(row_number, category_column)
+                self._set_text(cell, f"{display_date} - {note.content}")
+                cell.alignment = Alignment(wrap_text=True, vertical="top")
+        if include_terms:
+            self._merge_consecutive_terms(sheet, 3, 2 + len(rows))
+        self._format_sheet(sheet, last_column)
+
+    def _write_term(self, sheet, row_number, course_id, group, note_date) -> int:
+        term = self.configuration.term_for_date(course_id, group, note_date) if group else ""
+        self._set_text(sheet.cell(row_number, 1), term)
+        return 2
 
     def _course_name(self, course_id: int) -> str:
         course = self.courses.get_by_id(course_id)
@@ -149,7 +147,7 @@ class SpreadsheetReportService:
     def _safe_text(cls, value) -> str:
         """Prepara text Unicode vàlid per a una cel·la OOXML d'Excel."""
         text = unicodedata.normalize("NFC", "" if value is None else str(value))
-        text = cls.ILLEGAL_XML_CHARACTERS.sub("", text)
+        text = ILLEGAL_CHARACTERS_RE.sub("", text)
         return text[:cls.EXCEL_CELL_LIMIT]
 
     @classmethod

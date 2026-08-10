@@ -81,12 +81,12 @@ def _is_writable(path: Path) -> bool:
     if not path.exists():
         try:
             path.mkdir(parents=True, exist_ok=True)
-        except (OSError, PermissionError):
+        except OSError:
             return False
     test_file = path / ".write_test"
     try:
         test_file.touch(exist_ok=False)
         test_file.unlink()
         return True
-    except (OSError, PermissionError):
+    except OSError:
         return False

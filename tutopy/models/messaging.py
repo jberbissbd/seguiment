@@ -2,6 +2,8 @@ from dataclasses import dataclass, fields
 from typing import Optional, Union, get_args, get_origin
 import datetime
 
+INVALID_DATE_MESSAGE = "Incorrect data format, should be YYYY-MM-DD"
+
 
 def _matches_type(value, expected_type) -> bool:
     """Comprova tipus simples i unions com ``Optional[T]``."""
@@ -143,8 +145,8 @@ class Note:
         _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
-        except ValueError:
-            raise ValueError("Incorrect data format, should be YYYY-MM-DD")
+        except ValueError as error:
+            raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
 @dataclass
@@ -167,8 +169,8 @@ class NoteNew:
         _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
-        except ValueError:
-            raise ValueError("Incorrect data format, should be YYYY-MM-DD")
+        except ValueError as error:
+            raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
 @dataclass
@@ -191,8 +193,8 @@ class NoteRecord:
         _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
-        except ValueError:
-            raise ValueError("Incorrect data format, should be YYYY-MM-DD")
+        except ValueError as error:
+            raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
 @dataclass
@@ -323,13 +325,13 @@ class StudentGroupHistory:
         _validate(self)
         try:
             datetime.date.fromisoformat(self.start_date)
-        except ValueError:
-            raise ValueError("Incorrect start_date format, should be YYYY-MM-DD")
+        except ValueError as error:
+            raise ValueError("Incorrect start_date format, should be YYYY-MM-DD") from error
         if self.end_date:
             try:
                 datetime.date.fromisoformat(self.end_date)
-            except ValueError:
-                raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None")
+            except ValueError as error:
+                raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None") from error
 
 
 @dataclass
@@ -353,10 +355,10 @@ class StudentGroupHistoryNew:
         _validate(self)
         try:
             datetime.date.fromisoformat(self.start_date)
-        except ValueError:
-            raise ValueError("Incorrect start_date format, should be YYYY-MM-DD")
+        except ValueError as error:
+            raise ValueError("Incorrect start_date format, should be YYYY-MM-DD") from error
         if self.end_date:
             try:
                 datetime.date.fromisoformat(self.end_date)
-            except ValueError:
-                raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None")
+            except ValueError as error:
+                raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None") from error

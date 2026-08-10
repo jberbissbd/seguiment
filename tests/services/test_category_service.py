@@ -89,8 +89,9 @@ class TestCategoryService:
         db.categories.create(CategoryNew(name="Conducta"))
         
         # Intentar crear-ne una altra amb el mateix nom
+        duplicate = CategoryNew(name="Conducta")
         with pytest.raises(ValueError, match="Ja existeix una categoria amb el nom 'Conducta'"):
-            service.create(CategoryNew(name="Conducta"))
+            service.create(duplicate)
 
     def test_rename(self, category_dao, db):
         """Testa el renom d'una categoria."""

@@ -23,9 +23,11 @@ def test_contact_service_crud(contact_dao, student_dao, db):
 
 def test_contact_service_valida_relacions_i_text(contact_dao, student_dao, db):
     service = ContactService(contact_dao, student_dao)
+    missing_student = ContactNew(999, "Nom", "Relació")
     with pytest.raises(EntityNotFoundError):
-        service.create(ContactNew(999, "Nom", "Relació"))
+        service.create(missing_student)
 
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+    invalid_contact = ContactNew(student.id, "   ", "Relació")
     with pytest.raises(ValidationError):
-        service.create(ContactNew(student.id, "   ", "Relació"))
+        service.create(invalid_contact)

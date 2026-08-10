@@ -204,10 +204,9 @@ class TestNoteService:
             note_dao, academic_course_dao, category_dao, student_dao, db.transaction
         )
 
+        note = NoteNew(999, category.id, "2026-01-15", 0, "Nota")
         with pytest.raises(EntityNotFoundError, match="alumne"):
-            service.create(NoteNew(
-                999, category.id, "2026-01-15", 0, "Nota"
-            ))
+            service.create(note)
 
     def test_filtres_combinables(self, note_dao, academic_course_dao,
         category_dao, student_dao, db):
@@ -245,10 +244,9 @@ class TestNoteService:
         service = NoteService(
             note_dao, academic_course_dao, category_dao, student_dao, db.transaction
         )
+        filters = {"date_from": "2026-02-01", "date_to": "2026-01-01"}
         with pytest.raises(ValidationError, match="data inicial"):
-            service.get_records({
-                "date_from": "2026-02-01", "date_to": "2026-01-01"
-            })
+            service.get_records(filters)
 
     def test_create_es_atomic_si_falla_despres_de_crear_el_curs(self, note_dao,
         academic_course_dao, category_dao, student_dao, db, monkeypatch):
@@ -263,10 +261,9 @@ class TestNoteService:
             raise RuntimeError("fallada simulada")
 
         monkeypatch.setattr(note_dao, "create", fail_create)
+        note = NoteNew(student.id, category.id, "2026-09-01", 0, "Nota")
         with pytest.raises(RuntimeError, match="fallada simulada"):
-            service.create(NoteNew(
-                student.id, category.id, "2026-09-01", 0, "Nota"
-            ))
+            service.create(note)
 
         assert academic_course_dao.get_by_course("2026-2027") is None
         assert note_dao.get_all() == []

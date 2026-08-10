@@ -1,6 +1,5 @@
 from pathlib import Path
 import uuid, pytest
-from pytest import mark
 from tutopy.models.messaging import (
     CategoryNew, Category, 
     AcademicCourse, AcademicCourseNew, 
@@ -697,8 +696,9 @@ class TestEdgeCases:
         db.categories.create(CategoryNew("Acadèmic"))
         
         # Intentar crear una altra amb el mateix nom - hauria de fallar
+        duplicate = CategoryNew("Acadèmic")
         with pytest.raises(Exception):  # SQLiteIntegrationError o similar
-            db.categories.create(CategoryNew("Acadèmic"))
+            db.categories.create(duplicate)
 
     def test_academic_course_unique_constraint(self, db):
         """Verifica que no es poden crear cursos acadèmics duplicats"""
@@ -706,5 +706,6 @@ class TestEdgeCases:
         db.academic_courses.create(AcademicCourseNew("2025-2026"))
         
         # Intentar crear un altre amb el mateix nom - hauria de fallar
+        duplicate = AcademicCourseNew("2025-2026")
         with pytest.raises(Exception):
-            db.academic_courses.create(AcademicCourseNew("2025-2026"))
+            db.academic_courses.create(duplicate)

@@ -115,8 +115,9 @@ class TestAcademicCourseService:
         db.academic_courses.create(AcademicCourseNew(course="2024-2025"))
         
         # Intentar crear-ne un altre amb el mateix nom
+        duplicate = AcademicCourseNew(course="2024-2025")
         with pytest.raises(ValueError, match="Ja existeix un curs acadèmic amb el nom '2024-2025'"):
-            service.create(AcademicCourseNew(course="2024-2025"))
+            service.create(duplicate)
 
     def test_delete(self, academic_course_dao, db):
         """Testa l'eliminació d'un curs."""
@@ -135,8 +136,9 @@ class TestAcademicCourseService:
     @pytest.mark.parametrize("course", ["2026", "2026-2028", "abcd-efgh"])
     def test_create_rebutja_format_invalid(self, academic_course_dao, db, course):
         service = AcademicCourseService(academic_course_dao)
+        invalid_course = AcademicCourseNew(course)
         with pytest.raises(ValidationError):
-            service.create(AcademicCourseNew(course))
+            service.create(invalid_course)
 
     def test_delete_rebutja_curs_en_us(self, academic_course_dao, db):
         from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew

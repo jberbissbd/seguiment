@@ -66,6 +66,11 @@ def main() -> int:
         window, services.students, services.academic_courses,
         services.report_configuration, services.spreadsheet_reports,
     )
+    # Conserva els controladors durant tot el bucle d'esdeveniments de Qt.
+    window.controllers = (
+        main_controller, student_controller, note_controller, category_controller,
+        related_controller, data_controller, report_controller,
+    )
     main_controller.start()
     student_controller.start()
     note_controller.start()

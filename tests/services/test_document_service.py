@@ -31,10 +31,11 @@ def test_document_service_valida_relacions_i_nom(document_dao, student_dao, db):
         service.get_by_student(999)
 
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+    invalid_document = StudentDocumentNew(
+        student.id, " ", "", "uuid.pdf", "informe.pdf"
+    )
     with pytest.raises(ValidationError):
-        service.create(StudentDocumentNew(
-            student.id, " ", "", "uuid.pdf", "informe.pdf"
-        ))
+        service.create(invalid_document)
 
 
 def test_document_service_importa_i_elimina_fitxer_gestionat(
