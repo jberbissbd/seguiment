@@ -13,6 +13,7 @@ from .daos import (
     DocumentDAO,
     StudentGroupHistoryDAO,
     DataManagementDAO,
+    ReportConfigurationDAO,
 )
 
 
@@ -42,6 +43,9 @@ class ManagedConnection:
 
     def executescript(self, *args, **kwargs):
         return self._connection.executescript(*args, **kwargs)
+
+    def executemany(self, *args, **kwargs):
+        return self._connection.executemany(*args, **kwargs)
 
     def commit(self):
         if self._transaction_depth == 0:
@@ -91,6 +95,7 @@ class Database:
         self.documents: DocumentDAO = None
         self.student_group_history: StudentGroupHistoryDAO = None
         self.data_management: DataManagementDAO = None
+        self.report_configuration: ReportConfigurationDAO = None
 
     def connect(self):
         self.conn = ManagedConnection(sqlite3.connect(self.path))
@@ -126,6 +131,7 @@ class Database:
         self.documents = DocumentDAO(self.conn)
         self.student_group_history = StudentGroupHistoryDAO(self.conn)
         self.data_management = DataManagementDAO(self.conn)
+        self.report_configuration = ReportConfigurationDAO(self.conn)
 
     def _create_tables(self):
         self.conn.executescript("""
@@ -191,6 +197,22 @@ class Database:
                 FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
                 FOREIGN KEY (academic_course_id) REFERENCES academic_courses(id) ON DELETE SET NULL
             );
+            CREATE TABLE IF NOT EXISTS term_configurations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                academic_course_id INTEGER NOT NULL,
+                group_name TEXT NOT NULL,
+                second_term_start TEXT NOT NULL,
+                third_term_start TEXT NOT NULL,
+                UNIQUE (academic_course_id, group_name),
+                CHECK (third_term_start > second_term_start),
+                FOREIGN KEY (academic_course_id)
+                    REFERENCES academic_courses(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS category_export_order (
+                category_id INTEGER PRIMARY KEY,
+                position INTEGER NOT NULL UNIQUE,
+                FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+            );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_students_uuid
                 ON students(uuid);
             CREATE UNIQUE INDEX IF NOT EXISTS idx_one_current_group_per_student
@@ -205,4 +227,6 @@ class Database:
                 ON student_documents(student_id);
             CREATE INDEX IF NOT EXISTS idx_group_history_student
                 ON student_group_history(student_id);
+            CREATE INDEX IF NOT EXISTS idx_term_config_course_group
+                ON term_configurations(academic_course_id, group_name);
         """)

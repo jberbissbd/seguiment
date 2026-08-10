@@ -8,6 +8,7 @@ def test_recursos_vectorials_existeixen():
         "tutopy.svg", "notes.svg", "descriptors.svg", "contacts.svg",
         "documents.svg", "history.svg",
         "students.svg", "categories.svg", "data.svg",
+        "export.svg",
     ):
         assert asset_path(filename).is_file()
 

@@ -11,6 +11,7 @@ from tutopy.controllers.note_controller import NoteController
 from tutopy.controllers.catalog_controller import CategoryController
 from tutopy.controllers.student_related_controller import StudentRelatedController
 from tutopy.controllers.data_management_controller import DataManagementController
+from tutopy.controllers.report_controller import ReportController
 from tutopy.database.database import Database
 from tutopy.services.directories import get_db_path
 from tutopy.ui.main_window import MainWindow
@@ -55,15 +56,21 @@ def main() -> int:
         category_controller.refresh()
         note_controller.refresh_options()
         note_controller.refresh()
+        report_controller.refresh()
 
     data_controller = DataManagementController(
         window, services.bulk_import, services.data_management,
         on_changed=refresh_after_data_change,
     )
+    report_controller = ReportController(
+        window, services.students, services.academic_courses,
+        services.report_configuration, services.spreadsheet_reports,
+    )
     main_controller.start()
     student_controller.start()
     note_controller.start()
     category_controller.start()
+    report_controller.start()
     app.aboutToQuit.connect(database.close)
     window.show()
     return app.exec()

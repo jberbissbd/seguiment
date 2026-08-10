@@ -10,6 +10,8 @@ from tutopy.services.note_service import NoteService
 from tutopy.services.student_service import StudentService
 from tutopy.services.bulk_import_service import BulkImportService
 from tutopy.services.data_management_service import DataManagementService
+from tutopy.services.report_configuration_service import ReportConfigurationService
+from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
 from tutopy.services.directories import get_app_data_dir
 
 
@@ -26,6 +28,8 @@ class ServiceContainer:
     documents: DocumentService
     bulk_import: BulkImportService
     data_management: DataManagementService
+    report_configuration: ReportConfigurationService
+    spreadsheet_reports: SpreadsheetReportService
 
 
 def create_services(database: Database) -> ServiceContainer:
@@ -43,6 +47,10 @@ def create_services(database: Database) -> ServiceContainer:
         )
     categories = CategoryService(database.categories)
     storage_dir = get_app_data_dir() / "documents"
+    report_configuration = ReportConfigurationService(
+        database.report_configuration, database.academic_courses,
+        database.categories, database.transaction,
+    )
     return ServiceContainer(
         students=students,
         notes=NoteService(
@@ -67,5 +75,10 @@ def create_services(database: Database) -> ServiceContainer:
         data_management=DataManagementService(
             database.data_management, database.documents,
             database.transaction, storage_dir,
+        ),
+        report_configuration=report_configuration,
+        spreadsheet_reports=SpreadsheetReportService(
+            database.students, database.notes, database.academic_courses,
+            database.student_group_history, report_configuration,
         ),
     )

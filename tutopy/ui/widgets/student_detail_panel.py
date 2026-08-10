@@ -1,7 +1,7 @@
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
+    QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from tutopy.ui.tabs.annotation_tab import AnnotationTab
@@ -18,6 +18,7 @@ class StudentDetailPanel(QFrame):
     """Capçalera i pestanyes de detall de l'alumne seleccionat."""
 
     TAB_NAMES = ("Notes", "Descriptors", "Contactes", "Documents", "Històric")
+    export_requested = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -69,6 +70,13 @@ class StudentDetailPanel(QFrame):
         identity_layout.addWidget(self.group_value)
         info_layout.addLayout(identity_layout, 1)
 
+        self.export_button = QPushButton("Exportar informe")
+        self.export_button.setObjectName("secondaryButton")
+        self.export_button.setIcon(icon("export.svg"))
+        self.export_button.setIconSize(QSize(18, 18))
+        self.export_button.clicked.connect(self._request_export)
+        info_layout.addWidget(self.export_button)
+
         self.student_summary.hide()
         layout.addWidget(self.student_summary)
 
@@ -107,6 +115,10 @@ class StudentDetailPanel(QFrame):
         self.student_summary.hide()
         self.tabs.hide()
         self.placeholder.show()
+
+    def _request_export(self) -> None:
+        if self.current_student_id is not None:
+            self.export_requested.emit(self.current_student_id)
 
     def set_descriptors(self, descriptors) -> None:
         self.descriptor_flow.clear()
