@@ -1,5 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import sys
+
+
+icon_path = (
+    "tutopy/ui/assets/tutopy.ico"
+    if sys.platform == "win32"
+    else "tutopy/ui/assets/tutopy.png"
+)
+
 a = Analysis(
     ["tutopy/main.py"],
     pathex=[],
@@ -32,5 +41,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="tutopy/ui/assets/tutopy.svg",
+    icon=icon_path,
 )

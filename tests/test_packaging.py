@@ -37,7 +37,14 @@ def test_spec_es_onefile_i_no_inclou_base_de_dades():
 def test_spec_inclou_icona_i_recursos_visuals():
     spec = (ROOT / "tutopy.spec").read_text(encoding="utf-8")
     assert '("tutopy/ui/assets", "tutopy/ui/assets")' in spec
-    assert 'icon="tutopy/ui/assets/tutopy.svg"' in spec
+    assert '"tutopy/ui/assets/tutopy.ico"' in spec
+    assert '"tutopy/ui/assets/tutopy.png"' in spec
+    assert "icon=icon_path" in spec
+
+
+def test_icones_d_empaquetatge_existeixen():
+    assert (ROOT / "tutopy/ui/assets/tutopy.ico").is_file()
+    assert (ROOT / "tutopy/ui/assets/tutopy.png").is_file()
 
 
 def test_versio_de_pyinstaller_esta_fixada():
