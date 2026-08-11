@@ -121,3 +121,27 @@ def test_controlador_exporta_document_de_text(db, qtbot, tmp_path, monkeypatch):
     controller.export_student(student.id)
     assert destination.is_file()
     assert errors == []
+
+
+def test_controlador_configura_i_elimina_logotip_global(
+    db, qtbot, tmp_path, monkeypatch
+):
+    services, _student, _academic, _course, window, controller, _destination, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+    services.report_configuration.storage_dir = tmp_path / "reporting"
+    logo = tmp_path / "logo.png"
+    logo.write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDAT\x08\xd7c\xf8"
+        b"\xcf\xc0\xf0\x1f\x00\x05\x00\x01\xff\x89\x99=\x1d\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    monkeypatch.setattr(QFileDialog, "getOpenFileName",
+                        lambda *args: (str(logo), ""))
+    controller.configure_report_logo()
+    assert services.report_configuration.get_header_image().is_file()
+    assert window.data_tools.report_logo_remove_button.isEnabled()
+    controller.remove_report_logo()
+    assert services.report_configuration.get_header_image() is None
+    assert not window.data_tools.report_logo_remove_button.isEnabled()
+    assert errors == []

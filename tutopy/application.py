@@ -52,6 +52,7 @@ def create_services(database: Database) -> ServiceContainer:
     report_configuration = ReportConfigurationService(
         database.report_configuration, database.academic_courses,
         database.categories, database.transaction,
+        storage_dir=get_app_data_dir() / "reporting",
     )
     return ServiceContainer(
         students=students,

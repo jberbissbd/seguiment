@@ -101,3 +101,20 @@ def test_rebutja_ordres_incomplets_duplicats_o_invalids(db, reporting, order):
     db.categories.create(CategoryNew("B"))
     with pytest.raises(ValidationError):
         reporting.set_category_order(order)
+
+
+def test_logotip_es_global_es_copia_i_es_pot_eliminar(reporting, tmp_path):
+    reporting.storage_dir = tmp_path / "reporting"
+    source = tmp_path / "logo.png"
+    source.write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDAT\x08\xd7c\xf8"
+        b"\xcf\xc0\xf0\x1f\x00\x05\x00\x01\xff\x89\x99=\x1d\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    stored = reporting.set_header_image(source)
+    assert stored.is_file()
+    assert stored != source
+    assert reporting.get_header_image() == stored
+    reporting.clear_header_image()
+    assert reporting.get_header_image() is None
+    assert not stored.exists()

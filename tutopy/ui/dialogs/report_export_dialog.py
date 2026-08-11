@@ -42,6 +42,7 @@ class ReportExportDialog(QDialog):
         layout.addWidget(buttons)
 
         self.format_input.currentIndexChanged.connect(self._update_term_visibility)
+        self._update_term_visibility()
 
     def category_order(self) -> list[int]:
         return [
@@ -53,4 +54,5 @@ class ReportExportDialog(QDialog):
         return self.format_input.currentData()
 
     def _update_term_visibility(self) -> None:
-        self.include_terms.setEnabled(self.export_format() == "xlsx")
+        is_word = self.export_format() == "docx"
+        self.include_terms.setEnabled(not is_word)

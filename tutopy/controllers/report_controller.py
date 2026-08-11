@@ -35,6 +35,8 @@ class ReportController:
         self.confirm_delete = confirm_delete or window.confirm_deletion
         view = window.data_tools
         view.category_order_requested.connect(self.configure_category_order)
+        view.report_logo_requested.connect(self.configure_report_logo)
+        view.report_logo_remove_requested.connect(self.remove_report_logo)
         view.term_create_requested.connect(self.create_term_configuration)
         view.term_edit_requested.connect(self.edit_term_configuration)
         view.term_delete_requested.connect(self.delete_term_configuration)
@@ -54,6 +56,32 @@ class ReportController:
                 self._display_date(configuration.third_term_start),
             )))
         self.window.data_tools.set_term_configurations(rows)
+        logo = self.configuration.get_header_image()
+        self.window.data_tools.set_report_logo(logo.name if logo else None)
+
+    def configure_report_logo(self) -> None:
+        filename, _ = QFileDialog.getOpenFileName(
+            self.window, "Seleccionar logotip dels informes", "",
+            "Imatges (*.png *.jpg *.jpeg *.bmp *.gif *.tif *.tiff)",
+        )
+        if not filename:
+            return
+        try:
+            self.configuration.set_header_image(filename)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self.refresh()
+        self.window.show_status("Logotip dels informes desat")
+
+    def remove_report_logo(self) -> None:
+        try:
+            self.configuration.clear_header_image()
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self.refresh()
+        self.window.show_status("Logotip dels informes eliminat")
 
     def create_term_configuration(self) -> None:
         self._open_term_dialog()

@@ -213,6 +213,10 @@ class Database:
                 position INTEGER NOT NULL UNIQUE,
                 FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
             );
+            CREATE TABLE IF NOT EXISTS report_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_students_uuid
                 ON students(uuid);
             CREATE UNIQUE INDEX IF NOT EXISTS idx_one_current_group_per_student
