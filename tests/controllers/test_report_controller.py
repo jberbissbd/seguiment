@@ -33,6 +33,7 @@ class AcceptedTermDialog:
 class AcceptedExportDialog:
     order = []
     include = True
+    format = "xlsx"
 
     def __init__(self, *args, **kwargs):
         self.include_terms = SimpleNamespace(isChecked=lambda: self.include)
@@ -42,6 +43,9 @@ class AcceptedExportDialog:
 
     def category_order(self):
         return list(self.order)
+
+    def export_format(self):
+        return self.format
 
 
 def _controller(db, qtbot, tmp_path, monkeypatch):
@@ -58,6 +62,7 @@ def _controller(db, qtbot, tmp_path, monkeypatch):
     controller = ReportController(
         window, services.students, services.academic_courses,
         services.report_configuration, services.spreadsheet_reports,
+        services.word_reports,
         term_dialog=AcceptedTermDialog, export_dialog=AcceptedExportDialog,
         error_handler=errors.append, confirm_delete=lambda _name: True,
     )
@@ -101,4 +106,18 @@ def test_controlador_exporta_i_recorda_ordre(db, qtbot, tmp_path, monkeypatch):
     assert [item.id for item in services.report_configuration.get_ordered_categories()] == [
         family.id, academic.id
     ]
+    assert errors == []
+
+
+def test_controlador_exporta_document_de_text(db, qtbot, tmp_path, monkeypatch):
+    services, student, academic, _course, _window, controller, _destination, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+    monkeypatch.setattr(AcceptedExportDialog, "order", [academic.id])
+    monkeypatch.setattr(AcceptedExportDialog, "format", "docx")
+    destination = tmp_path / "informe.docx"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                        lambda *args: (str(destination), ""))
+    controller.export_student(student.id)
+    assert destination.is_file()
     assert errors == []

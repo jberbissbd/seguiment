@@ -46,6 +46,9 @@ def test_dialog_exportacio_permet_reordenar_i_ometre_opcio_trimestres(qtbot):
     dialog.category_list.insertItem(0, item)
     assert dialog.category_order() == [2, 1]
     assert dialog.include_terms.isHidden()
+    assert dialog.export_format() == "xlsx"
+    dialog.format_input.setCurrentIndex(1)
+    assert dialog.export_format() == "docx"
 
 
 def test_vista_de_dades_emet_ids_de_configuracio(qtbot):

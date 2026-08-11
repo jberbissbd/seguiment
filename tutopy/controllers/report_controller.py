@@ -7,6 +7,7 @@ from tutopy.services.academic_course_service import AcademicCourseService
 from tutopy.services.exceptions import DomainError
 from tutopy.services.report_configuration_service import ReportConfigurationService
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
+from tutopy.services.word_report_service import WordReportService
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.report_export_dialog import ReportExportDialog
 from tutopy.ui.dialogs.term_configuration_dialog import TermConfigurationDialog
@@ -18,6 +19,7 @@ class ReportController:
                  courses: AcademicCourseService,
                  configuration: ReportConfigurationService,
                  reports: SpreadsheetReportService,
+                 word_reports: WordReportService,
                  term_dialog=TermConfigurationDialog,
                  export_dialog=ReportExportDialog,
                  error_handler=None, confirm_delete=None):
@@ -26,6 +28,7 @@ class ReportController:
         self.courses = courses
         self.configuration = configuration
         self.reports = reports
+        self.word_reports = word_reports
         self.term_dialog = term_dialog
         self.export_dialog = export_dialog
         self.error_handler = error_handler or window.show_error
@@ -120,17 +123,26 @@ class ReportController:
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         safe_name = re.sub(r"[^\w.-]+", "_", student.full_name, flags=re.UNICODE).strip("_")
+        export_format = dialog.export_format()
+        if export_format == "docx":
+            default_name = f"informe_{safe_name}.docx"
+            file_filter = "Document de text Word (*.docx)"
+        else:
+            default_name = f"informe_{safe_name}.xlsx"
+            file_filter = "Full de càlcul Excel (*.xlsx)"
         filename, _ = QFileDialog.getSaveFileName(
-            self.window, "Desar informe", f"informe_{safe_name}.xlsx",
-            "Full de càlcul Excel (*.xlsx)",
+            self.window, "Desar informe", default_name, file_filter,
         )
         if not filename:
             return
         try:
             self.configuration.set_category_order(dialog.category_order())
-            path = self.reports.export_student(
-                student_id, filename, include_terms=dialog.include_terms.isChecked()
-            )
+            if export_format == "docx":
+                path = self.word_reports.export_student(student_id, filename)
+            else:
+                path = self.reports.export_student(
+                    student_id, filename, include_terms=dialog.include_terms.isChecked()
+                )
         except (DomainError, OSError) as error:
             self.error_handler(str(error))
             return

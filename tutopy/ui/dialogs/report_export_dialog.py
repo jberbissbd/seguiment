@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (
-    QAbstractItemView, QCheckBox, QDialog, QDialogButtonBox, QLabel,
+    QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QLabel,
     QListWidget, QListWidgetItem, QVBoxLayout,
 )
 from PySide6.QtCore import Qt
@@ -24,6 +24,11 @@ class ReportExportDialog(QDialog):
             item.setData(Qt.ItemDataRole.UserRole, category.id)
             self.category_list.addItem(item)
         layout.addWidget(self.category_list, 1)
+        layout.addWidget(QLabel("Format de l’informe"))
+        self.format_input = QComboBox()
+        self.format_input.addItem("Full de càlcul Excel (.xlsx)", "xlsx")
+        self.format_input.addItem("Document de text (.docx)", "docx")
+        layout.addWidget(self.format_input)
         self.include_terms = QCheckBox("Incloure els trimestres configurats")
         self.include_terms.setChecked(True)
         self.include_terms.setVisible(show_term_option)
@@ -36,8 +41,16 @@ class ReportExportDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+        self.format_input.currentIndexChanged.connect(self._update_term_visibility)
+
     def category_order(self) -> list[int]:
         return [
             self.category_list.item(row).data(Qt.ItemDataRole.UserRole)
             for row in range(self.category_list.count())
         ]
+
+    def export_format(self) -> str:
+        return self.format_input.currentData()
+
+    def _update_term_visibility(self) -> None:
+        self.include_terms.setEnabled(self.export_format() == "xlsx")

@@ -51,3 +51,11 @@ def test_versio_de_pyinstaller_esta_fixada():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     dependencies = project["project"]["optional-dependencies"]["build"]
     assert "pyinstaller==6.21.0" in dependencies
+
+
+def test_exportacio_docx_forma_part_de_les_dependencies_i_del_build():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert "python-docx==1.2.0" in project["project"]["dependencies"]
+    assert "python-docx==1.2.0" in (
+        ROOT / "requirements-build.lock"
+    ).read_text(encoding="utf-8")
