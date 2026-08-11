@@ -1,6 +1,9 @@
 import uuid
 import pytest
-from tutopy.models.messaging import NoteNew, CategoryNew, AcademicCourseNew, StudentNew, Note
+from tutopy.models.messaging import (
+    NoteNew, CategoryNew, AcademicCourseNew, StudentNew, Note,
+    StudentGroupHistoryNew,
+)
 from tutopy.services.note_service import NoteService
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 
@@ -82,6 +85,54 @@ class TestNoteService:
         assert created_note.course_id is not None
         curs = db.academic_courses.get_by_id(created_note.course_id)
         assert curs.course == "2026-2027"
+
+    def test_data_de_la_nota_sincronitza_el_curs_de_l_historic(
+        self, note_dao, academic_course_dao, category_dao, student_dao, db
+    ):
+        category = db.categories.create(CategoryNew("Acadèmic"))
+        student = db.students.create(StudentNew("Anna", "Martí", "3r B"))
+        old_course = db.academic_courses.get_or_create("2025-2026")
+        db.student_group_history.create(StudentGroupHistoryNew(
+            student.id, student.group_name, "2026-08-11", None, old_course.id
+        ))
+        service = NoteService(
+            note_dao, academic_course_dao, category_dao, student_dao,
+            db.transaction, db.student_group_history,
+        )
+
+        service.create(NoteNew(
+            student.id, category.id, "2026-09-11", 0, "Inici de curs"
+        ))
+
+        history = db.student_group_history.get_by_student(student.id)
+        assert [academic_course_dao.get_by_id(item.academic_course_id).course
+                for item in history] == ["2025-2026", "2026-2027"]
+        assert history[0].end_date == "2026-09-01"
+        assert history[1].start_date == "2026-09-01"
+        assert history[1].group_name == "3r B"
+
+    def test_historic_distingeix_la_combinacio_de_curs_i_grup(
+        self, note_dao, academic_course_dao, category_dao, student_dao, db
+    ):
+        category = db.categories.create(CategoryNew("Acadèmic"))
+        student = db.students.create(StudentNew("Anna", "Martí", "3r B"))
+        course = db.academic_courses.get_or_create("2026-2027")
+        db.student_group_history.create(StudentGroupHistoryNew(
+            student.id, "3r A", "2026-09-01", None, course.id
+        ))
+        service = NoteService(
+            note_dao, academic_course_dao, category_dao, student_dao,
+            db.transaction, db.student_group_history,
+        )
+
+        service.create(NoteNew(
+            student.id, category.id, "2026-10-01", 0, "Canvi de grup"
+        ))
+
+        history = db.student_group_history.get_by_student(student.id)
+        assert [(item.group_name, item.academic_course_id) for item in history] == [
+            ("3r A", course.id), ("3r B", course.id),
+        ]
 
     def test_create_note_resolves_course_from_january_date(self, note_dao, academic_course_dao, category_dao, student_dao, db):
         """Testa que una nota amb course_id=0 i data de gener resol el curs anterior."""

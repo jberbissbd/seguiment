@@ -64,7 +64,7 @@ def test_configura_bloc_inicial_a4_marges_i_taules_a_amplada_completa(db, tmp_pa
     document = Document(services.word_reports.export_student(student.id, destination))
     section = document.sections[0]
     assert section.header.paragraphs[0].text == ""
-    assert document.paragraphs[0].text == "Laia Martí"
+    assert document.paragraphs[0].text == "Martí, Laia"
     assert document.paragraphs[0].style.name == "Title"
     assert document.paragraphs[1].text == "Grup: 4t A"
     assert document.paragraphs[1].runs[0].bold

@@ -8,6 +8,7 @@ from tutopy.services.exceptions import DomainError
 from tutopy.services.report_configuration_service import ReportConfigurationService
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
 from tutopy.services.word_report_service import WordReportService
+from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.report_export_dialog import ReportExportDialog
 from tutopy.ui.dialogs.term_configuration_dialog import TermConfigurationDialog
@@ -20,6 +21,7 @@ class ReportController:
                  configuration: ReportConfigurationService,
                  reports: SpreadsheetReportService,
                  word_reports: WordReportService,
+                 student_exports: StudentExportService,
                  term_dialog=TermConfigurationDialog,
                  export_dialog=ReportExportDialog,
                  error_handler=None, confirm_delete=None):
@@ -29,6 +31,7 @@ class ReportController:
         self.configuration = configuration
         self.reports = reports
         self.word_reports = word_reports
+        self.student_exports = student_exports
         self.term_dialog = term_dialog
         self.export_dialog = export_dialog
         self.error_handler = error_handler or window.show_error
@@ -150,8 +153,27 @@ class ReportController:
         )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-        safe_name = re.sub(r"[^\w.-]+", "_", student.full_name, flags=re.UNICODE).strip("_")
+        safe_name = re.sub(
+            r'[<>:"/\\|?*\x00-\x1f]+', "_", student.filing_name
+        ).strip(" ._")
         export_format = dialog.export_format()
+        if dialog.include_documents.isChecked():
+            directory = QFileDialog.getExistingDirectory(
+                self.window, "Seleccionar carpeta d’exportació"
+            )
+            if not directory:
+                return
+            try:
+                self.configuration.set_category_order(dialog.category_order())
+                path = self.student_exports.export_student(
+                    student_id, directory, export_format,
+                    include_terms=dialog.include_terms.isChecked(),
+                )
+            except (DomainError, OSError) as error:
+                self.error_handler(str(error))
+                return
+            self.window.show_status(f"Informe i documents desats a {path}", 5000)
+            return
         if export_format == "docx":
             default_name = f"informe_{safe_name}.docx"
             file_filter = "Document de text Word (*.docx)"

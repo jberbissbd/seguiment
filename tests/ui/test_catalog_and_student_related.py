@@ -75,7 +75,7 @@ def test_controlador_de_dades_relacionades_crea_i_mostra_elements(
         source.write_text("Informe", encoding="utf-8")
         monkeypatch.setattr(AcceptedDocumentDialog, "values_to_return", {
             "name": "Informe", "description": "Trimestral",
-            "source_path": str(source),
+            "source_path": str(source), "date": "2026-02-01",
         })
         window = MainWindow()
         qtbot.addWidget(window)

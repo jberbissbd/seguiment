@@ -52,7 +52,7 @@ class WordReportService:
             by_course[note.course_id].append(note)
 
         document = Document()
-        document.core_properties.title = self._safe_text(f"Informe de {student.full_name}")
+        document.core_properties.title = self._safe_text(f"Informe de {student.filing_name}")
         document.core_properties.subject = "Notes de seguiment"
         self._configure_page(document)
         self._add_student_header(document, student, self.configuration.get_header_image())
@@ -115,7 +115,7 @@ class WordReportService:
                 document.add_picture(str(image_path), width=Cm(5))
             except (OSError, ValueError, UnrecognizedImageError) as error:
                 raise ValidationError("La imatge de capçalera no és vàlida.") from error
-        document.add_heading(self._safe_text(student.full_name), level=0)
+        document.add_heading(self._safe_text(student.filing_name), level=0)
         group = self._safe_text(student.group_name) or "Sense grup"
         paragraph = document.add_paragraph()
         paragraph.add_run("Grup: ").bold = True

@@ -33,6 +33,9 @@ class ReportExportDialog(QDialog):
         self.include_terms.setChecked(True)
         self.include_terms.setVisible(show_term_option)
         layout.addWidget(self.include_terms)
+        self.include_documents = QCheckBox("Incloure els documents, classificats per curs")
+        self.include_documents.setVisible(show_term_option)
+        layout.addWidget(self.include_documents)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )

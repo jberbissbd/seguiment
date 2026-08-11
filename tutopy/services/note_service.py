@@ -2,7 +2,8 @@ from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.database.daos.student_dao import StudentDAO
-from tutopy.models.messaging import Note, NoteNew, NoteRecord
+from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
+from tutopy.models.messaging import Note, NoteNew, NoteRecord, StudentGroupHistoryNew
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import AcademicCourseDeterminator
@@ -10,18 +11,21 @@ from tutopy.services.utils import AcademicCourseDeterminator
 
 class NoteService:
     def __init__(self, note_dao: NoteDAO, academic_course_dao: AcademicCourseDAO,
-        category_dao: CategoryDAO, student_dao: StudentDAO, transaction_factory):
+        category_dao: CategoryDAO, student_dao: StudentDAO, transaction_factory,
+        group_history_dao: StudentGroupHistoryDAO = None):
         self.note_dao = note_dao
         self.academic_course_dao = academic_course_dao
         self.category_dao = category_dao
         self.student_dao = student_dao
         self.transaction_factory = transaction_factory
+        self.group_history_dao = group_history_dao
         self.validation_service = ValidationService(category_dao)
 
     def create_note(self, note_data: NoteNew) -> Note:
         """Valida i crea una nota de seguiment."""
         with self.transaction_factory():
             prepared = self._prepare(note_data)
+            self._ensure_group_history(prepared)
             return self.note_dao.create(prepared)
 
     def create(self, note_data: NoteNew) -> Note:
@@ -61,6 +65,7 @@ class NoteService:
                 course_id=note.course_id,
                 content=note.content,
             ))
+            self._ensure_group_history(prepared)
             note.student_id = prepared.student_id
             note.category_id = prepared.category_id
             note.date = prepared.date
@@ -96,6 +101,51 @@ class NoteService:
             course_id=course_id,
             content=prepared.content,
         )
+
+    def _ensure_group_history(self, note: NoteNew) -> None:
+        """Registra el curs/grup de la data de la nota si encara no consta."""
+        if self.group_history_dao is None:
+            return
+        student = self._require_student(note.student_id)
+        histories = self.group_history_dao.get_by_student(note.student_id)
+        if any(
+            history.academic_course_id == note.course_id
+            and history.group_name == student.group_name
+            for history in histories
+        ):
+            return
+        current = self.group_history_dao.get_current(note.student_id)
+        first_entry_in_course = not histories or (
+            current is not None
+            and current.group_name == student.group_name
+            and current.academic_course_id != note.course_id
+        )
+        start_date = self._course_start(note.course_id) if first_entry_in_course else note.date
+        if current and start_date >= current.start_date:
+            current.end_date = start_date
+            self.group_history_dao.update(current)
+            group_name = student.group_name
+            end_date = None
+        else:
+            following = next(
+                (history for history in histories if history.start_date > start_date), None
+            )
+            group_name = student.group_name
+            end_date = following.start_date if following else None
+        self.group_history_dao.create(StudentGroupHistoryNew(
+            student_id=note.student_id,
+            group_name=group_name,
+            academic_course_id=note.course_id,
+            start_date=start_date,
+            end_date=end_date,
+        ))
+
+    def _course_start(self, course_id: int) -> str:
+        course = self.academic_course_dao.get_by_id(course_id)
+        if course is None:
+            raise EntityNotFoundError("El curs acadèmic de la nota no existeix.")
+        first_year = course.course.split("-", 1)[0]
+        return f"{first_year}-09-01"
 
     def _require_student(self, student_id: int):
         self.validation_service.positive_id(student_id)

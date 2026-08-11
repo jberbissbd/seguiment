@@ -71,6 +71,7 @@ class TestEstudiants():
     def test_nom_complet(self,estudiant_existent_dataclass):
         """Comprova que el nom complet es genera correctament"""
         assert estudiant_existent_dataclass.full_name == "Toni Cognom 1 Cognom 2"
+        assert estudiant_existent_dataclass.filing_name == "Cognom 1 Cognom 2, Toni"
 
     def test_error_parametres_existent(self):
         """Comprova que genera un error al intentar crear un estudiant amb la tipologia de 

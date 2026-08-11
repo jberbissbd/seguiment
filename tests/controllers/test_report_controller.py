@@ -37,6 +37,7 @@ class AcceptedExportDialog:
 
     def __init__(self, *args, **kwargs):
         self.include_terms = SimpleNamespace(isChecked=lambda: self.include)
+        self.include_documents = SimpleNamespace(isChecked=lambda: False)
 
     def exec(self):
         return QDialog.DialogCode.Accepted
@@ -63,6 +64,7 @@ def _controller(db, qtbot, tmp_path, monkeypatch):
         window, services.students, services.academic_courses,
         services.report_configuration, services.spreadsheet_reports,
         services.word_reports,
+        services.student_exports,
         term_dialog=AcceptedTermDialog, export_dialog=AcceptedExportDialog,
         error_handler=errors.append, confirm_delete=lambda _name: True,
     )

@@ -68,6 +68,8 @@ def test_document_dialog_selecciona_fitxer_i_dedueix_nom(qtbot, monkeypatch, tmp
     dialog._browse()
     assert dialog.values()["source_path"] == str(source)
     assert dialog.values()["name"] == "informe.pdf"
+    assert dialog.date_input.date().isValid()
+    assert dialog.values()["date"]
     dialog._accept_valid()
     assert dialog.result() == QDialog.DialogCode.Accepted
 
@@ -83,7 +85,10 @@ def test_document_dialog_no_modifica_res_si_es_cancella(qtbot, monkeypatch):
 
 
 def test_document_existent_no_requereix_nou_fitxer(qtbot):
-    document = SimpleNamespace(name="Informe", description="Final", original_filename="a.pdf")
+    document = SimpleNamespace(
+        name="Informe", description="Final", original_filename="a.pdf",
+        date="2026-02-01",
+    )
     dialog = DocumentDialog(document=document)
     qtbot.addWidget(dialog)
     dialog._accept_valid()

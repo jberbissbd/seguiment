@@ -81,7 +81,7 @@ class SpreadsheetReportService:
         last_column = len(categories) + (2 if include_terms else 1)
         sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_column)
         title = sheet.cell(1, 1)
-        self._set_text(title, f"{student.full_name} — {', '.join(groups) or 'Sense grup'}")
+        self._set_text(title, f"{student.filing_name} — {', '.join(groups) or 'Sense grup'}")
         title.font = Font(bold=True, size=14, color="FFFFFF")
         title.fill = PatternFill("solid", fgColor="173A5E")
         title.alignment = Alignment(horizontal="center", vertical="center")

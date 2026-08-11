@@ -9,7 +9,7 @@ class DocumentTab(CrudTableView):
     export_requested = Signal(int)
 
     def __init__(self, parent=None):
-        super().__init__(["Nom", "Descripció", "Fitxer"], "Nou document", parent)
+        super().__init__(["Data", "Nom", "Descripció", "Fitxer"], "Nou document", parent)
         self.open_button = QPushButton("Obrir")
         self.open_button.setObjectName("secondaryButton")
         self.export_button = QPushButton("Exportar…")

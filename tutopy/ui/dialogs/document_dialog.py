@@ -1,9 +1,11 @@
 from pathlib import Path
 
+from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QVBoxLayout,
 )
+from tutopy.ui.widgets.date_input import DateInput
 
 
 class DocumentDialog(QDialog):
@@ -15,6 +17,10 @@ class DocumentDialog(QDialog):
         form = QFormLayout()
         self.name_input = QLineEdit(document.name if document else "")
         self.description_input = QLineEdit(document.description if document else "")
+        saved_date = getattr(document, "date", "") if document else ""
+        initial_date = (QDate.fromString(saved_date, "yyyy-MM-dd")
+                        if saved_date else QDate.currentDate())
+        self.date_input = DateInput(initial_date)
         self.path_input = QLineEdit(document.original_filename if document else "")
         self.path_input.setReadOnly(True)
         browse = QPushButton("Seleccionar…")
@@ -24,9 +30,12 @@ class DocumentDialog(QDialog):
         path_layout.addWidget(browse)
         form.addRow("Nom:", self.name_input)
         form.addRow("Descripció:", self.description_input)
+        form.addRow("Data (DD/MM/AAAA):", self.date_input)
         form.addRow("Fitxer:", path_layout)
         layout.addLayout(form)
-        self.error_label = QLabel("Cal indicar un nom i seleccionar un fitxer.")
+        self.error_label = QLabel(
+            "Cal indicar un nom, una data vàlida i seleccionar un fitxer."
+        )
         self.error_label.setObjectName("errorText")
         self.error_label.hide()
         layout.addWidget(self.error_label)
@@ -42,6 +51,7 @@ class DocumentDialog(QDialog):
             "name": self.name_input.text().strip(),
             "description": self.description_input.text().strip(),
             "source_path": self.path_input.text().strip(),
+            "date": self.date_input.date().toString("yyyy-MM-dd"),
         }
 
     def _browse(self):
@@ -54,7 +64,7 @@ class DocumentDialog(QDialog):
     def _accept_valid(self):
         values = self.values()
         path_ok = self.document is not None or bool(values["source_path"])
-        if values["name"] and path_ok:
+        if values["name"] and path_ok and self.date_input.date().isValid():
             self.accept()
         else:
             self.error_label.show()

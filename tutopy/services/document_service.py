@@ -4,18 +4,22 @@ from pathlib import Path
 
 from tutopy.database.daos.document_dao import DocumentDAO
 from tutopy.database.daos.student_dao import StudentDAO
+from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.models.messaging import StudentDocument, StudentDocumentNew
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
+from tutopy.services.utils import AcademicCourseDeterminator
 
 
 class DocumentService:
     """API de negoci per a les metadades dels documents d'alumnes."""
 
     def __init__(self, document_dao: DocumentDAO, student_dao: StudentDAO,
+        academic_course_dao: AcademicCourseDAO = None,
         validation_service: ValidationService = None, storage_dir=None):
         self.document_dao = document_dao
         self.student_dao = student_dao
+        self.academic_course_dao = academic_course_dao
         self.validation_service = validation_service or ValidationService()
         self.storage_dir = Path(storage_dir) if storage_dir else None
 
@@ -38,7 +42,7 @@ class DocumentService:
         return self.document_dao.create(self._prepare(data))
 
     def import_file(self, student_id: int, name: str, description: str,
-        source_path: str) -> StudentDocument:
+        source_path: str, date: str = "") -> StudentDocument:
         """Copia un fitxer al magatzem gestionat i en desa les metadades."""
         self._require_student(student_id)
         if self.storage_dir is None:
@@ -58,6 +62,7 @@ class DocumentService:
                 uuid_filename=internal_name,
                 original_filename=source.name,
                 file_path=str(destination),
+                date=date,
             ))
         except Exception:
             destination.unlink(missing_ok=True)
@@ -72,6 +77,8 @@ class DocumentService:
             uuid_filename=existing.uuid_filename,
             original_filename=existing.original_filename,
             file_path=existing.file_path,
+            date=document.date,
+            course_id=document.course_id,
         ))
         document.student_id = existing.student_id
         document.name = prepared.name
@@ -79,6 +86,8 @@ class DocumentService:
         document.uuid_filename = existing.uuid_filename
         document.original_filename = existing.original_filename
         document.file_path = existing.file_path
+        document.date = prepared.date
+        document.course_id = prepared.course_id
         self.document_dao.update(document)
         return document
 
@@ -127,6 +136,15 @@ class DocumentService:
         return document
 
     def _prepare(self, data: StudentDocumentNew) -> StudentDocumentNew:
+        if not data.date:
+            raise ValidationError("La data del document és obligatòria.")
+        document_date = self.validation_service.iso_date(data.date)
+        course_id = data.course_id
+        if document_date:
+            if self.academic_course_dao is None:
+                raise ValidationError("No es pot determinar el curs acadèmic del document.")
+            course_name = AcademicCourseDeterminator().curs_academic_singular(document_date)
+            course_id = self.academic_course_dao.get_or_create(course_name).id
         return StudentDocumentNew(
             student_id=data.student_id,
             name=self.validation_service.required_text(
@@ -138,6 +156,8 @@ class DocumentService:
             ),
             original_filename=self.validation_service.optional_text(data.original_filename),
             file_path=self.validation_service.optional_text(data.file_path),
+            date=document_date,
+            course_id=course_id,
         )
 
     def _require_student(self, student_id: int):
