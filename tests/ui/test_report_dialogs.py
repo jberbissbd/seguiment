@@ -79,10 +79,10 @@ def test_vista_de_dades_emet_ids_de_configuracio(qtbot):
 def test_vista_de_dades_separa_visualment_les_configuracions(qtbot):
     view = DataToolsView()
     qtbot.addWidget(view)
-    groups = view.findChildren(QFrame, "settingsGroup")
+    groups = view.report_panel.findChildren(QFrame, "settingsGroup")
     assert len(groups) == 3
     titles = [
-        label.text() for label in view.findChildren(QLabel, "settingsTitle")
+        label.text() for label in view.report_panel.findChildren(QLabel, "settingsTitle")
     ]
     assert titles == [
         "Ordre de les categories",

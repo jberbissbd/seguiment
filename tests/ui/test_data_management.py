@@ -22,4 +22,5 @@ def test_finestra_inclou_gestio_de_dades(qtbot):
     assert window.content_stack.currentWidget() is window._pages["data"]
     assert isinstance(window.data_tools_scroll, QScrollArea)
     assert window.data_tools_scroll.widget() is window.data_tools
-    assert window.data_tools.minimumSizeHint().height() > 500
+    assert window.data_tools.report_panel.parentWidget() is not window.data_tools
+    assert window.configuration_scroll.widget().isAncestorOf(window.data_tools.report_panel)

@@ -40,6 +40,7 @@ class DataToolsView(QWidget):
 
         report_panel = QFrame()
         report_panel.setObjectName("panel")
+        self.report_panel = report_panel
         report_layout = QVBoxLayout(report_panel)
         report_layout.addWidget(self._title("Informes i trimestres"))
         report_layout.addWidget(self._description(
@@ -145,7 +146,6 @@ class DataToolsView(QWidget):
             )
 
         layout.addWidget(import_panel)
-        layout.addWidget(report_panel)
         layout.addWidget(danger_panel)
         layout.addStretch()
         self.template_button.clicked.connect(self.template_requested)

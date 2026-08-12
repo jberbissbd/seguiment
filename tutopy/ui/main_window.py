@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
         self.data_tools = DataToolsView()
         self._pages = {
             "students": self._create_students_page(),
-            "categories": self._create_management_page("Categories", self.category_view),
+            "configuration": self._create_configuration_page(),
             "data": self._create_management_page("Gestió de dades", self.data_tools),
         }
         for page in self._pages.values():
@@ -97,6 +97,46 @@ class MainWindow(QMainWindow):
             self.data_tools_scroll = scroll
         else:
             layout.addWidget(view, 1)
+        return page
+
+    def _create_configuration_page(self) -> QWidget:
+        page = QWidget()
+        page_layout = QVBoxLayout(page)
+        page_layout.setContentsMargins(24, 24, 24, 24)
+        heading = QLabel("Configuració")
+        heading.setObjectName("sectionTitle")
+        page_layout.addWidget(heading)
+
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(18)
+
+        category_panel = QFrame()
+        category_panel.setObjectName("panel")
+        category_layout = QVBoxLayout(category_panel)
+        category_title = QLabel("Categories")
+        category_title.setObjectName("studentName")
+        category_description = QLabel(
+            "Crea i edita les categories utilitzades per classificar les notes."
+        )
+        category_description.setObjectName("mutedText")
+        category_description.setWordWrap(True)
+        category_layout.addWidget(category_title)
+        category_layout.addWidget(category_description)
+        category_layout.addWidget(self.category_view)
+        category_panel.setMinimumHeight(240)
+        content_layout.addWidget(category_panel)
+        content_layout.addWidget(self.data_tools.report_panel)
+
+        scroll = QScrollArea()
+        scroll.setObjectName("configurationScroll")
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(content)
+        page_layout.addWidget(scroll, 1)
+        self.configuration_scroll = scroll
         return page
 
     def show_section(self, section: str) -> None:
