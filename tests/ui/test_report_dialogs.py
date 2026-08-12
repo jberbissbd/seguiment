@@ -1,5 +1,5 @@
 from PySide6.QtCore import QDate, Qt
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QFrame, QHeaderView, QLabel
 
 from tutopy.models.messaging import AcademicCourse, Category
 from tutopy.models.reporting import TermConfiguration
@@ -62,6 +62,42 @@ def test_vista_de_dades_emet_ids_de_configuracio(qtbot):
     with qtbot.waitSignal(view.term_delete_requested) as signal:
         qtbot.mouseClick(view.term_delete_button, Qt.MouseButton.LeftButton)
     assert signal.args == [7]
+    header = view.term_table.horizontalHeader()
+    assert header.sectionResizeMode(2) == QHeaderView.ResizeMode.Stretch
+    assert header.sectionResizeMode(3) == QHeaderView.ResizeMode.Stretch
+    original_height = view.term_table.maximumHeight()
+    view.resize(900, 700)
+    view.show()
+    qtbot.waitExposed(view)
+    assert header.sectionSize(2) == header.sectionSize(3)
+    assert header.height() >= header.fontMetrics().lineSpacing() * 2
+    assert view.term_table.horizontalHeaderItem(2).text() == "Inici 2n\ntrimestre"
+    assert view.term_table.horizontalHeaderItem(3).text() == "Inici 3r\ntrimestre"
+    assert view.term_table.maximumHeight() == original_height == 190
+
+
+def test_vista_de_dades_separa_visualment_les_configuracions(qtbot):
+    view = DataToolsView()
+    qtbot.addWidget(view)
+    groups = view.findChildren(QFrame, "settingsGroup")
+    assert len(groups) == 3
+    titles = [
+        label.text() for label in view.findChildren(QLabel, "settingsTitle")
+    ]
+    assert titles == [
+        "Ordre de les categories",
+        "Logotip dels informes",
+        "Configuració de trimestres",
+    ]
+    buttons = (
+        view.category_order_button, view.report_logo_button,
+        view.report_logo_remove_button, view.term_create_button,
+        view.term_edit_button, view.term_delete_button,
+    )
+    assert all(button.minimumHeight() == 38 for button in buttons)
+    assert all(
+        button.sizePolicy().verticalPolicy().name == "Fixed" for button in buttons
+    )
 
 
 def test_capcalera_emet_exportacio_per_alumne_seleccionat(qtbot):

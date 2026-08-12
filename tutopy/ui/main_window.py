@@ -1,6 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout, QLabel, QMainWindow, QSplitter, QStackedWidget, QVBoxLayout,
+    QFrame, QHBoxLayout, QLabel, QMainWindow, QScrollArea, QSplitter,
+    QStackedWidget, QVBoxLayout,
     QWidget, QMessageBox,
 )
 
@@ -85,7 +86,17 @@ class MainWindow(QMainWindow):
         heading = QLabel(title)
         heading.setObjectName("sectionTitle")
         layout.addWidget(heading)
-        layout.addWidget(view, 1)
+        if isinstance(view, DataToolsView):
+            scroll = QScrollArea()
+            scroll.setObjectName("dataToolsScroll")
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QFrame.Shape.NoFrame)
+            scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            scroll.setWidget(view)
+            layout.addWidget(scroll, 1)
+            self.data_tools_scroll = scroll
+        else:
+            layout.addWidget(view, 1)
         return page
 
     def show_section(self, section: str) -> None:
