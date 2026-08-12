@@ -1,6 +1,6 @@
 import re
 
-from PySide6.QtWidgets import QDialog, QFileDialog
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from tutopy.models.reporting import TermConfigurationNew
 from tutopy.services.academic_course_service import AcademicCourseService
@@ -12,6 +12,7 @@ from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.report_export_dialog import ReportExportDialog
 from tutopy.ui.dialogs.term_configuration_dialog import TermConfigurationDialog
+from tutopy.ui.dialogs.batch_export_dialog import BatchExportDialog
 from tutopy.ui.main_window import MainWindow
 
 
@@ -24,6 +25,7 @@ class ReportController:
                  student_exports: StudentExportService,
                  term_dialog=TermConfigurationDialog,
                  export_dialog=ReportExportDialog,
+                 batch_export_dialog=BatchExportDialog,
                  error_handler=None, confirm_delete=None):
         self.window = window
         self.students = students
@@ -34,6 +36,7 @@ class ReportController:
         self.student_exports = student_exports
         self.term_dialog = term_dialog
         self.export_dialog = export_dialog
+        self.batch_export_dialog = batch_export_dialog
         self.error_handler = error_handler or window.show_error
         self.confirm_delete = confirm_delete or window.confirm_deletion
         view = window.data_tools
@@ -44,6 +47,7 @@ class ReportController:
         view.term_edit_requested.connect(self.edit_term_configuration)
         view.term_delete_requested.connect(self.delete_term_configuration)
         window.student_detail.export_requested.connect(self.export_student)
+        window.student_list.batch_export_requested.connect(self.export_students)
 
     def start(self) -> None:
         self.refresh()
@@ -197,6 +201,37 @@ class ReportController:
             self.error_handler(str(error))
             return
         self.window.show_status(f"Informe desat a {path}", 5000)
+
+    def export_students(self) -> None:
+        dialog = self.batch_export_dialog(
+            self.students.get_all(), self.configuration.get_ordered_categories(),
+            parent=self.window,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        directory = QFileDialog.getExistingDirectory(
+            self.window, "Seleccionar carpeta d’exportació"
+        )
+        if not directory:
+            return
+        try:
+            self.configuration.set_category_order(dialog.category_order())
+            result = self.student_exports.export_students(
+                dialog.student_ids(), directory, dialog.export_format(),
+                include_terms=dialog.include_terms.isChecked(),
+                include_documents=dialog.include_documents.isChecked(),
+            )
+        except (DomainError, OSError) as error:
+            self.error_handler(str(error))
+            return
+        message = f"Alumnes exportats: {result.exported}"
+        if result.failures:
+            message += f"\nErrors: {len(result.failures)}\n\n" + "\n".join(
+                f"{failure.student_name}: {failure.reason}"
+                for failure in result.failures
+            )
+        QMessageBox.information(self.window, "Exportació completada", message)
+        self.window.show_status(f"Exportació desada a {result.destination}", 5000)
 
     @staticmethod
     def _display_date(value: str) -> str:

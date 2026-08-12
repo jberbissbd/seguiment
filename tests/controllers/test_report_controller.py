@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-from PySide6.QtWidgets import QDialog, QFileDialog
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from tutopy.application import create_services
 from tutopy.controllers.report_controller import ReportController
@@ -49,6 +49,17 @@ class AcceptedExportDialog:
         return self.format
 
 
+class AcceptedBatchExportDialog(AcceptedExportDialog):
+    ids = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.include_documents = SimpleNamespace(isChecked=lambda: False)
+
+    def student_ids(self):
+        return list(self.ids)
+
+
 def _controller(db, qtbot, tmp_path, monkeypatch):
     services = create_services(db)
     student = services.students.create(StudentNew("Laia", "Martí", "4t A"))
@@ -66,6 +77,7 @@ def _controller(db, qtbot, tmp_path, monkeypatch):
         services.word_reports,
         services.student_exports,
         term_dialog=AcceptedTermDialog, export_dialog=AcceptedExportDialog,
+        batch_export_dialog=AcceptedBatchExportDialog,
         error_handler=errors.append, confirm_delete=lambda _name: True,
     )
     destination = tmp_path / "informe.xlsx"
@@ -146,4 +158,27 @@ def test_controlador_configura_i_elimina_logotip_global(
     controller.remove_report_logo()
     assert services.report_configuration.get_header_image() is None
     assert not window.data_tools.report_logo_remove_button.isEnabled()
+    assert errors == []
+
+
+def test_controlador_exporta_diversos_alumnes(db, qtbot, tmp_path, monkeypatch):
+    services, student, academic, _course, _window, controller, _destination, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+    second = services.students.create(StudentNew("Pau", "Puig", "4t B"))
+    services.notes.create(NoteNew(
+        second.id, academic.id, "2026-02-02", 0, "Seguiment"
+    ))
+    monkeypatch.setattr(AcceptedBatchExportDialog, "ids", [student.id, second.id])
+    monkeypatch.setattr(AcceptedBatchExportDialog, "order", [academic.id])
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory",
+                        lambda *args: str(tmp_path / "lots"))
+    messages = []
+    monkeypatch.setattr(QMessageBox, "information",
+                        lambda *args: messages.append(args[2]))
+
+    controller.export_students()
+
+    assert any("Alumnes exportats: 2" in message for message in messages)
+    assert len(list((tmp_path / "lots").glob("Informes *"))) == 1
     assert errors == []

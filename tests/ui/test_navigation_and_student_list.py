@@ -29,7 +29,9 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         second = database.students.create(StudentNew("Alex", "Garcia", "2n A"))
         widget = StudentList()
         qtbot.addWidget(widget)
+        assert not widget.batch_export_button.isEnabled()
         widget.set_students([first, second])
+        assert widget.batch_export_button.isEnabled()
 
         assert widget.list_widget.count() == 2
         first_item = widget.list_widget.item(0)
@@ -43,6 +45,10 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
             widget.list_widget.setCurrentRow(1)
         assert signal.args == [second.id]
         assert first.uuid != second.uuid
+        with qtbot.waitSignal(widget.batch_export_requested):
+            qtbot.mouseClick(
+                widget.batch_export_button, Qt.MouseButton.LeftButton
+            )
     finally:
         database.close()
 
