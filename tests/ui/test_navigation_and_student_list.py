@@ -30,6 +30,11 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         widget = StudentList()
         qtbot.addWidget(widget)
         assert not widget.batch_export_button.isEnabled()
+        assert widget.create_button.parentWidget() is widget
+        assert widget.batch_export_button.parentWidget() is widget
+        widget.show()
+        qtbot.waitExposed(widget)
+        assert widget.create_button.geometry().top() < widget.batch_export_button.geometry().top()
         widget.set_students([first, second])
         assert widget.batch_export_button.isEnabled()
 
