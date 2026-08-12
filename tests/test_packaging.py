@@ -53,6 +53,19 @@ def test_versio_de_pyinstaller_esta_fixada():
     assert "pyinstaller==6.21.0" in dependencies
 
 
+def test_dependencies_de_build_especifiques_de_cada_sistema_estan_fixades():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    dependencies = project["project"]["optional-dependencies"]["build"]
+    assert "macholib==1.16.4; sys_platform == 'darwin'" in dependencies
+    assert "pefile==2024.8.26; sys_platform == 'win32'" in dependencies
+    assert "pywin32-ctypes==0.2.3; sys_platform == 'win32'" in dependencies
+
+    lock = (ROOT / "requirements-build.lock").read_text(encoding="utf-8")
+    assert "macholib==1.16.4" in lock
+    assert "pefile==2024.8.26" in lock
+    assert "pywin32-ctypes==0.2.3" in lock
+
+
 def test_exportacio_docx_forma_part_de_les_dependencies_i_del_build():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert "python-docx==1.2.0" in project["project"]["dependencies"]
