@@ -71,6 +71,23 @@ QFrame#studentSummary {{
     border-radius: 6px;
 }}
 
+QFrame#settingsGroup {{
+    background-color: #F8FAFC;
+    border: 1px solid {BORDER_COLOR};
+    border-radius: 6px;
+}}
+
+QFrame#settingsGroup QLabel {{
+    background: transparent;
+    border: none;
+}}
+
+QLabel#settingsTitle {{
+    color: {TEXT_PRIMARY};
+    font-size: 15px;
+    font-weight: 650;
+}}
+
 QFrame#studentSummary QLabel {{
     background: transparent;
     border: none;

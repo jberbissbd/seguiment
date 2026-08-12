@@ -1,3 +1,10 @@
+from pathlib import Path
+import shutil
+from uuid import uuid4
+
+from docx.image.exceptions import UnrecognizedImageError
+from docx.image.image import Image
+
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.database.daos.report_configuration_dao import ReportConfigurationDAO
@@ -13,12 +20,14 @@ class ReportConfigurationService:
 
     def __init__(self, configuration_dao: ReportConfigurationDAO,
                  courses: AcademicCourseDAO, categories: CategoryDAO,
-                 transaction_factory, validation_service: ValidationService = None):
+                 transaction_factory, storage_dir: str | Path | None = None,
+                 validation_service: ValidationService = None):
         self.configuration_dao = configuration_dao
         self.courses = courses
         self.categories = categories
         self.transaction_factory = transaction_factory
         self.validation = validation_service or ValidationService()
+        self.storage_dir = Path(storage_dir) if storage_dir else None
 
     def get_term_configurations(self) -> list[TermConfiguration]:
         return self.configuration_dao.get_term_configurations()
@@ -96,3 +105,42 @@ class ReportConfigurationService:
         with self.transaction_factory():
             self.configuration_dao.set_category_order(category_ids)
         return self.get_ordered_categories()
+
+    def get_header_image(self) -> Path | None:
+        value = self.configuration_dao.get_setting("header_image")
+        if not value:
+            return None
+        path = Path(value)
+        return path if path.is_file() else None
+
+    def set_header_image(self, source: str | Path) -> Path:
+        source = Path(source)
+        if not source.is_file():
+            raise ValidationError("No s’ha trobat la imatge de capçalera seleccionada.")
+        try:
+            Image.from_file(str(source))
+        except (OSError, UnrecognizedImageError) as error:
+            raise ValidationError("El fitxer seleccionat no és una imatge vàlida.") from error
+        if self.storage_dir is None:
+            raise ValidationError("No s’ha configurat el magatzem del logotip.")
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        destination = self.storage_dir / f"report-logo-{uuid4().hex}{source.suffix.lower()}"
+        previous = self.get_header_image()
+        try:
+            shutil.copy2(source, destination)
+            self.configuration_dao.set_setting("header_image", str(destination))
+        except OSError as error:
+            destination.unlink(missing_ok=True)
+            raise ValidationError("No s’ha pogut desar la imatge de capçalera.") from error
+        if previous and previous.parent.resolve() == self.storage_dir.resolve():
+            previous.unlink(missing_ok=True)
+        return destination
+
+    def clear_header_image(self) -> None:
+        previous = self.get_header_image()
+        self.configuration_dao.delete_setting("header_image")
+        if previous and self.storage_dir and previous.parent.resolve() == self.storage_dir.resolve():
+            try:
+                previous.unlink(missing_ok=True)
+            except OSError as error:
+                raise ValidationError("No s’ha pogut eliminar la imatge de capçalera.") from error

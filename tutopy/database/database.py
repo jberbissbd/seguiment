@@ -184,7 +184,10 @@ class Database:
                 uuid_filename TEXT NOT NULL,
                 original_filename TEXT NOT NULL DEFAULT '',
                 file_path TEXT NOT NULL DEFAULT '',
-                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+                date TEXT NOT NULL DEFAULT '',
+                course_id INTEGER,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (course_id) REFERENCES academic_courses(id) ON DELETE SET NULL
             );
             CREATE TABLE IF NOT EXISTS student_group_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -212,6 +215,10 @@ class Database:
                 category_id INTEGER PRIMARY KEY,
                 position INTEGER NOT NULL UNIQUE,
                 FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS report_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_students_uuid
                 ON students(uuid);

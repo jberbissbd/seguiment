@@ -7,9 +7,10 @@ from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 
 def test_document_service_crud(document_dao, student_dao, db):
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
-    service = DocumentService(document_dao, student_dao)
+    service = DocumentService(document_dao, student_dao, db.academic_courses)
     document = service.create(StudentDocumentNew(
-        student.id, " Informe ", " Descripció ", "uuid.pdf", "informe.pdf", "/tmp/informe.pdf"
+        student.id, " Informe ", " Descripció ", "uuid.pdf", "informe.pdf",
+        "/tmp/informe.pdf", "2026-02-01"
     ))
 
     assert document.name == "Informe"
@@ -26,13 +27,13 @@ def test_document_service_crud(document_dao, student_dao, db):
 
 
 def test_document_service_valida_relacions_i_nom(document_dao, student_dao, db):
-    service = DocumentService(document_dao, student_dao)
+    service = DocumentService(document_dao, student_dao, db.academic_courses)
     with pytest.raises(EntityNotFoundError):
         service.get_by_student(999)
 
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
     invalid_document = StudentDocumentNew(
-        student.id, " ", "", "uuid.pdf", "informe.pdf"
+        student.id, " ", "", "uuid.pdf", "informe.pdf", "", "2026-02-01"
     )
     with pytest.raises(ValidationError):
         service.create(invalid_document)
@@ -45,13 +46,17 @@ def test_document_service_importa_i_elimina_fitxer_gestionat(
     source = tmp_path / "informe.pdf"
     source.write_bytes(b"contingut")
     storage = tmp_path / "documents"
-    service = DocumentService(document_dao, student_dao, storage_dir=storage)
+    service = DocumentService(
+        document_dao, student_dao, db.academic_courses, storage_dir=storage
+    )
 
-    document = service.import_file(student.id, "Informe", "", str(source))
+    document = service.import_file(student.id, "Informe", "", str(source), "2026-02-01")
 
     managed_file = storage / document.uuid_filename
     assert managed_file.read_bytes() == b"contingut"
     assert document.original_filename == "informe.pdf"
+    assert document.date == "2026-02-01"
+    assert db.academic_courses.get_by_id(document.course_id).course == "2025-2026"
     assert source.exists()
 
     service.delete(document.id)
@@ -67,9 +72,10 @@ def test_document_service_valida_obertura_i_exporta_fitxer(
     source = tmp_path / "informe.txt"
     source.write_text("Informe", encoding="utf-8")
     service = DocumentService(
-        document_dao, student_dao, storage_dir=tmp_path / "documents"
+        document_dao, student_dao, db.academic_courses,
+        storage_dir=tmp_path / "documents"
     )
-    document = service.import_file(student.id, "Informe", "", str(source))
+    document = service.import_file(student.id, "Informe", "", str(source), "2026-02-01")
     destination = tmp_path / "exportats" / "copia.txt"
 
     assert service.get_readable_path(document.id).is_file()
@@ -86,10 +92,12 @@ def test_document_service_rebutja_fitxer_extern_al_magatzem(
     external = tmp_path / "extern.txt"
     external.write_text("Extern", encoding="utf-8")
     service = DocumentService(
-        document_dao, student_dao, storage_dir=tmp_path / "documents"
+        document_dao, student_dao, db.academic_courses,
+        storage_dir=tmp_path / "documents"
     )
     document = service.create(StudentDocumentNew(
-        student.id, "Extern", "", "extern.txt", "extern.txt", str(external)
+        student.id, "Extern", "", "extern.txt", "extern.txt", str(external),
+        "2026-02-01"
     ))
 
     with pytest.raises(ValidationError):

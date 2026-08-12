@@ -1,7 +1,8 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QAbstractItemView, QFrame, QHBoxLayout, QLabel, QPushButton, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QWidget,
+    QAbstractItemView, QFrame, QHeaderView, QHBoxLayout, QLabel, QLayout,
+    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QSizePolicy,
 )
 
 
@@ -10,6 +11,8 @@ class DataToolsView(QWidget):
     import_requested = Signal()
     clear_requested = Signal()
     category_order_requested = Signal()
+    report_logo_requested = Signal()
+    report_logo_remove_requested = Signal()
     term_create_requested = Signal()
     term_edit_requested = Signal(int)
     term_delete_requested = Signal(int)
@@ -19,6 +22,7 @@ class DataToolsView(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(18)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
 
         import_panel = QFrame()
         import_panel.setObjectName("panel")
@@ -36,14 +40,53 @@ class DataToolsView(QWidget):
 
         report_panel = QFrame()
         report_panel.setObjectName("panel")
+        self.report_panel = report_panel
         report_layout = QVBoxLayout(report_panel)
         report_layout.addWidget(self._title("Informes i trimestres"))
         report_layout.addWidget(self._description(
-            "Defineix l’ordre de les categories i les dates d’inici del segon i tercer trimestre."
+            "Configura la presentació i l’organització temporal dels informes."
+        ))
+
+        category_panel = QFrame()
+        category_panel.setObjectName("settingsGroup")
+        category_layout = QVBoxLayout(category_panel)
+        category_layout.addWidget(self._subtitle("Ordre de les categories"))
+        category_layout.addWidget(self._description(
+            "Estableix l’ordre en què apareixen les categories als informes."
         ))
         self.category_order_button = QPushButton("Ordenar categories")
         self.category_order_button.setObjectName("secondaryButton")
-        report_layout.addWidget(self.category_order_button)
+        category_layout.addWidget(self.category_order_button)
+        report_layout.addWidget(category_panel)
+
+        logo_panel = QFrame()
+        logo_panel.setObjectName("settingsGroup")
+        logo_layout = QVBoxLayout(logo_panel)
+        logo_layout.addWidget(self._subtitle("Logotip dels informes"))
+        logo_layout.addWidget(self._description(
+            "Selecciona la imatge que apareixerà al bloc inicial de tots els documents DOCX."
+        ))
+        logo_actions = QHBoxLayout()
+        self.report_logo_label = QLabel("Logotip: cap")
+        self.report_logo_label.setObjectName("mutedText")
+        self.report_logo_button = QPushButton("Seleccionar logotip")
+        self.report_logo_button.setObjectName("secondaryButton")
+        self.report_logo_remove_button = QPushButton("Eliminar logotip")
+        self.report_logo_remove_button.setObjectName("secondaryButton")
+        self.report_logo_remove_button.setEnabled(False)
+        logo_actions.addWidget(self.report_logo_label, 1)
+        logo_actions.addWidget(self.report_logo_button)
+        logo_actions.addWidget(self.report_logo_remove_button)
+        logo_layout.addLayout(logo_actions)
+        report_layout.addWidget(logo_panel)
+
+        term_panel = QFrame()
+        term_panel.setObjectName("settingsGroup")
+        term_layout = QVBoxLayout(term_panel)
+        term_layout.addWidget(self._subtitle("Configuració de trimestres"))
+        term_layout.addWidget(self._description(
+            "Defineix per a cada curs i grup les dates d’inici del segon i tercer trimestre."
+        ))
         term_actions = QHBoxLayout()
         self.term_create_button = QPushButton("Nova configuració")
         self.term_create_button.setObjectName("primaryButton")
@@ -57,18 +100,27 @@ class DataToolsView(QWidget):
         term_actions.addWidget(self.term_edit_button)
         term_actions.addWidget(self.term_delete_button)
         term_actions.addStretch()
-        report_layout.addLayout(term_actions)
+        term_layout.addLayout(term_actions)
         self.term_table = QTableWidget(0, 4)
         self.term_table.setHorizontalHeaderLabels(
-            ["Curs", "Grup", "Inici 2n trimestre", "Inici 3r trimestre"]
+            ["Curs", "Grup", "Inici 2n\ntrimestre", "Inici 3r\ntrimestre"]
         )
         self.term_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.term_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.term_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.term_table.verticalHeader().hide()
-        self.term_table.horizontalHeader().setStretchLastSection(True)
+        term_header = self.term_table.horizontalHeader()
+        term_header.setStretchLastSection(False)
+        term_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        term_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        term_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        term_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        two_line_height = term_header.fontMetrics().lineSpacing() * 2 + 12
+        term_header.setMinimumHeight(two_line_height)
+        term_header.setFixedHeight(two_line_height)
         self.term_table.setMaximumHeight(190)
-        report_layout.addWidget(self.term_table)
+        term_layout.addWidget(self.term_table)
+        report_layout.addWidget(term_panel)
 
         danger_panel = QFrame()
         danger_panel.setObjectName("panel")
@@ -81,14 +133,27 @@ class DataToolsView(QWidget):
         self.clear_button.setObjectName("dangerButton")
         danger_layout.addWidget(self.clear_button)
 
+        action_buttons = (
+            self.template_button, self.import_button, self.category_order_button,
+            self.report_logo_button, self.report_logo_remove_button,
+            self.term_create_button, self.term_edit_button, self.term_delete_button,
+            self.clear_button,
+        )
+        for button in action_buttons:
+            button.setMinimumHeight(38)
+            button.setSizePolicy(
+                button.sizePolicy().horizontalPolicy(), QSizePolicy.Policy.Fixed
+            )
+
         layout.addWidget(import_panel)
-        layout.addWidget(report_panel)
         layout.addWidget(danger_panel)
         layout.addStretch()
         self.template_button.clicked.connect(self.template_requested)
         self.import_button.clicked.connect(self.import_requested)
         self.clear_button.clicked.connect(self.clear_requested)
         self.category_order_button.clicked.connect(self.category_order_requested)
+        self.report_logo_button.clicked.connect(self.report_logo_requested)
+        self.report_logo_remove_button.clicked.connect(self.report_logo_remove_requested)
         self.term_create_button.clicked.connect(self.term_create_requested)
         self.term_edit_button.clicked.connect(self._request_term_edit)
         self.term_delete_button.clicked.connect(self._request_term_delete)
@@ -105,6 +170,10 @@ class DataToolsView(QWidget):
                     item.setData(Qt.ItemDataRole.UserRole, configuration_id)
                 self.term_table.setItem(row, column, item)
         self._term_selection_changed()
+
+    def set_report_logo(self, filename: str | None) -> None:
+        self.report_logo_label.setText(f"Logotip: {filename}" if filename else "Logotip: cap")
+        self.report_logo_remove_button.setEnabled(bool(filename))
 
     def current_term_configuration_id(self):
         rows = self.term_table.selectionModel().selectedRows()
@@ -138,4 +207,10 @@ class DataToolsView(QWidget):
         label = QLabel(text)
         label.setObjectName("mutedText")
         label.setWordWrap(True)
+        return label
+
+    @staticmethod
+    def _subtitle(text):
+        label = QLabel(text)
+        label.setObjectName("settingsTitle")
         return label

@@ -12,6 +12,8 @@ from tutopy.services.bulk_import_service import BulkImportService
 from tutopy.services.data_management_service import DataManagementService
 from tutopy.services.report_configuration_service import ReportConfigurationService
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
+from tutopy.services.word_report_service import WordReportService
+from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.directories import get_app_data_dir
 
 
@@ -30,6 +32,8 @@ class ServiceContainer:
     data_management: DataManagementService
     report_configuration: ReportConfigurationService
     spreadsheet_reports: SpreadsheetReportService
+    word_reports: WordReportService
+    student_exports: StudentExportService
 
 
 def create_services(database: Database) -> ServiceContainer:
@@ -50,6 +54,19 @@ def create_services(database: Database) -> ServiceContainer:
     report_configuration = ReportConfigurationService(
         database.report_configuration, database.academic_courses,
         database.categories, database.transaction,
+        storage_dir=get_app_data_dir() / "reporting",
+    )
+    spreadsheet_reports = SpreadsheetReportService(
+        database.students, database.notes, database.academic_courses,
+        database.student_group_history, report_configuration,
+    )
+    word_reports = WordReportService(
+        database.students, database.notes, database.academic_courses,
+        report_configuration,
+    )
+    documents = DocumentService(
+        database.documents, database.students, database.academic_courses,
+        storage_dir=storage_dir,
     )
     return ServiceContainer(
         students=students,
@@ -59,16 +76,13 @@ def create_services(database: Database) -> ServiceContainer:
             database.categories,
             database.students,
             database.transaction,
+            database.student_group_history,
         ),
         categories=categories,
         academic_courses=AcademicCourseService(database.academic_courses),
         annotations=AnnotationService(database.annotations, database.students),
         contacts=ContactService(database.contacts, database.students),
-        documents=DocumentService(
-            database.documents,
-            database.students,
-            storage_dir=storage_dir,
-        ),
+        documents=documents,
         bulk_import=BulkImportService(
             students, categories, database.transaction,
         ),
@@ -77,8 +91,10 @@ def create_services(database: Database) -> ServiceContainer:
             database.transaction, storage_dir,
         ),
         report_configuration=report_configuration,
-        spreadsheet_reports=SpreadsheetReportService(
-            database.students, database.notes, database.academic_courses,
-            database.student_group_history, report_configuration,
+        spreadsheet_reports=spreadsheet_reports,
+        word_reports=word_reports,
+        student_exports=StudentExportService(
+            database.students, documents, database.academic_courses,
+            spreadsheet_reports, word_reports,
         ),
     )

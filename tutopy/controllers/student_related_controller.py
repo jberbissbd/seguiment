@@ -79,7 +79,7 @@ class StudentRelatedController:
         ])
         documents = self.documents.get_by_student(self.student_id)
         self.window.student_detail.document_tab.set_rows([
-            (item.id, (item.name, item.description, item.original_filename))
+            (item.id, (item.date or "—", item.name, item.description, item.original_filename))
             for item in documents
         ])
         history = self.students.get_group_history(self.student_id)
@@ -142,6 +142,7 @@ class StudentRelatedController:
             self._run(lambda: self.documents.import_file(
                 self.student_id, values["name"], values["description"],
                 values["source_path"],
+                values["date"],
             ), "Document importat")
 
     def edit_document(self, entity_id):
@@ -155,6 +156,7 @@ class StudentRelatedController:
                 uuid_filename=document.uuid_filename,
                 original_filename=document.original_filename,
                 file_path=document.file_path,
+                date=values["date"], course_id=document.course_id,
             )
             self._run(lambda: self.documents.update(updated), "Document actualitzat")
 

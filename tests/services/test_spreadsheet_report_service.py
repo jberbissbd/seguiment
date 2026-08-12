@@ -50,7 +50,7 @@ def test_exporta_full_per_curs_amb_categories_i_grup_historic(db, tmp_path):
     workbook = load_workbook(path)
     assert workbook.sheetnames == ["2025-2026"]
     sheet = workbook["2025-2026"]
-    assert sheet["A1"].value == "Laia Martí — 4t A, 4t B"
+    assert sheet["A1"].value == "Martí, Laia — 4t A, 4t B"
     assert [sheet.cell(2, column).value for column in range(1, 6)] == [
         "Trimestre", "Grup", "Acadèmic", "Família", "Conducta"
     ]
@@ -110,7 +110,7 @@ def test_saneja_unicode_controls_formules_i_longitud(db, tmp_path):
     sheet = load_workbook(services.spreadsheet_reports.export_student(
         student.id, tmp_path / "unicode.xlsx"
     )).active
-    assert sheet["A1"].value.startswith("Júlia Nuñez 😊 — 4t A")
+    assert sheet["A1"].value.startswith("Nuñez 😊, Júlia — 4t A")
     assert "\x00" not in sheet["A1"].value
     assert sheet["B2"].value == '=HYPERLINK("x")'
     assert sheet["B2"].data_type == "s"

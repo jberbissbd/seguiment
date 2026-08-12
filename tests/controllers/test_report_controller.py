@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-from PySide6.QtWidgets import QDialog, QFileDialog
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from tutopy.application import create_services
 from tutopy.controllers.report_controller import ReportController
@@ -33,15 +33,31 @@ class AcceptedTermDialog:
 class AcceptedExportDialog:
     order = []
     include = True
+    format = "xlsx"
 
     def __init__(self, *args, **kwargs):
         self.include_terms = SimpleNamespace(isChecked=lambda: self.include)
+        self.include_documents = SimpleNamespace(isChecked=lambda: False)
 
     def exec(self):
         return QDialog.DialogCode.Accepted
 
     def category_order(self):
         return list(self.order)
+
+    def export_format(self):
+        return self.format
+
+
+class AcceptedBatchExportDialog(AcceptedExportDialog):
+    ids = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.include_documents = SimpleNamespace(isChecked=lambda: False)
+
+    def student_ids(self):
+        return list(self.ids)
 
 
 def _controller(db, qtbot, tmp_path, monkeypatch):
@@ -58,7 +74,10 @@ def _controller(db, qtbot, tmp_path, monkeypatch):
     controller = ReportController(
         window, services.students, services.academic_courses,
         services.report_configuration, services.spreadsheet_reports,
+        services.word_reports,
+        services.student_exports,
         term_dialog=AcceptedTermDialog, export_dialog=AcceptedExportDialog,
+        batch_export_dialog=AcceptedBatchExportDialog,
         error_handler=errors.append, confirm_delete=lambda _name: True,
     )
     destination = tmp_path / "informe.xlsx"
@@ -101,4 +120,65 @@ def test_controlador_exporta_i_recorda_ordre(db, qtbot, tmp_path, monkeypatch):
     assert [item.id for item in services.report_configuration.get_ordered_categories()] == [
         family.id, academic.id
     ]
+    assert errors == []
+
+
+def test_controlador_exporta_document_de_text(db, qtbot, tmp_path, monkeypatch):
+    services, student, academic, _course, _window, controller, _destination, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+    monkeypatch.setattr(AcceptedExportDialog, "order", [academic.id])
+    monkeypatch.setattr(AcceptedExportDialog, "format", "docx")
+    destination = tmp_path / "informe.docx"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                        lambda *args: (str(destination), ""))
+    controller.export_student(student.id)
+    assert destination.is_file()
+    assert errors == []
+
+
+def test_controlador_configura_i_elimina_logotip_global(
+    db, qtbot, tmp_path, monkeypatch
+):
+    services, _student, _academic, _course, window, controller, _destination, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+    services.report_configuration.storage_dir = tmp_path / "reporting"
+    logo = tmp_path / "logo.png"
+    logo.write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDAT\x08\xd7c\xf8"
+        b"\xcf\xc0\xf0\x1f\x00\x05\x00\x01\xff\x89\x99=\x1d\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    monkeypatch.setattr(QFileDialog, "getOpenFileName",
+                        lambda *args: (str(logo), ""))
+    controller.configure_report_logo()
+    assert services.report_configuration.get_header_image().is_file()
+    assert window.data_tools.report_logo_remove_button.isEnabled()
+    controller.remove_report_logo()
+    assert services.report_configuration.get_header_image() is None
+    assert not window.data_tools.report_logo_remove_button.isEnabled()
+    assert errors == []
+
+
+def test_controlador_exporta_diversos_alumnes(db, qtbot, tmp_path, monkeypatch):
+    services, student, academic, _course, _window, controller, _destination, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+    second = services.students.create(StudentNew("Pau", "Puig", "4t B"))
+    services.notes.create(NoteNew(
+        second.id, academic.id, "2026-02-02", 0, "Seguiment"
+    ))
+    monkeypatch.setattr(AcceptedBatchExportDialog, "ids", [student.id, second.id])
+    monkeypatch.setattr(AcceptedBatchExportDialog, "order", [academic.id])
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory",
+                        lambda *args: str(tmp_path / "lots"))
+    messages = []
+    monkeypatch.setattr(QMessageBox, "information",
+                        lambda *args: messages.append(args[2]))
+
+    controller.export_students()
+
+    assert any("Alumnes exportats: 2" in message for message in messages)
+    assert len(list((tmp_path / "lots").glob("Informes *"))) == 1
     assert errors == []

@@ -28,10 +28,11 @@ class DocumentDAO:
     def create(self, data: StudentDocumentNew) -> StudentDocument:
         cur = self.conn.execute(
             "INSERT INTO student_documents "
-            "(student_id, name, description, uuid_filename, original_filename, file_path) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "(student_id, name, description, uuid_filename, original_filename, file_path, "
+            "date, course_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (data.student_id, data.name, data.description,
-             data.uuid_filename, data.original_filename, data.file_path),
+             data.uuid_filename, data.original_filename, data.file_path,
+             data.date, data.course_id),
         )
         self.conn.commit()
         return StudentDocument(
@@ -40,12 +41,13 @@ class DocumentDAO:
             uuid_filename=data.uuid_filename,
             original_filename=data.original_filename,
             file_path=data.file_path,
+            date=data.date, course_id=data.course_id,
         )
 
     def update(self, doc: StudentDocument):
         self.conn.execute(
-            "UPDATE student_documents SET name=?, description=? WHERE id=?",
-            (doc.name, doc.description, doc.id),
+            "UPDATE student_documents SET name=?, description=?, date=?, course_id=? WHERE id=?",
+            (doc.name, doc.description, doc.date, doc.course_id, doc.id),
         )
         self.conn.commit()
 

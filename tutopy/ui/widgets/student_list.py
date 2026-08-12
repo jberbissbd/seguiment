@@ -38,6 +38,7 @@ class StudentList(QFrame):
     delete_requested = Signal(int)
     search_changed = Signal(str)
     create_requested = Signal()
+    batch_export_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -55,7 +56,16 @@ class StudentList(QFrame):
         self.create_button.clicked.connect(self.create_requested)
         header.addWidget(title)
         header.addStretch()
-        header.addWidget(self.create_button)
+        header_actions = QVBoxLayout()
+        header_actions.setContentsMargins(0, 0, 0, 0)
+        header_actions.setSpacing(6)
+        self.batch_export_button = QPushButton("Exportar diversos…")
+        self.batch_export_button.setObjectName("secondaryButton")
+        self.batch_export_button.setEnabled(False)
+        self.batch_export_button.clicked.connect(self.batch_export_requested)
+        header_actions.addWidget(self.create_button)
+        header_actions.addWidget(self.batch_export_button)
+        header.addLayout(header_actions)
         layout.addLayout(header)
 
         self.search_input = QLineEdit()
@@ -111,6 +121,7 @@ class StudentList(QFrame):
         has_students = self.list_widget.count() > 0
         self.list_widget.setVisible(has_students)
         self.empty_label.setVisible(not has_students)
+        self.batch_export_button.setEnabled(has_students)
 
     def current_student_id(self):
         item = self.list_widget.currentItem()

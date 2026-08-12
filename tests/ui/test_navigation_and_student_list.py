@@ -16,10 +16,10 @@ def test_sidebar_emet_la_seccio_seleccionada(qtbot):
     qtbot.addWidget(sidebar)
 
     with qtbot.waitSignal(sidebar.section_changed) as signal:
-        qtbot.mouseClick(sidebar.buttons["categories"], Qt.MouseButton.LeftButton)
+        qtbot.mouseClick(sidebar.buttons["configuration"], Qt.MouseButton.LeftButton)
 
-    assert signal.args == ["categories"]
-    assert sidebar.buttons["categories"].isChecked()
+    assert signal.args == ["configuration"]
+    assert sidebar.buttons["configuration"].isChecked()
 
 
 def test_student_list_preserva_ids_dels_homonims(qtbot):
@@ -29,7 +29,14 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         second = database.students.create(StudentNew("Alex", "Garcia", "2n A"))
         widget = StudentList()
         qtbot.addWidget(widget)
+        assert not widget.batch_export_button.isEnabled()
+        assert widget.create_button.parentWidget() is widget
+        assert widget.batch_export_button.parentWidget() is widget
+        widget.show()
+        qtbot.waitExposed(widget)
+        assert widget.create_button.geometry().top() < widget.batch_export_button.geometry().top()
         widget.set_students([first, second])
+        assert widget.batch_export_button.isEnabled()
 
         assert widget.list_widget.count() == 2
         first_item = widget.list_widget.item(0)
@@ -43,6 +50,10 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
             widget.list_widget.setCurrentRow(1)
         assert signal.args == [second.id]
         assert first.uuid != second.uuid
+        with qtbot.waitSignal(widget.batch_export_requested):
+            qtbot.mouseClick(
+                widget.batch_export_button, Qt.MouseButton.LeftButton
+            )
     finally:
         database.close()
 
@@ -55,6 +66,8 @@ def test_main_window_conte_la_navegacio_i_el_detall_de_l_alumne(qtbot):
     assert isinstance(window.student_list, StudentList)
     assert isinstance(window.student_detail, StudentDetailPanel)
     assert window.content_stack.currentWidget() is window._pages["students"]
+    assert "configuration" in window._pages
+    assert "categories" not in window._pages
     assert window.student_detail.tabs.count() == 5
 
 

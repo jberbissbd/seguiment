@@ -56,3 +56,21 @@ class ReportConfigurationDAO:
             [(category_id, position) for position, category_id in enumerate(category_ids)],
         )
         self.conn.commit()
+
+    def get_setting(self, key: str) -> str | None:
+        row = self.conn.execute(
+            "SELECT value FROM report_settings WHERE key = ?", (key,)
+        ).fetchone()
+        return row[0] if row else None
+
+    def set_setting(self, key: str, value: str) -> None:
+        self.conn.execute(
+            "INSERT INTO report_settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, value),
+        )
+        self.conn.commit()
+
+    def delete_setting(self, key: str) -> None:
+        self.conn.execute("DELETE FROM report_settings WHERE key = ?", (key,))
+        self.conn.commit()

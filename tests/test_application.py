@@ -6,6 +6,8 @@ from tutopy.services.note_service import NoteService
 from tutopy.services.student_service import StudentService
 from tutopy.services.report_configuration_service import ReportConfigurationService
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
+from tutopy.services.word_report_service import WordReportService
+from tutopy.services.student_export_service import StudentExportService
 
 
 def test_create_services_requereix_database_connectada(tmp_path):
@@ -23,6 +25,8 @@ def test_create_services_compon_la_capa_de_negoci(tmp_path):
         assert isinstance(services.notes, NoteService)
         assert isinstance(services.report_configuration, ReportConfigurationService)
         assert isinstance(services.spreadsheet_reports, SpreadsheetReportService)
+        assert isinstance(services.word_reports, WordReportService)
+        assert isinstance(services.student_exports, StudentExportService)
         assert not hasattr(services, "database")
     finally:
         database.close()

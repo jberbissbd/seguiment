@@ -105,6 +105,11 @@ class Student:
         """Retorna el nom complet: ``name`` + ``surnames``."""
         return f"{self.name}"+" "+f"{self.surnames}".strip()
 
+    @property
+    def filing_name(self) -> str:
+        """Retorna el nom en format administratiu ``cognoms, nom``."""
+        return f"{self.surnames}, {self.name}" if self.surnames else self.name
+
 
 @dataclass
 class StudentNew:
@@ -284,6 +289,8 @@ class StudentDocument:
     uuid_filename: str
     original_filename: str
     file_path: str = ""
+    date: str = ""
+    course_id: Optional[int] = None
 
     def __post_init__(self):
         _validate(self)
@@ -297,6 +304,8 @@ class StudentDocumentNew:
     uuid_filename: str
     original_filename: str
     file_path: str = ""
+    date: str = ""
+    course_id: Optional[int] = None
 
     def __post_init__(self):
         _validate(self)
