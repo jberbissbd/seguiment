@@ -31,6 +31,15 @@ class WordReportService:
 
     def export_student(self, student_id: int, destination: str | Path) -> Path:
         student_id = self.validation.positive_id(student_id)
+        student, student_notes = self._student_and_notes(student_id)
+        path = self._document_path(destination)
+        categories = self.configuration.get_ordered_categories()
+        document = self._new_document(student)
+        self._add_courses(document, self._group_by_course(student_notes), categories)
+        self._save_document(document, path)
+        return path
+
+    def _student_and_notes(self, student_id: int):
         student = self.students.get_by_id(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
@@ -39,60 +48,86 @@ class WordReportService:
         )
         if not student_notes:
             raise ValidationError("L’alumne no té notes per exportar.")
+        return student, student_notes
 
+    @staticmethod
+    def _document_path(destination: str | Path) -> Path:
         path = Path(destination)
         if path.suffix.lower() != ".docx":
             path = path.with_suffix(".docx")
         if not path.name:
             raise ValidationError("Cal indicar una destinació per a l’informe.")
+        return path
 
-        categories = self.configuration.get_ordered_categories()
+    @staticmethod
+    def _group_by_course(student_notes):
         by_course = defaultdict(list)
         for note in student_notes:
             by_course[note.course_id].append(note)
+        return by_course
 
+    def _new_document(self, student):
         document = Document()
-        document.core_properties.title = self._safe_text(f"Informe de {student.filing_name}")
+        document.core_properties.title = self._safe_text(
+            f"Informe de {student.filing_name}"
+        )
         document.core_properties.subject = "Notes de seguiment"
         self._configure_page(document)
-        self._add_student_header(document, student, self.configuration.get_header_image())
+        self._add_student_header(
+            document, student, self.configuration.get_header_image()
+        )
+        return document
+
+    def _add_courses(self, document, by_course, categories) -> None:
         for index, (course_id, course_notes) in enumerate(sorted(
             by_course.items(), key=lambda item: self._course_name(item[0])
         )):
             if index:
                 document.add_page_break()
-            document.add_heading(self._course_name(course_id), level=1)
-            notes_by_category = defaultdict(list)
-            for note in course_notes:
-                notes_by_category[note.category_id].append(note)
-            for category in categories:
-                category_notes = notes_by_category.get(category.id)
-                if not category_notes:
-                    continue
-                document.add_heading(self._safe_text(category.name), level=2)
-                table = document.add_table(rows=1, cols=2)
-                table.style = "Table Grid"
-                self._configure_table_width(table)
-                headers = table.rows[0].cells
-                headers[0].text = "Data"
-                headers[1].text = "Anotació"
-                for cell in headers:
-                    for run in cell.paragraphs[0].runs:
-                        run.bold = True
-                for note in category_notes:
-                    cells = table.add_row().cells
-                    cells[0].text = date.fromisoformat(note.date).strftime("%d/%m/%Y")
-                    cells[1].text = self._safe_text(note.content)
-                    for cell, width in zip(cells, (Cm(3), Cm(14))):
-                        cell.width = width
-                        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
+            self._add_course(document, course_id, course_notes, categories)
 
+    def _add_course(self, document, course_id, course_notes, categories) -> None:
+        document.add_heading(self._course_name(course_id), level=1)
+        notes_by_category = defaultdict(list)
+        for note in course_notes:
+            notes_by_category[note.category_id].append(note)
+        for category in categories:
+            category_notes = notes_by_category.get(category.id)
+            if category_notes:
+                self._add_category(document, category.name, category_notes)
+
+    def _add_category(self, document, category_name: str, category_notes) -> None:
+        document.add_heading(self._safe_text(category_name), level=2)
+        table = document.add_table(rows=1, cols=2)
+        table.style = "Table Grid"
+        self._configure_table_width(table)
+        self._configure_table_header(table.rows[0].cells)
+        for note in category_notes:
+            self._add_note_row(table, note)
+
+    @staticmethod
+    def _configure_table_header(headers) -> None:
+        headers[0].text = "Data"
+        headers[1].text = "Anotació"
+        for cell in headers:
+            for run in cell.paragraphs[0].runs:
+                run.bold = True
+
+    def _add_note_row(self, table, note) -> None:
+        cells = table.add_row().cells
+        cells[0].text = date.fromisoformat(note.date).strftime("%d/%m/%Y")
+        cells[1].text = self._safe_text(note.content)
+        for cell, width in zip(cells, (Cm(3), Cm(14))):
+            cell.width = width
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
+
+    @staticmethod
+    def _save_document(document, path: Path) -> None:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             document.save(path)
         except (OSError, ValueError) as error:
             raise ValidationError("No s’ha pogut desar l’informe.") from error
-        return path
 
     @staticmethod
     def _configure_page(document) -> None:
