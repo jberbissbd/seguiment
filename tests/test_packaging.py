@@ -26,6 +26,14 @@ def test_release_workflow_construeix_els_tres_sistemes():
     assert 'tags:\n      - "v*"' in workflow
 
 
+def test_accions_del_release_utilitzen_node_24():
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert "actions/checkout@v5" in workflow
+    assert "actions/setup-python@v6" in workflow
+    assert "actions/upload-artifact@v6" in workflow
+    assert "actions/download-artifact@v7" in workflow
+
+
 def test_spec_es_onefile_i_no_inclou_base_de_dades():
     spec = (ROOT / "tutopy.spec").read_text(encoding="utf-8")
     assert "COLLECT(" not in spec
