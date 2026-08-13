@@ -1,15 +1,13 @@
 import sys
-from pathlib import Path
 
 try:
-    import tomllib
-except ImportError:  # Python 3.10
-    import tomli as tomllib
+    from scripts.project_version import read_project_version
+except ModuleNotFoundError:  # Execució directa des del directori scripts.
+    from project_version import read_project_version
 
 
 def main(tag: str) -> int:
-    project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-    version = project["project"]["version"]
+    version = read_project_version()
     expected_tag = f"v{version}"
     if tag != expected_tag:
         print(f"El tag {tag!r} no coincideix amb la versió {version!r}.", file=sys.stderr)
