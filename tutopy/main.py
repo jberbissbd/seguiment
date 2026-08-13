@@ -12,6 +12,7 @@ from tutopy.controllers.catalog_controller import CategoryController
 from tutopy.controllers.student_related_controller import StudentRelatedController
 from tutopy.controllers.data_management_controller import DataManagementController
 from tutopy.controllers.report_controller import ReportController
+from tutopy.controllers.statistics_controller import StatisticsController
 from tutopy.database.database import Database
 from tutopy.services.directories import get_db_path
 from tutopy.ui.main_window import MainWindow
@@ -68,16 +69,22 @@ def main() -> int:
         services.word_reports, services.student_exports,
         services.open_document_reports,
     )
+    statistics_controller = StatisticsController(
+        window, services.statistics, services.students,
+        services.academic_courses, services.categories,
+    )
     # Conserva els controladors durant tot el bucle d'esdeveniments de Qt.
     window.controllers = (
         main_controller, student_controller, note_controller, category_controller,
         related_controller, data_controller, report_controller,
+        statistics_controller,
     )
     main_controller.start()
     student_controller.start()
     note_controller.start()
     category_controller.start()
     report_controller.start()
+    statistics_controller.start()
     app.aboutToQuit.connect(database.close)
     window.show()
     return app.exec()

@@ -16,6 +16,7 @@ from tutopy.services.word_report_service import WordReportService
 from tutopy.services.open_document_report_service import OpenDocumentReportService
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.directories import get_app_data_dir
+from tutopy.services.statistics_service import StatisticsService
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,7 @@ class ServiceContainer:
     word_reports: WordReportService
     open_document_reports: OpenDocumentReportService
     student_exports: StudentExportService
+    statistics: StatisticsService
 
 
 def create_services(database: Database) -> ServiceContainer:
@@ -103,5 +105,8 @@ def create_services(database: Database) -> ServiceContainer:
         student_exports=StudentExportService(
             database.students, documents, database.academic_courses,
             spreadsheet_reports, word_reports, open_document_reports,
+        ),
+        statistics=StatisticsService(
+            database.statistics, database.academic_courses, database.categories,
         ),
     )

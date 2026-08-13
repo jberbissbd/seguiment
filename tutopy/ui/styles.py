@@ -77,6 +77,18 @@ QFrame#settingsGroup {{
     border-radius: 6px;
 }}
 
+QFrame#statCard {{
+    background-color: {SURFACE_COLOR};
+    border: 1px solid {BORDER_COLOR};
+    border-radius: 8px;
+}}
+
+QLabel#statValue {{
+    color: {PRIMARY_COLOR};
+    font-size: 25px;
+    font-weight: 700;
+}}
+
 QFrame#settingsGroup QLabel {{
     background: transparent;
     border: none;

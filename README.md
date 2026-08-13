@@ -11,6 +11,8 @@ L'aplicació permet:
 - crear i gestionar alumnes i grups;
 - organitzar anotacions de seguiment per categories, cursos acadèmics i
   trimestres;
+- consultar estadístiques de cobertura, evolució temporal i distribució per
+  categories sense analitzar el text sensible de les notes;
 - mantenir l'històric de grups de cada alumne;
 - gestionar contactes, descriptors i documents associats a l'alumnat;
 - importar alumnes i categories massivament des de fulls XLSX o ODS;
