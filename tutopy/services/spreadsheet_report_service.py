@@ -87,11 +87,19 @@ class SpreadsheetReportService:
         title.alignment = Alignment(horizontal="center", vertical="center")
         sheet.row_dimensions[1].height = 25
 
+        sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_column)
+        export_date = sheet.cell(2, 1)
+        self._set_text(
+            export_date, f"Data d’exportació: {date.today().strftime('%d/%m/%Y')}"
+        )
+        export_date.font = Font(italic=True, color="64748B")
+        export_date.alignment = Alignment(horizontal="right")
+
         headers = (["Trimestre"] if include_terms else []) + ["Grup"] + [
             category.name for category in categories
         ]
         for column, header in enumerate(headers, 1):
-            cell = sheet.cell(2, column)
+            cell = sheet.cell(3, column)
             self._set_text(cell, header)
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill("solid", fgColor="2B73B7")
@@ -101,7 +109,7 @@ class SpreadsheetReportService:
             category.id: index
             for index, category in enumerate(categories, 3 if include_terms else 2)
         }
-        for row_number, (note, group) in enumerate(rows, 3):
+        for row_number, (note, group) in enumerate(rows, 4):
             group_column = self._write_term(sheet, row_number, course_id, group, note.date) \
                 if include_terms else 1
             self._set_text(sheet.cell(row_number, group_column), group)
@@ -112,7 +120,7 @@ class SpreadsheetReportService:
                 self._set_text(cell, f"{display_date} - {note.content}")
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
         if include_terms:
-            self._merge_consecutive_terms(sheet, 3, 2 + len(rows))
+            self._merge_consecutive_terms(sheet, 4, 3 + len(rows))
         self._format_sheet(sheet, last_column)
 
     def _write_term(self, sheet, row_number, course_id, group, note_date) -> int:
@@ -174,12 +182,12 @@ class SpreadsheetReportService:
 
     @staticmethod
     def _format_sheet(sheet, last_column: int) -> None:
-        sheet.freeze_panes = "A3"
-        sheet.auto_filter.ref = f"A2:{get_column_letter(last_column)}{sheet.max_row}"
+        sheet.freeze_panes = "A4"
+        sheet.auto_filter.ref = f"A3:{get_column_letter(last_column)}{sheet.max_row}"
         for column in range(1, last_column + 1):
             letter = get_column_letter(column)
             sheet.column_dimensions[letter].width = 14 if column <= 2 else 34
-        for row in sheet.iter_rows(min_row=3):
+        for row in sheet.iter_rows(min_row=4):
             for cell in row:
                 if cell.alignment == Alignment():
                     cell.alignment = Alignment(vertical="top")

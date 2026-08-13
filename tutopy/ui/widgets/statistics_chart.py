@@ -6,16 +6,22 @@ from PySide6.QtWidgets import QSizePolicy, QWidget
 class BarChart(QWidget):
     """Gràfic lleuger amb alternativa textual per accessibilitat."""
 
-    def __init__(self, parent=None, show_latest=False):
+    def __init__(self, parent=None, show_latest=False, max_items=12):
         super().__init__(parent)
         self._values = ()
         self._show_latest = show_latest
+        self._max_items = max_items
         self.setMinimumHeight(210)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setAccessibleName("Gràfic de barres")
 
     def set_values(self, values) -> None:
         self._values = tuple(values)
+        visible_count = (
+            len(self._values) if self._max_items is None
+            else min(len(self._values), self._max_items)
+        )
+        self.setMinimumWidth(max(320, visible_count * 105))
         description = "; ".join(
             f"{item.label}: {item.value}" for item in self._values
         ) or "No hi ha dades per mostrar"
@@ -32,7 +38,12 @@ class BarChart(QWidget):
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter,
                              "No hi ha dades per als filtres seleccionats")
             return
-        visible = self._values[-12:] if self._show_latest else self._values[:12]
+        if self._max_items is None:
+            visible = self._values
+        elif self._show_latest:
+            visible = self._values[-self._max_items:]
+        else:
+            visible = self._values[:self._max_items]
         bounds = self.rect().adjusted(42, 18, -16, -42)
         maximum = max(item.value for item in visible) or 1
         gap = 8

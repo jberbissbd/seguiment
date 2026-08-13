@@ -2,7 +2,7 @@ from PySide6.QtCore import QDate, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QFrame, QGridLayout, QHBoxLayout,
     QHeaderView, QLabel, QPushButton, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget,
+    QScrollArea, QVBoxLayout, QWidget,
 )
 
 from tutopy.ui.widgets.statistics_chart import BarChart
@@ -77,7 +77,7 @@ class StatisticsView(QWidget):
 
         charts = QHBoxLayout()
         month_panel, self.month_chart = self._chart_panel(
-            "Evolució mensual", show_latest=True
+            "Evolució mensual", show_latest=True, scrollable=True
         )
         category_panel, self.category_chart = self._chart_panel("Notes per categoria")
         charts.addWidget(month_panel, 1)
@@ -122,16 +122,26 @@ class StatisticsView(QWidget):
         self.date_to.dateChanged.connect(self._schedule_refresh)
 
     @staticmethod
-    def _chart_panel(title, show_latest=False):
+    def _chart_panel(title, show_latest=False, scrollable=False):
         panel = QFrame()
         panel.setObjectName("panel")
         layout = QVBoxLayout(panel)
         heading = QLabel(title)
         heading.setObjectName("settingsTitle")
-        chart = BarChart(show_latest=show_latest)
+        chart = BarChart(
+            show_latest=show_latest, max_items=None if scrollable else 12
+        )
         chart.setAccessibleName(title)
         layout.addWidget(heading)
-        layout.addWidget(chart, 1)
+        if scrollable:
+            scroll = QScrollArea()
+            scroll.setFrameShape(QFrame.Shape.NoFrame)
+            scroll.setWidgetResizable(False)
+            scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            scroll.setWidget(chart)
+            layout.addWidget(scroll, 1)
+        else:
+            layout.addWidget(chart, 1)
         return panel, chart
 
     def set_filter_options(self, courses, groups, categories) -> None:

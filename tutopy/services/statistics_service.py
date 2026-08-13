@@ -1,10 +1,18 @@
 from datetime import date
 
-from tutopy.models.statistics import StatisticsFilters, StatisticsSnapshot
+from dataclasses import replace
+
+from tutopy.models.statistics import (
+    StatisticValue, StatisticsFilters, StatisticsSnapshot,
+)
 from tutopy.services.exceptions import ValidationError
 
 
 class StatisticsService:
+    MONTH_NAMES = (
+        "Gener", "Febrer", "Març", "Abril", "Maig", "Juny",
+        "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre",
+    )
     def __init__(self, statistics_dao, courses, categories):
         self.statistics_dao = statistics_dao
         self.courses = courses
@@ -31,7 +39,16 @@ class StatisticsService:
             not isinstance(filters.group_name, str) or not filters.group_name.strip()
         ):
             raise ValidationError("El grup seleccionat no és vàlid.")
-        return self.statistics_dao.get_snapshot(filters)
+        snapshot = self.statistics_dao.get_snapshot(filters)
+        return replace(snapshot, by_month=tuple(
+            StatisticValue(self._month_label(item.label), item.value)
+            for item in snapshot.by_month
+        ))
+
+    @classmethod
+    def _month_label(cls, value: str) -> str:
+        year, month = value.split("-", 1)
+        return f"{cls.MONTH_NAMES[int(month) - 1]} {year}"
 
     @staticmethod
     def _validate_optional_id(value, dao, label):

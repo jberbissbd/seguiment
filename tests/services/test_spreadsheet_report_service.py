@@ -1,4 +1,5 @@
 from openpyxl import load_workbook
+from datetime import date
 import pytest
 import unicodedata
 
@@ -51,18 +52,21 @@ def test_exporta_full_per_curs_amb_categories_i_grup_historic(db, tmp_path):
     assert workbook.sheetnames == ["2025-2026"]
     sheet = workbook["2025-2026"]
     assert sheet["A1"].value == "Martí, Laia — 4t A, 4t B"
-    assert [sheet.cell(2, column).value for column in range(1, 6)] == [
+    assert sheet["A2"].value == (
+        f"Data d’exportació: {date.today().strftime('%d/%m/%Y')}"
+    )
+    assert [sheet.cell(3, column).value for column in range(1, 6)] == [
         "Trimestre", "Grup", "Acadèmic", "Família", "Conducta"
     ]
-    assert sheet["A3"].value == "1r"
-    assert sheet["B3"].value == "4t A"
-    assert sheet["D3"].value == "15/09/2025 - Entrevista inicial"
-    assert sheet["C4"].value == "15/01/2026 - Bona evolució"
-    assert sheet["B5"].value == "4t B"
-    assert sheet["E5"].value == "10/02/2026 - Incidència resolta"
-    assert sheet["C6"].value == "15/04/2026 - Objectius assolits"
-    assert "A4:A5" in {str(area) for area in sheet.merged_cells.ranges}
-    assert sheet.freeze_panes == "A3"
+    assert sheet["A4"].value == "1r"
+    assert sheet["B4"].value == "4t A"
+    assert sheet["D4"].value == "15/09/2025 - Entrevista inicial"
+    assert sheet["C5"].value == "15/01/2026 - Bona evolució"
+    assert sheet["B6"].value == "4t B"
+    assert sheet["E6"].value == "10/02/2026 - Incidència resolta"
+    assert sheet["C7"].value == "15/04/2026 - Objectius assolits"
+    assert "A5:A6" in {str(area) for area in sheet.merged_cells.ranges}
+    assert sheet.freeze_panes == "A4"
 
 
 def test_exportacio_sense_trimestres_no_crea_la_columna(db, tmp_path):
@@ -72,10 +76,10 @@ def test_exportacio_sense_trimestres_no_crea_la_columna(db, tmp_path):
     )
     sheet = load_workbook(path).active
     assert path.suffix == ".xlsx"
-    assert [sheet.cell(2, column).value for column in range(1, 5)] == [
+    assert [sheet.cell(3, column).value for column in range(1, 5)] == [
         "Grup", "Acadèmic", "Família", "Conducta"
     ]
-    assert not any(str(area).startswith("A3:A") for area in sheet.merged_cells.ranges)
+    assert not any(str(area).startswith("A4:A") for area in sheet.merged_cells.ranges)
 
 
 def test_crea_un_full_per_curs_en_ordre_ascendent(db, tmp_path):
@@ -112,9 +116,9 @@ def test_saneja_unicode_controls_formules_i_longitud(db, tmp_path):
     )).active
     assert sheet["A1"].value.startswith("Nuñez 😊, Júlia — 4t A")
     assert "\x00" not in sheet["A1"].value
-    assert sheet["B2"].value == '=HYPERLINK("x")'
-    assert sheet["B2"].data_type == "s"
-    assert "\x07" not in sheet["B3"].value
-    assert "😊" in sheet["B3"].value
-    assert len(sheet["B3"].value) == 32_767
+    assert sheet["B3"].value == '=HYPERLINK("x")'
     assert sheet["B3"].data_type == "s"
+    assert "\x07" not in sheet["B4"].value
+    assert "😊" in sheet["B4"].value
+    assert len(sheet["B4"].value) == 32_767
+    assert sheet["B4"].data_type == "s"

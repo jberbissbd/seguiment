@@ -30,7 +30,7 @@ def test_resume_agrega_notes_i_conserva_alumnes_sense_notes(db):
     assert snapshot.students_without_notes == 1
     assert snapshot.average_per_student == 1.0
     assert [(item.label, item.value) for item in snapshot.by_month] == [
-        ("2026-01", 1), ("2026-02", 1)
+        ("Gener 2026", 1), ("Febrer 2026", 1)
     ]
     assert {item.label: item.value for item in snapshot.by_category} == {
         "Acadèmic": 1, "Família": 1,
@@ -84,3 +84,9 @@ def test_selector_de_cursos_omet_cursos_sense_notes_despres_deditar(db):
     assert [course.course for course in services.statistics.get_available_courses()] == [
         "2026-2027"
     ]
+
+
+def test_nom_del_mes_es_localitzat_en_catala():
+    from tutopy.services.statistics_service import StatisticsService
+
+    assert StatisticsService._month_label("2026-09") == "Setembre 2026"

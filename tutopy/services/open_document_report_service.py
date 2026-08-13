@@ -103,6 +103,9 @@ class OpenDocumentReportService:
             document.text.addElement(paragraph)
         document.text.addElement(text.P(stylename=title_style, text=self._safe(student.filing_name)))
         document.text.addElement(text.P(text=f"Grup: {self._safe(student.group_name) or 'Sense grup'}"))
+        document.text.addElement(text.P(
+            text=f"Data d’exportació: {date.today().strftime('%d/%m/%Y')}"
+        ))
         for course_index, (course_name, course_notes) in enumerate(courses):
             if course_index:
                 document.text.addElement(text.P(stylename=page_break_style))
@@ -151,6 +154,10 @@ class OpenDocumentReportService:
         story.append(Paragraph(escape(self._safe(student.filing_name)), styles["TutopyTitle"]))
         story.append(Paragraph(
             f"<b>Grup:</b> {escape(self._safe(student.group_name) or 'Sense grup')}",
+            styles["BodyText"],
+        ))
+        story.append(Paragraph(
+            f"<b>Data d’exportació:</b> {date.today().strftime('%d/%m/%Y')}",
             styles["BodyText"],
         ))
         for course_index, (course_name, course_notes) in enumerate(courses):

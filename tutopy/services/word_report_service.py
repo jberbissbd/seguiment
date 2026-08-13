@@ -155,6 +155,9 @@ class WordReportService:
         paragraph = document.add_paragraph()
         paragraph.add_run("Grup: ").bold = True
         paragraph.add_run(group)
+        exported = document.add_paragraph()
+        exported.add_run("Data d’exportació: ").bold = True
+        exported.add_run(date.today().strftime("%d/%m/%Y"))
 
     @staticmethod
     def _configure_table_width(table) -> None:

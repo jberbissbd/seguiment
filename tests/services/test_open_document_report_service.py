@@ -1,5 +1,6 @@
 from odf import table, text, teletype
 from odf.opendocument import load
+from datetime import date
 import pytest
 
 from tutopy.application import create_services
@@ -32,6 +33,7 @@ def test_exporta_odt_amb_contingut_estructurat(db, tmp_path):
     assert "Martí, Laia" in all_text
     assert "Acadèmic" in all_text
     assert "Bona evolució" in all_text
+    assert f"Data d’exportació: {date.today().strftime('%d/%m/%Y')}" in all_text
     assert len(document.getElementsByType(table.Table)) == 1
 
 

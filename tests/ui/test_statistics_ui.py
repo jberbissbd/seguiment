@@ -44,7 +44,7 @@ def test_vista_mostra_resum_grafics_i_alumnes_amb_zero(qtbot):
     snapshot = StatisticsSnapshot(
         note_count=2, student_count=2, students_with_notes=1,
         students_without_notes=1, average_per_student=1.0,
-        by_month=(StatisticValue("2026-02", 2),),
+        by_month=(StatisticValue("Febrer 2026", 2),),
         by_category=(StatisticValue("Acadèmic", 2),),
         by_student=(
             StudentStatistic(1, "Martí, Laia", "4t A", 2),
@@ -56,7 +56,7 @@ def test_vista_mostra_resum_grafics_i_alumnes_amb_zero(qtbot):
     assert view.summary_values["notes"].text() == "2"
     assert view.summary_values["uncovered"].text() == "1"
     assert view.student_table.rowCount() == 2
-    assert "2026-02: 2" in view.month_chart.accessibleDescription()
+    assert "Febrer 2026: 2" in view.month_chart.accessibleDescription()
     assert view.context_label.text() == "2 alumnes inclosos"
 
 
@@ -67,3 +67,15 @@ def test_nova_seccio_es_navegable_i_te_desplacament_vertical(qtbot):
     assert window.content_stack.currentWidget() is window._pages["statistics"]
     assert window.sidebar.buttons["statistics"].isChecked()
     assert window.statistics_scroll.widget() is window.statistics_view
+
+
+def test_evolucio_mensual_guanya_amplada_en_lloc_de_comprimir_se(qtbot):
+    view = StatisticsView()
+    qtbot.addWidget(view)
+    values = tuple(
+        StatisticValue(f"Mes {index} 2026", index) for index in range(1, 19)
+    )
+
+    view.month_chart.set_values(values)
+
+    assert view.month_chart.minimumWidth() >= len(values) * 105
