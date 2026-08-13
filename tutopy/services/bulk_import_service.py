@@ -2,9 +2,13 @@ from difflib import SequenceMatcher
 from pathlib import Path
 import re
 import unicodedata
+from zipfile import BadZipFile, ZipFile
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
+from odf import table as odf_table
+from odf import teletype
+from odf.opendocument import load as load_odf
 
 from tutopy.models.bulk_import import (
     CategoryImportRow, ImportAction, ImportDecision, ImportIssue, ImportPreview,
@@ -21,6 +25,10 @@ class BulkImportService:
     CATEGORIES_SHEET = "Categories"
     STUDENT_HEADERS = ("Nom", "Cognoms", "Grup")
     CATEGORY_HEADERS = ("Nom",)
+    MAX_FILE_SIZE = 20 * 1024 * 1024
+    MAX_UNCOMPRESSED_SIZE = 100 * 1024 * 1024
+    MAX_ARCHIVE_MEMBERS = 2_000
+    MAX_ROWS_PER_SHEET = 10_000
 
     def __init__(self, students: StudentService, categories: CategoryService,
                  transaction_factory, similarity_threshold: float = 0.86):
@@ -61,10 +69,18 @@ class BulkImportService:
         path = Path(source)
         if not path.is_file():
             raise ValidationError("El full de càlcul seleccionat no existeix.")
+        if path.suffix.lower() not in {".xlsx", ".ods"}:
+            raise ValidationError("El format ha de ser XLSX o ODS.")
+        self._validate_archive(path)
         try:
-            workbook = load_workbook(path, read_only=True, data_only=False)
+            workbook = (
+                self._load_ods(path) if path.suffix.lower() == ".ods"
+                else load_workbook(path, read_only=True, data_only=False)
+            )
         except Exception as error:
-            raise ValidationError("No s’ha pogut obrir el fitxer com a full XLSX.") from error
+            raise ValidationError(
+                "No s’ha pogut obrir el fitxer com a full de càlcul XLSX o ODS."
+            ) from error
 
         issues: list[ImportIssue] = []
         student_rows: list[StudentImportRow] = []
@@ -79,6 +95,30 @@ class BulkImportService:
                 conflicts.append(StudentConflict(row, matches))
         return ImportPreview(tuple(student_rows), tuple(category_rows),
                              tuple(conflicts), tuple(issues))
+
+    def _validate_archive(self, path: Path) -> None:
+        """Rebutja arxius massa grans o sospitosos abans de descomprimir-los."""
+        try:
+            if path.stat().st_size > self.MAX_FILE_SIZE:
+                raise ValidationError("El full de càlcul supera el límit de 20 MB.")
+            with ZipFile(path) as archive:
+                members = archive.infolist()
+                if len(members) > self.MAX_ARCHIVE_MEMBERS:
+                    raise ValidationError("El full de càlcul conté massa fitxers interns.")
+                if any(member.flag_bits & 0x1 for member in members):
+                    raise ValidationError("No s’admeten fulls de càlcul xifrats.")
+                if sum(member.file_size for member in members) > self.MAX_UNCOMPRESSED_SIZE:
+                    raise ValidationError("El contingut descomprimit del full és massa gran.")
+        except BadZipFile as error:
+            raise ValidationError("El full de càlcul no és un fitxer vàlid.") from error
+
+    def _load_ods(self, path: Path):
+        document = load_odf(str(path))
+        sheets = {}
+        for sheet in document.spreadsheet.getElementsByType(odf_table.Table):
+            name = sheet.getAttribute("name")
+            sheets[name] = _OdsSheet(name, sheet, self.MAX_ROWS_PER_SHEET)
+        return _OdsWorkbook(sheets)
 
     def execute(self, preview: ImportPreview,
                 decisions: tuple[ImportDecision, ...] = ()) -> ImportResult:
@@ -218,3 +258,61 @@ class BulkImportService:
         incoming = self._normalize(row.full_name)
         current = self._normalize(student.full_name)
         return incoming == current or SequenceMatcher(None, incoming, current).ratio() >= self.similarity_threshold
+
+
+class _CellValue:
+    def __init__(self, value):
+        self.value = value
+
+
+class _OdsWorkbook:
+    def __init__(self, sheets):
+        self._sheets = sheets
+        self.sheetnames = list(sheets)
+
+    def __getitem__(self, name):
+        return self._sheets[name]
+
+
+class _OdsSheet:
+    """Adaptador mínim a l'API de lectura que usa el servei d'importació."""
+
+    def __init__(self, title, element, max_rows):
+        self.title = title
+        self._element = element
+        self._max_rows = max_rows
+
+    def iter_rows(self, min_row=1, max_row=None, max_col=None, values_only=False):
+        current_row = 0
+        for row in self._element.getElementsByType(odf_table.TableRow):
+            repeated_rows = int(row.getAttribute("numberrowsrepeated") or 1)
+            if repeated_rows > self._max_rows:
+                raise ValidationError("El full conté massa files repetides.")
+            values = self._row_values(row, max_col)
+            for _ in range(repeated_rows):
+                current_row += 1
+                if current_row > self._max_rows:
+                    raise ValidationError(
+                        f"El full supera el límit de {self._max_rows} files."
+                    )
+                if current_row < min_row:
+                    continue
+                if max_row is not None and current_row > max_row:
+                    return
+                yield tuple(values if values_only else map(_CellValue, values))
+
+    @staticmethod
+    def _row_values(row, max_col):
+        values = []
+        cells = row.getElementsByType(odf_table.TableCell)
+        for cell in cells:
+            repeated = int(cell.getAttribute("numbercolumnsrepeated") or 1)
+            remaining = repeated if max_col is None else max(0, max_col - len(values))
+            if remaining == 0:
+                break
+            formula = cell.getAttribute("formula")
+            value = "=" + formula if formula else teletype.extractText(cell)
+            values.extend([value or None] * min(repeated, remaining))
+        if max_col is not None:
+            values.extend([None] * (max_col - len(values)))
+        return values

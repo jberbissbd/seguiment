@@ -65,8 +65,8 @@ def main() -> int:
     report_controller = ReportController(
         window, services.students, services.academic_courses,
         services.report_configuration, services.spreadsheet_reports,
-        services.word_reports,
-        services.student_exports,
+        services.word_reports, services.student_exports,
+        services.open_document_reports,
     )
     # Conserva els controladors durant tot el bucle d'esdeveniments de Qt.
     window.controllers = (

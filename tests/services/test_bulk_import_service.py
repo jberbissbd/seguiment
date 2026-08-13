@@ -1,8 +1,12 @@
 from openpyxl import load_workbook
+from odf import table, text
+from odf.opendocument import OpenDocumentSpreadsheet
+import pytest
 
 from tutopy.application import create_services
 from tutopy.models.bulk_import import ImportAction, ImportDecision
 from tutopy.models.messaging import CategoryNew, StudentNew
+from tutopy.services.exceptions import ValidationError
 
 
 def _filled_template(service, path, students=(), categories=()):
@@ -13,6 +17,24 @@ def _filled_template(service, path, students=(), categories=()):
     for row in categories:
         workbook["Categories"].append(row)
     workbook.save(path)
+
+
+def _ods_file(path, students=(), categories=()):
+    document = OpenDocumentSpreadsheet()
+    for name, headers, rows in (
+        ("Alumnes", ("Nom", "Cognoms", "Grup"), students),
+        ("Categories", ("Nom",), categories),
+    ):
+        sheet = table.Table(name=name)
+        for values in (headers, *rows):
+            row = table.TableRow()
+            for value in values:
+                cell = table.TableCell(valuetype="string")
+                cell.addElement(text.P(text=str(value)))
+                row.addElement(cell)
+            sheet.addElement(row)
+        document.spreadsheet.addElement(sheet)
+    document.save(str(path), addsuffix=False)
 
 
 def test_template_te_els_fulls_i_capcaleres(db, tmp_path):
@@ -46,6 +68,33 @@ def test_importa_alumnes_i_reutilitza_categories_exactes(db, tmp_path):
     assert result.categories_created == 1
     assert result.categories_reused == 1
     assert services.students.get_all()[0].group_name == "1r A"
+
+
+def test_importa_alumnes_i_categories_des_d_ods(db, tmp_path):
+    services = create_services(db)
+    path = tmp_path / "dades.ods"
+    _ods_file(path, students=[("Anna", "Serra", "1r A")],
+              categories=[("Família",)])
+
+    preview = services.bulk_import.analyze(path)
+    result = services.bulk_import.execute(preview)
+
+    assert preview.issues == ()
+    assert result.students_created == 1
+    assert result.categories_created == 1
+    assert services.students.get_all()[0].filing_name == "Serra, Anna"
+
+
+def test_importacio_rebutja_extensions_i_arxius_no_valids(db, tmp_path):
+    service = create_services(db).bulk_import
+    invalid = tmp_path / "dades.ods"
+    invalid.write_text("no és un ODS")
+    with pytest.raises(ValidationError, match="no és un fitxer vàlid"):
+        service.analyze(invalid)
+    unsupported = tmp_path / "dades.csv"
+    unsupported.write_text("Nom,Cognoms")
+    with pytest.raises(ValidationError, match="XLSX o ODS"):
+        service.analyze(unsupported)
 
 
 def test_coincidencia_similar_requereix_decisio_i_preserva_uuid(db, tmp_path):

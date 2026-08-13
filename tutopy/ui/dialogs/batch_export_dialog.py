@@ -58,6 +58,8 @@ class BatchExportDialog(QDialog):
         self.format_input = QComboBox()
         self.format_input.addItem("Full de càlcul Excel (.xlsx)", "xlsx")
         self.format_input.addItem("Document de text (.docx)", "docx")
+        self.format_input.addItem("Document OpenDocument (.odt)", "odt")
+        self.format_input.addItem("Document PDF (.pdf)", "pdf")
         layout.addWidget(self.format_input)
         self.include_terms = QCheckBox("Incloure els trimestres configurats")
         self.include_terms.setChecked(True)

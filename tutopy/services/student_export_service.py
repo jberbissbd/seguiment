@@ -8,6 +8,7 @@ from tutopy.services.document_service import DocumentService
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
 from tutopy.services.word_report_service import WordReportService
+from tutopy.services.open_document_report_service import OpenDocumentReportService
 from tutopy.services.validation_service import ValidationService
 from tutopy.models.reporting import BatchExportFailure, BatchExportResult
 
@@ -17,12 +18,14 @@ class StudentExportService:
 
     def __init__(self, students: StudentDAO, documents: DocumentService,
                  courses: AcademicCourseDAO, spreadsheets: SpreadsheetReportService,
-                 word_reports: WordReportService):
+                 word_reports: WordReportService,
+                 open_document_reports: OpenDocumentReportService):
         self.students = students
         self.documents = documents
         self.courses = courses
         self.spreadsheets = spreadsheets
         self.word_reports = word_reports
+        self.open_document_reports = open_document_reports
         self.validation = ValidationService()
 
     def export_student(self, student_id: int, destination: str | Path,
@@ -33,7 +36,7 @@ class StudentExportService:
         student = self.students.get_by_id(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
-        if report_format not in {"xlsx", "docx"}:
+        if report_format not in {"xlsx", "docx", "odt", "pdf"}:
             raise ValidationError("El format de l’informe no és vàlid.")
         base = Path(destination)
         if not base.name:
@@ -47,9 +50,13 @@ class StudentExportService:
         report_path = root / f"informe.{report_format}"
         if report_format == "docx":
             self.word_reports.export_student(student_id, report_path)
-        else:
+        elif report_format == "xlsx":
             self.spreadsheets.export_student(
                 student_id, report_path, include_terms=include_terms
+            )
+        else:
+            self.open_document_reports.export_student(
+                student_id, report_path, report_format
             )
 
         if include_documents:
@@ -84,7 +91,7 @@ class StudentExportService:
             raise ValidationError("La selecció d’alumnes no és vàlida.")
         if len(student_ids) != len(set(student_ids)):
             raise ValidationError("La selecció d’alumnes conté duplicats.")
-        if report_format not in {"xlsx", "docx"}:
+        if report_format not in {"xlsx", "docx", "odt", "pdf"}:
             raise ValidationError("El format de l’informe no és vàlid.")
         base = Path(destination)
         if not base.name:

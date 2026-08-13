@@ -28,6 +28,8 @@ class ReportExportDialog(QDialog):
         self.format_input = QComboBox()
         self.format_input.addItem("Full de càlcul Excel (.xlsx)", "xlsx")
         self.format_input.addItem("Document de text (.docx)", "docx")
+        self.format_input.addItem("Document OpenDocument (.odt)", "odt")
+        self.format_input.addItem("Document PDF (.pdf)", "pdf")
         layout.addWidget(self.format_input)
         self.include_terms = QCheckBox("Incloure els trimestres configurats")
         self.include_terms.setChecked(True)
@@ -57,5 +59,5 @@ class ReportExportDialog(QDialog):
         return self.format_input.currentData()
 
     def _update_term_visibility(self) -> None:
-        is_word = self.export_format() == "docx"
-        self.include_terms.setEnabled(not is_word)
+        is_text_document = self.export_format() in {"docx", "odt", "pdf"}
+        self.include_terms.setEnabled(not is_text_document)

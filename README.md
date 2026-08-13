@@ -13,8 +13,9 @@ L'aplicació permet:
   trimestres;
 - mantenir l'històric de grups de cada alumne;
 - gestionar contactes, descriptors i documents associats a l'alumnat;
-- importar alumnes i categories massivament des d'un full de càlcul;
-- exportar informes individuals o de diversos alumnes en format XLSX o DOCX;
+- importar alumnes i categories massivament des de fulls XLSX o ODS;
+- exportar informes individuals o de diversos alumnes en format XLSX, DOCX,
+  ODT o PDF;
 - incorporar un logotip comú als informes DOCX;
 - exportar, juntament amb els informes, els documents de cada alumne ordenats
   per curs acadèmic.

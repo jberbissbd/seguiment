@@ -137,6 +137,25 @@ def test_controlador_exporta_document_de_text(db, qtbot, tmp_path, monkeypatch):
     assert errors == []
 
 
+@pytest.mark.parametrize("report_format", ["odt", "pdf"])
+def test_controlador_exporta_formats_oberts(
+    db, qtbot, tmp_path, monkeypatch, report_format
+):
+    services, student, academic, _course, _window, controller, _destination, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+    monkeypatch.setattr(AcceptedExportDialog, "order", [academic.id])
+    monkeypatch.setattr(AcceptedExportDialog, "format", report_format)
+    destination = tmp_path / f"informe.{report_format}"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                        lambda *args: (str(destination), ""))
+
+    controller.export_student(student.id)
+
+    assert destination.is_file()
+    assert errors == []
+
+
 def test_controlador_configura_i_elimina_logotip_global(
     db, qtbot, tmp_path, monkeypatch
 ):
