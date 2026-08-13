@@ -32,6 +32,7 @@ A l'apartat **Assets** de la versió, tria el fitxer corresponent al teu sistema
 | Windows de 64 bits | `Tutopy-Windows-x86_64.exe` |
 | Linux de 64 bits | `Tutopy-Linux-x86_64` |
 | macOS amb processador Intel | `Tutopy-macOS-x86_64` |
+| macOS amb Apple Silicon (M1 o posterior) | `Tutopy-macOS-arm64` |
 
 El fitxer `SHA256SUMS.txt` permet verificar que les descàrregues no s'han
 alterat.
@@ -66,17 +67,24 @@ També el pots moure a una carpeta permanent abans d'executar-lo.
 
 ### macOS
 
-La versió publicada actualment està construïda per a ordinadors Mac amb
-processador Intel (`x86_64`).
+Tria l'executable que correspon al processador del Mac:
 
-1. Descarrega `Tutopy-macOS-x86_64`.
+- `Tutopy-macOS-arm64` per a Apple Silicon (M1, M2, M3, M4 o posterior);
+- `Tutopy-macOS-x86_64` per a processadors Intel.
+
+Pots consultar-lo des del menú d'Apple, a **Quant a aquest Mac**.
+
+1. Descarrega l'executable corresponent.
 2. Obre el Terminal a la carpeta de la descàrrega.
 3. Dona-li permís d'execució i inicia'l:
 
 ```bash
-chmod +x Tutopy-macOS-x86_64
-./Tutopy-macOS-x86_64
+chmod +x Tutopy-macOS-arm64
+./Tutopy-macOS-arm64
 ```
+
+Si tens un Mac Intel, substitueix `Tutopy-macOS-arm64` per
+`Tutopy-macOS-x86_64` a les dues ordres.
 
 macOS pot bloquejar la primera execució perquè el binari encara no està signat
 ni notaritzat. Si l'has obtingut des de la pàgina oficial, pots autoritzar-lo a

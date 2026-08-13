@@ -23,11 +23,16 @@ def test_versio_del_projecte_es_llegida_des_del_pyproject():
     assert read_project_version() == project["project"]["version"]
 
 
-def test_release_workflow_construeix_els_tres_sistemes():
+def test_release_workflow_construeix_els_tres_sistemes_i_dues_arquitectures_macos():
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "windows-latest" in workflow
     assert "ubuntu-22.04" in workflow
     assert "macos-15-intel" in workflow
+    assert "- os: macos-15\n" in workflow
+    assert "Tutopy-macOS-x86_64" in workflow
+    assert "Tutopy-macOS-arm64" in workflow
+    assert "tutopy-macos-x86_64" in workflow
+    assert "tutopy-macos-arm64" in workflow
     assert "pyinstaller --clean --noconfirm tutopy.spec" in workflow
     assert 'tags:\n      - "v*"' in workflow
 

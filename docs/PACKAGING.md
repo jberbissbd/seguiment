@@ -10,7 +10,8 @@ artefacte al sistema operatiu de destinació.
 2. Executa les proves i integra els canvis a la branca principal.
 3. Crea i envia un tag coincident, per exemple `v0.1.0`.
 4. GitHub Actions valida la versió, executa les proves i construeix Windows,
-   Linux i macOS.
+   Linux i macOS, amb executables natius per a Intel i Apple Silicon en aquest
+   últim sistema.
 5. Si tots els jobs passen, es crea una GitHub Release amb els executables i
    `SHA256SUMS.txt`.
 
