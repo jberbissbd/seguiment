@@ -1,4 +1,5 @@
 from docx import Document
+from datetime import date
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.shared import Cm
@@ -68,6 +69,10 @@ def test_configura_bloc_inicial_a4_marges_i_taules_a_amplada_completa(db, tmp_pa
     assert document.paragraphs[0].style.name == "Title"
     assert document.paragraphs[1].text == "Grup: 4t A"
     assert document.paragraphs[1].runs[0].bold
+    assert document.paragraphs[2].text == (
+        f"Data d’exportació: {date.today().strftime('%d/%m/%Y')}"
+    )
+    assert document.paragraphs[2].runs[0].bold
     assert section.page_width == pytest.approx(Cm(21), abs=1_000)
     assert section.page_height == pytest.approx(Cm(29.7), abs=1_000)
     assert section.top_margin == pytest.approx(Cm(2), abs=1_000)

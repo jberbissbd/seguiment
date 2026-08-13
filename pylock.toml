@@ -2,6 +2,28 @@ lock-version = "1.0"
 created-by = "pip"
 
 [[packages]]
+name = "charset-normalizer"
+version = "3.5.0"
+
+[[packages.wheels]]
+name = "charset_normalizer-3.5.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+url = "https://files.pythonhosted.org/packages/23/35/5b85772eb82528ef22ba29487ad544a7049dfd27f35b1a5a55dbc0843048/charset_normalizer-3.5.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+
+[packages.wheels.hashes]
+sha256 = "14f6904a3cf870abf044df3a8c4924ac6c8ef77e9896586fd37e73ae96cff2af"
+
+[[packages]]
+name = "defusedxml"
+version = "0.7.1"
+
+[[packages.wheels]]
+name = "defusedxml-0.7.1-py2.py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl"
+
+[packages.wheels.hashes]
+sha256 = "a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61"
+
+[[packages]]
 name = "et-xmlfile"
 version = "2.0.0"
 
@@ -24,6 +46,17 @@ url = "https://files.pythonhosted.org/packages/08/f6/af32e23e563971ffb0fb86be52b
 sha256 = "ebe6af670449830d6d9b752c256a983291c766a1365ba5d5460048f9e33a7818"
 
 [[packages]]
+name = "odfpy"
+version = "1.4.1"
+
+[packages.sdist]
+name = "odfpy-1.4.1.tar.gz"
+url = "https://files.pythonhosted.org/packages/97/73/8ade73f6749177003f7ce3304f524774adda96e6aaab30ea79fd8fda7934/odfpy-1.4.1.tar.gz"
+
+[packages.sdist.hashes]
+sha256 = "db766a6e59c5103212f3cc92ec8dd50a0f3a02790233ed0b52148b70d3c438ec"
+
+[[packages]]
 name = "openpyxl"
 version = "3.1.5"
 
@@ -33,6 +66,17 @@ url = "https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e7
 
 [packages.wheels.hashes]
 sha256 = "5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2"
+
+[[packages]]
+name = "pillow"
+version = "12.3.0"
+
+[[packages.wheels]]
+name = "pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+url = "https://files.pythonhosted.org/packages/84/21/a35af28dcc61f37ed850a2d64c65c701321dfbf25085e469d5559360cbbf/pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+
+[packages.wheels.hashes]
+sha256 = "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91"
 
 [[packages]]
 name = "pyside6"
@@ -77,6 +121,17 @@ url = "https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f0
 
 [packages.wheels.hashes]
 sha256 = "3fd478f3250fbbbfd3b94fe1e985955737c145627498896a8a6bf81f4baf66c7"
+
+[[packages]]
+name = "reportlab"
+version = "5.0.0"
+
+[[packages.wheels]]
+name = "reportlab-5.0.0-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/a3/07/70085c17a369605f15e301d10ab902115019b1126c7253d964afc230c7d6/reportlab-5.0.0-py3-none-any.whl"
+
+[packages.wheels.hashes]
+sha256 = "9d5a3affa84919e1111ede580031266a570e93b1ce388219621347965ff1d93c"
 
 [[packages]]
 name = "shiboken6"

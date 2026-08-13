@@ -14,6 +14,7 @@ from .daos import (
     StudentGroupHistoryDAO,
     DataManagementDAO,
     ReportConfigurationDAO,
+    StatisticsDAO,
 )
 
 
@@ -96,6 +97,7 @@ class Database:
         self.student_group_history: StudentGroupHistoryDAO = None
         self.data_management: DataManagementDAO = None
         self.report_configuration: ReportConfigurationDAO = None
+        self.statistics: StatisticsDAO = None
 
     def connect(self):
         self.conn = ManagedConnection(sqlite3.connect(self.path))
@@ -132,6 +134,7 @@ class Database:
         self.student_group_history = StudentGroupHistoryDAO(self.conn)
         self.data_management = DataManagementDAO(self.conn)
         self.report_configuration = ReportConfigurationDAO(self.conn)
+        self.statistics = StatisticsDAO(self.conn)
 
     def _create_tables(self):
         self.conn.executescript("""
@@ -227,6 +230,9 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_notes_student ON notes(student_id);
             CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category_id);
             CREATE INDEX IF NOT EXISTS idx_notes_course ON notes(course_id);
+            CREATE INDEX IF NOT EXISTS idx_notes_date ON notes(date);
+            CREATE INDEX IF NOT EXISTS idx_notes_course_date ON notes(course_id, date);
+            CREATE INDEX IF NOT EXISTS idx_notes_category_date ON notes(category_id, date);
             CREATE INDEX IF NOT EXISTS idx_contacts_student ON contacts(student_id);
             CREATE INDEX IF NOT EXISTS idx_annotations_student
                 ON student_annotations(student_id);
@@ -236,4 +242,5 @@ class Database:
                 ON student_group_history(student_id);
             CREATE INDEX IF NOT EXISTS idx_term_config_course_group
                 ON term_configurations(academic_course_id, group_name);
+            CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_name);
         """)

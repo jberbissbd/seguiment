@@ -67,6 +67,7 @@ def test_main_window_conte_la_navegacio_i_el_detall_de_l_alumne(qtbot):
     assert isinstance(window.student_detail, StudentDetailPanel)
     assert window.content_stack.currentWidget() is window._pages["students"]
     assert "configuration" in window._pages
+    assert "statistics" in window._pages
     assert "categories" not in window._pages
     assert window.student_detail.tabs.count() == 5
 

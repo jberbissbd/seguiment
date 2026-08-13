@@ -50,6 +50,11 @@ def test_dialog_exportacio_permet_reordenar_i_ometre_opcio_trimestres(qtbot):
     assert not dialog.include_documents.isChecked()
     dialog.format_input.setCurrentIndex(1)
     assert dialog.export_format() == "docx"
+    dialog.format_input.setCurrentIndex(2)
+    assert dialog.export_format() == "odt"
+    assert not dialog.include_terms.isEnabled()
+    dialog.format_input.setCurrentIndex(3)
+    assert dialog.export_format() == "pdf"
 
 
 def test_vista_de_dades_emet_ids_de_configuracio(qtbot):

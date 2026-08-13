@@ -11,6 +11,7 @@ from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
 from tutopy.ui.widgets.student_list import StudentList
 from tutopy.ui.widgets.crud_views import CrudListView
 from tutopy.ui.widgets.data_tools import DataToolsView
+from tutopy.ui.widgets.statistics_view import StatisticsView
 from tutopy.ui.resources import application_icon
 
 
@@ -43,8 +44,10 @@ class MainWindow(QMainWindow):
         self.student_detail = StudentDetailPanel()
         self.category_view = CrudListView("Nova categoria")
         self.data_tools = DataToolsView()
+        self.statistics_view = StatisticsView()
         self._pages = {
             "students": self._create_students_page(),
+            "statistics": self._create_statistics_page(),
             "configuration": self._create_configuration_page(),
             "data": self._create_management_page("Gestió de dades", self.data_tools),
         }
@@ -64,6 +67,31 @@ class MainWindow(QMainWindow):
         splitter.setStretchFactor(1, 5)
         splitter.setSizes([340, 720])
         layout.addWidget(splitter)
+        return page
+
+    def _create_statistics_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(24, 24, 24, 24)
+        heading = QLabel("Estadístiques de seguiment")
+        heading.setObjectName("sectionTitle")
+        description = QLabel(
+            "Analitza la cobertura i l’evolució de les notes guardades. "
+            "Els textos de les notes no es mostren ni s’analitzen."
+        )
+        description.setObjectName("mutedText")
+        description.setWordWrap(True)
+        layout.addWidget(heading)
+        layout.addWidget(description)
+        self.statistics_view.setMinimumHeight(720)
+        scroll = QScrollArea()
+        scroll.setObjectName("statisticsScroll")
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(self.statistics_view)
+        layout.addWidget(scroll, 1)
+        self.statistics_scroll = scroll
         return page
 
     def _create_placeholder_page(self, title: str, message: str) -> QWidget:

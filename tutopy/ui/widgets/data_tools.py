@@ -29,7 +29,8 @@ class DataToolsView(QWidget):
         import_layout = QVBoxLayout(import_panel)
         import_layout.addWidget(self._title("Importació massiva"))
         import_layout.addWidget(self._description(
-            "Descarrega la plantilla, omple els fulls d’alumnes i categories i importa’ls en bloc."
+            "Descarrega la plantilla, omple els fulls d’alumnes i categories i "
+            "importa’ls en bloc des d’Excel o LibreOffice Calc."
         ))
         self.template_button = QPushButton("Descarregar plantilla XLSX")
         self.template_button.setObjectName("secondaryButton")
@@ -64,7 +65,7 @@ class DataToolsView(QWidget):
         logo_layout = QVBoxLayout(logo_panel)
         logo_layout.addWidget(self._subtitle("Logotip dels informes"))
         logo_layout.addWidget(self._description(
-            "Selecciona la imatge que apareixerà al bloc inicial de tots els documents DOCX."
+            "Selecciona la imatge que apareixerà al bloc inicial dels informes de text i PDF."
         ))
         logo_actions = QHBoxLayout()
         self.report_logo_label = QLabel("Logotip: cap")

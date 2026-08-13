@@ -42,7 +42,8 @@ class DataManagementController:
 
     def import_spreadsheet(self) -> None:
         filename, _ = QFileDialog.getOpenFileName(
-            self.window, "Importar dades", "", "Full de càlcul Excel (*.xlsx)"
+            self.window, "Importar dades", "",
+            "Fulls de càlcul (*.xlsx *.ods);;Excel (*.xlsx);;OpenDocument (*.ods)"
         )
         if not filename:
             return

@@ -11,10 +11,13 @@ L'aplicació permet:
 - crear i gestionar alumnes i grups;
 - organitzar anotacions de seguiment per categories, cursos acadèmics i
   trimestres;
+- consultar estadístiques de cobertura, evolució temporal i distribució per
+  categories sense analitzar el text sensible de les notes;
 - mantenir l'històric de grups de cada alumne;
 - gestionar contactes, descriptors i documents associats a l'alumnat;
-- importar alumnes i categories massivament des d'un full de càlcul;
-- exportar informes individuals o de diversos alumnes en format XLSX o DOCX;
+- importar alumnes i categories massivament des de fulls XLSX o ODS;
+- exportar informes individuals o de diversos alumnes en format XLSX, DOCX,
+  ODT o PDF;
 - incorporar un logotip comú als informes DOCX;
 - exportar, juntament amb els informes, els documents de cada alumne ordenats
   per curs acadèmic.
