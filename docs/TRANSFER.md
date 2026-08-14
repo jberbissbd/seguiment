@@ -1,6 +1,6 @@
 # Transferència entre instàncies
 
-Tutopy exporta agregats d'alumnes en contenidors xifrats amb extensió `.tutopy`.
+Tutopy exporta agregats d'alumnes en contenidors xifrats amb extensió `.tpy`.
 El format és per a intercanvi de dades; no és una còpia directa de la base
 SQLite.
 

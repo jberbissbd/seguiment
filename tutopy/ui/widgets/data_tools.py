@@ -48,7 +48,7 @@ class DataToolsView(QWidget):
         transfer_layout.addWidget(self._title("Transferència entre instàncies"))
         transfer_layout.addWidget(self._description(
             "Exporta alumnes amb notes, contactes, descriptors, historial i "
-            "documents, o importa un paquet .tutopy d’una altra instància."
+            "documents, o importa un paquet .tpy d’una altra instància."
         ))
         transfer_actions = QHBoxLayout()
         self.transfer_student_button = QPushButton("Exportar seleccionats")

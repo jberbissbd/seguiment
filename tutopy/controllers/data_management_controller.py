@@ -61,13 +61,13 @@ class DataManagementController:
             lambda filename, password: self.transfer_service.export_students(
                 student_ids, filename, password
             ),
-            "alumnes-seleccionats.tutopy",
+            "alumnes-seleccionats.tpy",
         )
 
     def export_all_students(self) -> None:
         """Exporta tots els agregats de la instància."""
         self._export_transfer(
-            self.transfer_service.export_all, "tutopy-complet.tutopy"
+            self.transfer_service.export_all, "tutopy-complet.tpy"
         )
 
     def _export_transfer(self, operation, default_name) -> None:
@@ -76,7 +76,7 @@ class DataManagementController:
             return
         filename, _ = QFileDialog.getSaveFileName(
             self.window, "Exportar paquet Tutopy", default_name,
-            "Paquet Tutopy (*.tutopy)",
+            "Paquet Tutopy (*.tpy)",
         )
         if not filename:
             return
@@ -91,13 +91,13 @@ class DataManagementController:
         self.window.show_status(f"Paquet desat a {path}", 5000)
 
     def import_transfer(self) -> None:
-        """Analitza, resol conflictes i importa un paquet `.tutopy`."""
+        """Analitza, resol conflictes i importa un paquet `.tpy`."""
         if self.transfer_service is None:
             self.window.show_error("El servei de transferència no està disponible.")
             return
         filename, _ = QFileDialog.getOpenFileName(
             self.window, "Importar paquet Tutopy", "",
-            "Paquet Tutopy (*.tutopy)",
+            "Paquet Tutopy (*.tpy)",
         )
         if not filename:
             return

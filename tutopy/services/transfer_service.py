@@ -37,6 +37,7 @@ class TransferService:
 
     FORMAT = "tutopy-transfer"
     FORMAT_VERSION = 1
+    EXTENSION = ".tpy"
     MAX_ARCHIVE_SIZE = 1_000 * 1024 * 1024
     MAX_UNCOMPRESSED_SIZE = 2_000 * 1024 * 1024
     MAX_MEMBERS = 20_000
@@ -85,15 +86,15 @@ class TransferService:
     def export_students(
         self, student_ids: list[int], destination: str | Path, password: str,
     ) -> Path:
-        """Construeix un paquet `.tutopy` amb els alumnes indicats."""
+        """Construeix un paquet `.tpy` amb els alumnes indicats."""
         password = self._validate_password(password)
         if not student_ids:
             raise ValidationError("No hi ha alumnes per exportar.")
         if len(student_ids) != len(set(student_ids)):
             raise ValidationError("La selecció d’alumnes conté duplicats.")
         path = Path(destination)
-        if path.suffix.lower() != ".tutopy":
-            path = path.with_suffix(".tutopy")
+        if path.suffix.lower() != self.EXTENSION:
+            path = path.with_suffix(self.EXTENSION)
         if not path.name:
             raise ValidationError("Cal indicar un fitxer de destinació.")
 
@@ -336,8 +337,8 @@ class TransferService:
 
     def _read_package(self, source, password, verify_documents):
         path = Path(source)
-        if not path.is_file() or path.suffix.lower() != ".tutopy":
-            raise ValidationError("Cal seleccionar un paquet .tutopy vàlid.")
+        if not path.is_file() or path.suffix.lower() != self.EXTENSION:
+            raise ValidationError("Cal seleccionar un paquet .tpy vàlid.")
         if path.stat().st_size > self.MAX_ARCHIVE_SIZE:
             raise ValidationError("El paquet supera la mida màxima admesa.")
         try:
@@ -507,12 +508,12 @@ class TransferService:
         cls._validate_password(password)
         header_size = len(cls.ENVELOPE_MAGIC) + 1 + cls.SALT_SIZE + cls.NONCE_SIZE
         if source.stat().st_size < header_size + cls.TAG_SIZE:
-            raise TransferFormatError("El fitxer .tutopy està incomplet.")
+            raise TransferFormatError("El fitxer .tpy està incomplet.")
         with source.open("rb") as encrypted:
             header = encrypted.read(header_size)
             if not header.startswith(cls.ENVELOPE_MAGIC):
                 raise TransferFormatError(
-                    "El fitxer no és un paquet .tutopy xifrat compatible."
+                    "El fitxer no és un paquet .tpy xifrat compatible."
                 )
             version_offset = len(cls.ENVELOPE_MAGIC)
             if header[version_offset] != cls.ENVELOPE_VERSION:
@@ -537,7 +538,7 @@ class TransferService:
                     while remaining:
                         chunk = encrypted.read(min(cls.CHUNK_SIZE, remaining))
                         if not chunk:
-                            raise TransferFormatError("El fitxer .tutopy està incomplet.")
+                            raise TransferFormatError("El fitxer .tpy està incomplet.")
                         plain.write(decryptor.update(chunk))
                         remaining -= len(chunk)
                     plain.write(decryptor.finalize())

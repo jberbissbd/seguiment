@@ -196,7 +196,7 @@ def test_transferencia_exporta_i_importa_paquets(
 
     transfer = TransferStub()
     controller.transfer_service = transfer
-    destination = str(tmp_path / "tots.tutopy")
+    destination = str(tmp_path / "tots.tpy")
     monkeypatch.setattr(
         QFileDialog, "getSaveFileName", lambda *args: (destination, "")
     )
@@ -257,7 +257,7 @@ def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
             return [22]
 
     controller.transfer_selection_dialog = AcceptedDialog
-    destination = str(tmp_path / "seleccio.tutopy")
+    destination = str(tmp_path / "seleccio.tpy")
     monkeypatch.setattr(
         QFileDialog, "getSaveFileName", lambda *args: (destination, "")
     )
@@ -279,7 +279,7 @@ def test_transferencia_valida_confirmacio_i_mostra_motiu_error(
             raise OSError(13, "Permís denegat")
 
     controller.transfer_service = TransferStub()
-    destination = str(tmp_path / "tots.tutopy")
+    destination = str(tmp_path / "tots.tpy")
     monkeypatch.setattr(
         QFileDialog, "getSaveFileName", lambda *args: (destination, "")
     )

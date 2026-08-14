@@ -65,7 +65,7 @@ def test_round_trip_conserva_agregat_i_documents(instances, tmp_path):
     result = target.transfers.execute(preview, password=PASSWORD)
 
     imported = target.students.get_by_uuid(original.uuid)
-    assert package.suffix == ".tutopy"
+    assert package.suffix == ".tpy"
     assert preview.student_count == 1
     assert preview.note_count == 1
     assert preview.document_count == 1
@@ -86,7 +86,7 @@ def test_exporta_i_importa_tots_els_alumnes(instances, tmp_path):
     first = _complete_student(source, tmp_path, "Laia")
     second = source.students.create(StudentNew("Pau", "Puig", "3r B"))
 
-    package = source.transfers.export_all(tmp_path / "tots.tutopy", PASSWORD)
+    package = source.transfers.export_all(tmp_path / "tots.tpy", PASSWORD)
     preview = target.transfers.analyze(package, PASSWORD)
     result = target.transfers.execute(preview, password=PASSWORD)
 
@@ -156,7 +156,7 @@ def test_conflicte_exigeix_decisio(instances, tmp_path):
 def test_rebutja_versio_incompatible_i_rutes_insegures(instances, tmp_path):
     _source, target = instances
     plain = tmp_path / "invalid.zip"
-    package = tmp_path / "invalid.tutopy"
+    package = tmp_path / "invalid.tpy"
     with ZipFile(plain, "w", compression=ZIP_DEFLATED) as archive:
         archive.writestr("../secret.txt", "secret")
         archive.writestr("manifest.json", json.dumps({
@@ -176,7 +176,7 @@ def test_rebutja_document_manipulat(instances, tmp_path):
     original = source.transfers.export_student(
         student.id, tmp_path / "original", PASSWORD
     )
-    manipulated = tmp_path / "manipulat.tutopy"
+    manipulated = tmp_path / "manipulat.tpy"
     content = bytearray(original.read_bytes())
     content[len(content) // 2] ^= 1
     manipulated.write_bytes(content)
@@ -206,14 +206,14 @@ def test_rebutja_paquets_en_clar_i_contrasenyes_massa_curtes(
     instances, tmp_path
 ):
     source, target = instances
-    plain = tmp_path / "antic.tutopy"
+    plain = tmp_path / "antic.tpy"
     with ZipFile(plain, "w") as archive:
         archive.writestr("manifest.json", "{}")
 
     with pytest.raises(TransferFormatError, match="xifrat compatible"):
         target.transfers.analyze(plain, PASSWORD)
     with pytest.raises(ValidationError, match="8 caràcters"):
-        source.transfers.export_all(tmp_path / "curt.tutopy", "curta")
+        source.transfers.export_all(tmp_path / "curt.tpy", "curta")
 
 
 def test_error_durant_documents_fa_rollback_i_neteja_fitxers(
