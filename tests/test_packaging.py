@@ -112,6 +112,18 @@ def test_ci_genera_cobertura_i_executa_sonarcloud():
     assert "-Dsonar.projectVersion=${{ steps.project.outputs.version }}" in workflow
 
 
+def test_ci_instal_la_dependencies_bloquejades_i_verifica_l_entorn():
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "cache-dependency-path: requirements-dev.lock" in workflow
+    assert (
+        "python -m pip install --require-hashes -r requirements-dev.lock"
+        in workflow
+    )
+    assert "python -m pip install --no-deps -e ." in workflow
+    assert "python -m pip check" in workflow
+    assert 'pip install -e ".[dev]"' not in workflow
+
+
 def test_configuracio_sonar_separa_fonts_tests_i_importa_cobertura():
     configuration = (ROOT / "sonar-project.properties").read_text(encoding="utf-8")
     assert "sonar.sources=tutopy" in configuration
