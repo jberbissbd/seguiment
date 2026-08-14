@@ -20,10 +20,9 @@ class StatisticsService:
 
     def get_available_courses(self):
         """Retorna només cursos que tenen notes i poden aportar estadístiques."""
-        course_ids = self.statistics_dao.get_course_ids_with_notes()
+        course_ids = set(self.statistics_dao.get_course_ids_with_notes())
         return tuple(
-            course for course_id in course_ids
-            if (course := self.courses.get_by_id(course_id)) is not None
+            course for course in self.courses.get_all() if course.id in course_ids
         )
 
     def get_snapshot(self, filters: StatisticsFilters) -> StatisticsSnapshot:

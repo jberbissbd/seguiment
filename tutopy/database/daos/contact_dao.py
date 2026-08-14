@@ -8,14 +8,17 @@ class ContactDAO:
 
     def get_by_student(self, student_id: int) -> list[Contact]:
         rows = self.conn.execute(
-            "SELECT * FROM contacts WHERE student_id = ? ORDER BY name",
+            "SELECT id, student_id, name, description, phone, email FROM contacts "
+            "WHERE student_id = ? ORDER BY name",
             (student_id,),
         ).fetchall()
         return [Contact(**row) for row in rows]
 
     def get_by_id(self, contact_id: int) -> Optional[Contact]:
         row = self.conn.execute(
-            "SELECT * FROM contacts WHERE id = ?", (contact_id,)
+            "SELECT id, student_id, name, description, phone, email "
+            "FROM contacts WHERE id = ?",
+            (contact_id,),
         ).fetchone()
         return Contact(**row) if row else None
 

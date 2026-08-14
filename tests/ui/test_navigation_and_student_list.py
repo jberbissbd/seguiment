@@ -22,6 +22,17 @@ def test_sidebar_emet_la_seccio_seleccionada(qtbot):
     assert sidebar.buttons["configuration"].isChecked()
 
 
+def test_sidebar_assigna_icones_diferents_a_estadistiques_i_configuracio(qtbot):
+    sidebar = Sidebar()
+    qtbot.addWidget(sidebar)
+
+    statistics_icon = sidebar.buttons["statistics"].icon()
+    configuration_icon = sidebar.buttons["configuration"].icon()
+    assert not statistics_icon.isNull()
+    assert not configuration_icon.isNull()
+    assert Sidebar.SECTIONS[1][2] != Sidebar.SECTIONS[2][2]
+
+
 def test_student_list_preserva_ids_dels_homonims(qtbot):
     database = Database(":memory:").connect()
     try:
@@ -46,6 +57,10 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         assert first_widget.minimumHeight() == 52
         assert first_widget.avatar.text() == "AG"
         assert "background-color" in first_widget.avatar.styleSheet()
+        first.name = "Àlex"
+        widget.set_students([first, second])
+        assert widget.list_widget.itemWidget(widget.list_widget.item(0)) is first_widget
+        assert first_widget.name.text().startswith("Àlex")
         with qtbot.waitSignal(widget.student_selected) as signal:
             widget.list_widget.setCurrentRow(1)
         assert signal.args == [second.id]
@@ -56,6 +71,18 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
             )
     finally:
         database.close()
+
+
+def test_cerca_coalesceix_pulsacions_consecutives(qtbot):
+    widget = StudentList()
+    qtbot.addWidget(widget)
+
+    with qtbot.waitSignal(widget.search_changed, timeout=1_000) as signal:
+        widget.search_input.setText("J")
+        widget.search_input.setText("Jo")
+        widget.search_input.setText("Jordi")
+
+    assert signal.args == ["Jordi"]
 
 
 def test_main_window_conte_la_navegacio_i_el_detall_de_l_alumne(qtbot):
@@ -88,6 +115,10 @@ def test_main_controller_carrega_cerca_i_selecciona_alumnes(qtbot, tmp_path):
         assert window.student_list.list_widget.count() == 2
 
         window.student_list.search_input.setText("Jordi")
+        qtbot.waitUntil(
+            lambda: window.student_list.list_widget.count() == 1,
+            timeout=1_000,
+        )
         assert window.student_list.list_widget.count() == 1
 
         window.student_list.list_widget.setCurrentRow(0)

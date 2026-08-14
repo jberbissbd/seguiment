@@ -16,3 +16,11 @@ class DuplicateEntityError(DomainError, ValueError):
 
 class EntityInUseError(DomainError, ValueError):
     """L'entitat no es pot modificar o eliminar perquè està en ús."""
+
+
+class TransferAuthenticationError(DomainError, ValueError):
+    """La contrasenya no desxifra el paquet o aquest ha estat manipulat."""
+
+
+class TransferFormatError(DomainError, ValueError):
+    """El fitxer no compleix el format de transferència esperat."""

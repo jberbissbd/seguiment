@@ -16,6 +16,7 @@ from reportlab.platypus import (
 
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
+from tutopy.services.utils import sanitize_xml_text
 
 
 class OpenDocumentReportService:
@@ -67,12 +68,13 @@ class OpenDocumentReportService:
         grouped = defaultdict(list)
         for note in notes:
             grouped[note.course_id].append(note)
+        course_names = {course.id: course.course for course in self.courses.get_all()}
+        missing = set(grouped) - course_names.keys()
+        if missing:
+            raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
         result = []
         for course_id, course_notes in grouped.items():
-            course = self.courses.get_by_id(course_id)
-            if course is None:
-                raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
-            result.append((course.course, course_notes))
+            result.append((course_names[course_id], course_notes))
         return sorted(result, key=lambda item: item[0])
 
     def _save_odt(self, path, student, courses, categories):
@@ -199,9 +201,5 @@ class OpenDocumentReportService:
 
     @staticmethod
     def _safe(value):
-        value = "" if value is None else str(value)
-        return "".join(character for character in value if (
-            character in "\t\n\r" or 0x20 <= ord(character) <= 0xD7FF
-            or 0xE000 <= ord(character) <= 0xFFFD
-            or 0x10000 <= ord(character) <= 0x10FFFF
-        ))
+        """Manté l'API interna històrica delegant al sanejador compartit."""
+        return sanitize_xml_text(value)

@@ -15,6 +15,7 @@ from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.report_configuration_service import ReportConfigurationService
 from tutopy.services.validation_service import ValidationService
+from tutopy.services.utils import sanitize_xml_text
 
 
 class WordReportService:
@@ -35,7 +36,10 @@ class WordReportService:
         path = self._document_path(destination)
         categories = self.configuration.get_ordered_categories()
         document = self._new_document(student)
-        self._add_courses(document, self._group_by_course(student_notes), categories)
+        by_course = self._group_by_course(student_notes)
+        self._add_courses(
+            document, by_course, categories, self._course_names(by_course)
+        )
         self._save_document(document, path)
         return path
 
@@ -78,16 +82,18 @@ class WordReportService:
         )
         return document
 
-    def _add_courses(self, document, by_course, categories) -> None:
+    def _add_courses(self, document, by_course, categories, course_names) -> None:
         for index, (course_id, course_notes) in enumerate(sorted(
-            by_course.items(), key=lambda item: self._course_name(item[0])
+            by_course.items(), key=lambda item: course_names[item[0]]
         )):
             if index:
                 document.add_page_break()
-            self._add_course(document, course_id, course_notes, categories)
+            self._add_course(
+                document, course_names[course_id], course_notes, categories
+            )
 
-    def _add_course(self, document, course_id, course_notes, categories) -> None:
-        document.add_heading(self._course_name(course_id), level=1)
+    def _add_course(self, document, course_name, course_notes, categories) -> None:
+        document.add_heading(course_name, level=1)
         notes_by_category = defaultdict(list)
         for note in course_notes:
             notes_by_category[note.category_id].append(note)
@@ -175,19 +181,14 @@ class WordReportService:
         for cell, width in zip(table.rows[0].cells, (Cm(3), Cm(14))):
             cell.width = width
 
-    def _course_name(self, course_id: int) -> str:
-        course = self.courses.get_by_id(course_id)
-        if course is None:
+    def _course_names(self, by_course) -> dict[int, str]:
+        names = {course.id: course.course for course in self.courses.get_all()}
+        missing = set(by_course) - names.keys()
+        if missing:
             raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
-        return course.course
+        return names
 
     @staticmethod
     def _safe_text(value) -> str:
         """Elimina els controls que XML no admet, conservant salts i tabuladors."""
-        text = "" if value is None else str(value)
-        return "".join(character for character in text if (
-            character in "\t\n\r"
-            or 0x20 <= ord(character) <= 0xD7FF
-            or 0xE000 <= ord(character) <= 0xFFFD
-            or 0x10000 <= ord(character) <= 0x10FFFF
-        ))
+        return sanitize_xml_text(value)

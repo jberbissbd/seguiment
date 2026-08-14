@@ -58,6 +58,11 @@ include = ["tutopy*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "unit: proves aïllades sense persistència ni UI real",
+  "integration: proves que connecten diverses capes o recursos reals",
+  "ui: proves de widgets i fluxos Qt executades en mode offscreen",
+]
 
 [tool.coverage.run]
 source = ["tutopy"]

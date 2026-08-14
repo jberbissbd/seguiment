@@ -1,7 +1,10 @@
 from datetime import date
 
+import pytest
+
 from tutopy.application import create_services
 from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew
+from tutopy.services.exceptions import ValidationError
 
 
 def test_exporta_informe_i_documents_en_carpetes_per_curs(db, tmp_path):
@@ -69,3 +72,45 @@ def test_exportacio_multiple_continua_si_un_alumne_no_te_notes(db, tmp_path):
     assert result.exported == 1
     assert len(result.failures) == 1
     assert result.failures[0].student_name == "Puig, Pau"
+
+
+@pytest.mark.parametrize("student_ids", [[], [0], [True], [1, 1], "1"])
+def test_exportacio_multiple_rebutja_seleccions_invalides(
+    db, tmp_path, student_ids
+):
+    service = create_services(db).student_exports
+
+    with pytest.raises(ValidationError, match="seleccionar|selecció"):
+        service.export_students(student_ids, tmp_path / "lots", "xlsx")
+
+
+def test_exportacio_rebutja_format_i_destinacio_invalids(db, tmp_path):
+    services = create_services(db)
+
+    with pytest.raises(ValidationError, match="format"):
+        services.student_exports.export_students(
+            [1], tmp_path / "lots", "html"
+        )
+    with pytest.raises(ValidationError, match="destinació"):
+        services.student_exports.export_students([1], "", "xlsx")
+
+
+def test_exportacio_multiple_informa_alumne_inexistent(db, tmp_path):
+    result = create_services(db).student_exports.export_students(
+        [999], tmp_path / "lots", "xlsx"
+    )
+
+    assert result.exported == 0
+    assert result.failures[0].student_id == 999
+    assert result.failures[0].student_name == "ID 999"
+
+
+def test_noms_de_carpeta_son_segurs_i_disponibles(tmp_path):
+    from tutopy.services.student_export_service import StudentExportService
+
+    assert StudentExportService._safe_name('  <A/B>:*  ', "Alumne") == "A_B"
+    assert StudentExportService._safe_name("...", "Alumne") == "Alumne"
+    original = tmp_path / "Informe"
+    original.mkdir()
+    (tmp_path / "Informe (2)").mkdir()
+    assert StudentExportService._available_path(original).name == "Informe (3)"

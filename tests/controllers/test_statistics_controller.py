@@ -4,6 +4,7 @@ from tutopy.application import create_services
 from tutopy.controllers.main_controller import MainController
 from tutopy.controllers.statistics_controller import StatisticsController
 from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew
+from tutopy.services.exceptions import ValidationError
 from tutopy.ui.main_window import MainWindow
 from tutopy.database.database import Database
 
@@ -107,3 +108,41 @@ def test_canvi_de_filtre_refresca_les_estadistiques(db, qtbot):
     )
 
     assert view.filter_values()["group_name"] == "4t B"
+
+
+def test_error_de_domini_es_mostra_sense_substituir_resultats(db, qtbot):
+    services = create_services(db)
+    window = MainWindow()
+    qtbot.addWidget(window)
+    errors = []
+    controller = StatisticsController(
+        window, services.statistics, services.students,
+        services.academic_courses, services.categories,
+        error_handler=errors.append,
+    )
+    controller.statistics.get_snapshot = lambda _filters: (
+        (_ for _ in ()).throw(ValidationError("filtres incorrectes"))
+    )
+
+    controller.refresh()
+
+    assert errors == ["filtres incorrectes"]
+
+
+def test_context_inclou_grup_i_interval_en_format_local(db, qtbot):
+    services = create_services(db)
+    window = MainWindow()
+    qtbot.addWidget(window)
+    controller = StatisticsController(
+        window, services.statistics, services.students,
+        services.academic_courses, services.categories,
+    )
+    values = {
+        "group_name": "4t A",
+        "date_from": "2026-01-08",
+        "date_to": "2026-04-07",
+    }
+
+    assert controller._context(values, 3) == (
+        "3 alumnes inclosos · grup 4t A · del 08/01/2026 al 07/04/2026"
+    )

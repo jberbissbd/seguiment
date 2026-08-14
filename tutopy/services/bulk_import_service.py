@@ -16,8 +16,9 @@ from tutopy.models.bulk_import import (
 )
 from tutopy.models.messaging import CategoryNew, Student, StudentNew
 from tutopy.services.category_service import CategoryService
-from tutopy.services.exceptions import ValidationError
+from tutopy.services.exceptions import DomainError, ValidationError
 from tutopy.services.student_service import StudentService
+from tutopy.services.validation_service import ValidationService
 
 
 class BulkImportService:
@@ -77,6 +78,9 @@ class BulkImportService:
                 self._load_ods(path) if path.suffix.lower() == ".ods"
                 else load_workbook(path, read_only=True, data_only=False)
             )
+        # openpyxl i odfpy no exposen una jerarquia comuna d'errors de format.
+        # Aquesta és una frontera d'entrada: qualsevol fallada del parser es
+        # converteix en un error de domini sense continuar amb dades parcials.
         except Exception as error:
             raise ValidationError(
                 "No s’ha pogut obrir el fitxer com a full de càlcul XLSX o ODS."
@@ -88,9 +92,16 @@ class BulkImportService:
         self._read_students(workbook, student_rows, issues)
         self._read_categories(workbook, category_rows, issues)
         existing = self.students.get_all()
+        normalized_existing = tuple(
+            (student, self._normalize(student.full_name)) for student in existing
+        )
         conflicts = []
         for row in student_rows:
-            matches = tuple(student for student in existing if self._similar(row, student))
+            incoming = self._normalize(row.full_name)
+            matches = tuple(
+                student for student, current in normalized_existing
+                if self._similar_names(incoming, current)
+            )
             if matches:
                 conflicts.append(StudentConflict(row, matches))
         return ImportPreview(tuple(student_rows), tuple(category_rows),
@@ -154,7 +165,7 @@ class BulkImportService:
                 else:
                     self.students.create(StudentNew(row.name, row.surnames, row.group_name))
                     created += 1
-            except Exception as error:
+            except (DomainError, ValueError, OSError) as error:
                 raise ValidationError(
                     f"{self.STUDENTS_SHEET} — fila {row.row}: {error}"
                 ) from error
@@ -184,7 +195,7 @@ class BulkImportService:
                 category = self.categories.create(CategoryNew(row.name))
                 existing[key] = category
                 created += 1
-            except Exception as error:
+            except (DomainError, ValueError, OSError) as error:
                 raise ValidationError(
                     f"{self.CATEGORIES_SHEET} — fila {row.row}: {error}"
                 ) from error
@@ -246,7 +257,10 @@ class BulkImportService:
 
     @staticmethod
     def _normalize(value: str) -> str:
-        decomposed = unicodedata.normalize("NFKD", value.casefold())
+        normalized = ValidationService.person_name(
+            value, "El nom no pot estar buit."
+        )
+        decomposed = unicodedata.normalize("NFKD", normalized.casefold())
         return " ".join("".join(c for c in decomposed if not unicodedata.combining(c)).split())
 
     @staticmethod
@@ -257,7 +271,14 @@ class BulkImportService:
     def _similar(self, row: StudentImportRow, student: Student) -> bool:
         incoming = self._normalize(row.full_name)
         current = self._normalize(student.full_name)
-        return incoming == current or SequenceMatcher(None, incoming, current).ratio() >= self.similarity_threshold
+        return self._similar_names(incoming, current)
+
+    def _similar_names(self, incoming: str, current: str) -> bool:
+        return (
+            incoming == current
+            or SequenceMatcher(None, incoming, current).ratio()
+            >= self.similarity_threshold
+        )
 
 
 class _CellValue:

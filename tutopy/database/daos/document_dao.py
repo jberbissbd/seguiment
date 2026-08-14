@@ -8,20 +8,27 @@ class DocumentDAO:
 
     def get_by_student(self, student_id: int) -> list[StudentDocument]:
         rows = self.conn.execute(
-            "SELECT * FROM student_documents WHERE student_id = ? ORDER BY name",
+            "SELECT id, student_id, name, description, uuid_filename, "
+            "original_filename, file_path, date, course_id FROM student_documents "
+            "WHERE student_id = ? ORDER BY name",
             (student_id,),
         ).fetchall()
         return [StudentDocument(**row) for row in rows]
 
     def get_by_id(self, id: int) -> Optional[StudentDocument]:
         row = self.conn.execute(
-            "SELECT * FROM student_documents WHERE id = ?", (id,)
+            "SELECT id, student_id, name, description, uuid_filename, "
+            "original_filename, file_path, date, course_id "
+            "FROM student_documents WHERE id = ?",
+            (id,),
         ).fetchone()
         return StudentDocument(**row) if row else None
 
     def get_all(self) -> list[StudentDocument]:
         rows = self.conn.execute(
-            "SELECT * FROM student_documents ORDER BY name"
+            "SELECT id, student_id, name, description, uuid_filename, "
+            "original_filename, file_path, date, course_id "
+            "FROM student_documents ORDER BY name"
         ).fetchall()
         return [StudentDocument(**row) for row in rows]
 

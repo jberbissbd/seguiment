@@ -155,8 +155,9 @@ class StudentExportService:
 
     def _export_documents(self, student_id: int, root: Path) -> None:
         used_names = {}
+        courses_by_id = {course.id: course for course in self.courses.get_all()}
         for document in self.documents.get_by_student(student_id):
-            course = self.courses.get_by_id(document.course_id) if document.course_id else None
+            course = courses_by_id.get(document.course_id)
             if course is None:
                 raise ValidationError("Un document no té un curs acadèmic vàlid.")
             course_dir = root / self._safe_name(course.course, "Curs")

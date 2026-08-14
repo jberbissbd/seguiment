@@ -1,8 +1,10 @@
 from PySide6.QtCore import QDate, QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QFormLayout, QHBoxLayout, QHeaderView,
-    QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
+
+from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
 
 class NotesTab(QWidget):
@@ -23,7 +25,7 @@ class NotesTab(QWidget):
         self.current_student_id = None
         self.category_filter = QComboBox()
         self.course_filter = QComboBox()
-        self.content_filter = QLineEdit()
+        self.content_filter = DebouncedLineEdit()
         self.content_filter.setPlaceholderText("Cercar en el contingut…")
         filters.addRow("Categoria:", self.category_filter)
         filters.addRow("Curs acadèmic:", self.course_filter)
@@ -87,7 +89,7 @@ class NotesTab(QWidget):
     def _connect_signals(self) -> None:
         self.category_filter.currentIndexChanged.connect(self._emit_filters)
         self.course_filter.currentIndexChanged.connect(self._emit_filters)
-        self.content_filter.textChanged.connect(self._emit_filters)
+        self.content_filter.debounced_text_changed.connect(self._emit_filters)
         self.date_from_enabled.toggled.connect(self.date_from.setEnabled)
         self.date_from_enabled.toggled.connect(self._emit_filters)
         self.date_to_enabled.toggled.connect(self.date_to.setEnabled)
@@ -142,24 +144,34 @@ class NotesTab(QWidget):
         self.date_from_enabled.setChecked(False)
         self.date_to_enabled.setChecked(False)
         self.content_filter.clear()
+        self.content_filter.cancel_pending()
         self._emit_filters()
 
     def set_records(self, records) -> None:
+        """Actualitza la taula in situ i conserva selecció i objectes de fila."""
+        records = tuple(records)
         selected_id = self.current_note_id()
-        self.table.setRowCount(0)
-        for record in records:
-            row = self.table.rowCount()
-            self.table.insertRow(row)
-            values = (
-                self._display_date(record.date), record.category_name, record.content,
-            )
-            for column, value in enumerate(values):
-                item = QTableWidgetItem(value)
-                if column == 0:
-                    item.setData(Qt.ItemDataRole.UserRole, record.note_id)
-                self.table.setItem(row, column, item)
-            if record.note_id == selected_id:
-                self.table.selectRow(row)
+        self.table.setUpdatesEnabled(False)
+        try:
+            self.table.setRowCount(len(records))
+            for row, record in enumerate(records):
+                values = (
+                    self._display_date(record.date),
+                    record.category_name,
+                    record.content,
+                )
+                for column, value in enumerate(values):
+                    item = self.table.item(row, column)
+                    if item is None:
+                        item = QTableWidgetItem()
+                        self.table.setItem(row, column, item)
+                    item.setText(value)
+                    if column == 0:
+                        item.setData(Qt.ItemDataRole.UserRole, record.note_id)
+                if record.note_id == selected_id:
+                    self.table.selectRow(row)
+        finally:
+            self.table.setUpdatesEnabled(True)
         self._selection_changed()
 
     def current_note_id(self):

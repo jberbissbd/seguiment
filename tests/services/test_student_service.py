@@ -74,17 +74,21 @@ class TestStudentService:
             student_dao, contact_dao, document_dao, group_history_dao,
             academic_course_dao, db.transaction,
         )
-        created = service.create(StudentNew("  Joana ", " Serra ", " 1r B "))
+        created = service.create(StudentNew(
+            "  Joana\tMaria ", " Serra\n  Puig ", " 1r B "
+        ))
         original_uuid = created.uuid
 
+        assert created.name == "Joana Maria"
+        assert created.surnames == "Serra Puig"
         assert service.get_by_id(created.id) == created
         assert service.get_all() == [created]
         assert service.get_groups() == ["1r B"]
 
-        created.name = "Joan"
+        created.name = "  Joan   Pau "
         created.group_name = "2n B"
         updated = service.update(created)
-        assert updated.name == "Joan"
+        assert updated.name == "Joan Pau"
         assert service.get_current_group(created.id) == "2n B"
         assert updated.uuid == original_uuid
 

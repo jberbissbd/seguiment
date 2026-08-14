@@ -54,14 +54,16 @@ class SpreadsheetReportService:
         by_course = defaultdict(list)
         for note in student_notes:
             by_course[note.course_id].append(note)
+        course_names = self._course_names(by_course)
 
         workbook = Workbook()
         workbook.remove(workbook.active)
         for course_id, course_notes in sorted(
-            by_course.items(), key=lambda item: self._course_name(item[0])
+            by_course.items(), key=lambda item: course_names[item[0]]
         ):
             self._add_course_sheet(
-                workbook, student, course_id, course_notes, histories,
+                workbook, student, course_id, course_names[course_id],
+                course_notes, histories,
                 categories, include_terms,
             )
 
@@ -72,9 +74,11 @@ class SpreadsheetReportService:
             raise ValidationError("No s’ha pogut desar l’informe.") from error
         return path
 
-    def _add_course_sheet(self, workbook, student, course_id, notes, histories,
-                          categories, include_terms: bool) -> None:
-        sheet = workbook.create_sheet(self._sheet_title(self._course_name(course_id)))
+    def _add_course_sheet(
+        self, workbook, student, course_id, course_name, notes, histories,
+        categories, include_terms: bool,
+    ) -> None:
+        sheet = workbook.create_sheet(self._sheet_title(course_name))
         rows = [(note, self._group_for(note.date, histories, student.group_name))
                 for note in notes]
         groups = list(dict.fromkeys(group for _note, group in rows if group))
@@ -128,11 +132,12 @@ class SpreadsheetReportService:
         self._set_text(sheet.cell(row_number, 1), term)
         return 2
 
-    def _course_name(self, course_id: int) -> str:
-        course = self.courses.get_by_id(course_id)
-        if course is None:
+    def _course_names(self, by_course) -> dict[int, str]:
+        names = {course.id: course.course for course in self.courses.get_all()}
+        missing = set(by_course) - names.keys()
+        if missing:
             raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
-        return course.course
+        return names
 
     @staticmethod
     def _group_for(note_date: str, histories, fallback: str) -> str:

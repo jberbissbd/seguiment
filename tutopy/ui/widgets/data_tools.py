@@ -10,6 +10,9 @@ class DataToolsView(QWidget):
     template_requested = Signal()
     import_requested = Signal()
     clear_requested = Signal()
+    transfer_student_requested = Signal()
+    transfer_all_requested = Signal()
+    transfer_import_requested = Signal()
     category_order_requested = Signal()
     report_logo_requested = Signal()
     report_logo_remove_requested = Signal()
@@ -38,6 +41,26 @@ class DataToolsView(QWidget):
         self.import_button.setObjectName("primaryButton")
         import_layout.addWidget(self.template_button)
         import_layout.addWidget(self.import_button)
+
+        transfer_panel = QFrame()
+        transfer_panel.setObjectName("panel")
+        transfer_layout = QVBoxLayout(transfer_panel)
+        transfer_layout.addWidget(self._title("Transferència entre instàncies"))
+        transfer_layout.addWidget(self._description(
+            "Exporta alumnes amb notes, contactes, descriptors, historial i "
+            "documents, o importa un paquet .tpy d’una altra instància."
+        ))
+        transfer_actions = QHBoxLayout()
+        self.transfer_student_button = QPushButton("Exportar seleccionats")
+        self.transfer_all_button = QPushButton("Exportar tots els alumnes")
+        self.transfer_import_button = QPushButton("Importar paquet Tutopy")
+        self.transfer_student_button.setObjectName("secondaryButton")
+        self.transfer_all_button.setObjectName("secondaryButton")
+        self.transfer_import_button.setObjectName("primaryButton")
+        transfer_actions.addWidget(self.transfer_student_button)
+        transfer_actions.addWidget(self.transfer_all_button)
+        transfer_actions.addWidget(self.transfer_import_button)
+        transfer_layout.addLayout(transfer_actions)
 
         report_panel = QFrame()
         report_panel.setObjectName("panel")
@@ -139,6 +162,8 @@ class DataToolsView(QWidget):
             self.report_logo_button, self.report_logo_remove_button,
             self.term_create_button, self.term_edit_button, self.term_delete_button,
             self.clear_button,
+            self.transfer_student_button, self.transfer_all_button,
+            self.transfer_import_button,
         )
         for button in action_buttons:
             button.setMinimumHeight(38)
@@ -147,11 +172,15 @@ class DataToolsView(QWidget):
             )
 
         layout.addWidget(import_panel)
+        layout.addWidget(transfer_panel)
         layout.addWidget(danger_panel)
         layout.addStretch()
         self.template_button.clicked.connect(self.template_requested)
         self.import_button.clicked.connect(self.import_requested)
         self.clear_button.clicked.connect(self.clear_requested)
+        self.transfer_student_button.clicked.connect(self.transfer_student_requested)
+        self.transfer_all_button.clicked.connect(self.transfer_all_requested)
+        self.transfer_import_button.clicked.connect(self.transfer_import_requested)
         self.category_order_button.clicked.connect(self.category_order_requested)
         self.report_logo_button.clicked.connect(self.report_logo_requested)
         self.report_logo_remove_button.clicked.connect(self.report_logo_remove_requested)

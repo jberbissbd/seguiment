@@ -122,3 +122,10 @@ L'aplicació es pot executar amb `tutopy` o `python -m tutopy.main`.
 
 El procés de construcció i publicació està documentat a
 [docs/PACKAGING.md](docs/PACKAGING.md).
+
+Els criteris de complexitat, transaccions, SQLite, coalescència d'esdeveniments
+i mantenibilitat es documenten a
+[docs/ENGINEERING.md](docs/ENGINEERING.md).
+
+El format d'intercanvi entre instàncies i les seves garanties es descriu a
+[docs/TRANSFER.md](docs/TRANSFER.md).
