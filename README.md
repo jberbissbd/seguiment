@@ -126,3 +126,6 @@ El procés de construcció i publicació està documentat a
 Els criteris de complexitat, transaccions, SQLite, coalescència d'esdeveniments
 i mantenibilitat es documenten a
 [docs/ENGINEERING.md](docs/ENGINEERING.md).
+
+El format d'intercanvi entre instàncies i les seves garanties es descriu a
+[docs/TRANSFER.md](docs/TRANSFER.md).

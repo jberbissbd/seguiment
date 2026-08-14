@@ -17,6 +17,7 @@ from tutopy.services.open_document_report_service import OpenDocumentReportServi
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.directories import get_app_data_dir
 from tutopy.services.statistics_service import StatisticsService
+from tutopy.services.transfer_service import TransferService
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +39,7 @@ class ServiceContainer:
     open_document_reports: OpenDocumentReportService
     student_exports: StudentExportService
     statistics: StatisticsService
+    transfers: TransferService
 
 
 def create_services(database: Database) -> ServiceContainer:
@@ -109,5 +111,11 @@ def create_services(database: Database) -> ServiceContainer:
         ),
         statistics=StatisticsService(
             database.statistics, database.academic_courses, database.categories,
+        ),
+        transfers=TransferService(
+            database.students, database.notes, database.categories,
+            database.academic_courses, database.contacts, database.annotations,
+            database.documents, database.student_group_history, documents,
+            database.transaction,
         ),
     )

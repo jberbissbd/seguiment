@@ -99,6 +99,7 @@ def create_controllers(
         window,
         services.bulk_import,
         services.data_management,
+        services.transfers,
         on_changed=refresh_after_data_change,
     )
     statistics_controller = StatisticsController(

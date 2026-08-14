@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
+from PySide6.QtWidgets import QDialog, QFileDialog, QInputDialog, QMessageBox
 
 from tutopy.controllers.data_management_controller import DataManagementController
 from tutopy.models.bulk_import import ClearDataResult, ImportIssue, ImportResult
@@ -168,3 +168,85 @@ def test_esborrat_cancel_lacio_error_i_exit(controller_env, monkeypatch):
     assert changed == [True]
     assert "S’han eliminat totes les dades" in messages[0]
     assert "fitxer.pdf: permís denegat" in messages[0]
+
+
+def test_transferencia_exporta_i_importa_paquets(
+    controller_env, monkeypatch, tmp_path
+):
+    window, _, _, controller, changed, messages = controller_env
+
+    class TransferStub:
+        def __init__(self):
+            self.exported = None
+            self.executed = None
+
+        def export_all(self, filename, password):
+            self.exported = (filename, password)
+            return filename
+
+        def analyze(self, filename, password):
+            return SimpleNamespace(source=filename, conflicts=())
+
+        def execute(self, preview, decisions=(), password=""):
+            self.executed = (preview, decisions, password)
+            return SimpleNamespace(
+                created=2, replaced=0, skipped=0,
+                imported_as_new=0, documents=1,
+            )
+
+    transfer = TransferStub()
+    controller.transfer_service = transfer
+    destination = str(tmp_path / "tots.tutopy")
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName", lambda *args: (destination, "")
+    )
+    passwords = iter((("contrasenya", True), ("contrasenya", True)))
+    monkeypatch.setattr(QInputDialog, "getText", lambda *args: next(passwords))
+    controller.export_all_students()
+    assert transfer.exported == (destination, "contrasenya")
+
+    monkeypatch.setattr(
+        QFileDialog, "getOpenFileName", lambda *args: (destination, "")
+    )
+    monkeypatch.setattr(
+        QInputDialog, "getText", lambda *args: ("contrasenya", True)
+    )
+    controller.import_transfer()
+    assert transfer.executed[1:] == ((), "contrasenya")
+    assert changed == [True]
+    assert "Alumnes creats: 2" in messages[0]
+
+
+def test_transferencia_individual_exigeix_seleccio(controller_env):
+    window, _, _, controller, _, _ = controller_env
+    controller.transfer_service = object()
+
+    controller.export_selected_student()
+
+    assert window.errors == ["Cal seleccionar un alumne per exportar-lo."]
+
+
+def test_transferencia_valida_confirmacio_i_mostra_motiu_error(
+    controller_env, monkeypatch, tmp_path
+):
+    window, _, _, controller, _, _ = controller_env
+
+    class TransferStub:
+        def export_all(self, filename, password):
+            raise OSError(13, "Permís denegat")
+
+    controller.transfer_service = TransferStub()
+    destination = str(tmp_path / "tots.tutopy")
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName", lambda *args: (destination, "")
+    )
+    passwords = iter((("contrasenya", True), ("diferent", True)))
+    monkeypatch.setattr(QInputDialog, "getText", lambda *args: next(passwords))
+    controller.export_all_students()
+    assert window.errors == ["Les contrasenyes no coincideixen."]
+
+    window.errors.clear()
+    passwords = iter((("contrasenya", True), ("contrasenya", True)))
+    monkeypatch.setattr(QInputDialog, "getText", lambda *args: next(passwords))
+    controller.export_all_students()
+    assert "Permís denegat" in window.errors[0]

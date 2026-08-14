@@ -42,6 +42,19 @@ class StudentDAO:
             group_name=data.group_name,
         )
 
+    def create_with_uuid(self, data: StudentNew, student_uuid: str) -> Student:
+        """Crea un alumne conservant una identitat portable validada."""
+        cur = self.conn.execute(
+            "INSERT INTO students (uuid, name, surnames, group_name) "
+            "VALUES (?, ?, ?, ?)",
+            (student_uuid, data.name, data.surnames, data.group_name),
+        )
+        self.conn.commit()
+        return Student(
+            id=cur.lastrowid, uuid=student_uuid, name=data.name,
+            surnames=data.surnames, group_name=data.group_name,
+        )
+
     def update(self, student: Student):
         self.conn.execute(
             "UPDATE students SET name = ?, surnames = ?, group_name = ? WHERE id = ?",
