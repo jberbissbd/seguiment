@@ -11,6 +11,9 @@ from tutopy.services.exceptions import DomainError
 from tutopy.ui.dialogs.clear_data_dialog import ClearDataDialog
 from tutopy.ui.dialogs.import_conflicts_dialog import ImportConflictsDialog
 from tutopy.ui.dialogs.transfer_conflicts_dialog import TransferConflictsDialog
+from tutopy.ui.dialogs.transfer_student_selection_dialog import (
+    TransferStudentSelectionDialog,
+)
 from tutopy.ui.main_window import MainWindow
 
 
@@ -20,18 +23,22 @@ LOGGER = logging.getLogger(__name__)
 class DataManagementController:
     def __init__(self, window: MainWindow, importer: BulkImportService,
                  data_service: DataManagementService, transfer_service=None,
+                 student_service=None,
                  on_changed=None,
                  conflict_dialog=ImportConflictsDialog,
                  clear_dialog=ClearDataDialog,
-                 transfer_conflict_dialog=TransferConflictsDialog):
+                 transfer_conflict_dialog=TransferConflictsDialog,
+                 transfer_selection_dialog=TransferStudentSelectionDialog):
         self.window = window
         self.importer = importer
         self.data_service = data_service
         self.transfer_service = transfer_service
+        self.student_service = student_service
         self.on_changed = on_changed or (lambda: None)
         self.conflict_dialog = conflict_dialog
         self.clear_dialog = clear_dialog
         self.transfer_conflict_dialog = transfer_conflict_dialog
+        self.transfer_selection_dialog = transfer_selection_dialog
         view = window.data_tools
         view.template_requested.connect(self.export_template)
         view.import_requested.connect(self.import_spreadsheet)
@@ -42,15 +49,19 @@ class DataManagementController:
 
     def export_selected_student(self) -> None:
         """Exporta l'agregat de l'alumne seleccionat a un paquet portable."""
-        student_id = self.window.student_list.current_student_id()
-        if student_id is None:
-            self.window.show_error("Cal seleccionar un alumne per exportar-lo.")
+        students = self.student_service.get_all() if self.student_service else []
+        if not students:
+            self.window.show_error("No hi ha alumnes disponibles per exportar.")
             return
+        dialog = self.transfer_selection_dialog(students, self.window)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        student_ids = dialog.student_ids()
         self._export_transfer(
-            lambda filename, password: self.transfer_service.export_student(
-                student_id, filename, password
+            lambda filename, password: self.transfer_service.export_students(
+                student_ids, filename, password
             ),
-            "alumne.tutopy",
+            "alumnes-seleccionats.tutopy",
         )
 
     def export_all_students(self) -> None:

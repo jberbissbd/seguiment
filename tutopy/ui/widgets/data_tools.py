@@ -51,7 +51,7 @@ class DataToolsView(QWidget):
             "documents, o importa un paquet .tutopy d’una altra instància."
         ))
         transfer_actions = QHBoxLayout()
-        self.transfer_student_button = QPushButton("Exportar alumne seleccionat")
+        self.transfer_student_button = QPushButton("Exportar seleccionats")
         self.transfer_all_button = QPushButton("Exportar tots els alumnes")
         self.transfer_import_button = QPushButton("Importar paquet Tutopy")
         self.transfer_student_button.setObjectName("secondaryButton")

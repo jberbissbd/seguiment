@@ -22,6 +22,17 @@ def test_sidebar_emet_la_seccio_seleccionada(qtbot):
     assert sidebar.buttons["configuration"].isChecked()
 
 
+def test_sidebar_assigna_icones_diferents_a_estadistiques_i_configuracio(qtbot):
+    sidebar = Sidebar()
+    qtbot.addWidget(sidebar)
+
+    statistics_icon = sidebar.buttons["statistics"].icon()
+    configuration_icon = sidebar.buttons["configuration"].icon()
+    assert not statistics_icon.isNull()
+    assert not configuration_icon.isNull()
+    assert Sidebar.SECTIONS[1][2] != Sidebar.SECTIONS[2][2]
+
+
 def test_student_list_preserva_ids_dels_homonims(qtbot):
     database = Database(":memory:").connect()
     try:

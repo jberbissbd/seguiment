@@ -100,6 +100,7 @@ def create_controllers(
         services.bulk_import,
         services.data_management,
         services.transfers,
+        services.students,
         on_changed=refresh_after_data_change,
     )
     statistics_controller = StatisticsController(

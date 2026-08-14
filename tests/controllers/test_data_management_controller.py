@@ -223,7 +223,50 @@ def test_transferencia_individual_exigeix_seleccio(controller_env):
 
     controller.export_selected_student()
 
-    assert window.errors == ["Cal seleccionar un alumne per exportar-lo."]
+    assert window.errors == ["No hi ha alumnes disponibles per exportar."]
+
+
+def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
+    controller_env, monkeypatch, tmp_path
+):
+    window, _, _, controller, _, _ = controller_env
+
+    class TransferStub:
+        exported = None
+
+        def export_students(self, student_ids, filename, password):
+            self.exported = (student_ids, filename, password)
+            return filename
+
+    transfer = TransferStub()
+    controller.transfer_service = transfer
+    students = (
+        SimpleNamespace(id=11, full_name="Anna Serra", group_name="3r A"),
+        SimpleNamespace(id=22, full_name="Biel Puig", group_name="3r B"),
+    )
+    controller.student_service = SimpleNamespace(get_all=lambda: students)
+
+    class AcceptedDialog:
+        def __init__(self, received, parent):
+            assert received == students
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+        def student_ids(self):
+            return [22]
+
+    controller.transfer_selection_dialog = AcceptedDialog
+    destination = str(tmp_path / "seleccio.tutopy")
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName", lambda *args: (destination, "")
+    )
+    passwords = iter((("contrasenya", True), ("contrasenya", True)))
+    monkeypatch.setattr(QInputDialog, "getText", lambda *args: next(passwords))
+
+    controller.export_selected_student()
+
+    assert transfer.exported == ([22], destination, "contrasenya")
 
 
 def test_transferencia_valida_confirmacio_i_mostra_motiu_error(
