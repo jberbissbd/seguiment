@@ -242,6 +242,8 @@ class Database:
                 ON student_documents(student_id);
             CREATE INDEX IF NOT EXISTS idx_group_history_student
                 ON student_group_history(student_id);
+            CREATE INDEX IF NOT EXISTS idx_group_history_course
+                ON student_group_history(academic_course_id);
             CREATE INDEX IF NOT EXISTS idx_term_config_course_group
                 ON term_configurations(academic_course_id, group_name);
             CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_name);

@@ -8,20 +8,24 @@ class NoteDAO:
 
     def get_by_student(self, student_id: int) -> list[Note]:
         rows = self.conn.execute(
-            "SELECT * FROM notes WHERE student_id = ? ORDER BY date DESC, id DESC",
+            "SELECT id, student_id, category_id, date, course_id, content "
+            "FROM notes WHERE student_id = ? ORDER BY date DESC, id DESC",
             (student_id,),
         ).fetchall()
         return [Note(**row) for row in rows]
 
     def get_by_id(self, id: int) -> Optional[Note]:
         row = self.conn.execute(
-            "SELECT * FROM notes WHERE id = ?", (id,)
+            "SELECT id, student_id, category_id, date, course_id, content "
+            "FROM notes WHERE id = ?",
+            (id,),
         ).fetchone()
         return Note(**row) if row else None
 
     def get_all(self) -> list[Note]:
         rows = self.conn.execute(
-            "SELECT * FROM notes ORDER BY date DESC, id DESC"
+            "SELECT id, student_id, category_id, date, course_id, content "
+            "FROM notes ORDER BY date DESC, id DESC"
         ).fetchall()
         return [Note(**row) for row in rows]
 

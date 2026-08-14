@@ -132,8 +132,9 @@ def test_error_durant_execucio_desfa_tota_la_importacio(db, tmp_path):
 
     services.students.create = failing_create
     try:
-        import pytest
-        with pytest.raises(Exception, match="Alumnes — fila 3: error simulat"):
+        # Els defectes inesperats no es converteixen en errors de domini, però
+        # la transacció exterior continua garantint el rollback complet.
+        with pytest.raises(RuntimeError, match="error simulat"):
             services.bulk_import.execute(preview)
     finally:
         services.students.create = original_create

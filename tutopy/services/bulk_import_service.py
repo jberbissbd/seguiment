@@ -16,7 +16,7 @@ from tutopy.models.bulk_import import (
 )
 from tutopy.models.messaging import CategoryNew, Student, StudentNew
 from tutopy.services.category_service import CategoryService
-from tutopy.services.exceptions import ValidationError
+from tutopy.services.exceptions import DomainError, ValidationError
 from tutopy.services.student_service import StudentService
 
 
@@ -77,6 +77,9 @@ class BulkImportService:
                 self._load_ods(path) if path.suffix.lower() == ".ods"
                 else load_workbook(path, read_only=True, data_only=False)
             )
+        # openpyxl i odfpy no exposen una jerarquia comuna d'errors de format.
+        # Aquesta és una frontera d'entrada: qualsevol fallada del parser es
+        # converteix en un error de domini sense continuar amb dades parcials.
         except Exception as error:
             raise ValidationError(
                 "No s’ha pogut obrir el fitxer com a full de càlcul XLSX o ODS."
@@ -161,7 +164,7 @@ class BulkImportService:
                 else:
                     self.students.create(StudentNew(row.name, row.surnames, row.group_name))
                     created += 1
-            except Exception as error:
+            except (DomainError, ValueError, OSError) as error:
                 raise ValidationError(
                     f"{self.STUDENTS_SHEET} — fila {row.row}: {error}"
                 ) from error
@@ -191,7 +194,7 @@ class BulkImportService:
                 category = self.categories.create(CategoryNew(row.name))
                 existing[key] = category
                 created += 1
-            except Exception as error:
+            except (DomainError, ValueError, OSError) as error:
                 raise ValidationError(
                     f"{self.CATEGORIES_SHEET} — fila {row.row}: {error}"
                 ) from error

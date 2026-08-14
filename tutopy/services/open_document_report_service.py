@@ -16,6 +16,7 @@ from reportlab.platypus import (
 
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
+from tutopy.services.utils import sanitize_xml_text
 
 
 class OpenDocumentReportService:
@@ -200,9 +201,5 @@ class OpenDocumentReportService:
 
     @staticmethod
     def _safe(value):
-        value = "" if value is None else str(value)
-        return "".join(character for character in value if (
-            character in "\t\n\r" or 0x20 <= ord(character) <= 0xD7FF
-            or 0xE000 <= ord(character) <= 0xFFFD
-            or 0x10000 <= ord(character) <= 0x10FFFF
-        ))
+        """Manté l'API interna històrica delegant al sanejador compartit."""
+        return sanitize_xml_text(value)

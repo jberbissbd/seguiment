@@ -64,6 +64,8 @@ class DocumentService:
                 file_path=str(destination),
                 date=date,
             ))
+        # La neteja s'ha d'executar davant qualsevol fallada posterior a la
+        # còpia (inclòs un defecte inesperat); l'excepció original es conserva.
         except Exception:
             destination.unlink(missing_ok=True)
             raise

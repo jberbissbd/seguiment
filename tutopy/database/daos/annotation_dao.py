@@ -8,14 +8,16 @@ class AnnotationDAO:
 
     def get_by_student(self, student_id: int) -> list[StudentAnnotation]:
         rows = self.conn.execute(
-            "SELECT * FROM student_annotations WHERE student_id = ? ORDER BY id",
+            "SELECT id, student_id, content FROM student_annotations "
+            "WHERE student_id = ? ORDER BY id",
             (student_id,),
         ).fetchall()
         return [StudentAnnotation(**row) for row in rows]
 
     def get_by_id(self, annotation_id: int) -> Optional[StudentAnnotation]:
         row = self.conn.execute(
-            "SELECT * FROM student_annotations WHERE id = ?", (annotation_id,)
+            "SELECT id, student_id, content FROM student_annotations WHERE id = ?",
+            (annotation_id,),
         ).fetchone()
         return StudentAnnotation(**row) if row else None
 

@@ -710,3 +710,20 @@ class TestEdgeCases:
         duplicate = AcademicCourseNew("2025-2026")
         with pytest.raises(sqlite3.IntegrityError):
             db.academic_courses.create(duplicate)
+
+
+def test_transaccio_exterior_agrupa_commits_dels_daos(db):
+    """Una unitat de negoci massiva genera un únic COMMIT físic."""
+    statements = []
+    db.conn._connection.set_trace_callback(statements.append)
+
+    with db.transaction():
+        db.categories.create(CategoryNew("Acadèmic"))
+        db.categories.create(CategoryNew("Família"))
+        db.categories.create(CategoryNew("Orientació"))
+
+    transaction_statements = [
+        statement.strip().upper() for statement in statements
+        if statement.strip().upper() in {"BEGIN", "COMMIT"}
+    ]
+    assert transaction_statements == ["BEGIN", "COMMIT"]

@@ -15,6 +15,7 @@ from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.report_configuration_service import ReportConfigurationService
 from tutopy.services.validation_service import ValidationService
+from tutopy.services.utils import sanitize_xml_text
 
 
 class WordReportService:
@@ -190,10 +191,4 @@ class WordReportService:
     @staticmethod
     def _safe_text(value) -> str:
         """Elimina els controls que XML no admet, conservant salts i tabuladors."""
-        text = "" if value is None else str(value)
-        return "".join(character for character in text if (
-            character in "\t\n\r"
-            or 0x20 <= ord(character) <= 0xD7FF
-            or 0xE000 <= ord(character) <= 0xFFFD
-            or 0x10000 <= ord(character) <= 0x10FFFF
-        ))
+        return sanitize_xml_text(value)

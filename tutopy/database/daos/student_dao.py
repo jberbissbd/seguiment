@@ -50,7 +50,7 @@ class StudentDAO:
         self.conn.commit()
 
     def delete(self, id: int):
-        self.conn.execute("DELETE FROM notes WHERE student_id = ?", (id,))
+        """Elimina l'alumne; les entitats dependents cauen per claus foranes."""
         self.conn.execute("DELETE FROM students WHERE id = ?", (id,))
         self.conn.commit()
 

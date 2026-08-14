@@ -180,6 +180,11 @@ def test_note_controller_aplica_filtres_de_la_vista(qtbot, tmp_path):
         )
         controller.view.content_filter.setText("notable")
 
+        qtbot.waitUntil(
+            lambda: controller.view.table.rowCount() == 1,
+            timeout=1_000,
+        )
+
         assert controller.view.table.rowCount() == 1
         assert controller.view.table.columnCount() == 3
         assert controller.view.table.item(0, 2).text() == "Progrés notable"

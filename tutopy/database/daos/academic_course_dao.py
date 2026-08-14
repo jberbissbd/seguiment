@@ -8,19 +8,19 @@ class AcademicCourseDAO:
 
     def get_by_id(self, id_course: int) -> Optional[AcademicCourse]:
         row = self.conn.execute(
-            "SELECT * FROM academic_courses WHERE id = ?", (id_course,)
+            "SELECT id, course FROM academic_courses WHERE id = ?", (id_course,)
         ).fetchone()
         return AcademicCourse(**row) if row else None
 
     def get_all(self) -> list[AcademicCourse]:
         rows = self.conn.execute(
-            "SELECT * FROM academic_courses ORDER BY course DESC"
+            "SELECT id, course FROM academic_courses ORDER BY course DESC"
         ).fetchall()
         return [AcademicCourse(**row) for row in rows]
 
     def get_by_course(self, course: str) -> Optional[AcademicCourse]:
         row = self.conn.execute(
-            "SELECT * FROM academic_courses WHERE course = ?", (course,)
+            "SELECT id, course FROM academic_courses WHERE course = ?", (course,)
         ).fetchone()
         return AcademicCourse(**row) if row else None
 
