@@ -6,6 +6,7 @@ from tutopy.models.statistics import (
 )
 from tutopy.ui.main_window import MainWindow
 from tutopy.ui.widgets.statistics_view import StatisticsView
+from tutopy.ui.widgets.statistics_chart import BarChart
 
 
 def test_vista_exposa_filtres_i_actualitzacio_explicita(qtbot):
@@ -79,3 +80,32 @@ def test_evolucio_mensual_guanya_amplada_en_lloc_de_comprimir_se(qtbot):
     view.month_chart.set_values(values)
 
     assert view.month_chart.minimumWidth() >= len(values) * 105
+
+
+def test_grafic_renderitza_estat_buit_i_limits_de_valors(qtbot):
+    chart = BarChart(show_latest=True, max_items=2)
+    qtbot.addWidget(chart)
+    chart.resize(420, 240)
+    chart.show()
+    chart.set_values(())
+    qtbot.waitExposed(chart)
+    empty = chart.grab()
+
+    chart.set_values((
+        StatisticValue("Gener", 0),
+        StatisticValue("Febrer amb una etiqueta molt llarga", 2),
+        StatisticValue("Març", 4),
+    ))
+    rendered = chart.grab()
+
+    assert not empty.isNull()
+    assert not rendered.isNull()
+    assert chart.accessibleDescription().startswith("Gener: 0")
+
+
+def test_grafic_sense_limit_mostra_tots_els_valors(qtbot):
+    chart = BarChart(max_items=None)
+    qtbot.addWidget(chart)
+    chart.set_values(tuple(StatisticValue(str(index), index) for index in range(5)))
+
+    assert chart.minimumWidth() >= 5 * 105

@@ -5,6 +5,7 @@ from tutopy.application import create_services
 from tutopy.controllers.note_controller import NoteController
 from tutopy.database.database import Database
 from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew
+from tutopy.services.exceptions import ValidationError
 from tutopy.ui.dialogs.note_dialog import NoteDialog
 from tutopy.ui.main_window import MainWindow
 from tutopy.ui.tabs.notes_tab import NotesTab
@@ -21,6 +22,11 @@ class AcceptedNoteDialog:
 
     def values(self):
         return dict(self.values_to_return)
+
+
+class RejectedNoteDialog(AcceptedNoteDialog):
+    def exec(self):
+        return QDialog.DialogCode.Rejected
 
 
 def build_note_controller(qtbot, tmp_path, confirm_delete=lambda: True):
@@ -178,5 +184,63 @@ def test_note_controller_aplica_filtres_de_la_vista(qtbot, tmp_path):
         assert controller.view.table.columnCount() == 3
         assert controller.view.table.item(0, 2).text() == "Progrés notable"
         assert errors == []
+    finally:
+        database.close()
+
+
+def test_note_controller_valida_context_categoria_i_cancel_lacions(
+    qtbot, tmp_path
+):
+    database, services, student, category, _window, controller, errors = (
+        build_note_controller(qtbot, tmp_path, confirm_delete=lambda: False)
+    )
+    try:
+        controller.current_student_id = None
+        controller.create()
+        assert "seleccionar un alumne" in errors.pop()
+
+        controller.current_student_id = student.id
+        services.categories.category_dao.delete(category.id)
+        controller.create()
+        assert "crear una categoria" in errors.pop()
+
+        replacement = services.categories.create(CategoryNew("Acadèmic"))
+        controller.dialog_factory = RejectedNoteDialog
+        controller.create()
+        assert services.notes.get_all() == []
+
+        note = services.notes.create(NoteNew(
+            student.id, replacement.id, "2026-01-15", 0, "Nota"
+        ))
+        controller.edit(note.id)
+        controller.delete(note.id)
+        assert services.notes.get_by_id(note.id) is not None
+    finally:
+        database.close()
+
+
+def test_note_controller_mostra_errors_de_servei(qtbot, tmp_path):
+    database, services, student, category, _window, controller, errors = (
+        build_note_controller(qtbot, tmp_path)
+    )
+    try:
+        controller.note_service.get_records = lambda *_args: (
+            (_ for _ in ()).throw(ValidationError("filtre incorrecte"))
+        )
+        controller.refresh()
+
+        controller.note_service.get_by_id = lambda _id: (
+            (_ for _ in ()).throw(ValidationError("nota inexistent"))
+        )
+        controller.edit(999)
+
+        controller.note_service.delete = lambda _id: (
+            (_ for _ in ()).throw(ValidationError("no es pot eliminar"))
+        )
+        controller.delete(999)
+
+        assert errors == [
+            "filtre incorrecte", "nota inexistent", "no es pot eliminar",
+        ]
     finally:
         database.close()

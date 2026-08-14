@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 from tutopy.application import create_services
 from tutopy.controllers.report_controller import ReportController
 from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew
+from tutopy.services.exceptions import ValidationError
 from tutopy.ui.main_window import MainWindow
 from tutopy.database.database import Database
 
@@ -178,6 +179,79 @@ def test_controlador_configura_i_elimina_logotip_global(
     assert services.report_configuration.get_header_image() is None
     assert not window.data_tools.report_logo_remove_button.isEnabled()
     assert errors == []
+
+
+def test_controlador_respecta_cancel_lacions_i_ids_inexistents(
+    db, qtbot, tmp_path, monkeypatch
+):
+    _services, student, _category, _course, _window, controller, _path, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+
+    class RejectedDialog:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    controller.term_dialog = RejectedDialog
+    controller.export_dialog = RejectedDialog
+    controller.batch_export_dialog = RejectedDialog
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("", ""))
+
+    controller.configure_report_logo()
+    controller.create_term_configuration()
+    controller.edit_term_configuration(999)
+    controller.configure_category_order()
+    controller.export_student(999)
+    controller.export_student(student.id)
+    controller.export_students()
+
+    assert errors == [
+        "No s’ha trobat la configuració de trimestres.",
+        "No s’ha trobat l’alumne.",
+    ]
+
+
+def test_controlador_mostra_errors_de_configuracio_i_exportacio(
+    db, qtbot, tmp_path, monkeypatch
+):
+    services, student, category, course, _window, controller, _path, errors = (
+        _controller(db, qtbot, tmp_path, monkeypatch)
+    )
+    values = {
+        "academic_course_id": course.id,
+        "group_name": "4t A",
+        "second_term_start": "2026-01-08",
+        "third_term_start": "2026-04-07",
+    }
+    monkeypatch.setattr(AcceptedTermDialog, "values_to_return", values)
+    services.report_configuration.save_term_configuration = lambda _data: (
+        (_ for _ in ()).throw(ValidationError("configuració incorrecta"))
+    )
+    controller.create_term_configuration()
+
+    controller.confirm_delete = lambda _name: False
+    controller.delete_term_configuration(1)
+
+    controller.confirm_delete = lambda _name: True
+    services.report_configuration.delete_term_configuration = lambda _id: (
+        (_ for _ in ()).throw(ValidationError("no es pot eliminar"))
+    )
+    controller.delete_term_configuration(1)
+
+    monkeypatch.setattr(AcceptedExportDialog, "order", [category.id])
+    services.report_configuration.set_category_order = lambda _order: (
+        (_ for _ in ()).throw(ValidationError("ordre incorrecte"))
+    )
+    controller.configure_category_order()
+    controller.export_student(student.id)
+
+    assert errors == [
+        "configuració incorrecta", "no es pot eliminar", "ordre incorrecte",
+        "ordre incorrecte",
+    ]
 
 
 def test_controlador_exporta_diversos_alumnes(db, qtbot, tmp_path, monkeypatch):

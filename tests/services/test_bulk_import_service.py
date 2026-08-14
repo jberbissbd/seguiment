@@ -138,3 +138,64 @@ def test_error_durant_execucio_desfa_tota_la_importacio(db, tmp_path):
     finally:
         services.students.create = original_create
     assert services.students.get_all() == []
+
+
+def test_analisi_rebutja_fitxer_inexistent_i_massa_gran(db, tmp_path):
+    service = create_services(db).bulk_import
+    with pytest.raises(ValidationError, match="no existeix"):
+        service.analyze(tmp_path / "absent.xlsx")
+
+    path = tmp_path / "gran.xlsx"
+    _filled_template(service, path)
+    service.MAX_FILE_SIZE = 1
+    with pytest.raises(ValidationError, match="20 MB"):
+        service.analyze(path)
+
+
+def test_analisi_detecta_fulls_capcaleres_formules_i_tipus_invalids(db, tmp_path):
+    service = create_services(db).bulk_import
+    path = tmp_path / "dades.xlsx"
+    service.create_template(path)
+    workbook = load_workbook(path)
+    del workbook["Categories"]
+    students = workbook["Alumnes"]
+    students["A1"] = "Persona"
+    students.append(["=A1", "Serra", True])
+    workbook.save(path)
+
+    preview = service.analyze(path)
+    messages = [str(issue) for issue in preview.issues]
+
+    assert any("capçaleres" in message for message in messages)
+    assert any("falta el full" in message for message in messages)
+
+
+def test_execucio_exigeix_decisions_i_valida_alumne_objectiu(db, tmp_path):
+    services = create_services(db)
+    existing = services.students.create(StudentNew("Júlia", "Martínez", "2n A"))
+    path = tmp_path / "dades.xlsx"
+    _filled_template(services.bulk_import, path,
+                     students=[("Julia", "Martines", "2n B")])
+    preview = services.bulk_import.analyze(path)
+
+    with pytest.raises(ValidationError, match="Falten decisions"):
+        services.bulk_import.execute(preview)
+    with pytest.raises(ValidationError, match="coincidència vàlida"):
+        services.bulk_import.execute(preview, (
+            ImportDecision(2, ImportAction.UPDATE, existing.id + 100),
+        ))
+
+
+def test_execucio_permet_ometre_un_conflicte(db, tmp_path):
+    services = create_services(db)
+    services.students.create(StudentNew("Júlia", "Martínez", "2n A"))
+    path = tmp_path / "dades.xlsx"
+    _filled_template(services.bulk_import, path,
+                     students=[("Julia", "Martines", "2n B")])
+    preview = services.bulk_import.analyze(path)
+
+    result = services.bulk_import.execute(preview, (
+        ImportDecision(2, ImportAction.SKIP),
+    ))
+
+    assert result.students_skipped == 1
