@@ -19,7 +19,7 @@ from tutopy.services.directories import get_app_data_dir
 from tutopy.services.statistics_service import StatisticsService
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ServiceContainer:
     """Serveis disponibles per als controladors de l'aplicació."""
 
@@ -46,19 +46,20 @@ def create_services(database: Database) -> ServiceContainer:
         raise RuntimeError("La base de dades ha d'estar connectada.")
 
     students = StudentService(
-            database.students,
-            database.contacts,
-            database.documents,
-            database.student_group_history,
-            database.academic_courses,
-            database.transaction,
-        )
+        database.students,
+        database.contacts,
+        database.documents,
+        database.student_group_history,
+        database.academic_courses,
+        database.transaction,
+    )
     categories = CategoryService(database.categories)
-    storage_dir = get_app_data_dir() / "documents"
+    app_data_dir = get_app_data_dir()
+    storage_dir = app_data_dir / "documents"
     report_configuration = ReportConfigurationService(
         database.report_configuration, database.academic_courses,
         database.categories, database.transaction,
-        storage_dir=get_app_data_dir() / "reporting",
+        storage_dir=app_data_dir / "reporting",
     )
     spreadsheet_reports = SpreadsheetReportService(
         database.students, database.notes, database.academic_courses,
