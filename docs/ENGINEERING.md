@@ -72,6 +72,12 @@ Es capturen excepcions concretes a les operacions de negoci. Només es permet un
 captura genèrica en una frontera externa amb una justificació local, com parsers
 de tercers sense jerarquia comuna o neteja que torna a llançar l'excepció original.
 
+Els noms i cognoms passen sempre per `ValidationService.person_name`: s'eliminen
+els espais exteriors i les seqüències d'espais, tabulacions o salts es redueixen
+a un sol espai. Es conserven capitalització, accents, apòstrofs i guionets. La
+representació sense accents i amb `casefold` només s'utilitza per comparar
+conflictes d'importació i mai no se substitueix pel valor desat.
+
 El codi públic nou ha d'incloure anotacions de tipus i docstrings segons PEP 257:
 resum en imperatiu, línia en blanc abans dels detalls i contractes excepcionals
 quan no siguin evidents. Els comentaris expliquen el perquè, no repeteixen el codi.

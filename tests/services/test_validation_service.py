@@ -25,13 +25,15 @@ class TestValidationService:
     def test_validate_student_normalitza_text(self, category_dao, db):
         service = ValidationService(category_dao)
         student_data = StudentNew(
-            name="  Jordi  ", surnames="  Garcia López ", group_name=" 4t A "
+            name="  Àlex\t Maria  ",
+            surnames="  O'Connor\n  Puig-Soler ",
+            group_name=" 4t A ",
         )
 
         service.validate_student(student_data)
 
-        assert student_data.name == "Jordi"
-        assert student_data.surnames == "Garcia López"
+        assert student_data.name == "Àlex Maria"
+        assert student_data.surnames == "O'Connor Puig-Soler"
         assert student_data.group_name == "4t A"
 
     def test_validate_student_empty_name(self, category_dao, db):

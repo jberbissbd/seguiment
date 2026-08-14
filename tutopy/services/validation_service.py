@@ -15,10 +15,10 @@ class ValidationService:
 
     def validate_student(self, student: StudentNew) -> None:
         """Valida i normalitza les dades d'un alumne nou."""
-        student.name = self.required_text(
+        student.name = self.person_name(
             student.name, "El nom de l'alumne no pot estar buit i ha de ser text."
         )
-        student.surnames = self.required_text(
+        student.surnames = self.person_name(
             student.surnames, "Els cognoms no poden estar buits i han de ser text."
         )
         student.group_name = self.optional_text(student.group_name)
@@ -52,6 +52,17 @@ class ValidationService:
         if not isinstance(value, str) or not value.strip():
             raise ValidationError(message)
         return value.strip()
+
+    @staticmethod
+    def person_name(value: str, message: str) -> str:
+        """Normalitza espais d'un nom conservant-ne l'ortografia original.
+
+        Elimina espais exteriors i converteix qualsevol seqüència d'espais,
+        tabulacions o salts de línia en un únic espai. No altera majúscules,
+        accents, apòstrofs ni guionets.
+        """
+        value = ValidationService.required_text(value, message)
+        return " ".join(value.split())
 
     @staticmethod
     def optional_text(value: str, message: str = "El valor ha de ser text.") -> str:

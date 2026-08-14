@@ -18,6 +18,7 @@ from tutopy.models.messaging import CategoryNew, Student, StudentNew
 from tutopy.services.category_service import CategoryService
 from tutopy.services.exceptions import DomainError, ValidationError
 from tutopy.services.student_service import StudentService
+from tutopy.services.validation_service import ValidationService
 
 
 class BulkImportService:
@@ -256,7 +257,10 @@ class BulkImportService:
 
     @staticmethod
     def _normalize(value: str) -> str:
-        decomposed = unicodedata.normalize("NFKD", value.casefold())
+        normalized = ValidationService.person_name(
+            value, "El nom no pot estar buit."
+        )
+        decomposed = unicodedata.normalize("NFKD", normalized.casefold())
         return " ".join("".join(c for c in decomposed if not unicodedata.combining(c)).split())
 
     @staticmethod

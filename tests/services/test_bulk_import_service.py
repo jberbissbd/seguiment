@@ -70,6 +70,22 @@ def test_importa_alumnes_i_reutilitza_categories_exactes(db, tmp_path):
     assert services.students.get_all()[0].group_name == "1r A"
 
 
+def test_importacio_aplica_la_mateixa_normalitzacio_de_noms(db, tmp_path):
+    services = create_services(db)
+    path = tmp_path / "noms.xlsx"
+    _filled_template(
+        services.bulk_import,
+        path,
+        students=[("  Àlex\t Maria  ", " O'Connor\n Puig-Soler ", "4t A")],
+    )
+
+    services.bulk_import.execute(services.bulk_import.analyze(path))
+
+    student = services.students.get_all()[0]
+    assert student.name == "Àlex Maria"
+    assert student.surnames == "O'Connor Puig-Soler"
+
+
 def test_importa_alumnes_i_categories_des_d_ods(db, tmp_path):
     services = create_services(db)
     path = tmp_path / "dades.ods"
