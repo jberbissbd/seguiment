@@ -39,14 +39,12 @@ class AcademicCourseDAO:
         return self.create(AcademicCourseNew(course=course))
 
     def is_deletable(self, id_course: int) -> bool:
-        notes = self.conn.execute(
-            "SELECT COUNT(*) FROM notes WHERE course_id = ?", (id_course,)
-        ).fetchone()[0]
-        history = self.conn.execute(
-            "SELECT COUNT(*) FROM student_group_history WHERE academic_course_id = ?",
-            (id_course,),
-        ).fetchone()[0]
-        return notes == 0 and history == 0
+        return self.conn.execute(
+            "SELECT NOT EXISTS(SELECT 1 FROM notes WHERE course_id = ?) "
+            "AND NOT EXISTS(SELECT 1 FROM student_group_history "
+            "WHERE academic_course_id = ?)",
+            (id_course, id_course),
+        ).fetchone()[0] == 1
 
     def delete(self, id_course: int):
         self.conn.execute("DELETE FROM academic_courses WHERE id = ?", (id_course,))

@@ -67,12 +67,13 @@ class OpenDocumentReportService:
         grouped = defaultdict(list)
         for note in notes:
             grouped[note.course_id].append(note)
+        course_names = {course.id: course.course for course in self.courses.get_all()}
+        missing = set(grouped) - course_names.keys()
+        if missing:
+            raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
         result = []
         for course_id, course_notes in grouped.items():
-            course = self.courses.get_by_id(course_id)
-            if course is None:
-                raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
-            result.append((course.course, course_notes))
+            result.append((course_names[course_id], course_notes))
         return sorted(result, key=lambda item: item[0])
 
     def _save_odt(self, path, student, courses, categories):

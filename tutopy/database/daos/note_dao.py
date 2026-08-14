@@ -55,11 +55,12 @@ class NoteDAO:
 
     def exists(self, student_id: int, category_id: int, date: str, content: str) -> bool:
         row = self.conn.execute(
-            "SELECT COUNT(*) FROM notes "
-            "WHERE student_id = ? AND category_id = ? AND date = ? AND content = ?",
+            "SELECT 1 FROM notes "
+            "WHERE student_id = ? AND category_id = ? AND date = ? AND content = ? "
+            "LIMIT 1",
             (student_id, category_id, date, content),
         ).fetchone()
-        return row[0] > 0
+        return row is not None
 
     def get_records(self, filters: dict = None) -> list[NoteRecord]:
         """Retorna registres desnormalitzats aplicant filtres SQL opcionals."""

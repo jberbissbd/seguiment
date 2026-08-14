@@ -233,6 +233,8 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_notes_date ON notes(date);
             CREATE INDEX IF NOT EXISTS idx_notes_course_date ON notes(course_id, date);
             CREATE INDEX IF NOT EXISTS idx_notes_category_date ON notes(category_id, date);
+            CREATE INDEX IF NOT EXISTS idx_notes_duplicate_lookup
+                ON notes(student_id, category_id, date);
             CREATE INDEX IF NOT EXISTS idx_contacts_student ON contacts(student_id);
             CREATE INDEX IF NOT EXISTS idx_annotations_student
                 ON student_annotations(student_id);

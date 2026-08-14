@@ -88,9 +88,16 @@ class BulkImportService:
         self._read_students(workbook, student_rows, issues)
         self._read_categories(workbook, category_rows, issues)
         existing = self.students.get_all()
+        normalized_existing = tuple(
+            (student, self._normalize(student.full_name)) for student in existing
+        )
         conflicts = []
         for row in student_rows:
-            matches = tuple(student for student in existing if self._similar(row, student))
+            incoming = self._normalize(row.full_name)
+            matches = tuple(
+                student for student, current in normalized_existing
+                if self._similar_names(incoming, current)
+            )
             if matches:
                 conflicts.append(StudentConflict(row, matches))
         return ImportPreview(tuple(student_rows), tuple(category_rows),
@@ -257,7 +264,14 @@ class BulkImportService:
     def _similar(self, row: StudentImportRow, student: Student) -> bool:
         incoming = self._normalize(row.full_name)
         current = self._normalize(student.full_name)
-        return incoming == current or SequenceMatcher(None, incoming, current).ratio() >= self.similarity_threshold
+        return self._similar_names(incoming, current)
+
+    def _similar_names(self, incoming: str, current: str) -> bool:
+        return (
+            incoming == current
+            or SequenceMatcher(None, incoming, current).ratio()
+            >= self.similarity_threshold
+        )
 
 
 class _CellValue:
