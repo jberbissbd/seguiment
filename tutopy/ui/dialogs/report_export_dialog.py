@@ -2,6 +2,8 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QLabel,
     QListWidget, QListWidgetItem, QVBoxLayout,
 )
+
+from tutopy.ui.resources import set_dialog_button_icons
 from PySide6.QtCore import Qt
 
 
@@ -42,6 +44,7 @@ class ReportExportDialog(QDialog):
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
         buttons.button(QDialogButtonBox.StandardButton.Save).setText("Continuar")
+        set_dialog_button_icons(buttons)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

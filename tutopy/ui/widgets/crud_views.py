@@ -4,6 +4,8 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from tutopy.ui.resources import set_button_icon
+
 
 class CrudActions(QWidget):
     create_requested = Signal()
@@ -20,6 +22,9 @@ class CrudActions(QWidget):
         self.edit_button.setObjectName("secondaryButton")
         self.delete_button = QPushButton("Eliminar")
         self.delete_button.setObjectName("dangerButton")
+        set_button_icon(self.create_button, "add")
+        set_button_icon(self.edit_button, "edit")
+        set_button_icon(self.delete_button, "delete")
         self.edit_button.setEnabled(False)
         self.delete_button.setEnabled(False)
         self.create_button.clicked.connect(self.create_requested)

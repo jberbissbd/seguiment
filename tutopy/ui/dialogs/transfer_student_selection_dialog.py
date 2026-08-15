@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (
     QListWidgetItem, QPushButton, QVBoxLayout,
 )
 
+from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
+
 
 class TransferStudentSelectionDialog(QDialog):
     """Permet cercar i marcar un o diversos alumnes, mostrant-ne el grup."""
@@ -25,6 +27,8 @@ class TransferStudentSelectionDialog(QDialog):
         actions = QHBoxLayout()
         self.select_visible_button = QPushButton("Seleccionar visibles")
         self.clear_button = QPushButton("Desmarcar tots")
+        set_button_icon(self.select_visible_button, "select")
+        set_button_icon(self.clear_button, "deselect")
         self.selection_label = QLabel("0 alumnes seleccionats")
         actions.addWidget(self.select_visible_button)
         actions.addWidget(self.clear_button)
@@ -57,6 +61,7 @@ class TransferStudentSelectionDialog(QDialog):
         self.buttons.button(QDialogButtonBox.StandardButton.Save).setText(
             "Continuar"
         )
+        set_dialog_button_icons(self.buttons)
         self.buttons.accepted.connect(self._accept_valid)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)

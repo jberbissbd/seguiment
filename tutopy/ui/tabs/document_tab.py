@@ -1,6 +1,8 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QPushButton
 
+from tutopy.ui.resources import set_button_icon
+
 from tutopy.ui.widgets.crud_views import CrudTableView
 
 
@@ -11,8 +13,10 @@ class DocumentTab(CrudTableView):
     def __init__(self, parent=None):
         super().__init__(["Data", "Nom", "Descripció", "Fitxer"], "Nou document", parent)
         self.open_button = QPushButton("Obrir")
+        set_button_icon(self.open_button, "open")
         self.open_button.setObjectName("secondaryButton")
         self.export_button = QPushButton("Exportar…")
+        set_button_icon(self.export_button, "export")
         self.export_button.setObjectName("secondaryButton")
         self.actions.layout().insertWidget(1, self.open_button)
         self.actions.layout().insertWidget(2, self.export_button)

@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
+from tutopy.ui.resources import set_button_icon
+
 
 class DataToolsView(QWidget):
     template_requested = Signal()
@@ -38,6 +40,8 @@ class DataToolsView(QWidget):
         self.template_button = QPushButton("Descarregar plantilla XLSX")
         self.template_button.setObjectName("secondaryButton")
         self.import_button = QPushButton("Importar full de càlcul")
+        set_button_icon(self.template_button, "template")
+        set_button_icon(self.import_button, "import")
         self.import_button.setObjectName("primaryButton")
         import_layout.addWidget(self.template_button)
         import_layout.addWidget(self.import_button)
@@ -54,6 +58,9 @@ class DataToolsView(QWidget):
         self.transfer_student_button = QPushButton("Exportar seleccionats")
         self.transfer_all_button = QPushButton("Exportar tots els alumnes")
         self.transfer_import_button = QPushButton("Importar paquet Tutopy")
+        set_button_icon(self.transfer_student_button, "export")
+        set_button_icon(self.transfer_all_button, "export")
+        set_button_icon(self.transfer_import_button, "import")
         self.transfer_student_button.setObjectName("secondaryButton")
         self.transfer_all_button.setObjectName("secondaryButton")
         self.transfer_import_button.setObjectName("primaryButton")
@@ -79,6 +86,7 @@ class DataToolsView(QWidget):
             "Estableix l’ordre en què apareixen les categories als informes."
         ))
         self.category_order_button = QPushButton("Ordenar categories")
+        set_button_icon(self.category_order_button, "order")
         self.category_order_button.setObjectName("secondaryButton")
         category_layout.addWidget(self.category_order_button)
         report_layout.addWidget(category_panel)
@@ -96,6 +104,8 @@ class DataToolsView(QWidget):
         self.report_logo_button = QPushButton("Seleccionar logotip")
         self.report_logo_button.setObjectName("secondaryButton")
         self.report_logo_remove_button = QPushButton("Eliminar logotip")
+        set_button_icon(self.report_logo_button, "image")
+        set_button_icon(self.report_logo_remove_button, "delete")
         self.report_logo_remove_button.setObjectName("secondaryButton")
         self.report_logo_remove_button.setEnabled(False)
         logo_actions.addWidget(self.report_logo_label, 1)
@@ -117,6 +127,9 @@ class DataToolsView(QWidget):
         self.term_edit_button = QPushButton("Editar")
         self.term_edit_button.setObjectName("secondaryButton")
         self.term_delete_button = QPushButton("Eliminar")
+        set_button_icon(self.term_create_button, "add")
+        set_button_icon(self.term_edit_button, "edit")
+        set_button_icon(self.term_delete_button, "delete")
         self.term_delete_button.setObjectName("dangerButton")
         self.term_edit_button.setEnabled(False)
         self.term_delete_button.setEnabled(False)
@@ -154,6 +167,7 @@ class DataToolsView(QWidget):
             "Elimina definitivament alumnes, notes, categories, contactes, descriptors, documents i cursos."
         ))
         self.clear_button = QPushButton("Eliminar totes les dades")
+        set_button_icon(self.clear_button, "delete")
         self.clear_button.setObjectName("dangerButton")
         danger_layout.addWidget(self.clear_button)
 

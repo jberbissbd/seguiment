@@ -3,6 +3,8 @@ from PySide6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QVBoxLayout,
 )
 
+from tutopy.ui.resources import set_dialog_button_icons
+
 from tutopy.ui.widgets.date_input import DateInput
 
 
@@ -33,6 +35,7 @@ class TermConfigurationDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
+        set_dialog_button_icons(buttons)
         buttons.accepted.connect(self._accept_valid)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

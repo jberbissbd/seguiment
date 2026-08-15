@@ -1,5 +1,8 @@
+from PySide6.QtWidgets import QAbstractButton, QDialogButtonBox
+
+from tutopy.ui.dialogs.contact_dialog import ContactDialog
 from tutopy.ui.main_window import MainWindow
-from tutopy.ui.resources import application_icon, asset_path
+from tutopy.ui.resources import ACTION_ICONS, application_icon, asset_path
 from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
 
 
@@ -11,6 +14,7 @@ def test_recursos_vectorials_existeixen():
         "export.svg",
     ):
         assert asset_path(filename).is_file()
+    assert all(asset_path(filename).is_file() for filename in ACTION_ICONS.values())
 
 
 def test_pestanyes_tenen_icones(qtbot):
@@ -33,3 +37,25 @@ def test_seccions_laterals_tenen_icones(qtbot):
     qtbot.addWidget(window)
     assert all(not button.icon().isNull()
                for button in window.sidebar.buttons.values())
+
+
+def test_accions_de_la_finestra_principal_tenen_icones(qtbot):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    action_buttons = [
+        button for button in window.findChildren(QAbstractButton)
+        if button.text() and not button.isCheckable()
+    ]
+    assert action_buttons
+    assert all(not button.icon().isNull() for button in action_buttons)
+
+
+def test_botons_estandard_dels_dialegs_tenen_icones(qtbot):
+    dialog = ContactDialog()
+    qtbot.addWidget(dialog)
+    assert not dialog.buttons.button(
+        QDialogButtonBox.StandardButton.Save
+    ).icon().isNull()
+    assert not dialog.buttons.button(
+        QDialogButtonBox.StandardButton.Cancel
+    ).icon().isNull()

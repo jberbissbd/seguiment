@@ -4,6 +4,8 @@ from PySide6.QtWidgets import (
     QPushButton, QVBoxLayout, QWidget,
 )
 
+from tutopy.ui.resources import set_button_icon
+
 from tutopy.ui.widgets.avatar import avatar_stylesheet, initials
 from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
@@ -62,6 +64,7 @@ class StudentList(QFrame):
         title = QLabel("Alumnes")
         title.setObjectName("sectionTitle")
         self.create_button = QPushButton("Nou alumne")
+        set_button_icon(self.create_button, "add")
         self.create_button.setObjectName("primaryButton")
         self.create_button.clicked.connect(self.create_requested)
         header.addWidget(title)
@@ -70,6 +73,7 @@ class StudentList(QFrame):
         header_actions.setContentsMargins(0, 0, 0, 0)
         header_actions.setSpacing(6)
         self.batch_export_button = QPushButton("Exportar diversos…")
+        set_button_icon(self.batch_export_button, "export")
         self.batch_export_button.setObjectName("secondaryButton")
         self.batch_export_button.setEnabled(False)
         self.batch_export_button.clicked.connect(self.batch_export_requested)
@@ -86,8 +90,10 @@ class StudentList(QFrame):
 
         actions = QHBoxLayout()
         self.edit_button = QPushButton("Editar")
+        set_button_icon(self.edit_button, "edit")
         self.edit_button.setObjectName("secondaryButton")
         self.delete_button = QPushButton("Eliminar")
+        set_button_icon(self.delete_button, "delete")
         self.delete_button.setObjectName("dangerButton")
         self.edit_button.setEnabled(False)
         self.delete_button.setEnabled(False)

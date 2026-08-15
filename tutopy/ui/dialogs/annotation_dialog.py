@@ -1,5 +1,7 @@
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QPlainTextEdit, QVBoxLayout
 
+from tutopy.ui.resources import set_dialog_button_icons
+
 
 class AnnotationDialog(QDialog):
     def __init__(self, parent=None, annotation=None):
@@ -16,6 +18,7 @@ class AnnotationDialog(QDialog):
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
+        set_dialog_button_icons(self.buttons)
         self.buttons.accepted.connect(self._accept_valid)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
