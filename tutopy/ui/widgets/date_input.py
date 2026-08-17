@@ -4,6 +4,8 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
+from tutopy.ui.resources import set_button_icon
+
 
 class DateInput(QWidget):
     """Entrada de data per teclat amb un calendari emergent alternatiu."""
@@ -20,7 +22,7 @@ class DateInput(QWidget):
         self.editor.setPlaceholderText("DD/MM/AAAA")
         self.editor.setText((date or QDate.currentDate()).toString(self.DATE_FORMAT))
         self.calendar_button = QToolButton()
-        self.calendar_button.setText("📅")
+        set_button_icon(self.calendar_button, "calendar")
         self.calendar_button.setToolTip("Obrir el calendari")
         self.calendar_button.setObjectName("calendarButton")
         layout.addWidget(self.editor, 1)

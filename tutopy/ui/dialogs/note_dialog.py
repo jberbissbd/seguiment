@@ -4,6 +4,8 @@ from PySide6.QtWidgets import (
     QPlainTextEdit, QVBoxLayout,
 )
 
+from tutopy.ui.resources import set_dialog_button_icons
+
 from tutopy.ui.widgets.date_input import DateInput
 
 
@@ -47,6 +49,7 @@ class NoteDialog(QDialog):
         )
         self.buttons.button(QDialogButtonBox.StandardButton.Save).setText("Desar")
         self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
+        set_dialog_button_icons(self.buttons)
         self.buttons.accepted.connect(self._validate_and_accept)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)

@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout,
 )
 
+from tutopy.ui.resources import set_dialog_button_icons
+
 from tutopy.models.transfer import TransferAction, TransferDecision
 
 
@@ -48,6 +50,7 @@ class TransferConflictsDialog(QDialog):
             QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
         )
+        set_dialog_button_icons(buttons)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

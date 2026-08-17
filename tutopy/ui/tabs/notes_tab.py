@@ -4,6 +4,8 @@ from PySide6.QtWidgets import (
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from tutopy.ui.resources import set_button_icon
+
 from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
 
@@ -54,6 +56,10 @@ class NotesTab(QWidget):
         self.delete_button = QPushButton("Eliminar")
         self.delete_button.setObjectName("dangerButton")
         self.clear_button = QPushButton("Netejar filtres")
+        set_button_icon(self.create_button, "add")
+        set_button_icon(self.edit_button, "edit")
+        set_button_icon(self.delete_button, "delete")
+        set_button_icon(self.clear_button, "clear")
         self.edit_button.setEnabled(False)
         self.delete_button.setEnabled(False)
         actions.addWidget(self.create_button)

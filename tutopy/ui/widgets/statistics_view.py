@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
     QScrollArea, QVBoxLayout, QWidget,
 )
 
+from tutopy.ui.resources import set_button_icon
+
 from tutopy.ui.widgets.statistics_chart import BarChart
 
 
@@ -41,6 +43,7 @@ class StatisticsView(QWidget):
         self.date_from.setEnabled(False)
         self.date_to.setEnabled(False)
         self.refresh_button = QPushButton("Actualitzar")
+        set_button_icon(self.refresh_button, "refresh")
         self.refresh_button.setObjectName("primaryButton")
         self.refresh_button.setDefault(True)
         self.refresh_button.setToolTip("Aplica els filtres seleccionats")

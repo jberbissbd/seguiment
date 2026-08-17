@@ -2,6 +2,8 @@ from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QLabel, QLineEdit, QVBoxLayout,
 )
 
+from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
+
 
 class ClearDataDialog(QDialog):
     CONFIRMATION = "ELIMINAR"
@@ -24,6 +26,8 @@ class ClearDataDialog(QDialog):
         )
         self.ok_button = self.buttons.button(QDialogButtonBox.StandardButton.Ok)
         self.ok_button.setText("Eliminar definitivament")
+        set_dialog_button_icons(self.buttons)
+        set_button_icon(self.ok_button, "delete")
         self.ok_button.setEnabled(False)
         self.confirmation_input.textChanged.connect(
             lambda text: self.ok_button.setEnabled(text == self.CONFIRMATION)

@@ -3,6 +3,8 @@ from PySide6.QtWidgets import (
     QLineEdit, QToolButton, QVBoxLayout,
 )
 
+from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
+
 
 class StudentDialog(QDialog):
     """Recull les dades necessàries per crear o editar un alumne."""
@@ -27,7 +29,7 @@ class StudentDialog(QDialog):
         self.group_input.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.group_input.addItems(groups)
         self.group_selector_button = QToolButton()
-        self.group_selector_button.setText("▾")
+        set_button_icon(self.group_selector_button, "dropdown")
         self.group_selector_button.setObjectName("selectorButton")
         self.group_selector_button.setToolTip("Mostrar els grups existents")
         self.group_selector_button.setAccessibleName("Seleccionar un grup existent")
@@ -54,6 +56,7 @@ class StudentDialog(QDialog):
         )
         self.buttons.button(QDialogButtonBox.StandardButton.Save).setText("Desar")
         self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
+        set_dialog_button_icons(self.buttons)
         self.buttons.accepted.connect(self._validate_and_accept)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)

@@ -4,6 +4,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from tutopy.ui.resources import set_dialog_button_icons
+
 from tutopy.models.bulk_import import ImportAction, ImportDecision
 
 
@@ -52,6 +54,7 @@ class ImportConflictsDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
+        set_dialog_button_icons(buttons)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

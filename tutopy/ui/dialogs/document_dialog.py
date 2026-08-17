@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QVBoxLayout,
 )
+
+from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
 from tutopy.ui.widgets.date_input import DateInput
 
 
@@ -24,6 +26,7 @@ class DocumentDialog(QDialog):
         self.path_input = QLineEdit(document.original_filename if document else "")
         self.path_input.setReadOnly(True)
         browse = QPushButton("Seleccionar…")
+        set_button_icon(browse, "open")
         browse.clicked.connect(self._browse)
         path_layout = QHBoxLayout()
         path_layout.addWidget(self.path_input, 1)
@@ -42,6 +45,7 @@ class DocumentDialog(QDialog):
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
+        set_dialog_button_icons(self.buttons)
         self.buttons.accepted.connect(self._accept_valid)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)

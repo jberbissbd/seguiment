@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Tutopy — Seguiment d'alumnes")
         self.setWindowIcon(application_icon())
         self.resize(1100, 700)
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(1180, 600)
         self.setStyleSheet(MAIN_STYLESHEET)
 
         root = QWidget()
