@@ -17,6 +17,11 @@ def test_recursos_vectorials_existeixen():
     assert all(asset_path(filename).is_file() for filename in ACTION_ICONS.values())
 
 
+def test_icona_de_creacio_contrasta_amb_els_botons_primaris():
+    content = asset_path(ACTION_ICONS["add"]).read_text(encoding="utf-8")
+    assert 'stroke="#FFFFFF"' in content
+
+
 def test_pestanyes_tenen_icones(qtbot):
     panel = StudentDetailPanel()
     qtbot.addWidget(panel)
