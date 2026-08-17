@@ -4,7 +4,7 @@ from tutopy.application import create_services
 from tutopy.controllers.main_controller import MainController
 from tutopy.controllers.student_controller import StudentController
 from tutopy.database.database import Database
-from tutopy.models.messaging import StudentNew
+from tutopy.models.messaging import Student, StudentNew
 from tutopy.ui.main_window import MainWindow
 from tutopy.ui.widgets.sidebar import Sidebar
 from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
@@ -97,6 +97,29 @@ def test_main_window_conte_la_navegacio_i_el_detall_de_l_alumne(qtbot):
     assert "statistics" in window._pages
     assert "categories" not in window._pages
     assert window.student_detail.tabs.count() == 5
+
+
+def test_amplada_minima_preserva_els_botons_de_documents(qtbot):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    window.student_detail.show_student(
+        Student(1, "uuid", "Maria", "Serra", "4t A")
+    )
+    window.student_detail.tabs.setCurrentWidget(window.student_detail.document_tab)
+    window.show()
+    qtbot.waitExposed(window)
+
+    tab = window.student_detail.document_tab
+    buttons = (
+        tab.actions.create_button,
+        tab.open_button,
+        tab.export_button,
+        tab.actions.edit_button,
+        tab.actions.delete_button,
+    )
+    assert window.minimumWidth() == 1180
+    assert all(button.width() >= button.sizeHint().width() for button in buttons)
+    assert all(button.minimumWidth() == 0 for button in buttons)
 
 
 def test_main_controller_carrega_cerca_i_selecciona_alumnes(qtbot, tmp_path):
