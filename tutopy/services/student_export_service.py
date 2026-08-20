@@ -57,12 +57,15 @@ class StudentExportService:
         report_data = self.report_files.prepare_students(
             student_ids, report_format, include_terms
         )
+        document_data = (
+            self._prepare_documents(student_ids) if include_documents else None
+        )
         failures = []
         used_folders = {}
         for student_id in student_ids:
             failure = self._export_batch_entry(
                 student_id, batch_root, report_format, include_terms,
-                include_documents, used_folders, report_data,
+                include_documents, used_folders, report_data, document_data,
             )
             if failure is not None:
                 failures.append(failure)
@@ -98,7 +101,7 @@ class StudentExportService:
                             report_format: str, include_terms: bool,
                             include_documents: bool,
                             used_folders: dict[str, int],
-                            report_data) -> BatchExportFailure | None:
+                            report_data, document_data) -> BatchExportFailure | None:
         student = None
         student_root = None
         try:
@@ -114,10 +117,12 @@ class StudentExportService:
                 report_format, report_data, include_terms,
             )
             if include_documents:
-                self._export_documents(student_id, student_root)
+                self._export_documents(student_id, student_root, document_data)
             return None
         except (ValidationError, EntityNotFoundError, OSError) as error:
-            self._recover_documents(include_documents, student, student_root)
+            self._recover_documents(
+                include_documents, student, student_root, document_data
+            )
             return BatchExportFailure(
                 student_id if isinstance(student_id, int) else 0,
                 student.filing_name if student else f"ID {student_id}",
@@ -134,19 +139,32 @@ class StudentExportService:
         return f"{base_name} ({used_folders[key]})"
 
     def _recover_documents(self, include_documents: bool, student,
-                           student_root: Path | None) -> None:
+                           student_root: Path | None, document_data=None) -> None:
         if not include_documents or student is None or student_root is None:
             return
         try:
             student_root.mkdir(parents=True, exist_ok=True)
-            self._export_documents(student.id, student_root)
+            self._export_documents(student.id, student_root, document_data)
         except (ValidationError, EntityNotFoundError, OSError):
             pass
 
-    def _export_documents(self, student_id: int, root: Path) -> None:
+    def _prepare_documents(self, student_ids: list[int]):
+        return (
+            {course.id: course for course in self.courses.get_all()},
+            self.documents.get_by_students(student_ids),
+        )
+
+    def _export_documents(
+        self, student_id: int, root: Path, document_data=None
+    ) -> None:
         used_names = {}
-        courses_by_id = {course.id: course for course in self.courses.get_all()}
-        for document in self.documents.get_by_student(student_id):
+        if document_data is None:
+            courses_by_id = {course.id: course for course in self.courses.get_all()}
+            documents = self.documents.get_by_student(student_id)
+        else:
+            courses_by_id, documents_by_student = document_data
+            documents = documents_by_student[student_id]
+        for document in documents:
             course = courses_by_id.get(document.course_id)
             if course is None:
                 raise ValidationError("Un document no té un curs acadèmic vàlid.")
@@ -157,8 +175,8 @@ class StudentExportService:
             key = (course.id, stem.casefold(), extension)
             used_names[key] = used_names.get(key, 0) + 1
             suffix = f"_{used_names[key]}" if used_names[key] > 1 else ""
-            self.documents.export_file(
-                document.id, str(course_dir / f"{stem}{suffix}{extension}")
+            self.documents.export_document(
+                document, str(course_dir / f"{stem}{suffix}{extension}")
             )
 
     @staticmethod

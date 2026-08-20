@@ -38,6 +38,19 @@ class DocumentService:
         self._require_student(student_id)
         return self.document_dao.get_by_student(student_id)
 
+    def get_by_students(
+        self, student_ids: list[int]
+    ) -> dict[int, list[StudentDocument]]:
+        """Carrega els documents de diversos alumnes amb consultes per lots."""
+        validated = [self.validation_service.positive_id(item) for item in student_ids]
+        existing = self.student_dao.get_by_ids(validated)
+        missing = [item for item in validated if item not in existing]
+        if missing:
+            raise EntityNotFoundError(
+                f"L'alumne amb ID {missing[0]} no existeix."
+            )
+        return self.document_dao.get_by_students(validated)
+
     def get_by_id(self, document_id: int) -> StudentDocument:
         self.validation_service.positive_id(document_id)
         document = self.document_dao.get_by_id(document_id)
@@ -118,7 +131,13 @@ class DocumentService:
 
     def export_file(self, document_id: int, destination_path: str) -> Path:
         """Copia un document gestionat a una ubicació escollida per l'usuari."""
-        source = self.get_readable_path(document_id)
+        return self.export_document(self.get_by_id(document_id), destination_path)
+
+    def export_document(
+        self, document: StudentDocument, destination_path: str
+    ) -> Path:
+        """Copia un document ja carregat sense tornar-ne a consultar les metadades."""
+        source = self.get_readable_document_path(document)
         destination = Path(destination_path)
         if not destination.name:
             raise ValidationError("Cal indicar una destinació per exportar el document.")

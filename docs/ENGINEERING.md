@@ -27,7 +27,7 @@ mateix volum de dades.
 | Mostrar alumnes | `O(S)` | `O(S)` | Els widgets es reutilitzen si es conserva la seqüència d'identificadors. |
 | Filtrar notes | `O(log N + R)` amb índex aplicable | `O(R)` | Els filtres s'executen a SQLite i només es materialitzen els `R` resultats. |
 | Estadístiques | `O(N + S)` | `O(S + C)` | Les agregacions es fan a SQLite i no carreguen el text sensible. |
-| Generar informes | `O(S + N + C)` | `O(S + N + C)` | El lot comparteix alumnes, notes, cursos, categories i configuració. |
+| Generar informes | `O(S + N + C + D)` | `O(S + N + C + D)` | El lot comparteix dades d'informe i metadades dels documents adjunts. |
 | Transferir alumnes | `O(S + N + D)` | `O(S + N + D)` | Les relacions es carreguen per lots; les lectures SQL no creixen per alumne. |
 | Detectar conflictes d'importació | `O(S·L + I·K·L²)` pitjor cas | `O(S·L + M)` | Un índex de longitud redueix els candidats a `K`; `quick_ratio` evita comparacions completes segures. |
 
