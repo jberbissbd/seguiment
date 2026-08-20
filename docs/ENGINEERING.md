@@ -6,6 +6,21 @@ del projecte. Les estimacions assumeixen `S` alumnes, `N` notes, `D` documents,
 
 ## Complexitat i límits
 
+### Línia base de rendiment
+
+Abans d'aplicar una optimització, es pot generar una base de dades temporal i
+mesurar les operacions principals amb l'entorn virtual del projecte:
+
+```bash
+.venv/bin/python scripts/performance_baseline.py \
+  --students 1000 --notes 10000 --repetitions 5
+```
+
+El script no obre ni modifica la base de dades de l'usuari. També admet
+`--json` per conservar els resultats i comparar-los després d'un canvi. Les
+mesures són orientatives i s'han de comparar a la mateixa màquina i amb el
+mateix volum de dades.
+
 | Operació | Temps | Memòria addicional | Decisió |
 | --- | ---: | ---: | --- |
 | Llistar o cercar alumnes | `O(S)` | `O(S)` | La cerca conté comodins; es coalescen pulsacions per no repetir-la. |
