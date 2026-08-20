@@ -24,22 +24,37 @@ class SpreadsheetReportService:
 
     def __init__(self, students: StudentDAO, notes: NoteDAO,
                  courses: AcademicCourseDAO, group_history: StudentGroupHistoryDAO,
-                 configuration: ReportConfigurationService):
+                 configuration: ReportConfigurationService, batch_loader=None):
         self.students = students
         self.notes = notes
         self.courses = courses
         self.group_history = group_history
         self.configuration = configuration
+        self.batch_loader = batch_loader
         self.validation = ValidationService()
 
     def export_student(self, student_id: int, destination: str | Path,
                        include_terms: bool = False) -> Path:
         student_id = self.validation.positive_id(student_id)
-        student = self.students.get_by_id(student_id)
+        data = self.prepare_students([student_id], include_terms=include_terms)
+        return self.export_prepared(student_id, destination, data, include_terms)
+
+    def prepare_students(self, student_ids: list[int], include_terms: bool = False):
+        """Carrega una vegada les dades compartides dels informes XLSX."""
+        return self.batch_loader.load(
+            student_ids, include_histories=True, include_terms=include_terms
+        )
+
+    def export_prepared(
+        self, student_id: int, destination: str | Path, data,
+        include_terms: bool = False,
+    ) -> Path:
+        """Genera un XLSX a partir d'un snapshot carregat prèviament."""
+        student = data.students.get(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
         student_notes = sorted(
-            self.notes.get_by_student(student_id), key=lambda note: (note.date, note.id)
+            data.notes[student_id], key=lambda note: (note.date, note.id)
         )
         if not student_notes:
             raise ValidationError("L’alumne no té notes per exportar.")
@@ -49,12 +64,12 @@ class SpreadsheetReportService:
         if not path.name:
             raise ValidationError("Cal indicar una destinació per a l’informe.")
 
-        categories = self.configuration.get_ordered_categories()
-        histories = self.group_history.get_by_student(student_id)
+        categories = data.categories
+        histories = data.histories[student_id]
         by_course = defaultdict(list)
         for note in student_notes:
             by_course[note.course_id].append(note)
-        course_names = self._course_names(by_course)
+        course_names = self._course_names(by_course, data.course_names)
 
         workbook = Workbook()
         workbook.remove(workbook.active)
@@ -64,7 +79,7 @@ class SpreadsheetReportService:
             self._add_course_sheet(
                 workbook, student, course_id, course_names[course_id],
                 course_notes, histories,
-                categories, include_terms,
+                categories, include_terms, data.term_configurations,
             )
 
         try:
@@ -76,7 +91,7 @@ class SpreadsheetReportService:
 
     def _add_course_sheet(
         self, workbook, student, course_id, course_name, notes, histories,
-        categories, include_terms: bool,
+        categories, include_terms: bool, term_configurations,
     ) -> None:
         sheet = workbook.create_sheet(self._sheet_title(course_name))
         rows = [(note, self._group_for(note.date, histories, student.group_name))
@@ -114,7 +129,9 @@ class SpreadsheetReportService:
             for index, category in enumerate(categories, 3 if include_terms else 2)
         }
         for row_number, (note, group) in enumerate(rows, 4):
-            group_column = self._write_term(sheet, row_number, course_id, group, note.date) \
+            group_column = self._write_term(
+                sheet, row_number, course_id, group, note.date, term_configurations
+            ) \
                 if include_terms else 1
             self._set_text(sheet.cell(row_number, group_column), group)
             category_column = category_columns.get(note.category_id)
@@ -127,13 +144,23 @@ class SpreadsheetReportService:
             self._merge_consecutive_terms(sheet, 4, 3 + len(rows))
         self._format_sheet(sheet, last_column)
 
-    def _write_term(self, sheet, row_number, course_id, group, note_date) -> int:
-        term = self.configuration.term_for_date(course_id, group, note_date) if group else ""
+    def _write_term(
+        self, sheet, row_number, course_id, group, note_date, term_configurations
+    ) -> int:
+        configuration = term_configurations.get((course_id, group)) if group else None
+        if configuration is None:
+            term = ""
+        elif note_date < configuration.second_term_start:
+            term = "1r"
+        elif note_date < configuration.third_term_start:
+            term = "2n"
+        else:
+            term = "3r"
         self._set_text(sheet.cell(row_number, 1), term)
         return 2
 
-    def _course_names(self, by_course) -> dict[int, str]:
-        names = {course.id: course.course for course in self.courses.get_all()}
+    @staticmethod
+    def _course_names(by_course, names) -> dict[int, str]:
         missing = set(by_course) - names.keys()
         if missing:
             raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")

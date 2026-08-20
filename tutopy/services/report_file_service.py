@@ -57,3 +57,31 @@ class ReportFileService:
         return self.open_document_reports.export_student(
             student_id, destination, report_format
         )
+
+    def prepare_students(
+        self, student_ids: list[int], report_format: str,
+        include_terms: bool = False,
+    ):
+        """Carrega el snapshot compartit requerit pel format seleccionat."""
+        self.get_format(report_format)
+        if report_format == "xlsx":
+            return self.spreadsheets.prepare_students(student_ids, include_terms)
+        if report_format == "docx":
+            return self.word_reports.prepare_students(student_ids)
+        return self.open_document_reports.prepare_students(student_ids)
+
+    def export_prepared(
+        self, student_id: int, destination: str | Path, report_format: str,
+        data, include_terms: bool = False,
+    ) -> Path:
+        """Renderitza un informe reutilitzant un snapshot de lot."""
+        self.get_format(report_format)
+        if report_format == "xlsx":
+            return self.spreadsheets.export_prepared(
+                student_id, destination, data, include_terms
+            )
+        if report_format == "docx":
+            return self.word_reports.export_prepared(student_id, destination, data)
+        return self.open_document_reports.export_prepared(
+            student_id, destination, report_format, data
+        )

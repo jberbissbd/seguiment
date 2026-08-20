@@ -15,6 +15,7 @@ from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
 from tutopy.services.word_report_service import WordReportService
 from tutopy.services.open_document_report_service import OpenDocumentReportService
 from tutopy.services.report_file_service import ReportFileService
+from tutopy.services.report_batch_loader import ReportBatchLoader
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.directories import get_app_data_dir
 from tutopy.services.statistics_service import StatisticsService
@@ -65,17 +66,21 @@ def create_services(database: Database) -> ServiceContainer:
         database.categories, database.transaction,
         storage_dir=app_data_dir / "reporting",
     )
-    spreadsheet_reports = SpreadsheetReportService(
+    report_batch_loader = ReportBatchLoader(
         database.students, database.notes, database.academic_courses,
         database.student_group_history, report_configuration,
     )
+    spreadsheet_reports = SpreadsheetReportService(
+        database.students, database.notes, database.academic_courses,
+        database.student_group_history, report_configuration, report_batch_loader,
+    )
     word_reports = WordReportService(
         database.students, database.notes, database.academic_courses,
-        report_configuration,
+        report_configuration, report_batch_loader,
     )
     open_document_reports = OpenDocumentReportService(
         database.students, database.notes, database.academic_courses,
-        report_configuration,
+        report_configuration, report_batch_loader,
     )
     report_files = ReportFileService(
         spreadsheet_reports, word_reports, open_document_reports

@@ -54,12 +54,15 @@ class StudentExportService:
                         include_documents: bool = False) -> BatchExportResult:
         base = self._validate_batch_request(student_ids, destination, report_format)
         batch_root = self._create_batch_root(base)
+        report_data = self.report_files.prepare_students(
+            student_ids, report_format, include_terms
+        )
         failures = []
         used_folders = {}
         for student_id in student_ids:
             failure = self._export_batch_entry(
                 student_id, batch_root, report_format, include_terms,
-                include_documents, used_folders,
+                include_documents, used_folders, report_data,
             )
             if failure is not None:
                 failures.append(failure)
@@ -94,22 +97,24 @@ class StudentExportService:
     def _export_batch_entry(self, student_id: int, batch_root: Path,
                             report_format: str, include_terms: bool,
                             include_documents: bool,
-                            used_folders: dict[str, int]) -> BatchExportFailure | None:
+                            used_folders: dict[str, int],
+                            report_data) -> BatchExportFailure | None:
         student = None
         student_root = None
         try:
             student_id = self.validation.positive_id(student_id)
-            student = self.students.get_by_id(student_id)
+            student = report_data.students.get(student_id)
             if student is None:
                 raise EntityNotFoundError("L’alumne seleccionat no existeix.")
             folder_name = self._next_student_folder(student.filing_name, used_folders)
             student_root = batch_root / folder_name
-            self.export_student(
-                student_id, batch_root, report_format,
-                include_terms=include_terms,
-                include_documents=include_documents,
-                folder_name=folder_name,
+            student_root.mkdir(parents=True, exist_ok=True)
+            self.report_files.export_prepared(
+                student_id, student_root / f"informe.{report_format}",
+                report_format, report_data, include_terms,
             )
+            if include_documents:
+                self._export_documents(student_id, student_root)
             return None
         except (ValidationError, EntityNotFoundError, OSError) as error:
             self._recover_documents(include_documents, student, student_root)

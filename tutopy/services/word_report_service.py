@@ -23,32 +23,43 @@ class WordReportService:
 
     def __init__(self, students: StudentDAO, notes: NoteDAO,
                  courses: AcademicCourseDAO,
-                 configuration: ReportConfigurationService):
+                 configuration: ReportConfigurationService, batch_loader=None):
         self.students = students
         self.notes = notes
         self.courses = courses
         self.configuration = configuration
+        self.batch_loader = batch_loader
         self.validation = ValidationService()
 
     def export_student(self, student_id: int, destination: str | Path) -> Path:
         student_id = self.validation.positive_id(student_id)
-        student, student_notes = self._student_and_notes(student_id)
+        data = self.prepare_students([student_id])
+        return self.export_prepared(student_id, destination, data)
+
+    def prepare_students(self, student_ids: list[int]):
+        """Carrega una vegada les dades compartides dels informes DOCX."""
+        return self.batch_loader.load(student_ids, include_header=True)
+
+    def export_prepared(self, student_id: int, destination: str | Path, data) -> Path:
+        """Genera un DOCX a partir d'un snapshot carregat prèviament."""
+        student, student_notes = self._student_and_notes(student_id, data)
         path = self._document_path(destination)
-        categories = self.configuration.get_ordered_categories()
-        document = self._new_document(student)
+        document = self._new_document(student, data.header_image)
         by_course = self._group_by_course(student_notes)
         self._add_courses(
-            document, by_course, categories, self._course_names(by_course)
+            document, by_course, data.categories,
+            self._course_names(by_course, data.course_names),
         )
         self._save_document(document, path)
         return path
 
-    def _student_and_notes(self, student_id: int):
-        student = self.students.get_by_id(student_id)
+    @staticmethod
+    def _student_and_notes(student_id: int, data):
+        student = data.students.get(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
         student_notes = sorted(
-            self.notes.get_by_student(student_id), key=lambda note: (note.date, note.id)
+            data.notes[student_id], key=lambda note: (note.date, note.id)
         )
         if not student_notes:
             raise ValidationError("L’alumne no té notes per exportar.")
@@ -70,7 +81,7 @@ class WordReportService:
             by_course[note.course_id].append(note)
         return by_course
 
-    def _new_document(self, student):
+    def _new_document(self, student, header_image):
         document = Document()
         document.core_properties.title = self._safe_text(
             f"Informe de {student.filing_name}"
@@ -78,7 +89,7 @@ class WordReportService:
         document.core_properties.subject = "Notes de seguiment"
         self._configure_page(document)
         self._add_student_header(
-            document, student, self.configuration.get_header_image()
+            document, student, header_image
         )
         return document
 
@@ -181,8 +192,8 @@ class WordReportService:
         for cell, width in zip(table.rows[0].cells, (Cm(3), Cm(14))):
             cell.width = width
 
-    def _course_names(self, by_course) -> dict[int, str]:
-        names = {course.id: course.course for course in self.courses.get_all()}
+    @staticmethod
+    def _course_names(by_course, names) -> dict[int, str]:
         missing = set(by_course) - names.keys()
         if missing:
             raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
