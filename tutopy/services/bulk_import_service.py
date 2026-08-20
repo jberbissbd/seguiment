@@ -1,4 +1,5 @@
 from difflib import SequenceMatcher
+import math
 from pathlib import Path
 import re
 import unicodedata
@@ -95,13 +96,15 @@ class BulkImportService:
         normalized_existing = tuple(
             (student, self._normalize(student.full_name)) for student in existing
         )
+        name_index = self._name_index(normalized_existing)
+        match_cache = {}
         conflicts = []
         for row in student_rows:
             incoming = self._normalize(row.full_name)
-            matches = tuple(
-                student for student, current in normalized_existing
-                if self._similar_names(incoming, current)
-            )
+            matches = match_cache.get(incoming)
+            if matches is None:
+                matches = self._find_matches(incoming, name_index)
+                match_cache[incoming] = matches
             if matches:
                 conflicts.append(StudentConflict(row, matches))
         return ImportPreview(tuple(student_rows), tuple(category_rows),
@@ -274,10 +277,43 @@ class BulkImportService:
         return self._similar_names(incoming, current)
 
     def _similar_names(self, incoming: str, current: str) -> bool:
+        if incoming == current:
+            return True
+        matcher = SequenceMatcher(None, incoming, current)
         return (
-            incoming == current
-            or SequenceMatcher(None, incoming, current).ratio()
-            >= self.similarity_threshold
+            matcher.quick_ratio() >= self.similarity_threshold
+            and matcher.ratio() >= self.similarity_threshold
+        )
+
+    @staticmethod
+    def _name_index(normalized_existing):
+        """Agrupa noms per longitud conservant-ne l'ordre original."""
+        by_length = {}
+        for position, (student, name) in enumerate(normalized_existing):
+            by_length.setdefault(len(name), []).append((position, student, name))
+        return by_length
+
+    def _find_matches(self, incoming: str, name_index) -> tuple[Student, ...]:
+        """Busca només longituds que poden assolir el llindar de similitud."""
+        threshold = self.similarity_threshold
+        if threshold > 1:
+            lengths = (len(incoming),)
+        elif threshold <= 0:
+            lengths = tuple(name_index)
+        else:
+            factor = (2 - threshold) / threshold
+            minimum = math.ceil(len(incoming) / factor)
+            maximum = math.floor(len(incoming) * factor)
+            lengths = range(minimum, maximum + 1)
+        candidates = [
+            item
+            for length in lengths
+            for item in name_index.get(length, ())
+        ]
+        candidates.sort(key=lambda item: item[0])
+        return tuple(
+            student for _position, student, current in candidates
+            if self._similar_names(incoming, current)
         )
 
 

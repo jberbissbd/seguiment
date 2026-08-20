@@ -29,12 +29,13 @@ mateix volum de dades.
 | Estadístiques | `O(N + S)` | `O(S + C)` | Les agregacions es fan a SQLite i no carreguen el text sensible. |
 | Generar informes | `O(S + N + C)` | `O(S + N + C)` | El lot comparteix alumnes, notes, cursos, categories i configuració. |
 | Transferir alumnes | `O(S + N + D)` | `O(S + N + D)` | Les relacions es carreguen per lots; les lectures SQL no creixen per alumne. |
-| Detectar conflictes d'importació | `O(I·S·L²)` pitjor cas | `O(S·L + M)` | La comparació difusa domina; els noms normalitzats es calculen una sola vegada. |
+| Detectar conflictes d'importació | `O(S·L + I·K·L²)` pitjor cas | `O(S·L + M)` | Un índex de longitud redueix els candidats a `K`; `quick_ratio` evita comparacions completes segures. |
 
-`L` és la longitud del nom i `M` el nombre de coincidències. El límit de 10.000
-files evita entrades sense límit. Si les instal·lacions arriben a desenes de
-milers d'alumnes, la comparació difusa s'haurà de bloquejar per prefix o tokens;
-fer-ho ara podria ocultar coincidències vàlides.
+`L` és la longitud del nom, `K ≤ S` els candidats amb una longitud compatible i
+`M` el nombre de coincidències. El límit de 10.000 files evita entrades sense
+límit. El filtre de longitud i `SequenceMatcher.quick_ratio()` són límits
+superiors del resultat final: descartar-ne un candidat no pot ocultar una
+coincidència que superi el llindar configurat.
 
 ## SQLite, `fsync` i transaccions
 
