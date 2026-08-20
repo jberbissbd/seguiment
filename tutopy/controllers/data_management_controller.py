@@ -47,6 +47,8 @@ class DataManagementController:
         self._transfer_progress = None
         self._transfer_analysis_task = None
         self._transfer_analysis_progress = None
+        self._transfer_execution_task = None
+        self._transfer_execution_progress = None
         view = window.data_tools
         view.template_requested.connect(self.export_template)
         view.import_requested.connect(self.import_spreadsheet)
@@ -206,11 +208,53 @@ class DataManagementController:
                 if dialog.exec() != QDialog.DialogCode.Accepted:
                     return
                 decisions = dialog.decisions()
-            result = self.transfer_service.execute(
-                preview, decisions, password=password
-            )
         except Exception as error:
             self._show_operation_error(error, "importar el paquet")
+            return
+        self._start_transfer_execution(preview, decisions, password)
+
+    def _start_transfer_execution(self, preview, decisions, password: str) -> None:
+        progress = self.progress_dialog(
+            "Important alumnes…", "Cancel·lar", 0,
+            preview.student_count, self.window,
+        )
+        progress.setWindowTitle("Importació de transferència")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(False)
+        progress.setAutoReset(False)
+        self._transfer_execution_progress = progress
+
+        def operation(report_progress, cancel_requested):
+            return self.transfer_service.execute_with_worker_connection(
+                preview, decisions, password=password,
+                progress_callback=report_progress,
+                cancel_requested=cancel_requested,
+            )
+
+        self._transfer_execution_task = self.task_runner.start(
+            operation,
+            on_progress=self._update_transfer_execution_progress,
+            on_success=self._transfer_execution_finished,
+            on_failure=self._transfer_execution_failed,
+        )
+        progress.canceled.connect(self._transfer_execution_task.cancel)
+        progress.show()
+
+    def _update_transfer_execution_progress(
+        self, completed: int, total: int
+    ) -> None:
+        progress = self._transfer_execution_progress
+        if progress is None:
+            return
+        progress.setMaximum(total)
+        progress.setValue(completed)
+        progress.setLabelText(f"Important alumnes… {completed} de {total}")
+
+    def _transfer_execution_finished(self, result) -> None:
+        self._close_transfer_execution_progress()
+        if result.cancelled:
+            self.window.show_status("Importació de transferència cancel·lada.", 5000)
             return
         self.on_changed()
         QMessageBox.information(
@@ -221,6 +265,17 @@ class DataManagementController:
             f"Importats com a nous: {result.imported_as_new}\n"
             f"Documents importats: {result.documents}",
         )
+
+    def _transfer_execution_failed(self, error: Exception) -> None:
+        self._close_transfer_execution_progress()
+        self._show_operation_error(error, "importar el paquet")
+
+    def _close_transfer_execution_progress(self) -> None:
+        progress = self._transfer_execution_progress
+        self._transfer_execution_progress = None
+        self._transfer_execution_task = None
+        if progress is not None:
+            progress.close()
 
     def _transfer_analysis_failed(self, error: Exception) -> None:
         self._close_transfer_analysis_progress()

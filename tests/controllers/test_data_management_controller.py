@@ -194,13 +194,19 @@ def test_transferencia_exporta_i_importa_paquets(
             return SimpleNamespace(source=filename, password=password)
 
         def complete_analysis(self, preparation):
-            return SimpleNamespace(source=preparation.source, conflicts=())
+            return SimpleNamespace(
+                source=preparation.source, conflicts=(), student_count=1
+            )
 
-        def execute(self, preview, decisions=(), password=""):
+        def execute_with_worker_connection(
+            self, preview, decisions=(), password="", progress_callback=None,
+            cancel_requested=None,
+        ):
             self.executed = (preview, decisions, password)
+            progress_callback(1, 1)
             return SimpleNamespace(
                 created=2, replaced=0, skipped=0,
-                imported_as_new=0, documents=1,
+                imported_as_new=0, documents=1, cancelled=False,
             )
 
     transfer = TransferStub()
@@ -225,7 +231,7 @@ def test_transferencia_exporta_i_importa_paquets(
         QInputDialog, "getText", lambda *args: ("contrasenya", True)
     )
     controller.import_transfer()
-    qtbot.waitUntil(lambda: controller._transfer_analysis_task is None, timeout=5000)
+    qtbot.waitUntil(lambda: bool(messages), timeout=5000)
     assert transfer.executed[1:] == ((), "contrasenya")
     assert changed == [True]
     assert "Alumnes creats: 2" in messages[0]

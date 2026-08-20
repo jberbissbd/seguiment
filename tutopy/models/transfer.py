@@ -51,3 +51,4 @@ class TransferResult:
     skipped: int
     imported_as_new: int
     documents: int
+    cancelled: bool = False

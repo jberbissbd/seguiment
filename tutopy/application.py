@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from contextlib import contextmanager
 
 from tutopy.database.database import Database
 from tutopy.services.academic_course_service import AcademicCourseService
@@ -45,7 +46,9 @@ class ServiceContainer:
     transfers: TransferService
 
 
-def create_services(database: Database) -> ServiceContainer:
+def create_services(
+    database: Database, *, configure_worker_services: bool = True
+) -> ServiceContainer:
     """Construeix la capa de negoci sense exposar DAOs a la UI."""
     if database.conn is None:
         raise RuntimeError("La base de dades ha d'estar connectada.")
@@ -89,7 +92,7 @@ def create_services(database: Database) -> ServiceContainer:
         database.documents, database.students, database.academic_courses,
         storage_dir=storage_dir,
     )
-    return ServiceContainer(
+    container = ServiceContainer(
         students=students,
         notes=NoteService(
             database.notes,
@@ -130,3 +133,18 @@ def create_services(database: Database) -> ServiceContainer:
             database.transaction,
         ),
     )
+    if configure_worker_services:
+        @contextmanager
+        def transfer_worker_service():
+            worker_database = Database(database.path).connect()
+            try:
+                worker = create_services(
+                    worker_database, configure_worker_services=False
+                )
+                worker.documents.storage_dir = container.documents.storage_dir
+                yield worker.transfers
+            finally:
+                worker_database.close()
+
+        container.transfers.worker_service_factory = transfer_worker_service
+    return container

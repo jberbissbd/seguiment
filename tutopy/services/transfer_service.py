@@ -46,6 +46,10 @@ class TransferExportPreparation:
     related: dict
 
 
+class _TransferExecutionCancelled(RuntimeError):
+    """Senyal intern per provocar rollback davant una cancel·lació."""
+
+
 class TransferService:
     """Mou dades d'alumnes entre instàncies mitjançant paquets versionats."""
 
@@ -69,6 +73,7 @@ class TransferService:
     def __init__(
         self, students, notes, categories, courses, contacts, annotations,
         documents, history, document_service, transaction_factory,
+        worker_service_factory=None,
     ):
         self.students = students
         self.notes = notes
@@ -80,6 +85,7 @@ class TransferService:
         self.history = history
         self.document_service = document_service
         self.transaction_factory = transaction_factory
+        self.worker_service_factory = worker_service_factory
         self.validation = ValidationService()
 
     def export_student(
@@ -231,8 +237,12 @@ class TransferService:
         self, preview: TransferPreview,
         decisions: tuple[TransferDecision, ...] = (),
         password: str = "",
+        progress_callback=None,
+        cancel_requested=None,
     ) -> TransferResult:
         """Importa el paquet de manera transaccional segons les decisions donades."""
+        if cancel_requested is not None and cancel_requested():
+            return TransferResult(0, 0, 0, 0, 0, cancelled=True)
         path, data = self._read_package(
             preview.source, password, verify_documents=True
         )
@@ -254,57 +264,74 @@ class TransferService:
         created = replaced = skipped = imported_as_new = imported_documents = 0
         new_file_paths: list[Path] = []
         old_file_paths: list[Path] = []
-        with tempfile.TemporaryDirectory(prefix="tutopy-transfer-") as temporary:
-            temporary_path = Path(temporary)
-            self._extract_documents(path, password, data, temporary_path)
-            try:
-                with self.transaction_factory():
-                    category_ids = self._category_ids(data)
-                    course_ids = self._course_ids(data)
-                    for item in data["students"]:
-                        local = self.students.get_by_uuid(item["uuid"])
-                        action = decision_by_uuid.get(item["uuid"])
-                        if local and action == TransferAction.KEEP_LOCAL:
-                            skipped += 1
-                            continue
-                        target_uuid = item["uuid"]
-                        if local and action == TransferAction.REPLACE:
-                            old_file_paths.extend(
-                                Path(document.file_path)
-                                for document in self.documents.get_by_student(local.id)
-                                if document.file_path
-                            )
-                            self.students.delete(local.id)
-                            replaced += 1
-                        elif local and action == TransferAction.IMPORT_AS_NEW:
-                            target_uuid = str(uuid.uuid4())
-                            imported_as_new += 1
-                        else:
-                            created += 1
-                        student = self.students.create_with_uuid(
-                            StudentNew(
-                                self.validation.person_name(
-                                    item["name"], "El nom no és vàlid."
-                                ),
-                                self.validation.person_name(
-                                    item["surnames"], "Els cognoms no són vàlids."
-                                ),
-                                self.validation.optional_text(item["group_name"]),
-                            ),
-                            target_uuid,
-                        )
-                        count = self._import_related(
-                            student.id, item, category_ids, course_ids,
-                            temporary_path, new_file_paths,
-                        )
-                        imported_documents += count
-            except Exception:
-                self._remove_managed_files(new_file_paths)
-                raise
+        try:
+            with tempfile.TemporaryDirectory(prefix="tutopy-transfer-") as temporary:
+                temporary_path = Path(temporary)
+                self._extract_documents(
+                    path, password, data, temporary_path, cancel_requested
+                )
+                try:
+                    with self.transaction_factory():
+                        category_ids = self._category_ids(data)
+                        course_ids = self._course_ids(data)
+                        total = len(data["students"])
+                        for completed, item in enumerate(data["students"], 1):
+                            if cancel_requested is not None and cancel_requested():
+                                raise _TransferExecutionCancelled
+                            local = self.students.get_by_uuid(item["uuid"])
+                            action = decision_by_uuid.get(item["uuid"])
+                            if local and action == TransferAction.KEEP_LOCAL:
+                                skipped += 1
+                            else:
+                                target_uuid = item["uuid"]
+                                if local and action == TransferAction.REPLACE:
+                                    old_file_paths.extend(
+                                        Path(document.file_path)
+                                        for document in self.documents.get_by_student(local.id)
+                                        if document.file_path
+                                    )
+                                    self.students.delete(local.id)
+                                    replaced += 1
+                                elif local and action == TransferAction.IMPORT_AS_NEW:
+                                    target_uuid = str(uuid.uuid4())
+                                    imported_as_new += 1
+                                else:
+                                    created += 1
+                                student = self.students.create_with_uuid(
+                                    StudentNew(
+                                        self.validation.person_name(
+                                            item["name"], "El nom no és vàlid."
+                                        ),
+                                        self.validation.person_name(
+                                            item["surnames"], "Els cognoms no són vàlids."
+                                        ),
+                                        self.validation.optional_text(item["group_name"]),
+                                    ),
+                                    target_uuid,
+                                )
+                                count = self._import_related(
+                                    student.id, item, category_ids, course_ids,
+                                    temporary_path, new_file_paths,
+                                )
+                                imported_documents += count
+                            if progress_callback is not None:
+                                progress_callback(completed, total)
+                except Exception:
+                    self._remove_managed_files(new_file_paths)
+                    raise
+        except _TransferExecutionCancelled:
+            return TransferResult(0, 0, 0, 0, 0, cancelled=True)
         self._remove_managed_files(old_file_paths)
         return TransferResult(
             created, replaced, skipped, imported_as_new, imported_documents
         )
+
+    def execute_with_worker_connection(self, *args, **kwargs) -> TransferResult:
+        """Executa la importació amb un servei vinculat a una connexió pròpia."""
+        if self.worker_service_factory is None:
+            return self.execute(*args, **kwargs)
+        with self.worker_service_factory() as worker_service:
+            return worker_service.execute(*args, **kwargs)
 
     def _related_by_student(self, student_ids):
         return {
@@ -522,7 +549,9 @@ class TransferService:
         if not isinstance(value, dict) or not set(keys) <= value.keys():
             raise ValidationError("El contingut del paquet no és vàlid.")
 
-    def _extract_documents(self, path, password, data, destination):
+    def _extract_documents(
+        self, path, password, data, destination, cancel_requested=None
+    ):
         with self._decrypted_archive(path, password) as archive:
             for student in data["students"]:
                 for document in student["documents"]:
@@ -531,6 +560,8 @@ class TransferService:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     with archive.open(name) as source, target.open("wb") as output:
                         while chunk := source.read(1024 * 1024):
+                            if cancel_requested is not None and cancel_requested():
+                                raise _TransferExecutionCancelled
                             output.write(chunk)
 
     @classmethod

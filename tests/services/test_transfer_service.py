@@ -1,4 +1,5 @@
 import json
+from threading import Thread
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
@@ -276,4 +277,59 @@ def test_exportacio_preparada_es_pot_cancel_lar_abans_de_xifrar(
     assert result is None
     assert progress == [(1, 2)]
     assert not destination.exists()
+
+
+def test_importacio_cancel_lada_fa_rollback_i_neteja_documents(
+    instances, tmp_path
+):
+    source, target = instances
+    first = _complete_student(source, tmp_path, "Laia")
+    second = source.students.create(StudentNew("Pau", "Puig", "3r B"))
+    package = source.transfers.export_students(
+        [first.id, second.id], tmp_path / "dos.tpy", PASSWORD
+    )
+    preview = target.transfers.analyze(package, PASSWORD)
+    progress = []
+
+    result = target.transfers.execute(
+        preview,
+        password=PASSWORD,
+        progress_callback=lambda completed, total: progress.append((completed, total)),
+        cancel_requested=lambda: bool(progress),
+    )
+
+    assert result.cancelled is True
+    assert target.students.get_all() == []
+    assert not target.documents.storage_dir.exists() or not any(
+        target.documents.storage_dir.iterdir()
+    )
+
+
+def test_importacio_utilitza_una_connexio_sqlite_del_treballador(
+    instances, tmp_path
+):
+    source, target = instances
+    original = _complete_student(source, tmp_path)
+    package = source.transfers.export_student(
+        original.id, tmp_path / "worker.tpy", PASSWORD
+    )
+    preview = target.transfers.analyze(package, PASSWORD)
+    outcome = {}
+
+    def execute():
+        try:
+            outcome["result"] = target.transfers.execute_with_worker_connection(
+                preview, password=PASSWORD
+            )
+        except Exception as error:
+            outcome["error"] = error
+
+    thread = Thread(target=execute)
+    thread.start()
+    thread.join(timeout=10)
+
+    assert not thread.is_alive()
+    assert "error" not in outcome
+    assert outcome["result"].created == 1
+    assert target.students.get_by_uuid(original.uuid) is not None
 from dataclasses import replace

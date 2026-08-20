@@ -95,9 +95,10 @@ alumnes, no es construeix ni es publica cap paquet parcial.
 
 En importar una transferència, el desxifrat, la validació de hashes i el parsing
 també s'executen en segon pla. En acabar, els conflictes UUID es consulten per
-lots al fil propietari de SQLite. L'aplicació transaccional posterior encara és
-síncrona i no s'ha de moure a un treballador fins que disposi d'una connexió
-SQLite pròpia.
+lots al fil propietari de SQLite. L'aplicació transaccional posterior obre una
+connexió SQLite pròpia dins del treballador. Una cancel·lació interromp el flux
+entre alumnes o blocs de document, força el rollback complet i elimina els
+fitxers nous copiats; els fitxers anteriors només s'eliminen després del commit.
 
 Les cerques textuals utilitzen `DebouncedLineEdit` (180 ms). Els canvis de
 selecció explícits continuen sent immediats. Les estadístiques utilitzen el
