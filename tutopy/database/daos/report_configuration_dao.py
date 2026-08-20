@@ -1,4 +1,10 @@
+import sqlite3
+
 from tutopy.models.reporting import TermConfiguration, TermConfigurationNew
+
+
+class ReportConfigurationPersistenceError(RuntimeError):
+    """La configuració d'informes no s'ha pogut persistir."""
 
 
 class ReportConfigurationDAO:
@@ -64,13 +70,19 @@ class ReportConfigurationDAO:
         return row[0] if row else None
 
     def set_setting(self, key: str, value: str) -> None:
-        self.conn.execute(
-            "INSERT INTO report_settings (key, value) VALUES (?, ?) "
-            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            (key, value),
-        )
-        self.conn.commit()
+        try:
+            self.conn.execute(
+                "INSERT INTO report_settings (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (key, value),
+            )
+            self.conn.commit()
+        except sqlite3.Error as error:
+            raise ReportConfigurationPersistenceError from error
 
     def delete_setting(self, key: str) -> None:
-        self.conn.execute("DELETE FROM report_settings WHERE key = ?", (key,))
-        self.conn.commit()
+        try:
+            self.conn.execute("DELETE FROM report_settings WHERE key = ?", (key,))
+            self.conn.commit()
+        except sqlite3.Error as error:
+            raise ReportConfigurationPersistenceError from error
