@@ -147,4 +147,17 @@ def create_services(
                 worker_database.close()
 
         container.transfers.worker_service_factory = transfer_worker_service
+
+        @contextmanager
+        def student_worker_service():
+            worker_database = Database(database.path).connect()
+            try:
+                worker = create_services(
+                    worker_database, configure_worker_services=False
+                )
+                yield worker.students
+            finally:
+                worker_database.close()
+
+        container.students.worker_service_factory = student_worker_service
     return container

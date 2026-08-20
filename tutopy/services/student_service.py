@@ -9,7 +9,8 @@ from tutopy.models.messaging import (
     Student, StudentDetails, StudentNew, StudentGroupHistory,
     StudentGroupHistoryNew,
 )
-from tutopy.services.exceptions import EntityNotFoundError
+from tutopy.models.student_bulk import StudentBulkUpdate, StudentBulkUpdateResult
+from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.utils import AcademicCourseDeterminator
 from tutopy.services.validation_service import ValidationService
 
@@ -20,7 +21,8 @@ class StudentService:
         document_dao: DocumentDAO, group_history_dao: StudentGroupHistoryDAO,
         academic_course_dao: AcademicCourseDAO,
         transaction_factory,
-        validation_service: ValidationService = None):
+        validation_service: ValidationService = None,
+        worker_service_factory=None):
         self.student_dao = student_dao
         self.contact_dao = contact_dao
         self.document_dao = document_dao
@@ -28,6 +30,7 @@ class StudentService:
         self.academic_course_dao = academic_course_dao
         self.transaction_factory = transaction_factory
         self.validation_service = validation_service or ValidationService()
+        self.worker_service_factory = worker_service_factory
 
     def get_all(self) -> list[Student]:
         """Retorna tots els alumnes ordenats pel DAO."""
@@ -86,6 +89,71 @@ class StudentService:
                     requested_group,
                 )
         return updated
+
+    def bulk_update(
+        self, changes: list[StudentBulkUpdate], change_date: str,
+        progress_callback=None, cancel_requested=None,
+    ) -> StudentBulkUpdateResult:
+        """Actualitza diversos alumnes atòmicament i conserva l'historial de grup."""
+        if not isinstance(changes, list) or not changes:
+            raise ValidationError("Cal indicar almenys un alumne per actualitzar.")
+        identifiers = [self.validation_service.positive_id(item.student_id)
+                       for item in changes]
+        if len(identifiers) != len(set(identifiers)):
+            raise ValidationError("La selecció d’alumnes conté duplicats.")
+        change_date = self.validation_service.iso_date(change_date)
+        existing_by_id = self.student_dao.get_by_ids(identifiers)
+        missing = [item for item in identifiers if item not in existing_by_id]
+        if missing:
+            raise EntityNotFoundError(
+                f"L'alumne amb ID {missing[0]} no existeix."
+            )
+        prepared = []
+        for change in changes:
+            data = self.validation_service.validate_student(StudentNew(
+                change.name, change.surnames, change.group_name
+            ))
+            existing = existing_by_id[change.student_id]
+            if data.group_name != existing.group_name and not data.group_name:
+                raise ValidationError("El grup nou no pot estar buit.")
+            prepared.append((existing, data))
+
+        updated = unchanged = group_changes = 0
+        try:
+            with self.transaction_factory():
+                total = len(prepared)
+                for completed, (existing, data) in enumerate(prepared, 1):
+                    if cancel_requested is not None and cancel_requested():
+                        raise _BulkUpdateCancelled
+                    if (
+                        data.name == existing.name
+                        and data.surnames == existing.surnames
+                        and data.group_name == existing.group_name
+                    ):
+                        unchanged += 1
+                    else:
+                        self.student_dao.update(Student(
+                            existing.id, existing.uuid, data.name, data.surnames,
+                            existing.group_name,
+                        ))
+                        if data.group_name != existing.group_name:
+                            self.change_student_group(
+                                existing.id, data.group_name, change_date=change_date
+                            )
+                            group_changes += 1
+                        updated += 1
+                    if progress_callback is not None:
+                        progress_callback(completed, total)
+        except _BulkUpdateCancelled:
+            return StudentBulkUpdateResult(0, 0, 0, cancelled=True)
+        return StudentBulkUpdateResult(updated, unchanged, group_changes)
+
+    def bulk_update_with_worker_connection(self, *args, **kwargs):
+        """Executa l'edició amb una connexió creada dins del treballador."""
+        if self.worker_service_factory is None:
+            return self.bulk_update(*args, **kwargs)
+        with self.worker_service_factory() as worker_service:
+            return worker_service.bulk_update(*args, **kwargs)
 
     def delete(self, student_id: int) -> None:
         """Elimina un alumne existent i les seves dades dependents."""
@@ -183,3 +251,7 @@ class StudentService:
         if student is None:
             raise EntityNotFoundError(f"L'alumne amb ID {student_id} no existeix.")
         return student
+
+
+class _BulkUpdateCancelled(RuntimeError):
+    """Senyal intern que força el rollback de l'edició massiva."""

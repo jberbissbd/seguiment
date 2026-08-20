@@ -8,7 +8,7 @@ l'ordinador de l'usuari i no requereix cap servei web per treballar-hi.
 
 L'aplicació permet:
 
-- crear i gestionar alumnes i grups;
+- crear i gestionar alumnes i grups, també mitjançant edició massiva;
 - organitzar anotacions de seguiment per categories, cursos acadèmics i
   trimestres;
 - consultar estadístiques de cobertura, evolució temporal i distribució per

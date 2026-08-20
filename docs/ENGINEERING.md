@@ -100,6 +100,11 @@ connexió SQLite pròpia dins del treballador. Una cancel·lació interromp el f
 entre alumnes o blocs de document, força el rollback complet i elimina els
 fitxers nous copiats; els fitxers anteriors només s'eliminen després del commit.
 
+L'edició massiva d'alumnes valida el lot complet abans d'escriure i utilitza
+una connexió SQLite pròpia del treballador. Noms, cognoms i grups es confirmen
+en una sola transacció. Els canvis de grup passen per `StudentService` per
+mantenir l'historial; una cancel·lació força el rollback de totes les files.
+
 Les cerques textuals utilitzen `DebouncedLineEdit` (180 ms). Els canvis de
 selecció explícits continuen sent immediats. Les estadístiques utilitzen el
 mateix principi amb un `QTimer` d'un sol tret.

@@ -51,6 +51,7 @@ class StudentList(QFrame):
     search_changed = Signal(str)
     create_requested = Signal()
     batch_export_requested = Signal()
+    bulk_edit_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -77,7 +78,13 @@ class StudentList(QFrame):
         self.batch_export_button.setObjectName("secondaryButton")
         self.batch_export_button.setEnabled(False)
         self.batch_export_button.clicked.connect(self.batch_export_requested)
+        self.bulk_edit_button = QPushButton("Edició massiva…")
+        set_button_icon(self.bulk_edit_button, "edit")
+        self.bulk_edit_button.setObjectName("secondaryButton")
+        self.bulk_edit_button.setEnabled(False)
+        self.bulk_edit_button.clicked.connect(self.bulk_edit_requested)
         header_actions.addWidget(self.create_button)
+        header_actions.addWidget(self.bulk_edit_button)
         header_actions.addWidget(self.batch_export_button)
         header.addLayout(header_actions)
         layout.addLayout(header)
@@ -150,6 +157,7 @@ class StudentList(QFrame):
         self.list_widget.setVisible(has_students)
         self.empty_label.setVisible(not has_students)
         self.batch_export_button.setEnabled(has_students)
+        self.bulk_edit_button.setEnabled(has_students)
 
     def current_student_id(self):
         item = self.list_widget.currentItem()
