@@ -79,6 +79,12 @@ El text compatible amb XML es normalitza a `sanitize_xml_text`, compartit pels
 informes DOCX, ODT i PDF. Una nova regla comuna s'ha d'ubicar a la capa més baixa
 que no introdueixi dependències inverses.
 
+Els models de domini de `messaging.py` són valors immutables amb `slots`. Els
+serveis no han de modificar els objectes rebuts: una normalització o actualització
+ha de construir un valor nou (o usar `dataclasses.replace`). Les vistes compostes,
+com l'alumne amb contactes i documents, tenen un model de lectura específic en
+lloc d'afegir atributs dinàmicament a una entitat.
+
 Es capturen excepcions concretes a les operacions de negoci. Només es permet una
 captura genèrica en una frontera externa amb una justificació local, com parsers
 de tercers sense jerarquia comuna o neteja que torna a llançar l'excepció original.

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,7 @@ def test_document_service_crud(document_dao, student_dao, db):
 
     assert document.name == "Informe"
     assert service.get_by_student(student.id) == [document]
-    document.name = "Informe actualitzat"
+    document = replace(document, name="Informe actualitzat")
     updated = service.update(document)
     assert updated.name == "Informe actualitzat"
     assert updated.uuid_filename == "uuid.pdf"

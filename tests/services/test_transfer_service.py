@@ -116,7 +116,7 @@ def test_conflictes_apliquen_les_tres_decisions(
     first_preview = target.transfers.analyze(package, PASSWORD)
     target.transfers.execute(first_preview, password=PASSWORD)
     local = target.students.get_by_uuid(original.uuid)
-    local.name = "Nom local"
+    local = replace(local, name="Nom local")
     target.students.update(local)
 
     preview = target.transfers.analyze(package, PASSWORD)
@@ -248,3 +248,4 @@ def test_error_durant_documents_fa_rollback_i_neteja_fitxers(
     assert not target.documents.storage_dir.exists() or not any(
         target.documents.storage_dir.iterdir()
     )
+from dataclasses import replace

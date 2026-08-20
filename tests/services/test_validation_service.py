@@ -1,4 +1,6 @@
 import uuid
+from types import SimpleNamespace
+
 import pytest
 from tutopy.models.messaging import StudentNew, NoteNew, CategoryNew, AcademicCourseNew
 from tutopy.services.validation_service import ValidationService
@@ -20,7 +22,7 @@ class TestValidationService:
         )
         
         # No hauria de llançar cap excepció
-        service.validate_student(student_data)
+        student_data = service.validate_student(student_data)
 
     def test_validate_student_normalitza_text(self, category_dao, db):
         service = ValidationService(category_dao)
@@ -30,7 +32,7 @@ class TestValidationService:
             group_name=" 4t A ",
         )
 
-        service.validate_student(student_data)
+        student_data = service.validate_student(student_data)
 
         assert student_data.name == "Àlex Maria"
         assert student_data.surnames == "O'Connor Puig-Soler"
@@ -52,12 +54,9 @@ class TestValidationService:
         """Testa que la validació falla si el nom és None."""
         service = ValidationService(category_dao)
         
-        # Crear un objecte vàlid i després modificar-lo per bypassar el dataclass
-        student = StudentNew(name="Jordi",
-            surnames="Garcia López",
-            group_name="4t A"
+        student = SimpleNamespace(
+            name=None, surnames="Garcia López", group_name="4t A"
         )
-        student.name = None
         
         with pytest.raises(ValueError, match="El nom de l'alumne no pot estar buit"):
             service.validate_student(student)
@@ -66,12 +65,9 @@ class TestValidationService:
         """Testa que la validació falla si el nom no és una cadena."""
         service = ValidationService(category_dao)
         
-        # Crear un objecte vàlid i després modificar-lo
-        student = StudentNew(name="Jordi",
-            surnames="Garcia López",
-            group_name="4t A"
+        student = SimpleNamespace(
+            name=123, surnames="Garcia López", group_name="4t A"
         )
-        student.name = 123  # No és string
         
         with pytest.raises(ValueError, match="El nom de l'alumne no pot estar buit"):
             service.validate_student(student)
@@ -80,12 +76,7 @@ class TestValidationService:
         """Testa que la validació falla si els cognoms estan buits."""
         service = ValidationService(category_dao)
         
-        # Crear un objecte vàlid i després modificar-lo
-        student = StudentNew(name="Jordi",
-            surnames="Garcia López",
-            group_name="4t A"
-        )
-        student.surnames = ""
+        student = StudentNew(name="Jordi", surnames="", group_name="4t A")
         
         with pytest.raises(ValueError, match="Els cognoms no poden estar buits"):
             service.validate_student(student)
@@ -94,12 +85,7 @@ class TestValidationService:
         """Testa que la validació falla si els cognoms no són text."""
         service = ValidationService(category_dao)
         
-        # Crear un objecte vàlid i després modificar-lo
-        student = StudentNew(name="Jordi",
-            surnames="Garcia López",
-            group_name="4t A"
-        )
-        student.surnames = 456
+        student = SimpleNamespace(name="Jordi", surnames=456, group_name="4t A")
         
         with pytest.raises(ValueError, match="Els cognoms no poden estar buits"):
             service.validate_student(student)
@@ -130,15 +116,13 @@ class TestValidationService:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         service = ValidationService(category_dao)
         
-        # Crear un objecte vàlid i després modificar-lo
         note = NoteNew(
             student_id=1,
             category_id=categoria.id,
             date="2026-01-15",
             course_id=1,
-            content="Nota de prova"
+            content=""
         )
-        note.content = ""
         
         with pytest.raises(ValueError, match="El contingut de la nota no pot estar buit"):
             service.validate_note(note)
@@ -149,15 +133,13 @@ class TestValidationService:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         service = ValidationService(category_dao)
         
-        # Crear un objecte vàlid i després modificar-lo
-        note = NoteNew(
+        note = SimpleNamespace(
             student_id=1,
             category_id=categoria.id,
             date="2026-01-15",
             course_id=1,
-            content="Nota de prova"
+            content=None,
         )
-        note.content = None
         
         with pytest.raises(ValueError, match="El contingut de la nota no pot estar buit"):
             service.validate_note(note)

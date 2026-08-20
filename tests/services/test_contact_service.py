@@ -15,7 +15,7 @@ def test_contact_service_crud(contact_dao, student_dao, db):
     assert contact.name == "Maria"
     assert service.get_by_student(student.id) == [contact]
 
-    contact.phone = "611 111 111"
+    contact = replace(contact, phone="611 111 111")
     assert service.update(contact).phone == "611 111 111"
     service.delete(contact.id)
     assert service.get_by_student(student.id) == []
@@ -31,3 +31,4 @@ def test_contact_service_valida_relacions_i_text(contact_dao, student_dao, db):
     invalid_contact = ContactNew(student.id, "   ", "Relació")
     with pytest.raises(ValidationError):
         service.create(invalid_contact)
+from dataclasses import replace

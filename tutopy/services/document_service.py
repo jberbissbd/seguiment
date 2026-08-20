@@ -90,16 +90,13 @@ class DocumentService:
             date=document.date,
             course_id=document.course_id,
         ))
-        document.student_id = existing.student_id
-        document.name = prepared.name
-        document.description = prepared.description
-        document.uuid_filename = existing.uuid_filename
-        document.original_filename = existing.original_filename
-        document.file_path = existing.file_path
-        document.date = prepared.date
-        document.course_id = prepared.course_id
-        self.document_dao.update(document)
-        return document
+        updated = StudentDocument(
+            document.id, existing.student_id, prepared.name, prepared.description,
+            existing.uuid_filename, existing.original_filename, existing.file_path,
+            prepared.date, prepared.course_id,
+        )
+        self.document_dao.update(updated)
+        return updated
 
     def get_readable_path(self, document_id: int) -> Path:
         """Retorna el fitxer gestionat després de validar-ne ubicació i existència."""

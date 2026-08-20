@@ -66,9 +66,9 @@ class AnnotationService:
             annotation.content, "El contingut del descriptor no pot estar buit."
         )
         self._require_student(annotation.student_id)
-        annotation.content = content
-        annotation.student_id = existing.student_id
-        self.annotation_dao.update(annotation)
+        self.annotation_dao.update(StudentAnnotation(
+            annotation.id, existing.student_id, content
+        ))
 
     def delete(self, id: int) -> None:
         """Elimina una anotació pel seu ID.

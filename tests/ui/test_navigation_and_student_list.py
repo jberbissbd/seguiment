@@ -57,7 +57,7 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         assert first_widget.minimumHeight() == 52
         assert first_widget.avatar.text() == "AG"
         assert "background-color" in first_widget.avatar.styleSheet()
-        first.name = "Àlex"
+        first = replace(first, name="Àlex")
         widget.set_students([first, second])
         assert widget.list_widget.itemWidget(widget.list_widget.item(0)) is first_widget
         assert first_widget.name.text().startswith("Àlex")
@@ -150,3 +150,4 @@ def test_main_controller_carrega_cerca_i_selecciona_alumnes(qtbot, tmp_path):
         assert window.student_detail.tabs.isVisibleTo(window.student_detail)
     finally:
         database.close()
+from dataclasses import replace

@@ -5,7 +5,10 @@ from tutopy.database.daos.contact_dao import ContactDAO
 from tutopy.database.daos.document_dao import DocumentDAO
 from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
-from tutopy.models.messaging import Student, StudentNew, StudentGroupHistoryNew, StudentGroupHistory
+from tutopy.models.messaging import (
+    Student, StudentDetails, StudentNew, StudentGroupHistory,
+    StudentGroupHistoryNew,
+)
 from tutopy.services.exceptions import EntityNotFoundError
 from tutopy.services.utils import AcademicCourseDeterminator
 from tutopy.services.validation_service import ValidationService
@@ -54,7 +57,7 @@ class StudentService:
     def create_student(self, student_data: StudentNew) -> Student:
         """Crea l'alumne i registra també el seu grup inicial."""
         with self.transaction_factory():
-            self.validation_service.validate_student(student_data)
+            student_data = self.validation_service.validate_student(student_data)
             student = self.student_dao.create(student_data)
             if student.group_name:
                 self.change_student_group(student.id, student.group_name)
@@ -69,32 +72,38 @@ class StudentService:
         with self.transaction_factory():
             existing = self._require_student(student.id)
             data = StudentNew(student.name, student.surnames, student.group_name)
-            self.validation_service.validate_student(data)
+            data = self.validation_service.validate_student(data)
             requested_group = data.group_name
-            student.uuid = existing.uuid
-            student.name = data.name
-            student.surnames = data.surnames
-            student.group_name = existing.group_name
-            self.student_dao.update(student)
+            updated = Student(
+                student.id, existing.uuid, data.name, data.surnames,
+                existing.group_name,
+            )
+            self.student_dao.update(updated)
             if requested_group != existing.group_name:
                 self.change_student_group(student.id, requested_group)
-                student.group_name = requested_group
-        return student
+                updated = Student(
+                    updated.id, updated.uuid, updated.name, updated.surnames,
+                    requested_group,
+                )
+        return updated
 
     def delete(self, student_id: int) -> None:
         """Elimina un alumne existent i les seves dades dependents."""
         self._require_student(student_id)
         self.student_dao.delete(student_id)
 
-    def get_student_with_contacts(self, student_id: int) -> Student:
+    def get_student_with_contacts(self, student_id: int) -> StudentDetails | None:
         """Obté un alumne amb els seus contactes i documents."""
         student = self.student_dao.get_by_id(student_id)
-        if student:
-            student.contacts = self.contact_dao.get_by_student(student_id)
-            student.documents = self.document_dao.get_by_student(student_id)
-        return student
+        if student is None:
+            return None
+        return StudentDetails(
+            student,
+            tuple(self.contact_dao.get_by_student(student_id)),
+            tuple(self.document_dao.get_by_student(student_id)),
+        )
 
-    def get_details(self, student_id: int) -> Optional[Student]:
+    def get_details(self, student_id: int) -> Optional[StudentDetails]:
         """Retorna l'alumne amb contactes i documents associats."""
         return self.get_student_with_contacts(student_id)
 
@@ -141,8 +150,11 @@ class StudentService:
 
             current_history = self.group_history_dao.get_current(student_id)
             if current_history:
-                current_history.end_date = change_date
-                self.group_history_dao.update(current_history)
+                self.group_history_dao.update(StudentGroupHistory(
+                    current_history.id, current_history.student_id,
+                    current_history.group_name, current_history.start_date,
+                    change_date, current_history.academic_course_id,
+                ))
 
             if academic_course_id is None:
                 course_str = AcademicCourseDeterminator().curs_academic_singular(change_date)
@@ -160,8 +172,9 @@ class StudentService:
                 end_date=None,
             )
             history = self.group_history_dao.create(new_history)
-            student.group_name = new_group
-            self.student_dao.update(student)
+            self.student_dao.update(Student(
+                student.id, student.uuid, student.name, student.surnames, new_group
+            ))
             return history
 
     def _require_student(self, student_id: int) -> Student:

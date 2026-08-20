@@ -238,9 +238,9 @@ class TestNoteService:
         assert service.get_by_id(created.id) == created
         assert service.get_all() == [created]
 
-        created.date = "2026-09-01"
-        created.course_id = 0
-        created.content = "Actualitzada"
+        created = replace(
+            created, date="2026-09-01", course_id=0, content="Actualitzada"
+        )
         updated = service.update(created)
         assert db.academic_courses.get_by_id(updated.course_id).course == "2026-2027"
 
@@ -318,3 +318,4 @@ class TestNoteService:
 
         assert academic_course_dao.get_by_course("2026-2027") is None
         assert note_dao.get_all() == []
+from dataclasses import replace
