@@ -73,8 +73,6 @@ class TransferService:
     ) -> Path:
         """Exporta un únic alumne i totes les seves dades relacionades."""
         student_id = self.validation.positive_id(student_id)
-        if self.students.get_by_id(student_id) is None:
-            raise EntityNotFoundError("L’alumne seleccionat no existeix.")
         return self.export_students([student_id], destination, password)
 
     def export_all(self, destination: str | Path, password: str) -> Path:
@@ -98,18 +96,24 @@ class TransferService:
         if not path.name:
             raise ValidationError("Cal indicar un fitxer de destinació.")
 
+        validated_ids = [self.validation.positive_id(item) for item in student_ids]
+        students_by_id = self.students.get_by_ids(validated_ids)
+        missing_ids = [item for item in validated_ids if item not in students_by_id]
+        if missing_ids:
+            raise EntityNotFoundError(
+                f"L’alumne amb ID {missing_ids[0]} no existeix."
+            )
         categories = {item.id: item.name for item in self.categories.get_all()}
         courses = {item.id: item.course for item in self.courses.get_all()}
+        related = self._related_by_student(validated_ids)
         payload = []
         document_sources: list[tuple[Path, str]] = []
         checksums = {}
-        for student_id in student_ids:
-            student = self.students.get_by_id(
-                self.validation.positive_id(student_id)
+        for student_id in validated_ids:
+            student = students_by_id[student_id]
+            item, sources = self._export_student_data(
+                student, categories, courses, related
             )
-            if student is None:
-                raise EntityNotFoundError(f"L’alumne amb ID {student_id} no existeix.")
-            item, sources = self._export_student_data(student, categories, courses)
             payload.append(item)
             for source, archive_name in sources:
                 digest = self._sha256_file(source)
@@ -244,28 +248,37 @@ class TransferService:
             created, replaced, skipped, imported_as_new, imported_documents
         )
 
-    def _export_student_data(self, student, categories, courses):
+    def _related_by_student(self, student_ids):
+        return {
+            "notes": self.notes.get_by_students(student_ids),
+            "contacts": self.contacts.get_by_students(student_ids),
+            "annotations": self.annotations.get_by_students(student_ids),
+            "history": self.history.get_by_students(student_ids),
+            "documents": self.documents.get_by_students(student_ids),
+        }
+
+    def _export_student_data(self, student, categories, courses, related):
         notes = [{
             "date": item.date, "content": item.content,
             "category": categories[item.category_id], "course": courses[item.course_id],
-        } for item in self.notes.get_by_student(student.id)]
+        } for item in related["notes"][student.id]]
         contacts = [{
             "name": item.name, "description": item.description,
             "phone": item.phone, "email": item.email,
-        } for item in self.contacts.get_by_student(student.id)]
+        } for item in related["contacts"][student.id]]
         annotations = [
             {"content": item.content}
-            for item in self.annotations.get_by_student(student.id)
+            for item in related["annotations"][student.id]
         ]
         history = [{
             "group_name": item.group_name,
             "course": courses.get(item.academic_course_id),
             "start_date": item.start_date, "end_date": item.end_date,
-        } for item in self.history.get_by_student(student.id)]
+        } for item in related["history"][student.id]]
         documents_by_path = {}
         sources = []
-        for item in self.documents.get_by_student(student.id):
-            source = self.document_service.get_readable_path(item.id)
+        for item in related["documents"][student.id]:
+            source = self.document_service.get_readable_document_path(item)
             archive_name = f"documents/{student.uuid}/{item.uuid_filename}"
             documents_by_path[archive_name] = {
                 "name": item.name, "description": item.description,

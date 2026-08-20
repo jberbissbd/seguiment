@@ -28,6 +28,7 @@ mateix volum de dades.
 | Filtrar notes | `O(log N + R)` amb índex aplicable | `O(R)` | Els filtres s'executen a SQLite i només es materialitzen els `R` resultats. |
 | Estadístiques | `O(N + S)` | `O(S + C)` | Les agregacions es fan a SQLite i no carreguen el text sensible. |
 | Generar un informe | `O(N + C)` | `O(N + C)` | Cursos i categories es precomputen una vegada per exportació. |
+| Transferir alumnes | `O(S + N + D)` | `O(S + N + D)` | Les relacions es carreguen per lots; les lectures SQL no creixen per alumne. |
 | Detectar conflictes d'importació | `O(I·S·L²)` pitjor cas | `O(S·L + M)` | La comparació difusa domina; els noms normalitzats es calculen una sola vegada. |
 
 `L` és la longitud del nom i `M` el nombre de coincidències. El límit de 10.000

@@ -1,6 +1,7 @@
 import uuid as uuid_mod
 from typing import Optional
 from tutopy.models.messaging import Student, StudentNew
+from ._batch import SQLITE_PARAMETER_BATCH
 
 
 class StudentDAO:
@@ -20,6 +21,21 @@ class StudentDAO:
             (id,),
         ).fetchone()
         return Student(**row) if row else None
+
+    def get_by_ids(self, student_ids: list[int]) -> dict[int, Student]:
+        """Retorna els alumnes indicats amb un nombre acotat de consultes."""
+        unique_ids = tuple(dict.fromkeys(student_ids))
+        students = {}
+        for offset in range(0, len(unique_ids), SQLITE_PARAMETER_BATCH):
+            batch = unique_ids[offset:offset + SQLITE_PARAMETER_BATCH]
+            placeholders = ",".join("?" for _ in batch)
+            rows = self.conn.execute(
+                "SELECT id, uuid, name, surnames, group_name FROM students "
+                f"WHERE id IN ({placeholders})",
+                batch,
+            )
+            students.update((row["id"], Student(**row)) for row in rows)
+        return students
 
     def get_by_uuid(self, uuid: str) -> Optional[Student]:
         row = self.conn.execute(

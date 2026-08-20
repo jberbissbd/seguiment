@@ -100,7 +100,10 @@ class DocumentService:
 
     def get_readable_path(self, document_id: int) -> Path:
         """Retorna el fitxer gestionat després de validar-ne ubicació i existència."""
-        document = self.get_by_id(document_id)
+        return self.get_readable_document_path(self.get_by_id(document_id))
+
+    def get_readable_document_path(self, document: StudentDocument) -> Path:
+        """Valida la ruta d'un document que ja s'ha carregat de persistència."""
         if self.storage_dir is None or not document.file_path:
             raise ValidationError("El document no té cap fitxer gestionat.")
         path = Path(document.file_path)

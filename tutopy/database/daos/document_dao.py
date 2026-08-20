@@ -1,5 +1,6 @@
 from typing import Optional
 from tutopy.models.messaging import StudentDocument, StudentDocumentNew
+from ._batch import grouped_by_student
 
 
 class DocumentDAO:
@@ -14,6 +15,19 @@ class DocumentDAO:
             (student_id,),
         ).fetchall()
         return [StudentDocument(**row) for row in rows]
+
+    def get_by_students(
+        self, student_ids: list[int]
+    ) -> dict[int, list[StudentDocument]]:
+        """Retorna els documents agrupats per alumne en lectures per lots."""
+        return grouped_by_student(
+            self.conn,
+            student_ids,
+            "SELECT id, student_id, name, description, uuid_filename, "
+            "original_filename, file_path, date, course_id FROM student_documents "
+            "WHERE student_id IN ({placeholders}) ORDER BY student_id, name",
+            StudentDocument,
+        )
 
     def get_by_id(self, id: int) -> Optional[StudentDocument]:
         row = self.conn.execute(
