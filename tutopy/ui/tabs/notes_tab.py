@@ -13,7 +13,6 @@ class NotesTab(QWidget):
     """Taula i filtres de notes sense dependències de negoci."""
 
     filters_changed = Signal(dict)
-    create_requested = Signal()
     edit_requested = Signal(int)
     delete_requested = Signal(int)
 
@@ -49,20 +48,16 @@ class NotesTab(QWidget):
         layout.addLayout(filters)
 
         actions = QHBoxLayout()
-        self.create_button = QPushButton("Nova nota")
-        self.create_button.setObjectName("primaryButton")
         self.edit_button = QPushButton("Editar")
         self.edit_button.setObjectName("secondaryButton")
         self.delete_button = QPushButton("Eliminar")
         self.delete_button.setObjectName("dangerButton")
         self.clear_button = QPushButton("Netejar filtres")
-        set_button_icon(self.create_button, "add")
         set_button_icon(self.edit_button, "edit")
         set_button_icon(self.delete_button, "delete")
         set_button_icon(self.clear_button, "clear")
         self.edit_button.setEnabled(False)
         self.delete_button.setEnabled(False)
-        actions.addWidget(self.create_button)
         actions.addWidget(self.edit_button)
         actions.addWidget(self.delete_button)
         actions.addStretch()
@@ -103,7 +98,6 @@ class NotesTab(QWidget):
         self.date_from.dateChanged.connect(self._emit_filters)
         self.date_to.dateChanged.connect(self._emit_filters)
         self.clear_button.clicked.connect(self.clear_filters)
-        self.create_button.clicked.connect(self.create_requested)
         self.edit_button.clicked.connect(self._request_edit)
         self.delete_button.clicked.connect(self._request_delete)
         self.table.itemSelectionChanged.connect(self._selection_changed)

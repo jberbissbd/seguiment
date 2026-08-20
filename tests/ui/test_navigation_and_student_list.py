@@ -1,4 +1,7 @@
-from PySide6.QtCore import Qt
+from dataclasses import replace
+
+from PySide6.QtCore import QEvent, Qt
+from PySide6.QtWidgets import QApplication
 
 from tutopy.application import create_services
 from tutopy.controllers.main_controller import MainController
@@ -59,6 +62,22 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         assert first_widget.minimumHeight() == 52
         assert first_widget.avatar.text() == "AG"
         assert "background-color" in first_widget.avatar.styleSheet()
+        assert first_widget.note_button.isHidden()
+        assert first_widget.note_button.objectName() == "studentNoteButton"
+        assert first_widget.note_button.width() == first_widget.note_button.height() == 34
+        QApplication.sendEvent(first_widget, QEvent(QEvent.Type.Enter))
+        assert not first_widget.note_button.isHidden()
+        QApplication.sendEvent(first_widget, QEvent(QEvent.Type.Leave))
+        assert first_widget.note_button.isHidden()
+        QApplication.sendEvent(first_widget, QEvent(QEvent.Type.Enter))
+        with qtbot.waitSignal(widget.note_create_requested) as note_signal:
+            qtbot.mouseClick(
+                first_widget.note_button, Qt.MouseButton.LeftButton
+            )
+        assert note_signal.args == [first.id]
+        assert widget.current_student_id() == first.id
+        QApplication.sendEvent(first_widget, QEvent(QEvent.Type.Leave))
+        assert not first_widget.note_button.isHidden()
         first = replace(first, name="Àlex")
         widget.set_students([first, second])
         assert widget.list_widget.itemWidget(widget.list_widget.item(0)) is first_widget
@@ -66,6 +85,7 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
         with qtbot.waitSignal(widget.student_selected) as signal:
             widget.list_widget.setCurrentRow(1)
         assert signal.args == [second.id]
+        assert first_widget.note_button.isHidden()
         assert first.uuid != second.uuid
         with qtbot.waitSignal(widget.batch_export_requested):
             qtbot.mouseClick(
@@ -152,4 +172,3 @@ def test_main_controller_carrega_cerca_i_selecciona_alumnes(qtbot, tmp_path):
         assert window.student_detail.tabs.isVisibleTo(window.student_detail)
     finally:
         database.close()
-from dataclasses import replace

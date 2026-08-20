@@ -189,6 +189,26 @@ QToolButton#calendarButton:hover, QToolButton#selectorButton:hover {{
     background-color: #EEF6FC;
 }}
 
+QToolButton#studentNoteButton {{
+    background-color: {PRIMARY_COLOR};
+    border: 2px solid #173A5E;
+    border-radius: 17px;
+    padding: 6px;
+}}
+
+QToolButton#studentNoteButton:hover {{
+    background-color: #173A5E;
+    border-color: {ACCENT_COLOR};
+}}
+
+QToolButton#studentNoteButton:pressed {{
+    background-color: #102D49;
+}}
+
+QToolButton#studentNoteButton:focus {{
+    border-color: {ACCENT_COLOR};
+}}
+
 QPlainTextEdit {{
     min-height: 90px;
 }}

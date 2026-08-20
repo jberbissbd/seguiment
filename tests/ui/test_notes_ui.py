@@ -1,4 +1,4 @@
-from PySide6.QtCore import QDate
+from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QDialog
 
 from tutopy.application import create_services
@@ -156,6 +156,37 @@ def test_note_controller_crud(qtbot, tmp_path, monkeypatch):
         controller.delete(notes[0].id)
         assert services.notes.get_all() == []
         assert controller.view.table.rowCount() == 0
+        assert errors == []
+    finally:
+        database.close()
+
+
+def test_accio_contextual_crea_la_nota_per_l_alumne_de_la_fila(
+    qtbot, tmp_path, monkeypatch
+):
+    database, services, first, category, window, controller, errors = (
+        build_note_controller(qtbot, tmp_path)
+    )
+    try:
+        second = services.students.create(StudentNew("Anna", "Serra", "3r B"))
+        window.student_list.set_students([first, second])
+        monkeypatch.setattr(AcceptedNoteDialog, "values_to_return", {
+            "student_id": first.id,
+            "category_id": category.id,
+            "date": "2026-01-15",
+            "course_id": 0,
+            "content": "Nota des de la fila",
+        })
+        second_item = window.student_list.list_widget.item(1)
+        second_widget = window.student_list.list_widget.itemWidget(second_item)
+        second_widget.set_selected(True)
+
+        qtbot.mouseClick(second_widget.note_button, Qt.MouseButton.LeftButton)
+
+        note = services.notes.get_all()[0]
+        assert note.student_id == second.id
+        assert controller.current_student_id == second.id
+        assert not hasattr(controller.view, "create_button")
         assert errors == []
     finally:
         database.close()

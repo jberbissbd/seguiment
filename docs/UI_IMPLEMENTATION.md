@@ -136,6 +136,8 @@ La gestió d'alumnes de la fase 2 està implementada:
   una data efectiva comuna per als canvis d'historial.
 - Eliminació amb confirmació explícita.
 - Cerca, selecció i actualització dinàmica de la llista.
+- Acció contextual per crear una nota des de cada fila, visible amb hover o
+  mentre l'alumne està seleccionat.
 - Informació bàsica, grup i UUID al panell de detall.
 - Canvis de grup sincronitzats amb l'historial.
 - Tractament independent d'alumnes homònims.
