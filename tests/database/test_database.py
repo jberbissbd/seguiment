@@ -10,6 +10,26 @@ from tutopy.models.messaging import (
     StudentAnnotation, StudentAnnotationNew,
     StudentDocument, StudentDocumentNew
 )
+from tutopy.database.database import Database
+
+
+def test_database_assigna_la_versio_actual_de_l_esquema(db):
+    version = db.conn.execute("PRAGMA user_version").fetchone()[0]
+
+    assert version == Database.SCHEMA_VERSION
+
+
+def test_database_rebutja_un_esquema_mes_nou(tmp_path):
+    path = tmp_path / "future.db"
+    connection = sqlite3.connect(path)
+    connection.execute(f"PRAGMA user_version = {Database.SCHEMA_VERSION + 1}")
+    connection.close()
+
+    database = Database(str(path))
+    with pytest.raises(RuntimeError, match="versió més nova"):
+        database.connect()
+
+    assert database.conn is None
 
 
 class TestDatabasePaths:

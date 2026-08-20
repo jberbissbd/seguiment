@@ -84,6 +84,8 @@ class Database:
     ``.notes``, ``.contacts``, ``.annotations``, ``.documents``).
     """
 
+    SCHEMA_VERSION = 1
+
     def __init__(self, path: str = None):
         self.path = path or _default_db_path()
         self.conn: Optional[ManagedConnection] = None
@@ -101,10 +103,15 @@ class Database:
 
     def connect(self):
         self.conn = ManagedConnection(sqlite3.connect(self.path))
-        self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA foreign_keys = ON")
-        self._create_tables()
-        self._init_daos()
+        try:
+            self.conn.row_factory = sqlite3.Row
+            self.conn.execute("PRAGMA foreign_keys = ON")
+            self._migrate_schema()
+            self._init_daos()
+        except Exception:
+            self.conn.close()
+            self.conn = None
+            raise
         return self
 
     def close(self):
@@ -136,8 +143,21 @@ class Database:
         self.report_configuration = ReportConfigurationDAO(self.conn)
         self.statistics = StatisticsDAO(self.conn)
 
-    def _create_tables(self):
+    def _migrate_schema(self) -> None:
+        """Aplica, en ordre, les migracions pendents de l'esquema."""
+        current_version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+        if current_version > self.SCHEMA_VERSION:
+            raise RuntimeError(
+                "La base de dades ha estat creada amb una versió més nova "
+                "de Tutopy."
+            )
+        if current_version < 1:
+            self._create_schema_v1()
+
+    def _create_schema_v1(self) -> None:
+        """Crea atòmicament la versió inicial de l'esquema."""
         self.conn.executescript("""
+            BEGIN IMMEDIATE;
             CREATE TABLE IF NOT EXISTS academic_courses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 course TEXT NOT NULL UNIQUE
@@ -247,4 +267,6 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_term_config_course_group
                 ON term_configurations(academic_course_id, group_name);
             CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_name);
+            PRAGMA user_version = 1;
+            COMMIT;
         """)

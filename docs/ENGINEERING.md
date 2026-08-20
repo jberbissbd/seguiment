@@ -47,6 +47,13 @@ la construcció dels models i permet que SQLite consideri índexs coberts. Els
 índexs segueixen els filtres reals: notes per alumne/curs/categoria/data,
 duplicats i historial per alumne o curs.
 
+L'esquema es versiona amb `PRAGMA user_version`. Una base nova aplica les
+migracions pendents en ordre i la creació de cada versió ha de ser atòmica. Quan
+canviï l'esquema, cal incrementar `Database.SCHEMA_VERSION`, afegir un pas nou a
+`Database._migrate_schema()` i provar tant una base nova com l'actualització des
+de la versió immediatament anterior. L'aplicació rebutja versions d'esquema més
+noves que les que coneix per evitar obrir-les de manera incompatible.
+
 Abans d'afegir un índex cal validar la consulta amb `EXPLAIN QUERY PLAN`: cada
 índex accelera lectures però encareix escriptures i ocupa disc.
 
