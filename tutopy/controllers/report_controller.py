@@ -1,6 +1,7 @@
 import re
 
-from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QProgressDialog
 
 from tutopy.models.reporting import TermConfigurationNew
 from tutopy.services.academic_course_service import AcademicCourseService
@@ -13,6 +14,7 @@ from tutopy.ui.dialogs.report_export_dialog import ReportExportDialog
 from tutopy.ui.dialogs.term_configuration_dialog import TermConfigurationDialog
 from tutopy.ui.dialogs.batch_export_dialog import BatchExportDialog
 from tutopy.ui.main_window import MainWindow
+from tutopy.ui.background_task import BackgroundTaskRunner
 
 
 class ReportController:
@@ -24,7 +26,8 @@ class ReportController:
                  term_dialog=TermConfigurationDialog,
                  export_dialog=ReportExportDialog,
                  batch_export_dialog=BatchExportDialog,
-                 error_handler=None, confirm_delete=None):
+                 error_handler=None, confirm_delete=None,
+                 task_runner=None, progress_dialog=QProgressDialog):
         self.window = window
         self.students = students
         self.courses = courses
@@ -36,6 +39,10 @@ class ReportController:
         self.batch_export_dialog = batch_export_dialog
         self.error_handler = error_handler or window.show_error
         self.confirm_delete = confirm_delete or window.confirm_deletion
+        self.task_runner = task_runner or BackgroundTaskRunner()
+        self.progress_dialog = progress_dialog
+        self._batch_export_task = None
+        self._batch_progress = None
         view = window.data_tools
         view.category_order_requested.connect(self.configure_category_order)
         view.report_logo_requested.connect(self.configure_report_logo)
@@ -200,6 +207,9 @@ class ReportController:
         self.window.show_status(f"Informe desat a {path}", 5000)
 
     def export_students(self) -> None:
+        if self._batch_export_task is not None:
+            self.window.show_status("Ja hi ha una exportació en curs.")
+            return
         dialog = self.batch_export_dialog(
             self.students.get_all(), self.configuration.get_ordered_categories(),
             parent=self.window,
@@ -213,7 +223,7 @@ class ReportController:
             return
         try:
             self.configuration.set_category_order(dialog.category_order())
-            result = self.student_exports.export_students(
+            preparation = self.student_exports.prepare_students_export(
                 dialog.student_ids(), directory, dialog.export_format(),
                 include_terms=dialog.include_terms.isChecked(),
                 include_documents=dialog.include_documents.isChecked(),
@@ -221,7 +231,46 @@ class ReportController:
         except (DomainError, OSError) as error:
             self.error_handler(str(error))
             return
+        progress = self.progress_dialog(
+            "Preparant els informes…", "Cancel·lar", 0,
+            len(preparation.student_ids), self.window,
+        )
+        progress.setWindowTitle("Exportació d’informes")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(False)
+        progress.setAutoReset(False)
+        self._batch_progress = progress
+
+        def operation(report_progress, cancel_requested):
+            return self.student_exports.export_prepared(
+                preparation, progress_callback=report_progress,
+                cancel_requested=cancel_requested,
+            )
+
+        self._batch_export_task = self.task_runner.start(
+            operation,
+            on_progress=self._update_batch_progress,
+            on_success=self._batch_export_finished,
+            on_failure=self._batch_export_failed,
+        )
+        progress.canceled.connect(self._batch_export_task.cancel)
+        progress.show()
+
+    def _update_batch_progress(self, completed: int, total: int) -> None:
+        if self._batch_progress is None:
+            return
+        self._batch_progress.setMaximum(total)
+        self._batch_progress.setValue(completed)
+        self._batch_progress.setLabelText(
+            f"Generant informes… {completed} de {total}"
+        )
+
+    def _batch_export_finished(self, result) -> None:
+        self._close_batch_progress()
         message = f"Alumnes exportats: {result.exported}"
+        if result.cancelled:
+            message = "Exportació cancel·lada.\n" + message
         if result.failures:
             message += f"\nErrors: {len(result.failures)}\n\n" + "\n".join(
                 f"{failure.student_name}: {failure.reason}"
@@ -229,6 +278,17 @@ class ReportController:
             )
         QMessageBox.information(self.window, "Exportació completada", message)
         self.window.show_status(f"Exportació desada a {result.destination}", 5000)
+
+    def _batch_export_failed(self, error: Exception) -> None:
+        self._close_batch_progress()
+        self.error_handler(str(error))
+
+    def _close_batch_progress(self) -> None:
+        progress = self._batch_progress
+        self._batch_progress = None
+        self._batch_export_task = None
+        if progress is not None:
+            progress.close()
 
     @staticmethod
     def _display_date(value: str) -> str:

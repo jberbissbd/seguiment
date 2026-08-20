@@ -37,6 +37,7 @@ class BatchExportResult:
     destination: str
     exported: int
     failures: tuple[BatchExportFailure, ...] = ()
+    cancelled: bool = False
 
 
 @dataclass(frozen=True, slots=True)

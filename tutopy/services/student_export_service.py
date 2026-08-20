@@ -1,6 +1,8 @@
 from pathlib import Path
 import re
 from datetime import date
+from dataclasses import dataclass
+from typing import Any, Callable
 
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.student_dao import StudentDAO
@@ -9,6 +11,19 @@ from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.report_file_service import ReportFileService
 from tutopy.services.validation_service import ValidationService
 from tutopy.models.reporting import BatchExportFailure, BatchExportResult
+
+
+@dataclass(frozen=True, slots=True)
+class StudentExportPreparation:
+    """Snapshot sense accés posterior a SQLite per exportar en un treballador."""
+
+    student_ids: tuple[int, ...]
+    destination: Path
+    report_format: str
+    include_terms: bool
+    include_documents: bool
+    report_data: Any
+    document_data: Any
 
 
 class StudentExportService:
@@ -51,26 +66,63 @@ class StudentExportService:
 
     def export_students(self, student_ids: list[int], destination: str | Path,
                         report_format: str, include_terms: bool = False,
-                        include_documents: bool = False) -> BatchExportResult:
+                        include_documents: bool = False,
+                        progress_callback: Callable[[int, int], None] | None = None,
+                        cancel_requested: Callable[[], bool] | None = None,
+                        ) -> BatchExportResult:
+        preparation = self.prepare_students_export(
+            student_ids, destination, report_format, include_terms, include_documents
+        )
+        return self.export_prepared(
+            preparation, progress_callback=progress_callback,
+            cancel_requested=cancel_requested,
+        )
+
+    def prepare_students_export(
+        self, student_ids: list[int], destination: str | Path,
+        report_format: str, include_terms: bool = False,
+        include_documents: bool = False,
+    ) -> StudentExportPreparation:
+        """Valida i carrega al fil actual totes les dades requerides pel lot."""
         base = self._validate_batch_request(student_ids, destination, report_format)
-        batch_root = self._create_batch_root(base)
         report_data = self.report_files.prepare_students(
             student_ids, report_format, include_terms
         )
         document_data = (
             self._prepare_documents(student_ids) if include_documents else None
         )
+        return StudentExportPreparation(
+            tuple(student_ids), base, report_format, include_terms,
+            include_documents, report_data, document_data,
+        )
+
+    def export_prepared(
+        self, preparation: StudentExportPreparation,
+        progress_callback: Callable[[int, int], None] | None = None,
+        cancel_requested: Callable[[], bool] | None = None,
+    ) -> BatchExportResult:
+        """Genera un lot preparat sense efectuar cap lectura de SQLite."""
+        batch_root = self._create_batch_root(preparation.destination)
         failures = []
         used_folders = {}
-        for student_id in student_ids:
+        processed = 0
+        total = len(preparation.student_ids)
+        for student_id in preparation.student_ids:
+            if cancel_requested is not None and cancel_requested():
+                break
             failure = self._export_batch_entry(
-                student_id, batch_root, report_format, include_terms,
-                include_documents, used_folders, report_data, document_data,
+                student_id, batch_root, preparation.report_format,
+                preparation.include_terms, preparation.include_documents,
+                used_folders, preparation.report_data, preparation.document_data,
             )
             if failure is not None:
                 failures.append(failure)
+            processed += 1
+            if progress_callback is not None:
+                progress_callback(processed, total)
         return BatchExportResult(
-            str(batch_root), len(student_ids) - len(failures), tuple(failures)
+            str(batch_root), processed - len(failures), tuple(failures),
+            cancelled=processed < total,
         )
 
     def _validate_batch_request(self, student_ids: list[int],
