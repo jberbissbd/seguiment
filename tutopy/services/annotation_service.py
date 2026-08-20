@@ -1,4 +1,3 @@
-from typing import Optional
 from tutopy.database.daos.annotation_dao import AnnotationDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.models.messaging import StudentAnnotation, StudentAnnotationNew

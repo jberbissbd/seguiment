@@ -115,6 +115,7 @@ desenvolupament:
 
 ```bash
 python -m pip install -e ".[dev]"
+python -m ruff check tutopy scripts
 python -m pytest
 ```
 

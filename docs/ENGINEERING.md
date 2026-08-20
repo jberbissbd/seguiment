@@ -98,3 +98,7 @@ conflictes d'importació i mai no se substitueix pel valor desat.
 El codi públic nou ha d'incloure anotacions de tipus i docstrings segons PEP 257:
 resum en imperatiu, línia en blanc abans dels detalls i contractes excepcionals
 quan no siguin evidents. Els comentaris expliquen el perquè, no repeteixen el codi.
+
+Ruff és una barrera obligatòria del CI per al codi distribuït. Localment
+s'executa amb `python -m ruff check tutopy scripts`; la configuració compartida
+és a `pyproject.toml` i exclou la documentació generada o narrativa de `docs`.

@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QInputDialog, QLineEdit, QMessageBox,
