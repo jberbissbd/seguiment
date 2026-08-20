@@ -82,6 +82,12 @@ Abans d'afegir un índex cal validar la consulta amb `EXPLAIN QUERY PLAN`: cada
 
 ## Esdeveniments i widgets Qt
 
+Les exportacions massives preparen al fil principal un snapshot de totes les
+dades SQLite i generen els fitxers mitjançant `BackgroundTask`. El treballador
+no comparteix la connexió SQLite i només comunica progrés, resultat o error amb
+senyals Qt. La cancel·lació és cooperativa entre alumnes: els informes ja
+acabats es conserven i no s'inicia el següent.
+
 Les cerques textuals utilitzen `DebouncedLineEdit` (180 ms). Els canvis de
 selecció explícits continuen sent immediats. Les estadístiques utilitzen el
 mateix principi amb un `QTimer` d'un sol tret.

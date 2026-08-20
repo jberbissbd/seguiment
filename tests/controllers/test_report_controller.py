@@ -271,6 +271,7 @@ def test_controlador_exporta_diversos_alumnes(db, qtbot, tmp_path, monkeypatch):
 
     controller.export_students()
 
+    qtbot.waitUntil(lambda: bool(messages), timeout=5000)
     assert any("Alumnes exportats: 2" in message for message in messages)
     assert len(list((tmp_path / "lots").glob("Informes *"))) == 1
     assert errors == []

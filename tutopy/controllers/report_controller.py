@@ -258,11 +258,12 @@ class ReportController:
         progress.show()
 
     def _update_batch_progress(self, completed: int, total: int) -> None:
-        if self._batch_progress is None:
+        progress = self._batch_progress
+        if progress is None:
             return
-        self._batch_progress.setMaximum(total)
-        self._batch_progress.setValue(completed)
-        self._batch_progress.setLabelText(
+        progress.setMaximum(total)
+        progress.setValue(completed)
+        progress.setLabelText(
             f"Generant informes… {completed} de {total}"
         )
 
