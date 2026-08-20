@@ -22,6 +22,54 @@ L'aplicació permet:
 - exportar, juntament amb els informes, els documents de cada alumne ordenats
   per curs acadèmic.
 
+## Primers passos
+
+1. Obre **Configuració** i crea les categories que faràs servir per classificar
+   les notes.
+2. A **Alumnes**, prem **Nou alumne** per crear el primer registre i assignar-li
+   un grup.
+3. Passa el cursor per sobre d'un alumne i prem el botó rodó **+** que apareix a
+   la dreta per afegir-li una nota. El botó també es manté visible a la fila
+   seleccionada.
+4. Selecciona un alumne per consultar-ne les notes, els descriptors, els
+   contactes, els documents i l'històric de grups.
+
+La cerca de la llista permet filtrar per nom, cognoms o grup.
+
+### Edició massiva d'alumnes
+
+Prem **Edició massiva…** a la llista d'alumnes per modificar noms, cognoms o
+grups directament en una taula. Per assignar el mateix grup a diverses files:
+
+1. selecciona les files corresponents;
+2. escriu o tria el grup;
+3. prem **Aplicar grup**;
+4. indica la data efectiva del canvi i prem **Aplicar canvis**.
+
+Els canvis de grup s'incorporen a l'històric de cada alumne amb la data
+indicada.
+
+### Informes i trimestres
+
+Des de **Configuració → Informes i trimestres** pots ordenar les categories,
+seleccionar el logotip dels informes i definir les dates d'inici del segon i
+tercer trimestre. La configuració dels trimestres és específica per a cada
+combinació de curs acadèmic i grup.
+
+Per exportar un únic informe, selecciona l'alumne i prem **Exportar informe**.
+Per generar-ne diversos, utilitza **Exportar diversos…** a la llista.
+
+### Importació i transferència de dades
+
+A **Gestió de dades** pots descarregar la plantilla XLSX i importar alumnes i
+categories preparats amb Excel o LibreOffice Calc.
+
+Per traslladar expedients complets entre instal·lacions de Tutopy, exporta els
+alumnes seleccionats —o tots els alumnes— en un paquet `.tpy`. El paquet inclou
+notes, contactes, descriptors, historial i documents, i queda xifrat amb una
+contrasenya d'almenys vuit caràcters. Necessitaràs aquesta mateixa contrasenya
+per importar-lo; conserva-la en un lloc segur.
+
 ## Descàrrega
 
 La versió publicada més recent es pot descarregar des de:
@@ -108,18 +156,28 @@ Aquest procés no elimina ni trasllada les dades existents. Tot i això, és
 recomanable conservar còpies de seguretat periòdiques de la informació
 important.
 
+Les dades de treball romanen a l'ordinador. Tutopy no necessita enviar-les a
+cap servei web. Els paquets `.tpy` són adequats per transferir informació entre
+instal·lacions perquè es creen xifrats i se'n comprova la integritat durant la
+importació.
+
 ## Desenvolupament
 
 El projecte requereix Python 3.10 o superior. Per preparar un entorn de
 desenvolupament:
 
 ```bash
-python -m pip install -e ".[dev]"
-python -m ruff check tutopy scripts
-python -m pytest
+python -m venv .venv
+.venv/bin/python -m pip install --require-hashes -r requirements-dev.lock
+.venv/bin/python -m pip install --no-deps -e .
+.venv/bin/python -m ruff check tutopy scripts tests
+.venv/bin/python -m pytest
 ```
 
-L'aplicació es pot executar amb `tutopy` o `python -m tutopy.main`.
+A Windows, substitueix `.venv/bin/python` per `.venv\Scripts\python.exe`.
+
+L'aplicació es pot executar amb `.venv/bin/tutopy` o
+`.venv/bin/python -m tutopy.main`.
 
 El procés de construcció i publicació està documentat a
 [docs/PACKAGING.md](docs/PACKAGING.md).
