@@ -747,3 +747,30 @@ def test_transaccio_exterior_agrupa_commits_dels_daos(db):
         if statement.strip().upper() in {"BEGIN", "COMMIT"}
     ]
     assert transaction_statements == ["BEGIN", "COMMIT"]
+
+
+def test_transaccio_niuada_desfa_nomes_els_canvis_interiors(db):
+    with db.transaction():
+        db.categories.create(CategoryNew("Exterior abans"))
+        try:
+            with db.transaction():
+                db.categories.create(CategoryNew("Interior"))
+                raise RuntimeError("error interior")
+        except RuntimeError:
+            pass
+        db.categories.create(CategoryNew("Exterior després"))
+
+    assert [category.name for category in db.categories.get_all()] == [
+        "Exterior abans", "Exterior després",
+    ]
+
+
+def test_rollback_exterior_desfa_savepoints_ja_confirmats(db):
+    with pytest.raises(RuntimeError, match="error exterior"):
+        with db.transaction():
+            db.categories.create(CategoryNew("Exterior"))
+            with db.transaction():
+                db.categories.create(CategoryNew("Interior confirmat"))
+            raise RuntimeError("error exterior")
+
+    assert db.categories.get_all() == []

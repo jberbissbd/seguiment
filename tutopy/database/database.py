@@ -30,6 +30,7 @@ class ManagedConnection:
     def __init__(self, connection: sqlite3.Connection):
         self._connection = connection
         self._transaction_depth = 0
+        self._savepoint_counter = 0
 
     @property
     def row_factory(self):
@@ -63,6 +64,11 @@ class ManagedConnection:
         outermost = self._transaction_depth == 0
         if outermost:
             self._connection.execute("BEGIN")
+            savepoint = None
+        else:
+            self._savepoint_counter += 1
+            savepoint = f"tutopy_savepoint_{self._savepoint_counter}"
+            self._connection.execute(f"SAVEPOINT {savepoint}")
         self._transaction_depth += 1
         try:
             yield
@@ -70,11 +76,16 @@ class ManagedConnection:
             self._transaction_depth -= 1
             if outermost:
                 self._connection.rollback()
+            else:
+                self._connection.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                self._connection.execute(f"RELEASE SAVEPOINT {savepoint}")
             raise
         else:
             self._transaction_depth -= 1
             if outermost:
                 self._connection.commit()
+            else:
+                self._connection.execute(f"RELEASE SAVEPOINT {savepoint}")
 
 
 class Database:

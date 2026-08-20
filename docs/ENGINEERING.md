@@ -27,6 +27,10 @@ els `commit` interns quan un servei obre `Database.transaction()`. Així, una
 importació o un canvi coordinat produeix un únic `COMMIT` físic. La capa de servei,
 que coneix la unitat de negoci completa, és qui obre la transacció.
 
+Les transaccions niuades creen `SAVEPOINT`. Si una operació interior falla, se'n
+desfan només els canvis i la transacció exterior pot capturar l'error i continuar.
+Un rollback exterior també desfà els savepoints interiors que ja s'hagin alliberat.
+
 No s'han d'afegir `commit` dins de bucles. Les noves operacions massives han de
 seguir aquest patró:
 
