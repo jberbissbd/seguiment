@@ -93,6 +93,21 @@ def test_exportacio_docx_forma_part_de_les_dependencies_i_del_build():
     ).read_text(encoding="utf-8")
 
 
+def test_cryptography_50_esta_fixada_a_tots_els_entorns():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert "cryptography==50.0.0" in project["project"]["dependencies"]
+
+    for lock_name in ("requirements-dev.lock", "requirements-build.lock"):
+        lock = (ROOT / lock_name).read_text(encoding="utf-8")
+        assert "cryptography==50.0.0" in lock
+
+    pylock = tomllib.loads((ROOT / "pylock.toml").read_text(encoding="utf-8"))
+    cryptography = next(
+        package for package in pylock["packages"] if package["name"] == "cryptography"
+    )
+    assert cryptography["version"] == "50.0.0"
+
+
 def test_workflows_i_lock_utilitzen_python_312():
     for workflow_name in ("ci.yml", "release.yml"):
         workflow = (ROOT / ".github/workflows" / workflow_name).read_text(
