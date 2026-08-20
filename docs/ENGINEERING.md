@@ -64,7 +64,9 @@ delega les dependències a `ON DELETE CASCADE`; les restriccions `RESTRICT` i
 Els DAOs projecten columnes explícites. Això evita que afegir una columna trenqui
 la construcció dels models i permet que SQLite consideri índexs coberts. Els
 índexs segueixen els filtres reals: notes per alumne/curs/categoria/data,
-duplicats i historial per alumne o curs.
+duplicats i historial per alumne o curs. L'índex compost de notes per alumne i
+curs evita recórrer totes les notes d'un curs per cada alumne quan es calculen
+estadístiques filtrades.
 
 L'esquema es versiona amb `PRAGMA user_version`. Una base nova aplica les
 migracions pendents en ordre i la creació de cada versió ha de ser atòmica. Quan

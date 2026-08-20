@@ -259,6 +259,8 @@ class Database:
             CREATE UNIQUE INDEX IF NOT EXISTS idx_one_current_group_per_student
                 ON student_group_history(student_id) WHERE end_date IS NULL;
             CREATE INDEX IF NOT EXISTS idx_notes_student ON notes(student_id);
+            CREATE INDEX IF NOT EXISTS idx_notes_student_course
+                ON notes(student_id, course_id);
             CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category_id);
             CREATE INDEX IF NOT EXISTS idx_notes_course ON notes(course_id);
             CREATE INDEX IF NOT EXISTS idx_notes_date ON notes(date);
