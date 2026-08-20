@@ -9,7 +9,7 @@ from tutopy.services.annotation_service import AnnotationService
 from tutopy.services.academic_course_service import AcademicCourseService
 from tutopy.services.contact_service import ContactService
 from tutopy.services.document_service import DocumentService
-from tutopy.services.exceptions import DomainError
+from tutopy.services.exceptions import DomainError, FileCleanupError
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.annotation_dialog import AnnotationDialog
 from tutopy.ui.dialogs.contact_dialog import ContactDialog
@@ -198,6 +198,10 @@ class StudentRelatedController:
     def _run(self, operation, success_message):
         try:
             operation()
+        except FileCleanupError as error:
+            self.refresh_all()
+            self.error_handler(str(error))
+            return
         except DomainError as error:
             self.error_handler(str(error))
             return

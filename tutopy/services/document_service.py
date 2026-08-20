@@ -1,3 +1,4 @@
+import logging
 import shutil
 import uuid
 from pathlib import Path
@@ -6,9 +7,16 @@ from tutopy.database.daos.document_dao import DocumentDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.models.messaging import StudentDocument, StudentDocumentNew
-from tutopy.services.exceptions import EntityNotFoundError, ValidationError
+from tutopy.services.exceptions import (
+    EntityNotFoundError,
+    FileCleanupError,
+    ValidationError,
+)
 from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import AcademicCourseDeterminator
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class DocumentService:
@@ -127,14 +135,39 @@ class DocumentService:
 
     def delete(self, document_id: int) -> StudentDocument:
         document = self.get_by_id(document_id)
-        self.document_dao.delete(document_id)
         path = Path(document.file_path) if document.file_path else None
+        quarantined = None
         if path and self.storage_dir:
             try:
-                if path.resolve().parent == self.storage_dir.resolve():
-                    path.unlink(missing_ok=True)
-            except OSError:
-                pass
+                managed = path.resolve()
+                if managed.parent == self.storage_dir.resolve() and managed.is_file():
+                    quarantined = managed.with_name(
+                        f".{managed.name}.{uuid.uuid4().hex}.deleting"
+                    )
+                    managed.replace(quarantined)
+            except OSError as error:
+                raise ValidationError(
+                    "No s'ha pogut preparar el fitxer del document per eliminar-lo."
+                ) from error
+        try:
+            self.document_dao.delete(document_id)
+        except Exception:
+            if quarantined is not None:
+                try:
+                    quarantined.replace(path)
+                except OSError:
+                    LOGGER.exception(
+                        "No s'ha pogut restaurar el fitxer del document %s", document_id
+                    )
+            raise
+        if quarantined is not None:
+            try:
+                quarantined.unlink()
+            except OSError as error:
+                raise FileCleanupError(
+                    "El document s'ha eliminat, però no s'ha pogut esborrar "
+                    "completament el fitxer associat."
+                ) from error
         return document
 
     def _prepare(self, data: StudentDocumentNew) -> StudentDocumentNew:
