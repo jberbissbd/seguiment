@@ -45,6 +45,8 @@ class DataManagementController:
         self.progress_dialog = progress_dialog
         self._transfer_export_task = None
         self._transfer_progress = None
+        self._transfer_analysis_task = None
+        self._transfer_analysis_progress = None
         view = window.data_tools
         view.template_requested.connect(self.export_template)
         view.import_requested.connect(self.import_spreadsheet)
@@ -159,6 +161,9 @@ class DataManagementController:
         if self.transfer_service is None:
             self.window.show_error("El servei de transferència no està disponible.")
             return
+        if self._transfer_analysis_task is not None:
+            self.window.show_status("Ja s’està analitzant una transferència.")
+            return
         filename, _ = QFileDialog.getOpenFileName(
             self.window, "Importar paquet Tutopy", "",
             "Paquet Tutopy (*.tpy)",
@@ -168,8 +173,31 @@ class DataManagementController:
         password = self._transfer_password()
         if password is None:
             return
+        progress = self.progress_dialog(
+            "Desxifrant i validant el paquet…", "", 0, 0, self.window
+        )
+        progress.setWindowTitle("Anàlisi de transferència")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setCancelButton(None)
+        self._transfer_analysis_progress = progress
+
+        def operation(_progress, _cancel_requested):
+            return self.transfer_service.prepare_analysis(filename, password)
+
+        self._transfer_analysis_task = self.task_runner.start(
+            operation,
+            on_success=lambda preparation: self._transfer_analysis_finished(
+                preparation, password
+            ),
+            on_failure=self._transfer_analysis_failed,
+        )
+        progress.show()
+
+    def _transfer_analysis_finished(self, preparation, password: str) -> None:
+        self._close_transfer_analysis_progress()
         try:
-            preview = self.transfer_service.analyze(filename, password)
+            preview = self.transfer_service.complete_analysis(preparation)
             decisions = ()
             if preview.conflicts:
                 dialog = self.transfer_conflict_dialog(
@@ -193,6 +221,17 @@ class DataManagementController:
             f"Importats com a nous: {result.imported_as_new}\n"
             f"Documents importats: {result.documents}",
         )
+
+    def _transfer_analysis_failed(self, error: Exception) -> None:
+        self._close_transfer_analysis_progress()
+        self._show_operation_error(error, "analitzar el paquet")
+
+    def _close_transfer_analysis_progress(self) -> None:
+        progress = self._transfer_analysis_progress
+        self._transfer_analysis_progress = None
+        self._transfer_analysis_task = None
+        if progress is not None:
+            progress.close()
 
     def _new_transfer_password(self) -> str | None:
         """Demana dues vegades la contrasenya d'un paquet nou."""

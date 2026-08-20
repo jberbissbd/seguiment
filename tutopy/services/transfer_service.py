@@ -23,8 +23,8 @@ from tutopy.models.messaging import (
     StudentNew,
 )
 from tutopy.models.transfer import (
-    TransferAction, TransferConflict, TransferDecision, TransferPreview,
-    TransferResult,
+    TransferAction, TransferAnalysisPreparation, TransferConflict,
+    TransferDecision, TransferPreview, TransferResult,
 )
 from tutopy.services.exceptions import (
     EntityNotFoundError, TransferAuthenticationError, TransferFormatError,
@@ -194,11 +194,27 @@ class TransferService:
 
     def analyze(self, source: str | Path, password: str) -> TransferPreview:
         """Valida completament un paquet sense modificar dades locals."""
+        return self.complete_analysis(self.prepare_analysis(source, password))
+
+    def prepare_analysis(
+        self, source: str | Path, password: str
+    ) -> TransferAnalysisPreparation:
+        """Desxifra i valida el paquet sense consultar la base de dades."""
         path, data = self._read_package(source, password, verify_documents=True)
+        return TransferAnalysisPreparation(path, data)
+
+    def complete_analysis(
+        self, preparation: TransferAnalysisPreparation
+    ) -> TransferPreview:
+        """Completa al fil de la base de dades la detecció de conflictes UUID."""
+        data = preparation.data
+        local_by_uuid = self.students.get_by_uuids(
+            [item["uuid"] for item in data["students"]]
+        )
         conflicts = []
         note_count = document_count = total_bytes = 0
         for item in data["students"]:
-            local = self.students.get_by_uuid(item["uuid"])
+            local = local_by_uuid.get(item["uuid"])
             if local:
                 conflicts.append(TransferConflict(
                     item["uuid"], self._full_name(item), local.full_name,
@@ -207,7 +223,7 @@ class TransferService:
             document_count += len(item["documents"])
             total_bytes += sum(document["size"] for document in item["documents"])
         return TransferPreview(
-            path, len(data["students"]), note_count, document_count,
+            preparation.source, len(data["students"]), note_count, document_count,
             total_bytes, tuple(conflicts),
         )
 

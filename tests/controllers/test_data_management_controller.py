@@ -190,8 +190,11 @@ def test_transferencia_exporta_i_importa_paquets(
             progress_callback(1, 1)
             return preparation
 
-        def analyze(self, filename, password):
-            return SimpleNamespace(source=filename, conflicts=())
+        def prepare_analysis(self, filename, password):
+            return SimpleNamespace(source=filename, password=password)
+
+        def complete_analysis(self, preparation):
+            return SimpleNamespace(source=preparation.source, conflicts=())
 
         def execute(self, preview, decisions=(), password=""):
             self.executed = (preview, decisions, password)
@@ -222,6 +225,7 @@ def test_transferencia_exporta_i_importa_paquets(
         QInputDialog, "getText", lambda *args: ("contrasenya", True)
     )
     controller.import_transfer()
+    qtbot.waitUntil(lambda: controller._transfer_analysis_task is None, timeout=5000)
     assert transfer.executed[1:] == ((), "contrasenya")
     assert changed == [True]
     assert "Alumnes creats: 2" in messages[0]

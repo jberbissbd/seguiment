@@ -93,6 +93,12 @@ snapshot conté les relacions necessàries, mentre que els hashes, el ZIP, Scryp
 i AES-GCM s'executen al treballador. Si es cancel·la durant la preparació dels
 alumnes, no es construeix ni es publica cap paquet parcial.
 
+En importar una transferència, el desxifrat, la validació de hashes i el parsing
+també s'executen en segon pla. En acabar, els conflictes UUID es consulten per
+lots al fil propietari de SQLite. L'aplicació transaccional posterior encara és
+síncrona i no s'ha de moure a un treballador fins que disposi d'una connexió
+SQLite pròpia.
+
 Les cerques textuals utilitzen `DebouncedLineEdit` (180 ms). Els canvis de
 selecció explícits continuen sent immediats. Les estadístiques utilitzen el
 mateix principi amb un `QTimer` d'un sol tret.
