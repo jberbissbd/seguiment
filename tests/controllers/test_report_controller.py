@@ -74,8 +74,7 @@ def _controller(db, qtbot, tmp_path, monkeypatch):
     errors = []
     controller = ReportController(
         window, services.students, services.academic_courses,
-        services.report_configuration, services.spreadsheet_reports,
-        services.word_reports,
+        services.report_configuration, services.report_files,
         services.student_exports,
         term_dialog=AcceptedTermDialog, export_dialog=AcceptedExportDialog,
         batch_export_dialog=AcceptedBatchExportDialog,

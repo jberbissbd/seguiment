@@ -6,9 +6,7 @@ from tutopy.models.reporting import TermConfigurationNew
 from tutopy.services.academic_course_service import AcademicCourseService
 from tutopy.services.exceptions import DomainError
 from tutopy.services.report_configuration_service import ReportConfigurationService
-from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
-from tutopy.services.word_report_service import WordReportService
-from tutopy.services.open_document_report_service import OpenDocumentReportService
+from tutopy.services.report_file_service import ReportFileService
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.report_export_dialog import ReportExportDialog
@@ -21,10 +19,8 @@ class ReportController:
     def __init__(self, window: MainWindow, students: StudentService,
                  courses: AcademicCourseService,
                  configuration: ReportConfigurationService,
-                 reports: SpreadsheetReportService,
-                 word_reports: WordReportService,
+                 report_files: ReportFileService,
                  student_exports: StudentExportService,
-                 open_document_reports: OpenDocumentReportService | None = None,
                  term_dialog=TermConfigurationDialog,
                  export_dialog=ReportExportDialog,
                  batch_export_dialog=BatchExportDialog,
@@ -33,11 +29,7 @@ class ReportController:
         self.students = students
         self.courses = courses
         self.configuration = configuration
-        self.reports = reports
-        self.word_reports = word_reports
-        self.open_document_reports = (
-            open_document_reports or student_exports.open_document_reports
-        )
+        self.report_files = report_files
         self.student_exports = student_exports
         self.term_dialog = term_dialog
         self.export_dialog = export_dialog
@@ -166,6 +158,11 @@ class ReportController:
             r'[<>:"/\\|?*\x00-\x1f]+', "_", student.filing_name
         ).strip(" ._")
         export_format = dialog.export_format()
+        try:
+            format_details = self.report_files.get_format(export_format)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
         if dialog.include_documents.isChecked():
             directory = QFileDialog.getExistingDirectory(
                 self.window, "Seleccionar carpeta d’exportació"
@@ -183,13 +180,7 @@ class ReportController:
                 return
             self.window.show_status(f"Informe i documents desats a {path}", 5000)
             return
-        format_options = {
-            "xlsx": ("Full de càlcul Excel", "xlsx"),
-            "docx": ("Document de text Word", "docx"),
-            "odt": ("Document de text OpenDocument", "odt"),
-            "pdf": ("Document PDF", "pdf"),
-        }
-        label, extension = format_options[export_format]
+        label, extension = format_details.label, format_details.extension
         default_name = f"informe_{safe_name}.{extension}"
         file_filter = f"{label} (*.{extension})"
         filename, _ = QFileDialog.getSaveFileName(
@@ -199,16 +190,10 @@ class ReportController:
             return
         try:
             self.configuration.set_category_order(dialog.category_order())
-            if export_format == "docx":
-                path = self.word_reports.export_student(student_id, filename)
-            elif export_format == "xlsx":
-                path = self.reports.export_student(
-                    student_id, filename, include_terms=dialog.include_terms.isChecked()
-                )
-            else:
-                path = self.open_document_reports.export_student(
-                    student_id, filename, export_format
-                )
+            path = self.report_files.export_student(
+                student_id, filename, export_format,
+                include_terms=dialog.include_terms.isChecked(),
+            )
         except (DomainError, OSError) as error:
             self.error_handler(str(error))
             return

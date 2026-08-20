@@ -14,6 +14,7 @@ from tutopy.services.report_configuration_service import ReportConfigurationServ
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
 from tutopy.services.word_report_service import WordReportService
 from tutopy.services.open_document_report_service import OpenDocumentReportService
+from tutopy.services.report_file_service import ReportFileService
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.directories import get_app_data_dir
 from tutopy.services.statistics_service import StatisticsService
@@ -37,6 +38,7 @@ class ServiceContainer:
     spreadsheet_reports: SpreadsheetReportService
     word_reports: WordReportService
     open_document_reports: OpenDocumentReportService
+    report_files: ReportFileService
     student_exports: StudentExportService
     statistics: StatisticsService
     transfers: TransferService
@@ -75,6 +77,9 @@ def create_services(database: Database) -> ServiceContainer:
         database.students, database.notes, database.academic_courses,
         report_configuration,
     )
+    report_files = ReportFileService(
+        spreadsheet_reports, word_reports, open_document_reports
+    )
     documents = DocumentService(
         database.documents, database.students, database.academic_courses,
         storage_dir=storage_dir,
@@ -105,9 +110,10 @@ def create_services(database: Database) -> ServiceContainer:
         spreadsheet_reports=spreadsheet_reports,
         word_reports=word_reports,
         open_document_reports=open_document_reports,
+        report_files=report_files,
         student_exports=StudentExportService(
             database.students, documents, database.academic_courses,
-            spreadsheet_reports, word_reports, open_document_reports,
+            report_files,
         ),
         statistics=StatisticsService(
             database.statistics, database.academic_courses, database.categories,
