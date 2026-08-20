@@ -248,4 +248,32 @@ def test_error_durant_documents_fa_rollback_i_neteja_fitxers(
     assert not target.documents.storage_dir.exists() or not any(
         target.documents.storage_dir.iterdir()
     )
+
+
+def test_exportacio_preparada_es_pot_cancel_lar_abans_de_xifrar(
+    instances, tmp_path, monkeypatch
+):
+    source, _target = instances
+    first = source.students.create(StudentNew("Laia", "Martí", "4t A"))
+    second = source.students.create(StudentNew("Pau", "Puig", "4t B"))
+    destination = tmp_path / "cancel-lat.tpy"
+    preparation = source.transfers.prepare_export(
+        [first.id, second.id], destination, PASSWORD
+    )
+    progress = []
+    monkeypatch.setattr(
+        source.transfers,
+        "_encrypt_file",
+        lambda *_args: pytest.fail("no s'hauria de xifrar un paquet cancel·lat"),
+    )
+
+    result = source.transfers.export_prepared(
+        preparation,
+        progress_callback=lambda completed, total: progress.append((completed, total)),
+        cancel_requested=lambda: bool(progress),
+    )
+
+    assert result is None
+    assert progress == [(1, 2)]
+    assert not destination.exists()
 from dataclasses import replace

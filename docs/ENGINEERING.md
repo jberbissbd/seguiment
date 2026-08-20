@@ -88,6 +88,11 @@ no comparteix la connexió SQLite i només comunica progrés, resultat o error a
 senyals Qt. La cancel·lació és cooperativa entre alumnes: els informes ja
 acabats es conserven i no s'inicia el següent.
 
+Les exportacions de transferència segueixen el mateix límit entre fils. El
+snapshot conté les relacions necessàries, mentre que els hashes, el ZIP, Scrypt
+i AES-GCM s'executen al treballador. Si es cancel·la durant la preparació dels
+alumnes, no es construeix ni es publica cap paquet parcial.
+
 Les cerques textuals utilitzen `DebouncedLineEdit` (180 ms). Els canvis de
 selecció explícits continuen sent immediats. Les estadístiques utilitzen el
 mateix principi amb un `QTimer` d'un sol tret.

@@ -8,6 +8,7 @@ import os
 import tempfile
 import uuid
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
@@ -30,6 +31,19 @@ from tutopy.services.exceptions import (
     ValidationError,
 )
 from tutopy.services.validation_service import ValidationService
+
+
+@dataclass(frozen=True, slots=True)
+class TransferExportPreparation:
+    """Snapshot d'una transferència que ja no requereix lectures SQLite."""
+
+    student_ids: tuple[int, ...]
+    destination: Path
+    password: str
+    students_by_id: dict
+    categories: dict[int, str]
+    courses: dict[int, str]
+    related: dict
 
 
 class TransferService:
@@ -85,6 +99,13 @@ class TransferService:
         self, student_ids: list[int], destination: str | Path, password: str,
     ) -> Path:
         """Construeix un paquet `.tpy` amb els alumnes indicats."""
+        preparation = self.prepare_export(student_ids, destination, password)
+        return self.export_prepared(preparation)
+
+    def prepare_export(
+        self, student_ids: list[int], destination: str | Path, password: str,
+    ) -> TransferExportPreparation:
+        """Valida i carrega totes les dades abans d'iniciar un treballador."""
         password = self._validate_password(password)
         if not student_ids:
             raise ValidationError("No hi ha alumnes per exportar.")
@@ -106,13 +127,27 @@ class TransferService:
         categories = {item.id: item.name for item in self.categories.get_all()}
         courses = {item.id: item.course for item in self.courses.get_all()}
         related = self._related_by_student(validated_ids)
+        return TransferExportPreparation(
+            tuple(validated_ids), path, password, students_by_id,
+            categories, courses, related,
+        )
+
+    def export_prepared(
+        self, preparation: TransferExportPreparation,
+        progress_callback=None, cancel_requested=None,
+    ) -> Path | None:
+        """Comprimeix i xifra un snapshot sense consultar SQLite."""
         payload = []
         document_sources: list[tuple[Path, str]] = []
         checksums = {}
-        for student_id in validated_ids:
-            student = students_by_id[student_id]
+        total = len(preparation.student_ids)
+        for completed, student_id in enumerate(preparation.student_ids, 1):
+            if cancel_requested is not None and cancel_requested():
+                return None
+            student = preparation.students_by_id[student_id]
             item, sources = self._export_student_data(
-                student, categories, courses, related
+                student, preparation.categories, preparation.courses,
+                preparation.related,
             )
             payload.append(item)
             for source, archive_name in sources:
@@ -122,6 +157,11 @@ class TransferService:
                 item["documents_by_path"][archive_name]["size"] = source.stat().st_size
                 document_sources.append((source, archive_name))
             item["documents"] = list(item.pop("documents_by_path").values())
+            if progress_callback is not None:
+                progress_callback(completed, total)
+
+        if cancel_requested is not None and cancel_requested():
+            return None
 
         manifest = {
             "format": self.FORMAT,
@@ -133,7 +173,7 @@ class TransferService:
         }
         data = {"students": payload}
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)
+            preparation.destination.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.TemporaryDirectory(prefix="tutopy-export-") as temporary:
                 plain_path = Path(temporary) / "payload.zip"
                 with ZipFile(plain_path, "w", compression=ZIP_DEFLATED) as archive:
@@ -142,13 +182,15 @@ class TransferService:
                     archive.writestr("checksums.json", self._json(checksums))
                     for source, archive_name in document_sources:
                         archive.write(source, archive_name)
-                self._encrypt_file(plain_path, path, password)
+                self._encrypt_file(
+                    plain_path, preparation.destination, preparation.password
+                )
         except OSError as error:
             reason = error.strerror or str(error)
             raise ValidationError(
                 f"No s’ha pogut crear el paquet de transferència: {reason}."
             ) from error
-        return path
+        return preparation.destination
 
     def analyze(self, source: str | Path, password: str) -> TransferPreview:
         """Valida completament un paquet sense modificar dades locals."""
