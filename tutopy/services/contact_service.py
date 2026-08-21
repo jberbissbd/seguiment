@@ -36,13 +36,12 @@ class ContactService:
             existing.student_id, contact.name, contact.description,
             contact.phone, contact.email,
         ))
-        contact.student_id = existing.student_id
-        contact.name = prepared.name
-        contact.description = prepared.description
-        contact.phone = prepared.phone
-        contact.email = prepared.email
-        self.contact_dao.update(contact)
-        return contact
+        updated = Contact(
+            contact.id, existing.student_id, prepared.name, prepared.description,
+            prepared.phone, prepared.email,
+        )
+        self.contact_dao.update(updated)
+        return updated
 
     def delete(self, contact_id: int) -> None:
         self.get_by_id(contact_id)

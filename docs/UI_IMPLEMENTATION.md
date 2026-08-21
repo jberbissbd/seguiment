@@ -132,8 +132,12 @@ La gestió d'alumnes de la fase 2 està implementada:
 
 - Controlador d'alumnes separat del controlador de navegació.
 - Creació i edició mitjançant un diàleg validat.
+- Edició massiva en taula, amb assignació de grup a les files seleccionades i
+  una data efectiva comuna per als canvis d'historial.
 - Eliminació amb confirmació explícita.
 - Cerca, selecció i actualització dinàmica de la llista.
+- Acció contextual per crear una nota des de cada fila, visible amb hover o
+  mentre l'alumne està seleccionat.
 - Informació bàsica, grup i UUID al panell de detall.
 - Canvis de grup sincronitzats amb l'historial.
 - Tractament independent d'alumnes homònims.
@@ -225,6 +229,7 @@ Estat: completada.
 
 - [x] Llista, cerca i selecció d'alumnes.
 - [x] Creació, edició i eliminació mitjançant `StudentService`.
+- [x] Edició massiva transaccional amb progrés i cancel·lació.
 - [x] Detall bàsic.
 - [x] Canvi de grup i sincronització de l'historial.
 - [x] Suport correcte d'alumnes homònims.

@@ -1,5 +1,14 @@
+from dataclasses import FrozenInstanceError
+
 import pytest
 from tutopy.models.messaging import Category,CategoryNew, Student, StudentNew, Note, NoteNew, NoteRecord, Contact, ContactNew, StudentAnnotation, StudentAnnotationNew,AcademicCourse, AcademicCourseNew
+
+
+def test_models_de_domini_son_immutables():
+    student = Student(1, "uuid", "Laia", "Martí", "4t A")
+
+    with pytest.raises(FrozenInstanceError):
+        student.name = "Maria"
 
 class TestCategories():
     """Tests de categoríes"""

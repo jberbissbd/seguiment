@@ -18,6 +18,10 @@ class EntityInUseError(DomainError, ValueError):
     """L'entitat no es pot modificar o eliminar perquè està en ús."""
 
 
+class FileCleanupError(DomainError):
+    """L'operació s'ha completat, però ha quedat un fitxer per netejar."""
+
+
 class TransferAuthenticationError(DomainError, ValueError):
     """La contrasenya no desxifra el paquet o aquest ha estat manipulat."""
 

@@ -6,19 +6,36 @@ del projecte. Les estimacions assumeixen `S` alumnes, `N` notes, `D` documents,
 
 ## Complexitat i límits
 
+### Línia base de rendiment
+
+Abans d'aplicar una optimització, es pot generar una base de dades temporal i
+mesurar les operacions principals amb l'entorn virtual del projecte:
+
+```bash
+.venv/bin/python scripts/performance_baseline.py \
+  --students 1000 --notes 10000 --repetitions 5
+```
+
+El script no obre ni modifica la base de dades de l'usuari. També admet
+`--json` per conservar els resultats i comparar-los després d'un canvi. Les
+mesures són orientatives i s'han de comparar a la mateixa màquina i amb el
+mateix volum de dades.
+
 | Operació | Temps | Memòria addicional | Decisió |
 | --- | ---: | ---: | --- |
 | Llistar o cercar alumnes | `O(S)` | `O(S)` | La cerca conté comodins; es coalescen pulsacions per no repetir-la. |
 | Mostrar alumnes | `O(S)` | `O(S)` | Els widgets es reutilitzen si es conserva la seqüència d'identificadors. |
 | Filtrar notes | `O(log N + R)` amb índex aplicable | `O(R)` | Els filtres s'executen a SQLite i només es materialitzen els `R` resultats. |
 | Estadístiques | `O(N + S)` | `O(S + C)` | Les agregacions es fan a SQLite i no carreguen el text sensible. |
-| Generar un informe | `O(N + C)` | `O(N + C)` | Cursos i categories es precomputen una vegada per exportació. |
-| Detectar conflictes d'importació | `O(I·S·L²)` pitjor cas | `O(S·L + M)` | La comparació difusa domina; els noms normalitzats es calculen una sola vegada. |
+| Generar informes | `O(S + N + C + D)` | `O(S + N + C + D)` | El lot comparteix dades d'informe i metadades dels documents adjunts. |
+| Transferir alumnes | `O(S + N + D)` | `O(S + N + D)` | Les relacions es carreguen per lots; les lectures SQL no creixen per alumne. |
+| Detectar conflictes d'importació | `O(S·L + I·K·L²)` pitjor cas | `O(S·L + M)` | Un índex de longitud redueix els candidats a `K`; `quick_ratio` evita comparacions completes segures. |
 
-`L` és la longitud del nom i `M` el nombre de coincidències. El límit de 10.000
-files evita entrades sense límit. Si les instal·lacions arriben a desenes de
-milers d'alumnes, la comparació difusa s'haurà de bloquejar per prefix o tokens;
-fer-ho ara podria ocultar coincidències vàlides.
+`L` és la longitud del nom, `K ≤ S` els candidats amb una longitud compatible i
+`M` el nombre de coincidències. El límit de 10.000 files evita entrades sense
+límit. El filtre de longitud i `SequenceMatcher.quick_ratio()` són límits
+superiors del resultat final: descartar-ne un candidat no pot ocultar una
+coincidència que superi el llindar configurat.
 
 ## SQLite, `fsync` i transaccions
 
@@ -26,6 +43,10 @@ Els DAOs poden confirmar una operació autònoma, però `ManagedConnection` supr
 els `commit` interns quan un servei obre `Database.transaction()`. Així, una
 importació o un canvi coordinat produeix un únic `COMMIT` físic. La capa de servei,
 que coneix la unitat de negoci completa, és qui obre la transacció.
+
+Les transaccions niuades creen `SAVEPOINT`. Si una operació interior falla, se'n
+desfan només els canvis i la transacció exterior pot capturar l'error i continuar.
+Un rollback exterior també desfà els savepoints interiors que ja s'hagin alliberat.
 
 No s'han d'afegir `commit` dins de bucles. Les noves operacions massives han de
 seguir aquest patró:
@@ -45,12 +66,44 @@ delega les dependències a `ON DELETE CASCADE`; les restriccions `RESTRICT` i
 Els DAOs projecten columnes explícites. Això evita que afegir una columna trenqui
 la construcció dels models i permet que SQLite consideri índexs coberts. Els
 índexs segueixen els filtres reals: notes per alumne/curs/categoria/data,
-duplicats i historial per alumne o curs.
+duplicats i historial per alumne o curs. L'índex compost de notes per alumne i
+curs evita recórrer totes les notes d'un curs per cada alumne quan es calculen
+estadístiques filtrades.
+
+L'esquema es versiona amb `PRAGMA user_version`. Una base nova aplica les
+migracions pendents en ordre i la creació de cada versió ha de ser atòmica. Quan
+canviï l'esquema, cal incrementar `Database.SCHEMA_VERSION`, afegir un pas nou a
+`Database._migrate_schema()` i provar tant una base nova com l'actualització des
+de la versió immediatament anterior. L'aplicació rebutja versions d'esquema més
+noves que les que coneix per evitar obrir-les de manera incompatible.
 
 Abans d'afegir un índex cal validar la consulta amb `EXPLAIN QUERY PLAN`: cada
 índex accelera lectures però encareix escriptures i ocupa disc.
 
 ## Esdeveniments i widgets Qt
+
+Les exportacions massives preparen al fil principal un snapshot de totes les
+dades SQLite i generen els fitxers mitjançant `BackgroundTask`. El treballador
+no comparteix la connexió SQLite i només comunica progrés, resultat o error amb
+senyals Qt. La cancel·lació és cooperativa entre alumnes: els informes ja
+acabats es conserven i no s'inicia el següent.
+
+Les exportacions de transferència segueixen el mateix límit entre fils. El
+snapshot conté les relacions necessàries, mentre que els hashes, el ZIP, Scrypt
+i AES-GCM s'executen al treballador. Si es cancel·la durant la preparació dels
+alumnes, no es construeix ni es publica cap paquet parcial.
+
+En importar una transferència, el desxifrat, la validació de hashes i el parsing
+també s'executen en segon pla. En acabar, els conflictes UUID es consulten per
+lots al fil propietari de SQLite. L'aplicació transaccional posterior obre una
+connexió SQLite pròpia dins del treballador. Una cancel·lació interromp el flux
+entre alumnes o blocs de document, força el rollback complet i elimina els
+fitxers nous copiats; els fitxers anteriors només s'eliminen després del commit.
+
+L'edició massiva d'alumnes valida el lot complet abans d'escriure i utilitza
+una connexió SQLite pròpia del treballador. Noms, cognoms i grups es confirmen
+en una sola transacció. Els canvis de grup passen per `StudentService` per
+mantenir l'historial; una cancel·lació força el rollback de totes les files.
 
 Les cerques textuals utilitzen `DebouncedLineEdit` (180 ms). Els canvis de
 selecció explícits continuen sent immediats. Les estadístiques utilitzen el
@@ -68,6 +121,12 @@ El text compatible amb XML es normalitza a `sanitize_xml_text`, compartit pels
 informes DOCX, ODT i PDF. Una nova regla comuna s'ha d'ubicar a la capa més baixa
 que no introdueixi dependències inverses.
 
+Els models de domini de `messaging.py` són valors immutables amb `slots`. Els
+serveis no han de modificar els objectes rebuts: una normalització o actualització
+ha de construir un valor nou (o usar `dataclasses.replace`). Les vistes compostes,
+com l'alumne amb contactes i documents, tenen un model de lectura específic en
+lloc d'afegir atributs dinàmicament a una entitat.
+
 Es capturen excepcions concretes a les operacions de negoci. Només es permet una
 captura genèrica en una frontera externa amb una justificació local, com parsers
 de tercers sense jerarquia comuna o neteja que torna a llançar l'excepció original.
@@ -81,3 +140,7 @@ conflictes d'importació i mai no se substitueix pel valor desat.
 El codi públic nou ha d'incloure anotacions de tipus i docstrings segons PEP 257:
 resum en imperatiu, línia en blanc abans dels detalls i contractes excepcionals
 quan no siguin evidents. Els comentaris expliquen el perquè, no repeteixen el codi.
+
+Ruff és una barrera obligatòria del CI per al codi distribuït. Localment
+s'executa amb `python -m ruff check tutopy scripts`; la configuració compartida
+és a `pyproject.toml` i exclou la documentació generada o narrativa de `docs`.

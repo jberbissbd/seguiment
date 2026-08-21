@@ -30,6 +30,7 @@ class ManagedConnection:
     def __init__(self, connection: sqlite3.Connection):
         self._connection = connection
         self._transaction_depth = 0
+        self._savepoint_counter = 0
 
     @property
     def row_factory(self):
@@ -63,6 +64,11 @@ class ManagedConnection:
         outermost = self._transaction_depth == 0
         if outermost:
             self._connection.execute("BEGIN")
+            savepoint = None
+        else:
+            self._savepoint_counter += 1
+            savepoint = f"tutopy_savepoint_{self._savepoint_counter}"
+            self._connection.execute(f"SAVEPOINT {savepoint}")
         self._transaction_depth += 1
         try:
             yield
@@ -70,11 +76,16 @@ class ManagedConnection:
             self._transaction_depth -= 1
             if outermost:
                 self._connection.rollback()
+            else:
+                self._connection.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                self._connection.execute(f"RELEASE SAVEPOINT {savepoint}")
             raise
         else:
             self._transaction_depth -= 1
             if outermost:
                 self._connection.commit()
+            else:
+                self._connection.execute(f"RELEASE SAVEPOINT {savepoint}")
 
 
 class Database:
@@ -83,6 +94,8 @@ class Database:
     Proporciona accés a les DAOs (``.categories``, ``.students``,
     ``.notes``, ``.contacts``, ``.annotations``, ``.documents``).
     """
+
+    SCHEMA_VERSION = 1
 
     def __init__(self, path: str = None):
         self.path = path or _default_db_path()
@@ -101,10 +114,15 @@ class Database:
 
     def connect(self):
         self.conn = ManagedConnection(sqlite3.connect(self.path))
-        self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA foreign_keys = ON")
-        self._create_tables()
-        self._init_daos()
+        try:
+            self.conn.row_factory = sqlite3.Row
+            self.conn.execute("PRAGMA foreign_keys = ON")
+            self._migrate_schema()
+            self._init_daos()
+        except Exception:
+            self.conn.close()
+            self.conn = None
+            raise
         return self
 
     def close(self):
@@ -136,8 +154,21 @@ class Database:
         self.report_configuration = ReportConfigurationDAO(self.conn)
         self.statistics = StatisticsDAO(self.conn)
 
-    def _create_tables(self):
+    def _migrate_schema(self) -> None:
+        """Aplica, en ordre, les migracions pendents de l'esquema."""
+        current_version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+        if current_version > self.SCHEMA_VERSION:
+            raise RuntimeError(
+                "La base de dades ha estat creada amb una versió més nova "
+                "de Tutopy."
+            )
+        if current_version < 1:
+            self._create_schema_v1()
+
+    def _create_schema_v1(self) -> None:
+        """Crea atòmicament la versió inicial de l'esquema."""
         self.conn.executescript("""
+            BEGIN IMMEDIATE;
             CREATE TABLE IF NOT EXISTS academic_courses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 course TEXT NOT NULL UNIQUE
@@ -228,6 +259,8 @@ class Database:
             CREATE UNIQUE INDEX IF NOT EXISTS idx_one_current_group_per_student
                 ON student_group_history(student_id) WHERE end_date IS NULL;
             CREATE INDEX IF NOT EXISTS idx_notes_student ON notes(student_id);
+            CREATE INDEX IF NOT EXISTS idx_notes_student_course
+                ON notes(student_id, course_id);
             CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category_id);
             CREATE INDEX IF NOT EXISTS idx_notes_course ON notes(course_id);
             CREATE INDEX IF NOT EXISTS idx_notes_date ON notes(date);
@@ -247,4 +280,6 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_term_config_course_group
                 ON term_configurations(academic_course_id, group_name);
             CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_name);
+            PRAGMA user_version = 1;
+            COMMIT;
         """)

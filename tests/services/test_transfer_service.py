@@ -1,4 +1,5 @@
 import json
+from threading import Thread
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
@@ -116,7 +117,7 @@ def test_conflictes_apliquen_les_tres_decisions(
     first_preview = target.transfers.analyze(package, PASSWORD)
     target.transfers.execute(first_preview, password=PASSWORD)
     local = target.students.get_by_uuid(original.uuid)
-    local.name = "Nom local"
+    local = replace(local, name="Nom local")
     target.students.update(local)
 
     preview = target.transfers.analyze(package, PASSWORD)
@@ -248,3 +249,87 @@ def test_error_durant_documents_fa_rollback_i_neteja_fitxers(
     assert not target.documents.storage_dir.exists() or not any(
         target.documents.storage_dir.iterdir()
     )
+
+
+def test_exportacio_preparada_es_pot_cancel_lar_abans_de_xifrar(
+    instances, tmp_path, monkeypatch
+):
+    source, _target = instances
+    first = source.students.create(StudentNew("Laia", "Martí", "4t A"))
+    second = source.students.create(StudentNew("Pau", "Puig", "4t B"))
+    destination = tmp_path / "cancel-lat.tpy"
+    preparation = source.transfers.prepare_export(
+        [first.id, second.id], destination, PASSWORD
+    )
+    progress = []
+    monkeypatch.setattr(
+        source.transfers,
+        "_encrypt_file",
+        lambda *_args: pytest.fail("no s'hauria de xifrar un paquet cancel·lat"),
+    )
+
+    result = source.transfers.export_prepared(
+        preparation,
+        progress_callback=lambda completed, total: progress.append((completed, total)),
+        cancel_requested=lambda: bool(progress),
+    )
+
+    assert result is None
+    assert progress == [(1, 2)]
+    assert not destination.exists()
+
+
+def test_importacio_cancel_lada_fa_rollback_i_neteja_documents(
+    instances, tmp_path
+):
+    source, target = instances
+    first = _complete_student(source, tmp_path, "Laia")
+    second = source.students.create(StudentNew("Pau", "Puig", "3r B"))
+    package = source.transfers.export_students(
+        [first.id, second.id], tmp_path / "dos.tpy", PASSWORD
+    )
+    preview = target.transfers.analyze(package, PASSWORD)
+    progress = []
+
+    result = target.transfers.execute(
+        preview,
+        password=PASSWORD,
+        progress_callback=lambda completed, total: progress.append((completed, total)),
+        cancel_requested=lambda: bool(progress),
+    )
+
+    assert result.cancelled is True
+    assert target.students.get_all() == []
+    assert not target.documents.storage_dir.exists() or not any(
+        target.documents.storage_dir.iterdir()
+    )
+
+
+def test_importacio_utilitza_una_connexio_sqlite_del_treballador(
+    instances, tmp_path
+):
+    source, target = instances
+    original = _complete_student(source, tmp_path)
+    package = source.transfers.export_student(
+        original.id, tmp_path / "worker.tpy", PASSWORD
+    )
+    preview = target.transfers.analyze(package, PASSWORD)
+    outcome = {}
+
+    def execute():
+        try:
+            outcome["result"] = target.transfers.execute_with_worker_connection(
+                preview, password=PASSWORD
+            )
+        except Exception as error:
+            outcome["error"] = error
+
+    thread = Thread(target=execute)
+    thread.start()
+    thread.join(timeout=10)
+
+    assert not thread.is_alive()
+    assert "error" not in outcome
+    assert outcome["result"].created == 1
+    assert target.students.get_by_uuid(original.uuid) is not None
+from dataclasses import replace

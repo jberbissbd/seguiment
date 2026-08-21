@@ -1,3 +1,4 @@
+import logging
 import shutil
 import uuid
 from pathlib import Path
@@ -6,9 +7,16 @@ from tutopy.database.daos.document_dao import DocumentDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.models.messaging import StudentDocument, StudentDocumentNew
-from tutopy.services.exceptions import EntityNotFoundError, ValidationError
+from tutopy.services.exceptions import (
+    EntityNotFoundError,
+    FileCleanupError,
+    ValidationError,
+)
 from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import AcademicCourseDeterminator
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class DocumentService:
@@ -29,6 +37,19 @@ class DocumentService:
     def get_by_student(self, student_id: int) -> list[StudentDocument]:
         self._require_student(student_id)
         return self.document_dao.get_by_student(student_id)
+
+    def get_by_students(
+        self, student_ids: list[int]
+    ) -> dict[int, list[StudentDocument]]:
+        """Carrega els documents de diversos alumnes amb consultes per lots."""
+        validated = [self.validation_service.positive_id(item) for item in student_ids]
+        existing = self.student_dao.get_by_ids(validated)
+        missing = [item for item in validated if item not in existing]
+        if missing:
+            raise EntityNotFoundError(
+                f"L'alumne amb ID {missing[0]} no existeix."
+            )
+        return self.document_dao.get_by_students(validated)
 
     def get_by_id(self, document_id: int) -> StudentDocument:
         self.validation_service.positive_id(document_id)
@@ -82,20 +103,20 @@ class DocumentService:
             date=document.date,
             course_id=document.course_id,
         ))
-        document.student_id = existing.student_id
-        document.name = prepared.name
-        document.description = prepared.description
-        document.uuid_filename = existing.uuid_filename
-        document.original_filename = existing.original_filename
-        document.file_path = existing.file_path
-        document.date = prepared.date
-        document.course_id = prepared.course_id
-        self.document_dao.update(document)
-        return document
+        updated = StudentDocument(
+            document.id, existing.student_id, prepared.name, prepared.description,
+            existing.uuid_filename, existing.original_filename, existing.file_path,
+            prepared.date, prepared.course_id,
+        )
+        self.document_dao.update(updated)
+        return updated
 
     def get_readable_path(self, document_id: int) -> Path:
         """Retorna el fitxer gestionat després de validar-ne ubicació i existència."""
-        document = self.get_by_id(document_id)
+        return self.get_readable_document_path(self.get_by_id(document_id))
+
+    def get_readable_document_path(self, document: StudentDocument) -> Path:
+        """Valida la ruta d'un document que ja s'ha carregat de persistència."""
         if self.storage_dir is None or not document.file_path:
             raise ValidationError("El document no té cap fitxer gestionat.")
         path = Path(document.file_path)
@@ -110,7 +131,13 @@ class DocumentService:
 
     def export_file(self, document_id: int, destination_path: str) -> Path:
         """Copia un document gestionat a una ubicació escollida per l'usuari."""
-        source = self.get_readable_path(document_id)
+        return self.export_document(self.get_by_id(document_id), destination_path)
+
+    def export_document(
+        self, document: StudentDocument, destination_path: str
+    ) -> Path:
+        """Copia un document ja carregat sense tornar-ne a consultar les metadades."""
+        source = self.get_readable_document_path(document)
         destination = Path(destination_path)
         if not destination.name:
             raise ValidationError("Cal indicar una destinació per exportar el document.")
@@ -127,14 +154,39 @@ class DocumentService:
 
     def delete(self, document_id: int) -> StudentDocument:
         document = self.get_by_id(document_id)
-        self.document_dao.delete(document_id)
         path = Path(document.file_path) if document.file_path else None
+        quarantined = None
         if path and self.storage_dir:
             try:
-                if path.resolve().parent == self.storage_dir.resolve():
-                    path.unlink(missing_ok=True)
-            except OSError:
-                pass
+                managed = path.resolve()
+                if managed.parent == self.storage_dir.resolve() and managed.is_file():
+                    quarantined = managed.with_name(
+                        f".{managed.name}.{uuid.uuid4().hex}.deleting"
+                    )
+                    managed.replace(quarantined)
+            except OSError as error:
+                raise ValidationError(
+                    "No s'ha pogut preparar el fitxer del document per eliminar-lo."
+                ) from error
+        try:
+            self.document_dao.delete(document_id)
+        except Exception:
+            if quarantined is not None:
+                try:
+                    quarantined.replace(path)
+                except OSError:
+                    LOGGER.exception(
+                        "No s'ha pogut restaurar el fitxer del document %s", document_id
+                    )
+            raise
+        if quarantined is not None:
+            try:
+                quarantined.unlink()
+            except OSError as error:
+                raise FileCleanupError(
+                    "El document s'ha eliminat, però no s'ha pogut esborrar "
+                    "completament el fitxer associat."
+                ) from error
         return document
 
     def _prepare(self, data: StudentDocumentNew) -> StudentDocumentNew:

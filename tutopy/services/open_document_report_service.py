@@ -3,17 +3,6 @@ from datetime import date
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from odf import draw, style, table, text
-from odf.opendocument import OpenDocumentText
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.platypus import (
-    Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
-)
-
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import sanitize_xml_text
@@ -22,11 +11,12 @@ from tutopy.services.utils import sanitize_xml_text
 class OpenDocumentReportService:
     """Genera els informes de text oberts (ODT) i PDF sense eines externes."""
 
-    def __init__(self, students, notes, courses, configuration):
+    def __init__(self, students, notes, courses, configuration, batch_loader=None):
         self.students = students
         self.notes = notes
         self.courses = courses
         self.configuration = configuration
+        self.batch_loader = batch_loader
         self.validation = ValidationService()
 
     def export_student(self, student_id: int, destination: str | Path,
@@ -34,23 +24,39 @@ class OpenDocumentReportService:
         if report_format not in {"odt", "pdf"}:
             raise ValidationError("El format del document no és vàlid.")
         student_id = self.validation.positive_id(student_id)
-        student = self.students.get_by_id(student_id)
+        data = self.prepare_students([student_id])
+        return self.export_prepared(student_id, destination, report_format, data)
+
+    def prepare_students(self, student_ids: list[int]):
+        """Carrega una vegada les dades compartides dels informes ODT i PDF."""
+        return self.batch_loader.load(student_ids, include_header=True)
+
+    def export_prepared(
+        self, student_id: int, destination: str | Path, report_format: str, data
+    ) -> Path:
+        """Genera un ODT o PDF a partir d'un snapshot carregat prèviament."""
+        if report_format not in {"odt", "pdf"}:
+            raise ValidationError("El format del document no és vàlid.")
+        student = data.students.get(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
         notes = sorted(
-            self.notes.get_by_student(student_id), key=lambda item: (item.date, item.id)
+            data.notes[student_id], key=lambda item: (item.date, item.id)
         )
         if not notes:
             raise ValidationError("L’alumne no té notes per exportar.")
         path = self._destination(destination, report_format)
-        courses = self._report_courses(notes)
-        categories = self.configuration.get_ordered_categories()
+        courses = self._report_courses(notes, data.course_names)
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             if report_format == "odt":
-                self._save_odt(path, student, courses, categories)
+                self._save_odt(
+                    path, student, courses, data.categories, data.header_image
+                )
             else:
-                self._save_pdf(path, student, courses, categories)
+                self._save_pdf(
+                    path, student, courses, data.categories, data.header_image
+                )
         except (OSError, ValueError) as error:
             raise ValidationError("No s’ha pogut desar l’informe.") from error
         return path
@@ -64,11 +70,11 @@ class OpenDocumentReportService:
             raise ValidationError("Cal indicar una destinació per a l’informe.")
         return path
 
-    def _report_courses(self, notes):
+    @staticmethod
+    def _report_courses(notes, course_names):
         grouped = defaultdict(list)
         for note in notes:
             grouped[note.course_id].append(note)
-        course_names = {course.id: course.course for course in self.courses.get_all()}
         missing = set(grouped) - course_names.keys()
         if missing:
             raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
@@ -77,7 +83,10 @@ class OpenDocumentReportService:
             result.append((course_names[course_id], course_notes))
         return sorted(result, key=lambda item: item[0])
 
-    def _save_odt(self, path, student, courses, categories):
+    def _save_odt(self, path, student, courses, categories, header_image):
+        from odf import draw, style, table, text
+        from odf.opendocument import OpenDocumentText
+
         document = OpenDocumentText()
         title_style = style.Style(name="TutopyTitle", family="paragraph")
         title_style.addElement(style.TextProperties(fontsize="20pt", fontweight="bold"))
@@ -95,7 +104,7 @@ class OpenDocumentReportService:
         header_style.addElement(style.TextProperties(fontweight="bold"))
         document.styles.addElement(header_style)
 
-        logo = self.configuration.get_header_image()
+        logo = header_image
         if logo:
             href = document.addPicture(str(logo))
             frame = draw.Frame(width="5cm", height="2cm", anchortype="paragraph")
@@ -142,14 +151,24 @@ class OpenDocumentReportService:
                 document.text.addElement(report_table)
         document.save(str(path), addsuffix=False)
 
-    def _save_pdf(self, path, student, courses, categories):
+    def _save_pdf(self, path, student, courses, categories, header_image):
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import cm
+        from reportlab.platypus import (
+            Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table,
+            TableStyle,
+        )
+
         styles = getSampleStyleSheet()
         styles.add(ParagraphStyle(
             name="TutopyTitle", parent=styles["Title"], alignment=TA_CENTER,
             spaceAfter=10,
         ))
         story = []
-        logo = self.configuration.get_header_image()
+        logo = header_image
         if logo:
             story.extend((Image(str(logo), width=5 * cm, height=2 * cm, kind="proportional"),
                           Spacer(1, 0.25 * cm)))

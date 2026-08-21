@@ -1,14 +1,9 @@
 from difflib import SequenceMatcher
+import math
 from pathlib import Path
 import re
 import unicodedata
 from zipfile import BadZipFile, ZipFile
-
-from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, PatternFill
-from odf import table as odf_table
-from odf import teletype
-from odf.opendocument import load as load_odf
 
 from tutopy.models.bulk_import import (
     CategoryImportRow, ImportAction, ImportDecision, ImportIssue, ImportPreview,
@@ -39,6 +34,9 @@ class BulkImportService:
         self.similarity_threshold = similarity_threshold
 
     def create_template(self, destination: str | Path) -> Path:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+
         path = Path(destination)
         if path.suffix.lower() != ".xlsx":
             path = path.with_suffix(".xlsx")
@@ -74,10 +72,12 @@ class BulkImportService:
             raise ValidationError("El format ha de ser XLSX o ODS.")
         self._validate_archive(path)
         try:
-            workbook = (
-                self._load_ods(path) if path.suffix.lower() == ".ods"
-                else load_workbook(path, read_only=True, data_only=False)
-            )
+            if path.suffix.lower() == ".ods":
+                workbook = self._load_ods(path)
+            else:
+                from openpyxl import load_workbook
+
+                workbook = load_workbook(path, read_only=True, data_only=False)
         # openpyxl i odfpy no exposen una jerarquia comuna d'errors de format.
         # Aquesta és una frontera d'entrada: qualsevol fallada del parser es
         # converteix en un error de domini sense continuar amb dades parcials.
@@ -95,13 +95,15 @@ class BulkImportService:
         normalized_existing = tuple(
             (student, self._normalize(student.full_name)) for student in existing
         )
+        name_index = self._name_index(normalized_existing)
+        match_cache = {}
         conflicts = []
         for row in student_rows:
             incoming = self._normalize(row.full_name)
-            matches = tuple(
-                student for student, current in normalized_existing
-                if self._similar_names(incoming, current)
-            )
+            matches = match_cache.get(incoming)
+            if matches is None:
+                matches = self._find_matches(incoming, name_index)
+                match_cache[incoming] = matches
             if matches:
                 conflicts.append(StudentConflict(row, matches))
         return ImportPreview(tuple(student_rows), tuple(category_rows),
@@ -124,6 +126,9 @@ class BulkImportService:
             raise ValidationError("El full de càlcul no és un fitxer vàlid.") from error
 
     def _load_ods(self, path: Path):
+        from odf import table as odf_table
+        from odf.opendocument import load as load_odf
+
         document = load_odf(str(path))
         sheets = {}
         for sheet in document.spreadsheet.getElementsByType(odf_table.Table):
@@ -274,10 +279,43 @@ class BulkImportService:
         return self._similar_names(incoming, current)
 
     def _similar_names(self, incoming: str, current: str) -> bool:
+        if incoming == current:
+            return True
+        matcher = SequenceMatcher(None, incoming, current)
         return (
-            incoming == current
-            or SequenceMatcher(None, incoming, current).ratio()
-            >= self.similarity_threshold
+            matcher.quick_ratio() >= self.similarity_threshold
+            and matcher.ratio() >= self.similarity_threshold
+        )
+
+    @staticmethod
+    def _name_index(normalized_existing):
+        """Agrupa noms per longitud conservant-ne l'ordre original."""
+        by_length = {}
+        for position, (student, name) in enumerate(normalized_existing):
+            by_length.setdefault(len(name), []).append((position, student, name))
+        return by_length
+
+    def _find_matches(self, incoming: str, name_index) -> tuple[Student, ...]:
+        """Busca només longituds que poden assolir el llindar de similitud."""
+        threshold = self.similarity_threshold
+        if threshold > 1:
+            lengths = (len(incoming),)
+        elif threshold <= 0:
+            lengths = tuple(name_index)
+        else:
+            factor = (2 - threshold) / threshold
+            minimum = math.ceil(len(incoming) / factor)
+            maximum = math.floor(len(incoming) * factor)
+            lengths = range(minimum, maximum + 1)
+        candidates = [
+            item
+            for length in lengths
+            for item in name_index.get(length, ())
+        ]
+        candidates.sort(key=lambda item: item[0])
+        return tuple(
+            student for _position, student, current in candidates
+            if self._similar_names(incoming, current)
         )
 
 
@@ -304,6 +342,8 @@ class _OdsSheet:
         self._max_rows = max_rows
 
     def iter_rows(self, min_row=1, max_row=None, max_col=None, values_only=False):
+        from odf import table as odf_table
+
         current_row = 0
         for row in self._element.getElementsByType(odf_table.TableRow):
             repeated_rows = int(row.getAttribute("numberrowsrepeated") or 1)
@@ -324,6 +364,9 @@ class _OdsSheet:
 
     @staticmethod
     def _row_values(row, max_col):
+        from odf import table as odf_table
+        from odf import teletype
+
         values = []
         cells = row.getElementsByType(odf_table.TableCell)
         for cell in cells:

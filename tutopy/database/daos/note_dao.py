@@ -1,5 +1,6 @@
 from typing import Optional
 from tutopy.models.messaging import Note, NoteNew, NoteRecord
+from ._batch import grouped_by_student
 
 
 class NoteDAO:
@@ -13,6 +14,17 @@ class NoteDAO:
             (student_id,),
         ).fetchall()
         return [Note(**row) for row in rows]
+
+    def get_by_students(self, student_ids: list[int]) -> dict[int, list[Note]]:
+        """Retorna les anotacions agrupades per alumne en lectures per lots."""
+        return grouped_by_student(
+            self.conn,
+            student_ids,
+            "SELECT id, student_id, category_id, date, course_id, content "
+            "FROM notes WHERE student_id IN ({placeholders}) "
+            "ORDER BY student_id, date DESC, id DESC",
+            Note,
+        )
 
     def get_by_id(self, id: int) -> Optional[Note]:
         row = self.conn.execute(

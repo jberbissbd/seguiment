@@ -3,7 +3,9 @@ from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
-from tutopy.models.messaging import Note, NoteNew, NoteRecord, StudentGroupHistoryNew
+from tutopy.models.messaging import (
+    Note, NoteNew, NoteRecord, StudentGroupHistory, StudentGroupHistoryNew,
+)
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import AcademicCourseDeterminator
@@ -66,13 +68,12 @@ class NoteService:
                 content=note.content,
             ))
             self._ensure_group_history(prepared)
-            note.student_id = prepared.student_id
-            note.category_id = prepared.category_id
-            note.date = prepared.date
-            note.course_id = prepared.course_id
-            note.content = prepared.content
-            self.note_dao.update(note)
-            return note
+            updated = Note(
+                note.id, prepared.student_id, prepared.category_id, prepared.date,
+                prepared.course_id, prepared.content,
+            )
+            self.note_dao.update(updated)
+            return updated
 
     def delete(self, note_id: int) -> None:
         self.get_by_id(note_id)
@@ -90,7 +91,7 @@ class NoteService:
             course_id=note_data.course_id,
             content=note_data.content,
         )
-        self.validation_service.validate_note(prepared)
+        prepared = self.validation_service.validate_note(prepared)
         self._require_student(prepared.student_id)
         # El curs és una dada derivada de la data, no una elecció manual.
         course_id = self._resolve_academic_course(prepared.date)
@@ -122,8 +123,10 @@ class NoteService:
         )
         start_date = self._course_start(note.course_id) if first_entry_in_course else note.date
         if current and start_date >= current.start_date:
-            current.end_date = start_date
-            self.group_history_dao.update(current)
+            self.group_history_dao.update(StudentGroupHistory(
+                current.id, current.student_id, current.group_name,
+                current.start_date, start_date, current.academic_course_id,
+            ))
             group_name = student.group_name
             end_date = None
         else:

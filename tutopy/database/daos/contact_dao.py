@@ -1,5 +1,6 @@
 from typing import Optional
 from tutopy.models.messaging import Contact, ContactNew
+from ._batch import grouped_by_student
 
 
 class ContactDAO:
@@ -13,6 +14,16 @@ class ContactDAO:
             (student_id,),
         ).fetchall()
         return [Contact(**row) for row in rows]
+
+    def get_by_students(self, student_ids: list[int]) -> dict[int, list[Contact]]:
+        """Retorna els contactes agrupats per alumne en lectures per lots."""
+        return grouped_by_student(
+            self.conn,
+            student_ids,
+            "SELECT id, student_id, name, description, phone, email FROM contacts "
+            "WHERE student_id IN ({placeholders}) ORDER BY student_id, name",
+            Contact,
+        )
 
     def get_by_id(self, contact_id: int) -> Optional[Contact]:
         row = self.conn.execute(

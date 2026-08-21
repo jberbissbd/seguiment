@@ -171,7 +171,7 @@ def test_esborrat_cancel_lacio_error_i_exit(controller_env, monkeypatch):
 
 
 def test_transferencia_exporta_i_importa_paquets(
-    controller_env, monkeypatch, tmp_path
+    controller_env, monkeypatch, tmp_path, qtbot
 ):
     window, _, _, controller, changed, messages = controller_env
 
@@ -180,22 +180,40 @@ def test_transferencia_exporta_i_importa_paquets(
             self.exported = None
             self.executed = None
 
-        def export_all(self, filename, password):
-            self.exported = (filename, password)
+        def prepare_export(self, student_ids, filename, password):
+            self.exported = (student_ids, filename, password)
             return filename
 
-        def analyze(self, filename, password):
-            return SimpleNamespace(source=filename, conflicts=())
+        def export_prepared(
+            self, preparation, progress_callback=None, cancel_requested=None
+        ):
+            progress_callback(1, 1)
+            return preparation
 
-        def execute(self, preview, decisions=(), password=""):
+        def prepare_analysis(self, filename, password):
+            return SimpleNamespace(source=filename, password=password)
+
+        def complete_analysis(self, preparation):
+            return SimpleNamespace(
+                source=preparation.source, conflicts=(), student_count=1
+            )
+
+        def execute_with_worker_connection(
+            self, preview, decisions=(), password="", progress_callback=None,
+            cancel_requested=None,
+        ):
             self.executed = (preview, decisions, password)
+            progress_callback(1, 1)
             return SimpleNamespace(
                 created=2, replaced=0, skipped=0,
-                imported_as_new=0, documents=1,
+                imported_as_new=0, documents=1, cancelled=False,
             )
 
     transfer = TransferStub()
     controller.transfer_service = transfer
+    controller.student_service = SimpleNamespace(
+        get_all=lambda: (SimpleNamespace(id=7),)
+    )
     destination = str(tmp_path / "tots.tpy")
     monkeypatch.setattr(
         QFileDialog, "getSaveFileName", lambda *args: (destination, "")
@@ -203,7 +221,8 @@ def test_transferencia_exporta_i_importa_paquets(
     passwords = iter((("contrasenya", True), ("contrasenya", True)))
     monkeypatch.setattr(QInputDialog, "getText", lambda *args: next(passwords))
     controller.export_all_students()
-    assert transfer.exported == (destination, "contrasenya")
+    qtbot.waitUntil(lambda: controller._transfer_export_task is None, timeout=5000)
+    assert transfer.exported == ([7], destination, "contrasenya")
 
     monkeypatch.setattr(
         QFileDialog, "getOpenFileName", lambda *args: (destination, "")
@@ -212,6 +231,7 @@ def test_transferencia_exporta_i_importa_paquets(
         QInputDialog, "getText", lambda *args: ("contrasenya", True)
     )
     controller.import_transfer()
+    qtbot.waitUntil(lambda: bool(messages), timeout=5000)
     assert transfer.executed[1:] == ((), "contrasenya")
     assert changed == [True]
     assert "Alumnes creats: 2" in messages[0]
@@ -227,16 +247,22 @@ def test_transferencia_individual_exigeix_seleccio(controller_env):
 
 
 def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
-    controller_env, monkeypatch, tmp_path
+    controller_env, monkeypatch, tmp_path, qtbot
 ):
     window, _, _, controller, _, _ = controller_env
 
     class TransferStub:
         exported = None
 
-        def export_students(self, student_ids, filename, password):
+        def prepare_export(self, student_ids, filename, password):
             self.exported = (student_ids, filename, password)
             return filename
+
+        def export_prepared(
+            self, preparation, progress_callback=None, cancel_requested=None
+        ):
+            progress_callback(1, 1)
+            return preparation
 
     transfer = TransferStub()
     controller.transfer_service = transfer
@@ -266,6 +292,7 @@ def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
 
     controller.export_selected_student()
 
+    qtbot.waitUntil(lambda: controller._transfer_export_task is None, timeout=5000)
     assert transfer.exported == ([22], destination, "contrasenya")
 
 
@@ -275,10 +302,13 @@ def test_transferencia_valida_confirmacio_i_mostra_motiu_error(
     window, _, _, controller, _, _ = controller_env
 
     class TransferStub:
-        def export_all(self, filename, password):
+        def prepare_export(self, student_ids, filename, password):
             raise OSError(13, "Permís denegat")
 
     controller.transfer_service = TransferStub()
+    controller.student_service = SimpleNamespace(
+        get_all=lambda: (SimpleNamespace(id=1),)
+    )
     destination = str(tmp_path / "tots.tpy")
     monkeypatch.setattr(
         QFileDialog, "getSaveFileName", lambda *args: (destination, "")

@@ -85,8 +85,7 @@ class TestStudentService:
         assert service.get_all() == [created]
         assert service.get_groups() == ["1r B"]
 
-        created.name = "  Joan   Pau "
-        created.group_name = "2n B"
+        created = replace(created, name="  Joan   Pau ", group_name="2n B")
         updated = service.update(created)
         assert updated.name == "Joan Pau"
         assert service.get_current_group(created.id) == "2n B"
@@ -116,8 +115,8 @@ class TestStudentService:
         assert student_with_contacts.id == created_student.id
         assert hasattr(student_with_contacts, 'contacts')
         assert hasattr(student_with_contacts, 'documents')
-        assert student_with_contacts.contacts == []
-        assert student_with_contacts.documents == []
+        assert student_with_contacts.contacts == ()
+        assert student_with_contacts.documents == ()
 
     def test_get_student_with_contacts_with_contacts(self, student_dao, contact_dao, document_dao, group_history_dao, academic_course_dao, db):
         """Testa l'obtenció d'un alumne amb contactes associats."""
@@ -478,3 +477,4 @@ class TestStudentGroupHistory:
         assert group_history_dao.get_by_student(student.id) == []
         assert academic_course_dao.get_by_course("2025-2026") is None
         assert student_dao.get_by_id(student.id).group_name == "3r A"
+from dataclasses import replace

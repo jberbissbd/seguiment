@@ -82,10 +82,8 @@ def create_controllers(
         services.students,
         services.academic_courses,
         services.report_configuration,
-        services.spreadsheet_reports,
-        services.word_reports,
+        services.report_files,
         services.student_exports,
-        services.open_document_reports,
     )
 
     def refresh_after_data_change() -> None:

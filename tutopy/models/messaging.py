@@ -25,7 +25,7 @@ def _validate(dataclass_obj):
             )
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Category:
     """Categoria per classificar les notes de seguiment.
 
@@ -40,7 +40,7 @@ class Category:
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CategoryNew:
     """Categoria per classificar les notes de seguiment.
 
@@ -53,7 +53,7 @@ class CategoryNew:
     def __post_init__(self):
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class AcademicCourse:
     """Curs acadèmic, generat de manera automàtica a partir dels registres
     
@@ -67,7 +67,7 @@ class AcademicCourse:
     def __post_init__(self):
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class AcademicCourseNew:
     """Curs acadèmic, generat de manera automàtica a partir dels registres
     
@@ -80,7 +80,7 @@ class AcademicCourseNew:
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Student:
     """Alumne del qual es fa el seguiment.
 
@@ -103,7 +103,7 @@ class Student:
     @property
     def full_name(self) -> str:
         """Retorna el nom complet: ``name`` + ``surnames``."""
-        return f"{self.name}"+" "+f"{self.surnames}".strip()
+        return f"{self.name} {self.surnames}".strip()
 
     @property
     def filing_name(self) -> str:
@@ -111,7 +111,7 @@ class Student:
         return f"{self.surnames}, {self.name}" if self.surnames else self.name
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentNew:
     """Alumne del qual es fa el seguiment.
 
@@ -128,7 +128,7 @@ class StudentNew:
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Note:
     """Registre de seguiment datat, classificat i associat a un alumne.
 
@@ -154,7 +154,7 @@ class Note:
             raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class NoteNew:
     """Dades d'entrada per crear un registre de seguiment datat.
 
@@ -178,7 +178,7 @@ class NoteNew:
             raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class NoteRecord:
     """Nota amb dades desnormalitzades per a visualització en taula.
 
@@ -202,7 +202,7 @@ class NoteRecord:
             raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Contact:
     """Persones de contacte associats a l'aulmne. Familiars o altres
     professionals externs al centre.
@@ -225,7 +225,7 @@ class Contact:
     def __post_init__(self):
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ContactNew:
     """Persones de contacte associats a l'aulmne. Familiars o altres
     professionals externs al centre.
@@ -248,7 +248,7 @@ class ContactNew:
 
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentAnnotation:
     """Descriptor general i no datat d'un alumne.
 
@@ -266,7 +266,7 @@ class StudentAnnotation:
     def __post_init__(self):
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentAnnotationNew:
     """Dades d'entrada per a un descriptor general i no datat de l'alumne.
     Entrada nova.
@@ -280,7 +280,7 @@ class StudentAnnotationNew:
     def __post_init__(self):
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentDocument:
     id: int
     student_id: int
@@ -296,7 +296,7 @@ class StudentDocument:
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentDocumentNew:
     student_id: int
     name: str
@@ -311,7 +311,7 @@ class StudentDocumentNew:
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentGroupHistory:
     """Històric de grups d'un alumne.
     
@@ -343,7 +343,7 @@ class StudentGroupHistory:
                 raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None") from error
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentGroupHistoryNew:
     """Nou registre d'històric de grup d'un alumne.
     
@@ -371,3 +371,15 @@ class StudentGroupHistoryNew:
                 datetime.date.fromisoformat(self.end_date)
             except ValueError as error:
                 raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None") from error
+
+
+@dataclass(frozen=True, slots=True)
+class StudentDetails:
+    """Alumne amb les relacions necessàries per a la vista de detall."""
+
+    student: Student
+    contacts: tuple[Contact, ...]
+    documents: tuple[StudentDocument, ...]
+
+    def __getattr__(self, name):
+        return getattr(self.student, name)

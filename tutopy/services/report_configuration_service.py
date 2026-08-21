@@ -1,18 +1,22 @@
+import logging
 from pathlib import Path
 import shutil
 from uuid import uuid4
 
-from docx.image.exceptions import UnrecognizedImageError
-from docx.image.image import Image
-
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.category_dao import CategoryDAO
-from tutopy.database.daos.report_configuration_dao import ReportConfigurationDAO
+from tutopy.database.daos.report_configuration_dao import (
+    ReportConfigurationDAO,
+    ReportConfigurationPersistenceError,
+)
 from tutopy.models.messaging import Category
 from tutopy.models.reporting import TermConfiguration, TermConfigurationNew
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.utils import AcademicCourseDeterminator
 from tutopy.services.validation_service import ValidationService
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ReportConfigurationService:
@@ -114,6 +118,9 @@ class ReportConfigurationService:
         return path if path.is_file() else None
 
     def set_header_image(self, source: str | Path) -> Path:
+        from docx.image.exceptions import UnrecognizedImageError
+        from docx.image.image import Image
+
         source = Path(source)
         if not source.is_file():
             raise ValidationError("No s’ha trobat la imatge de capçalera seleccionada.")
@@ -123,24 +130,50 @@ class ReportConfigurationService:
             raise ValidationError("El fitxer seleccionat no és una imatge vàlida.") from error
         if self.storage_dir is None:
             raise ValidationError("No s’ha configurat el magatzem del logotip.")
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.storage_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            raise ValidationError("No s’ha pogut preparar el magatzem del logotip.") from error
         destination = self.storage_dir / f"report-logo-{uuid4().hex}{source.suffix.lower()}"
         previous = self.get_header_image()
         try:
             shutil.copy2(source, destination)
             self.configuration_dao.set_setting("header_image", str(destination))
-        except OSError as error:
-            destination.unlink(missing_ok=True)
+        except (OSError, ReportConfigurationPersistenceError) as error:
+            try:
+                destination.unlink(missing_ok=True)
+            except OSError:
+                LOGGER.warning(
+                    "No s'ha pogut netejar el logotip nou després d'un error: %s",
+                    destination,
+                    exc_info=True,
+                )
             raise ValidationError("No s’ha pogut desar la imatge de capçalera.") from error
         if previous and previous.parent.resolve() == self.storage_dir.resolve():
-            previous.unlink(missing_ok=True)
+            try:
+                previous.unlink(missing_ok=True)
+            except OSError:
+                LOGGER.warning(
+                    "No s'ha pogut eliminar el logotip anterior: %s",
+                    previous,
+                    exc_info=True,
+                )
         return destination
 
     def clear_header_image(self) -> None:
         previous = self.get_header_image()
-        self.configuration_dao.delete_setting("header_image")
+        try:
+            self.configuration_dao.delete_setting("header_image")
+        except ReportConfigurationPersistenceError as error:
+            raise ValidationError(
+                "No s’ha pogut eliminar la configuració del logotip."
+            ) from error
         if previous and self.storage_dir and previous.parent.resolve() == self.storage_dir.resolve():
             try:
                 previous.unlink(missing_ok=True)
-            except OSError as error:
-                raise ValidationError("No s’ha pogut eliminar la imatge de capçalera.") from error
+            except OSError:
+                LOGGER.warning(
+                    "No s'ha pogut eliminar el fitxer del logotip: %s",
+                    previous,
+                    exc_info=True,
+                )

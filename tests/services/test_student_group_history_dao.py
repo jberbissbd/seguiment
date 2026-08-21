@@ -178,7 +178,7 @@ class TestStudentGroupHistoryDAO:
         ))
         
         # Actualitzar
-        created.end_date = "2026-06-30"
+        created = replace(created, end_date="2026-06-30")
         dao.update(created)
         
         # Verificar
@@ -280,3 +280,4 @@ class TestStudentGroupHistoryDAO:
         # Verificar
         assert len(results) == 1
         assert results[0].group_name == "4t B"
+from dataclasses import replace

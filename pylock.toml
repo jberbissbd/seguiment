@@ -2,15 +2,37 @@ lock-version = "1.0"
 created-by = "pip"
 
 [[packages]]
-name = "charset-normalizer"
-version = "3.5.0"
+name = "cffi"
+version = "2.1.1"
 
 [[packages.wheels]]
-name = "charset_normalizer-3.5.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
-url = "https://files.pythonhosted.org/packages/23/35/5b85772eb82528ef22ba29487ad544a7049dfd27f35b1a5a55dbc0843048/charset_normalizer-3.5.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+name = "cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+url = "https://files.pythonhosted.org/packages/b1/db/dceb9dd5b231e1da801793f8acc9f3c52a7e1afe40bb1aae37e02b0faad5/cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
 
 [packages.wheels.hashes]
-sha256 = "14f6904a3cf870abf044df3a8c4924ac6c8ef77e9896586fd37e73ae96cff2af"
+sha256 = "c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf"
+
+[[packages]]
+name = "charset-normalizer"
+version = "3.5.1"
+
+[[packages.wheels]]
+name = "charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+url = "https://files.pythonhosted.org/packages/6f/89/bb5108dc6c3651dca963f2b0a3ba19bbcb370c94e1b6d3e0e844a58e6dca/charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+
+[packages.wheels.hashes]
+sha256 = "b9af956078716df40d985fb0dfeb2c2120c5ca92ba4ff4b388acfd01cdc14d08"
+
+[[packages]]
+name = "cryptography"
+version = "50.0.0"
+
+[[packages.wheels]]
+name = "cryptography-50.0.0-cp311-abi3-manylinux_2_34_x86_64.whl"
+url = "https://files.pythonhosted.org/packages/da/3a/f05e32c99d440c9bb891ea0e36c9091891e36be5a9a87ab2ee6ea20729f6/cryptography-50.0.0-cp311-abi3-manylinux_2_34_x86_64.whl"
+
+[packages.wheels.hashes]
+sha256 = "82148ec5bddac30b51a5b3c1945075f896fa022cb93f8e4a01e9f6ee95292c5f"
 
 [[packages]]
 name = "defusedxml"
@@ -36,14 +58,14 @@ sha256 = "7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa"
 
 [[packages]]
 name = "lxml"
-version = "6.1.1"
+version = "6.1.2"
 
 [[packages.wheels]]
-name = "lxml-6.1.1-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl"
-url = "https://files.pythonhosted.org/packages/08/f6/af32e23e563971ffb0fb86be52bc5be5c2c118858ffc119bf6a9039b173d/lxml-6.1.1-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl"
+name = "lxml-6.1.2-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl"
+url = "https://files.pythonhosted.org/packages/3d/e0/a65b64f34d556925faef2c4f14167d58c571bc15a3e1f2bba71138830562/lxml-6.1.2-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl"
 
 [packages.wheels.hashes]
-sha256 = "ebe6af670449830d6d9b752c256a983291c766a1365ba5d5460048f9e33a7818"
+sha256 = "04cf9e3f4ee9cab9d9ba05401bef8668840fa9620fcd4d8e85a2d2fd0b0fa960"
 
 [[packages]]
 name = "odfpy"
@@ -77,6 +99,17 @@ url = "https://files.pythonhosted.org/packages/84/21/a35af28dcc61f37ed850a2d64c6
 
 [packages.wheels.hashes]
 sha256 = "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91"
+
+[[packages]]
+name = "pycparser"
+version = "3.0"
+
+[[packages.wheels]]
+name = "pycparser-3.0-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl"
+
+[packages.wheels.hashes]
+sha256 = "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"
 
 [[packages]]
 name = "pyside6"

@@ -1,5 +1,6 @@
 from typing import Optional
 from tutopy.models.messaging import StudentAnnotation, StudentAnnotationNew
+from ._batch import grouped_by_student
 
 
 class AnnotationDAO:
@@ -13,6 +14,18 @@ class AnnotationDAO:
             (student_id,),
         ).fetchall()
         return [StudentAnnotation(**row) for row in rows]
+
+    def get_by_students(
+        self, student_ids: list[int]
+    ) -> dict[int, list[StudentAnnotation]]:
+        """Retorna els descriptors agrupats per alumne en lectures per lots."""
+        return grouped_by_student(
+            self.conn,
+            student_ids,
+            "SELECT id, student_id, content FROM student_annotations "
+            "WHERE student_id IN ({placeholders}) ORDER BY student_id, id",
+            StudentAnnotation,
+        )
 
     def get_by_id(self, annotation_id: int) -> Optional[StudentAnnotation]:
         row = self.conn.execute(

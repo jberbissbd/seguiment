@@ -33,8 +33,10 @@ class NoteController:
 
     def _connect_signals(self) -> None:
         self.window.student_list.student_selected.connect(self.set_student_context)
+        self.window.student_list.note_create_requested.connect(
+            self.create_for_student
+        )
         self.view.filters_changed.connect(self.refresh)
-        self.view.create_requested.connect(self.create)
         self.view.edit_requested.connect(self.edit)
         self.view.delete_requested.connect(self.delete)
 
@@ -84,6 +86,12 @@ class NoteController:
         self.refresh()
         self._select_note(note.id)
         self.window.show_status("Nota creada correctament")
+
+    def create_for_student(self, student_id: int) -> None:
+        """Obre la creació des de l'acció contextual d'una fila d'alumne."""
+        if self.current_student_id != student_id:
+            self.set_student_context(student_id)
+        self.create()
 
     def edit(self, note_id: int) -> None:
         try:

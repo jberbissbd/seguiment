@@ -61,17 +61,17 @@ class CategoryService:
         existing = self.category_dao.get_by_id(category.id)
         if not existing:
             raise EntityNotFoundError(f"No existeix la categoria amb ID {category.id}")
-        category.name = self.validation_service.required_text(
+        name = self.validation_service.required_text(
             category.name, "El nom de la categoria no pot estar buit."
         )
         
         # Verificar que no hi hagi una altra categoria amb el mateix nom
-        existing_with_name = self.category_dao.get_by_name(category.name)
+        existing_with_name = self.category_dao.get_by_name(name)
         if existing_with_name and existing_with_name.id != category.id:
             raise DuplicateEntityError(
-                f"Ja existeix una categoria amb el nom '{category.name}'"
+                f"Ja existeix una categoria amb el nom '{name}'"
             )
-        self.category_dao.rename(category)
+        self.category_dao.rename(Category(category.id, name))
 
     def can_delete(self, id: int) -> bool:
         """Comprova si una categoria es pot eliminar.

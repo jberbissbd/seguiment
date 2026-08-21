@@ -37,9 +37,18 @@ class TransferPreview:
 
 
 @dataclass(frozen=True, slots=True)
+class TransferAnalysisPreparation:
+    """Paquet validat criptogràficament pendent de consultar conflictes locals."""
+
+    source: Path
+    data: dict
+
+
+@dataclass(frozen=True, slots=True)
 class TransferResult:
     created: int
     replaced: int
     skipped: int
     imported_as_new: int
     documents: int
+    cancelled: bool = False
