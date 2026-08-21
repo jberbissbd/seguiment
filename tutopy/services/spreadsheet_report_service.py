@@ -3,11 +3,6 @@ from datetime import date
 from pathlib import Path
 import unicodedata
 
-from openpyxl import Workbook
-from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
-
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.student_dao import StudentDAO
@@ -50,6 +45,8 @@ class SpreadsheetReportService:
         include_terms: bool = False,
     ) -> Path:
         """Genera un XLSX a partir d'un snapshot carregat prèviament."""
+        from openpyxl import Workbook
+
         student = data.students.get(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
@@ -93,6 +90,8 @@ class SpreadsheetReportService:
         self, workbook, student, course_id, course_name, notes, histories,
         categories, include_terms: bool, term_configurations,
     ) -> None:
+        from openpyxl.styles import Alignment, Font, PatternFill
+
         sheet = workbook.create_sheet(self._sheet_title(course_name))
         rows = [(note, self._group_for(note.date, histories, student.group_name))
                 for note in notes]
@@ -186,6 +185,8 @@ class SpreadsheetReportService:
     @classmethod
     def _safe_text(cls, value) -> str:
         """Prepara text Unicode vàlid per a una cel·la OOXML d'Excel."""
+        from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+
         text = unicodedata.normalize("NFC", "" if value is None else str(value))
         text = ILLEGAL_CHARACTERS_RE.sub("", text)
         return text[:cls.EXCEL_CELL_LIMIT]
@@ -198,6 +199,8 @@ class SpreadsheetReportService:
 
     @staticmethod
     def _merge_consecutive_terms(sheet, first_row: int, last_row: int) -> None:
+        from openpyxl.styles import Alignment
+
         start = first_row
         while start <= last_row:
             value = sheet.cell(start, 1).value
@@ -214,6 +217,9 @@ class SpreadsheetReportService:
 
     @staticmethod
     def _format_sheet(sheet, last_column: int) -> None:
+        from openpyxl.styles import Alignment
+        from openpyxl.utils import get_column_letter
+
         sheet.freeze_panes = "A4"
         sheet.auto_filter.ref = f"A3:{get_column_letter(last_column)}{sheet.max_row}"
         for column in range(1, last_column + 1):

@@ -2,13 +2,6 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
-from docx import Document
-from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
-from docx.image.exceptions import UnrecognizedImageError
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.shared import Cm
-
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.student_dao import StudentDAO
@@ -82,6 +75,8 @@ class WordReportService:
         return by_course
 
     def _new_document(self, student, header_image):
+        from docx import Document
+
         document = Document()
         document.core_properties.title = self._safe_text(
             f"Informe de {student.filing_name}"
@@ -131,6 +126,9 @@ class WordReportService:
                 run.bold = True
 
     def _add_note_row(self, table, note) -> None:
+        from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+        from docx.shared import Cm
+
         cells = table.add_row().cells
         cells[0].text = date.fromisoformat(note.date).strftime("%d/%m/%Y")
         cells[1].text = self._safe_text(note.content)
@@ -149,6 +147,8 @@ class WordReportService:
     @staticmethod
     def _configure_page(document) -> None:
         """Configura un A4 amb marges de 2 cm."""
+        from docx.shared import Cm
+
         section = document.sections[0]
         section.page_width = Cm(21)
         section.page_height = Cm(29.7)
@@ -159,6 +159,9 @@ class WordReportService:
 
     def _add_student_header(self, document, student, header_image) -> None:
         """Afegeix el bloc inicial identificatiu i, opcionalment, un logotip."""
+        from docx.image.exceptions import UnrecognizedImageError
+        from docx.shared import Cm
+
         if header_image:
             image_path = Path(header_image)
             if not image_path.is_file():
@@ -179,6 +182,11 @@ class WordReportService:
     @staticmethod
     def _configure_table_width(table) -> None:
         """Fixa la taula al 100% dels 17 cm disponibles entre marges."""
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+        from docx.shared import Cm
+
         table.autofit = False
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         table.columns[0].width = Cm(3)

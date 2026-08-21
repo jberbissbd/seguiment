@@ -5,12 +5,6 @@ import re
 import unicodedata
 from zipfile import BadZipFile, ZipFile
 
-from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, PatternFill
-from odf import table as odf_table
-from odf import teletype
-from odf.opendocument import load as load_odf
-
 from tutopy.models.bulk_import import (
     CategoryImportRow, ImportAction, ImportDecision, ImportIssue, ImportPreview,
     ImportResult, StudentConflict, StudentImportRow,
@@ -40,6 +34,9 @@ class BulkImportService:
         self.similarity_threshold = similarity_threshold
 
     def create_template(self, destination: str | Path) -> Path:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+
         path = Path(destination)
         if path.suffix.lower() != ".xlsx":
             path = path.with_suffix(".xlsx")
@@ -75,10 +72,12 @@ class BulkImportService:
             raise ValidationError("El format ha de ser XLSX o ODS.")
         self._validate_archive(path)
         try:
-            workbook = (
-                self._load_ods(path) if path.suffix.lower() == ".ods"
-                else load_workbook(path, read_only=True, data_only=False)
-            )
+            if path.suffix.lower() == ".ods":
+                workbook = self._load_ods(path)
+            else:
+                from openpyxl import load_workbook
+
+                workbook = load_workbook(path, read_only=True, data_only=False)
         # openpyxl i odfpy no exposen una jerarquia comuna d'errors de format.
         # Aquesta és una frontera d'entrada: qualsevol fallada del parser es
         # converteix en un error de domini sense continuar amb dades parcials.
@@ -127,6 +126,9 @@ class BulkImportService:
             raise ValidationError("El full de càlcul no és un fitxer vàlid.") from error
 
     def _load_ods(self, path: Path):
+        from odf import table as odf_table
+        from odf.opendocument import load as load_odf
+
         document = load_odf(str(path))
         sheets = {}
         for sheet in document.spreadsheet.getElementsByType(odf_table.Table):
@@ -340,6 +342,8 @@ class _OdsSheet:
         self._max_rows = max_rows
 
     def iter_rows(self, min_row=1, max_row=None, max_col=None, values_only=False):
+        from odf import table as odf_table
+
         current_row = 0
         for row in self._element.getElementsByType(odf_table.TableRow):
             repeated_rows = int(row.getAttribute("numberrowsrepeated") or 1)
@@ -360,6 +364,9 @@ class _OdsSheet:
 
     @staticmethod
     def _row_values(row, max_col):
+        from odf import table as odf_table
+        from odf import teletype
+
         values = []
         cells = row.getElementsByType(odf_table.TableCell)
         for cell in cells:

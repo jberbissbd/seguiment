@@ -1,5 +1,8 @@
-import pytest
+import subprocess
+import sys
 from types import SimpleNamespace
+
+import pytest
 
 from tutopy.application import ServiceContainer, create_services
 from tutopy.database.database import Database
@@ -44,6 +47,15 @@ def test_main_es_importable_sense_executar_la_ui():
     from tutopy.main import main
 
     assert callable(main)
+
+
+def test_application_no_carrega_backends_de_documents_a_l_arrencada():
+    code = (
+        "import sys; import tutopy.application; "
+        "assert not ({'openpyxl', 'docx', 'odf', 'reportlab'} & sys.modules.keys())"
+    )
+
+    subprocess.run([sys.executable, "-c", code], check=True)
 
 
 def test_controller_container_inicia_nomes_controladors_visibles():

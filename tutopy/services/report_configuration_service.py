@@ -3,9 +3,6 @@ from pathlib import Path
 import shutil
 from uuid import uuid4
 
-from docx.image.exceptions import UnrecognizedImageError
-from docx.image.image import Image
-
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.database.daos.report_configuration_dao import (
@@ -121,6 +118,9 @@ class ReportConfigurationService:
         return path if path.is_file() else None
 
     def set_header_image(self, source: str | Path) -> Path:
+        from docx.image.exceptions import UnrecognizedImageError
+        from docx.image.image import Image
+
         source = Path(source)
         if not source.is_file():
             raise ValidationError("No s’ha trobat la imatge de capçalera seleccionada.")

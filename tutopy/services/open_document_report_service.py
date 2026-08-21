@@ -3,17 +3,6 @@ from datetime import date
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from odf import draw, style, table, text
-from odf.opendocument import OpenDocumentText
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.platypus import (
-    Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
-)
-
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import sanitize_xml_text
@@ -95,6 +84,9 @@ class OpenDocumentReportService:
         return sorted(result, key=lambda item: item[0])
 
     def _save_odt(self, path, student, courses, categories, header_image):
+        from odf import draw, style, table, text
+        from odf.opendocument import OpenDocumentText
+
         document = OpenDocumentText()
         title_style = style.Style(name="TutopyTitle", family="paragraph")
         title_style.addElement(style.TextProperties(fontsize="20pt", fontweight="bold"))
@@ -160,6 +152,16 @@ class OpenDocumentReportService:
         document.save(str(path), addsuffix=False)
 
     def _save_pdf(self, path, student, courses, categories, header_image):
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import cm
+        from reportlab.platypus import (
+            Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table,
+            TableStyle,
+        )
+
         styles = getSampleStyleSheet()
         styles.add(ParagraphStyle(
             name="TutopyTitle", parent=styles["Title"], alignment=TA_CENTER,
