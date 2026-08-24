@@ -156,39 +156,55 @@ class DocumentService:
     def delete(self, document_id: int) -> StudentDocument:
         document = self.get_by_id(document_id)
         path = Path(document.file_path) if document.file_path else None
-        quarantined = None
-        if path and self.storage_dir:
-            try:
-                managed = path.resolve()
-                if managed.parent == self.storage_dir.resolve() and managed.is_file():
-                    quarantined = managed.with_name(
-                        f".{managed.name}.{uuid.uuid4().hex}.deleting"
-                    )
-                    managed.replace(quarantined)
-            except OSError as error:
-                raise ValidationError(
-                    "No s'ha pogut preparar el fitxer del document per eliminar-lo."
-                ) from error
+        quarantined = self._quarantine_document_file(path)
         try:
             self.document_dao.delete(document_id)
         except Exception:
             if quarantined is not None:
-                try:
-                    quarantined.replace(path)
-                except OSError:
-                    LOGGER.exception(
-                        "No s'ha pogut restaurar el fitxer del document %s", document_id
-                    )
+                self._restore_quarantined_file(quarantined, path, document_id)
             raise
         if quarantined is not None:
-            try:
-                quarantined.unlink()
-            except OSError as error:
-                raise FileCleanupError(
-                    "El document s'ha eliminat, però no s'ha pogut esborrar "
-                    "completament el fitxer associat."
-                ) from error
+            self._finalize_quarantine(quarantined)
         return document
+
+    def _quarantine_document_file(self, path: Path | None) -> Path | None:
+        """Mou el fitxer gestionat a un nom temporal abans d'esborrar-ne el registre."""
+        if not path or not self.storage_dir:
+            return None
+        try:
+            managed = path.resolve()
+            if managed.parent != self.storage_dir.resolve() or not managed.is_file():
+                return None
+            quarantined = managed.with_name(
+                f".{managed.name}.{uuid.uuid4().hex}.deleting"
+            )
+            managed.replace(quarantined)
+            return quarantined
+        except OSError as error:
+            raise ValidationError(
+                "No s'ha pogut preparar el fitxer del document per eliminar-lo."
+            ) from error
+
+    def _restore_quarantined_file(
+        self, quarantined: Path, path: Path, document_id: int
+    ) -> None:
+        """Restaura el fitxer si l'eliminació del registre a la BD ha fallat."""
+        try:
+            quarantined.replace(path)
+        except OSError:
+            LOGGER.exception(
+                "No s'ha pogut restaurar el fitxer del document %s", document_id
+            )
+
+    def _finalize_quarantine(self, quarantined: Path) -> None:
+        """Esborra definitivament el fitxer un cop confirmada l'eliminació a la BD."""
+        try:
+            quarantined.unlink()
+        except OSError as error:
+            raise FileCleanupError(
+                "El document s'ha eliminat, però no s'ha pogut esborrar "
+                "completament el fitxer associat."
+            ) from error
 
     def _prepare(self, data: StudentDocumentNew) -> StudentDocumentNew:
         if not data.date:
