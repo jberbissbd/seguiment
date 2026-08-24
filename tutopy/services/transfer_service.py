@@ -246,7 +246,10 @@ class TransferService:
         path, data = self._read_package(
             preview.source, password, verify_documents=True
         )
-        decision_by_uuid = self._validate_decisions(data, decisions)
+        local_by_uuid = self.students.get_by_uuids(
+            [item["uuid"] for item in data["students"]]
+        )
+        decision_by_uuid = self._validate_decisions(data, decisions, local_by_uuid)
 
         new_file_paths: list[Path] = []
         old_file_paths: list[Path] = []
@@ -259,7 +262,7 @@ class TransferService:
                 try:
                     with self.transaction_factory():
                         counts = self._import_students(
-                            data, decision_by_uuid, temporary_path,
+                            data, decision_by_uuid, local_by_uuid, temporary_path,
                             new_file_paths, old_file_paths,
                             progress_callback, cancel_requested,
                         )
@@ -272,13 +275,13 @@ class TransferService:
         return TransferResult(*counts)
 
     def _validate_decisions(
-        self, data, decisions: tuple[TransferDecision, ...]
+        self, data, decisions: tuple[TransferDecision, ...], local_by_uuid: dict
     ) -> dict[str, TransferAction]:
         """Comprova que hi hagi exactament una decisió vàlida per cada conflicte."""
         decision_by_uuid = {decision.uuid: decision.action for decision in decisions}
         conflict_uuids = {
             item["uuid"] for item in data["students"]
-            if self.students.get_by_uuid(item["uuid"]) is not None
+            if item["uuid"] in local_by_uuid
         }
         missing = conflict_uuids - decision_by_uuid.keys()
         unknown = decision_by_uuid.keys() - conflict_uuids
@@ -292,7 +295,7 @@ class TransferService:
         return decision_by_uuid
 
     def _import_students(
-        self, data, decision_by_uuid, temporary_path,
+        self, data, decision_by_uuid, local_by_uuid, temporary_path,
         new_file_paths, old_file_paths, progress_callback, cancel_requested,
     ) -> tuple[int, int, int, int, int]:
         """Importa tots els alumnes del paquet dins la transacció ja oberta."""
@@ -305,7 +308,7 @@ class TransferService:
             if cancel_requested is not None and cancel_requested():
                 raise _TransferExecutionCancelled
             outcome, document_count = self._import_one_student(
-                item, decision_by_uuid, category_ids, course_ids,
+                item, decision_by_uuid, local_by_uuid, category_ids, course_ids,
                 temporary_path, new_file_paths, old_file_paths,
             )
             counters[outcome] += 1
@@ -318,11 +321,11 @@ class TransferService:
         )
 
     def _import_one_student(
-        self, item, decision_by_uuid, category_ids, course_ids,
+        self, item, decision_by_uuid, local_by_uuid, category_ids, course_ids,
         temporary_path, new_file_paths, old_file_paths,
     ) -> tuple[str, int]:
         """Importa un alumne del paquet i retorna (resultat, documents importats)."""
-        local = self.students.get_by_uuid(item["uuid"])
+        local = local_by_uuid.get(item["uuid"])
         action = decision_by_uuid.get(item["uuid"])
         if local and action == TransferAction.KEEP_LOCAL:
             return "skipped", 0
