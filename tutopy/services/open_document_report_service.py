@@ -84,10 +84,19 @@ class OpenDocumentReportService:
         return sorted(result, key=lambda item: item[0])
 
     def _save_odt(self, path, student, courses, categories, header_image):
-        from odf import draw, style, table, text
         from odf.opendocument import OpenDocumentText
 
         document = OpenDocumentText()
+        styles = self._build_odt_styles(document)
+        self._add_odt_header(document, student, header_image, styles)
+        self._add_odt_courses(document, courses, categories, styles)
+        document.save(str(path), addsuffix=False)
+
+    @staticmethod
+    def _build_odt_styles(document) -> dict:
+        """Registra i retorna els estils ODT reutilitzats per tot l'informe."""
+        from odf import style
+
         title_style = style.Style(name="TutopyTitle", family="paragraph")
         title_style.addElement(style.TextProperties(fontsize="20pt", fontweight="bold"))
         document.styles.addElement(title_style)
@@ -103,53 +112,85 @@ class OpenDocumentReportService:
         header_style = style.Style(name="TutopyTableHeader", family="table-cell")
         header_style.addElement(style.TextProperties(fontweight="bold"))
         document.styles.addElement(header_style)
+        return {
+            "title": title_style, "heading": heading_style,
+            "category": category_style, "page_break": page_break_style,
+            "header": header_style,
+        }
 
-        logo = header_image
-        if logo:
-            href = document.addPicture(str(logo))
+    def _add_odt_header(self, document, student, header_image, styles: dict) -> None:
+        """Afegeix el logotip opcional i la capçalera (títol, grup, data) del document."""
+        from odf import draw, text
+
+        if header_image:
+            href = document.addPicture(str(header_image))
             frame = draw.Frame(width="5cm", height="2cm", anchortype="paragraph")
             frame.addElement(draw.Image(href=href))
             paragraph = text.P()
             paragraph.addElement(frame)
             document.text.addElement(paragraph)
-        document.text.addElement(text.P(stylename=title_style, text=self._safe(student.filing_name)))
-        document.text.addElement(text.P(text=f"Grup: {self._safe(student.group_name) or 'Sense grup'}"))
+        document.text.addElement(
+            text.P(stylename=styles["title"], text=self._safe(student.filing_name))
+        )
+        document.text.addElement(
+            text.P(text=f"Grup: {self._safe(student.group_name) or 'Sense grup'}")
+        )
         document.text.addElement(text.P(
             text=f"Data d’exportació: {date.today().strftime('%d/%m/%Y')}"
         ))
+
+    def _add_odt_courses(self, document, courses, categories, styles: dict) -> None:
+        """Afegeix un bloc per curs, amb salt de pàgina entre cursos successius."""
+        from odf import text
+
         for course_index, (course_name, course_notes) in enumerate(courses):
             if course_index:
-                document.text.addElement(text.P(stylename=page_break_style))
-            document.text.addElement(text.P(stylename=heading_style, text=self._safe(course_name)))
-            by_category = defaultdict(list)
-            for note in course_notes:
-                by_category[note.category_id].append(note)
-            for category in categories:
-                category_notes = by_category.get(category.id)
-                if not category_notes:
-                    continue
-                document.text.addElement(text.P(
-                    stylename=category_style, text=self._safe(category.name)
-                ))
-                report_table = table.Table()
-                header = table.TableRow()
-                for value in ("Data", "Anotació"):
-                    cell = table.TableCell(stylename=header_style)
-                    cell.addElement(text.P(text=value))
-                    header.addElement(cell)
-                report_table.addElement(header)
-                for note in category_notes:
-                    row = table.TableRow()
-                    for value in (
-                        date.fromisoformat(note.date).strftime("%d/%m/%Y"),
-                        self._safe(note.content),
-                    ):
-                        cell = table.TableCell()
-                        cell.addElement(text.P(text=value))
-                        row.addElement(cell)
-                    report_table.addElement(row)
-                document.text.addElement(report_table)
-        document.save(str(path), addsuffix=False)
+                document.text.addElement(text.P(stylename=styles["page_break"]))
+            document.text.addElement(
+                text.P(stylename=styles["heading"], text=self._safe(course_name))
+            )
+            self._add_odt_course_categories(document, course_notes, categories, styles)
+
+    def _add_odt_course_categories(
+        self, document, course_notes, categories, styles: dict
+    ) -> None:
+        """Agrupa les notes d'un curs per categoria i n'afegeix la taula corresponent."""
+        by_category = defaultdict(list)
+        for note in course_notes:
+            by_category[note.category_id].append(note)
+        for category in categories:
+            category_notes = by_category.get(category.id)
+            if not category_notes:
+                continue
+            self._add_odt_category_table(document, category, category_notes, styles)
+
+    def _add_odt_category_table(
+        self, document, category, category_notes, styles: dict
+    ) -> None:
+        """Afegeix el títol de la categoria i la taula de notes corresponent."""
+        from odf import table, text
+
+        document.text.addElement(
+            text.P(stylename=styles["category"], text=self._safe(category.name))
+        )
+        report_table = table.Table()
+        header = table.TableRow()
+        for value in ("Data", "Anotació"):
+            cell = table.TableCell(stylename=styles["header"])
+            cell.addElement(text.P(text=value))
+            header.addElement(cell)
+        report_table.addElement(header)
+        for note in category_notes:
+            row = table.TableRow()
+            for value in (
+                date.fromisoformat(note.date).strftime("%d/%m/%Y"),
+                self._safe(note.content),
+            ):
+                cell = table.TableCell()
+                cell.addElement(text.P(text=value))
+                row.addElement(cell)
+            report_table.addElement(row)
+        document.text.addElement(report_table)
 
     def _save_pdf(self, path, student, courses, categories, header_image):
         from reportlab.lib import colors
