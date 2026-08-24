@@ -1,6 +1,5 @@
 import logging
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QInputDialog, QLineEdit, QMessageBox, QProgressDialog,
 )
@@ -15,7 +14,7 @@ from tutopy.ui.dialogs.transfer_student_selection_dialog import (
     TransferStudentSelectionDialog,
 )
 from tutopy.ui.main_window import MainWindow
-from tutopy.ui.background_task import BackgroundTaskRunner
+from tutopy.ui.background_task import BackgroundOperationPresenter, BackgroundTaskRunner
 
 
 LOGGER = logging.getLogger(__name__)
@@ -43,12 +42,15 @@ class DataManagementController:
         self.transfer_selection_dialog = transfer_selection_dialog
         self.task_runner = task_runner or BackgroundTaskRunner()
         self.progress_dialog = progress_dialog
-        self._transfer_export_task = None
-        self._transfer_progress = None
-        self._transfer_analysis_task = None
-        self._transfer_analysis_progress = None
-        self._transfer_execution_task = None
-        self._transfer_execution_progress = None
+        self._transfer_export = BackgroundOperationPresenter(
+            self.window, self.task_runner, self.progress_dialog
+        )
+        self._transfer_analysis = BackgroundOperationPresenter(
+            self.window, self.task_runner, self.progress_dialog
+        )
+        self._transfer_execution = BackgroundOperationPresenter(
+            self.window, self.task_runner, self.progress_dialog
+        )
         view = window.data_tools
         view.template_requested.connect(self.export_template)
         view.import_requested.connect(self.import_spreadsheet)
@@ -83,7 +85,7 @@ class DataManagementController:
         if self.transfer_service is None:
             self.window.show_error("El servei de transferència no està disponible.")
             return
-        if self._transfer_export_task is not None:
+        if self._transfer_export.is_running():
             self.window.show_status("Ja hi ha una transferència en curs.")
             return
         filename, _ = QFileDialog.getSaveFileName(
@@ -102,15 +104,6 @@ class DataManagementController:
         except Exception as error:
             self._show_operation_error(error, "exportar el paquet")
             return
-        progress = self.progress_dialog(
-            "Preparant el paquet…", "Cancel·lar", 0, len(student_ids), self.window
-        )
-        progress.setWindowTitle("Exportació de transferència")
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setAutoClose(False)
-        progress.setAutoReset(False)
-        self._transfer_progress = progress
 
         def operation(report_progress, cancel_requested):
             return self.transfer_service.export_prepared(
@@ -118,52 +111,36 @@ class DataManagementController:
                 cancel_requested=cancel_requested,
             )
 
-        self._transfer_export_task = self.task_runner.start(
+        def progress_label(completed: int, total: int) -> str:
+            if completed == total:
+                return "Comprimint i xifrant el paquet…"
+            return f"Preparant alumnes… {completed} de {total}"
+
+        self._transfer_export.start(
             operation,
-            on_progress=self._update_transfer_progress,
+            title="Exportació de transferència",
+            label="Preparant el paquet…",
+            maximum=len(student_ids),
             on_success=self._transfer_export_finished,
             on_failure=self._transfer_export_failed,
+            progress_label=progress_label,
         )
-        progress.canceled.connect(self._transfer_export_task.cancel)
-        progress.show()
-
-    def _update_transfer_progress(self, completed: int, total: int) -> None:
-        progress = self._transfer_progress
-        if progress is None:
-            return
-        progress.setMaximum(total)
-        progress.setValue(completed)
-        label = (
-            "Comprimint i xifrant el paquet…"
-            if completed == total
-            else f"Preparant alumnes… {completed} de {total}"
-        )
-        progress.setLabelText(label)
 
     def _transfer_export_finished(self, path) -> None:
-        self._close_transfer_progress()
         if path is None:
             self.window.show_status("Exportació de transferència cancel·lada.", 5000)
             return
         self.window.show_status(f"Paquet desat a {path}", 5000)
 
     def _transfer_export_failed(self, error: Exception) -> None:
-        self._close_transfer_progress()
         self._show_operation_error(error, "exportar el paquet")
-
-    def _close_transfer_progress(self) -> None:
-        progress = self._transfer_progress
-        self._transfer_progress = None
-        self._transfer_export_task = None
-        if progress is not None:
-            progress.close()
 
     def import_transfer(self) -> None:
         """Analitza, resol conflictes i importa un paquet `.tpy`."""
         if self.transfer_service is None:
             self.window.show_error("El servei de transferència no està disponible.")
             return
-        if self._transfer_analysis_task is not None:
+        if self._transfer_analysis.is_running():
             self.window.show_status("Ja s’està analitzant una transferència.")
             return
         filename, _ = QFileDialog.getOpenFileName(
@@ -175,29 +152,22 @@ class DataManagementController:
         password = self._transfer_password()
         if password is None:
             return
-        progress = self.progress_dialog(
-            "Desxifrant i validant el paquet…", "", 0, 0, self.window
-        )
-        progress.setWindowTitle("Anàlisi de transferència")
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setCancelButton(None)
-        self._transfer_analysis_progress = progress
 
         def operation(_progress, _cancel_requested):
             return self.transfer_service.prepare_analysis(filename, password)
 
-        self._transfer_analysis_task = self.task_runner.start(
+        self._transfer_analysis.start(
             operation,
+            title="Anàlisi de transferència",
+            label="Desxifrant i validant el paquet…",
+            cancellable=False,
             on_success=lambda preparation: self._transfer_analysis_finished(
                 preparation, password
             ),
             on_failure=self._transfer_analysis_failed,
         )
-        progress.show()
 
     def _transfer_analysis_finished(self, preparation, password: str) -> None:
-        self._close_transfer_analysis_progress()
         try:
             preview = self.transfer_service.complete_analysis(preparation)
             decisions = ()
@@ -214,17 +184,6 @@ class DataManagementController:
         self._start_transfer_execution(preview, decisions, password)
 
     def _start_transfer_execution(self, preview, decisions, password: str) -> None:
-        progress = self.progress_dialog(
-            "Important alumnes…", "Cancel·lar", 0,
-            preview.student_count, self.window,
-        )
-        progress.setWindowTitle("Importació de transferència")
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setAutoClose(False)
-        progress.setAutoReset(False)
-        self._transfer_execution_progress = progress
-
         def operation(report_progress, cancel_requested):
             return self.transfer_service.execute_with_worker_connection(
                 preview, decisions, password=password,
@@ -232,27 +191,18 @@ class DataManagementController:
                 cancel_requested=cancel_requested,
             )
 
-        self._transfer_execution_task = self.task_runner.start(
+        self._transfer_execution.start(
             operation,
-            on_progress=self._update_transfer_execution_progress,
+            title="Importació de transferència",
+            label="Important alumnes…",
+            maximum=preview.student_count,
             on_success=self._transfer_execution_finished,
             on_failure=self._transfer_execution_failed,
+            progress_label=lambda completed, total:
+                f"Important alumnes… {completed} de {total}",
         )
-        progress.canceled.connect(self._transfer_execution_task.cancel)
-        progress.show()
-
-    def _update_transfer_execution_progress(
-        self, completed: int, total: int
-    ) -> None:
-        progress = self._transfer_execution_progress
-        if progress is None:
-            return
-        progress.setMaximum(total)
-        progress.setValue(completed)
-        progress.setLabelText(f"Important alumnes… {completed} de {total}")
 
     def _transfer_execution_finished(self, result) -> None:
-        self._close_transfer_execution_progress()
         if result.cancelled:
             self.window.show_status("Importació de transferència cancel·lada.", 5000)
             return
@@ -267,26 +217,10 @@ class DataManagementController:
         )
 
     def _transfer_execution_failed(self, error: Exception) -> None:
-        self._close_transfer_execution_progress()
         self._show_operation_error(error, "importar el paquet")
 
-    def _close_transfer_execution_progress(self) -> None:
-        progress = self._transfer_execution_progress
-        self._transfer_execution_progress = None
-        self._transfer_execution_task = None
-        if progress is not None:
-            progress.close()
-
     def _transfer_analysis_failed(self, error: Exception) -> None:
-        self._close_transfer_analysis_progress()
         self._show_operation_error(error, "analitzar el paquet")
-
-    def _close_transfer_analysis_progress(self) -> None:
-        progress = self._transfer_analysis_progress
-        self._transfer_analysis_progress = None
-        self._transfer_analysis_task = None
-        if progress is not None:
-            progress.close()
 
     def _new_transfer_password(self) -> str | None:
         """Demana dues vegades la contrasenya d'un paquet nou."""

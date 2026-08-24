@@ -6,7 +6,8 @@ from collections.abc import Callable
 from threading import Event
 from typing import Any
 
-from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QRunnable, QThreadPool, Signal, Slot
+from PySide6.QtWidgets import QProgressDialog
 
 
 class BackgroundTaskSignals(QObject):
@@ -63,3 +64,87 @@ class BackgroundTaskRunner:
             task.signals.failed.connect(on_failure)
         self.pool.start(task)
         return task
+
+
+class BackgroundOperationPresenter:
+    """Coordina un `QProgressDialog` amb una `BackgroundTask`.
+
+    Centralitza el patró, repetit a diversos controladors, de mostrar un
+    diàleg de progrés modal mentre s'executa una operació en un fil
+    secundari i tancar-lo automàticament en acabar (èxit, error o
+    cancel·lació).
+    """
+
+    def __init__(
+        self,
+        window,
+        task_runner: BackgroundTaskRunner | None = None,
+        progress_dialog_factory=QProgressDialog,
+    ):
+        self.window = window
+        self.task_runner = task_runner or BackgroundTaskRunner()
+        self.progress_dialog_factory = progress_dialog_factory
+        self.task: BackgroundTask | None = None
+        self.progress: QProgressDialog | None = None
+
+    def is_running(self) -> bool:
+        return self.task is not None
+
+    def start(
+        self,
+        operation: Callable[[Callable, Callable], Any],
+        *,
+        title: str,
+        label: str,
+        on_success: Callable[[Any], None],
+        on_failure: Callable[[Exception], None],
+        maximum: int = 0,
+        cancellable: bool = True,
+        progress_label: Callable[[int, int], str] | None = None,
+    ) -> None:
+        progress = self.progress_dialog_factory(
+            label, "Cancel·lar" if cancellable else "", 0, maximum, self.window
+        )
+        progress.setWindowTitle(title)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        if cancellable:
+            progress.setAutoClose(False)
+            progress.setAutoReset(False)
+        else:
+            progress.setCancelButton(None)
+        self.progress = progress
+
+        def handle_progress(completed: int, total: int) -> None:
+            progress = self.progress
+            if progress is None:
+                return
+            progress.setMaximum(total)
+            progress.setValue(completed)
+            if progress_label is not None:
+                progress.setLabelText(progress_label(completed, total))
+
+        def handle_success(result: Any) -> None:
+            self.close()
+            on_success(result)
+
+        def handle_failure(error: Exception) -> None:
+            self.close()
+            on_failure(error)
+
+        self.task = self.task_runner.start(
+            operation,
+            on_progress=handle_progress,
+            on_success=handle_success,
+            on_failure=handle_failure,
+        )
+        if cancellable:
+            progress.canceled.connect(self.task.cancel)
+        progress.show()
+
+    def close(self) -> None:
+        progress = self.progress
+        self.progress = None
+        self.task = None
+        if progress is not None:
+            progress.close()

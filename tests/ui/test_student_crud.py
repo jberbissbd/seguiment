@@ -168,7 +168,7 @@ def test_controller_aplica_edicio_massiva_en_segon_pla(
         controller.bulk_dialog_factory = AcceptedBulkDialog
 
         controller.bulk_edit()
-        qtbot.waitUntil(lambda: controller._bulk_edit_task is None, timeout=5000)
+        qtbot.waitUntil(lambda: not controller._bulk_edit.is_running(), timeout=5000)
 
         updated = services.students.get_by_id(first.id)
         assert updated.name == "Anna Maria"

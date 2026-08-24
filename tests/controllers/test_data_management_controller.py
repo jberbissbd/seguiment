@@ -221,7 +221,9 @@ def test_transferencia_exporta_i_importa_paquets(
     passwords = iter((("contrasenya", True), ("contrasenya", True)))
     monkeypatch.setattr(QInputDialog, "getText", lambda *args: next(passwords))
     controller.export_all_students()
-    qtbot.waitUntil(lambda: controller._transfer_export_task is None, timeout=5000)
+    qtbot.waitUntil(
+        lambda: not controller._transfer_export.is_running(), timeout=5000
+    )
     assert transfer.exported == ([7], destination, "contrasenya")
 
     monkeypatch.setattr(
@@ -292,7 +294,9 @@ def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
 
     controller.export_selected_student()
 
-    qtbot.waitUntil(lambda: controller._transfer_export_task is None, timeout=5000)
+    qtbot.waitUntil(
+        lambda: not controller._transfer_export.is_running(), timeout=5000
+    )
     assert transfer.exported == ([22], destination, "contrasenya")
 
 

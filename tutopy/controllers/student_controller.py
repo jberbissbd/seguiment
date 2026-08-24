@@ -7,7 +7,7 @@ from tutopy.services.exceptions import DomainError
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.student_dialog import StudentDialog
 from tutopy.ui.dialogs.bulk_student_edit_dialog import BulkStudentEditDialog
-from tutopy.ui.background_task import BackgroundTaskRunner
+from tutopy.ui.background_task import BackgroundOperationPresenter, BackgroundTaskRunner
 from tutopy.ui.main_window import MainWindow
 
 
@@ -26,8 +26,9 @@ class StudentController:
         self.bulk_dialog_factory = bulk_dialog_factory
         self.task_runner = task_runner or BackgroundTaskRunner()
         self.progress_dialog = progress_dialog
-        self._bulk_edit_task = None
-        self._bulk_edit_progress = None
+        self._bulk_edit = BackgroundOperationPresenter(
+            self.window, self.task_runner, self.progress_dialog
+        )
         self._connect_signals()
 
     def start(self) -> None:
@@ -110,7 +111,7 @@ class StudentController:
 
     def bulk_edit(self) -> None:
         """Recull i aplica una edició massiva sense bloquejar la interfície."""
-        if self._bulk_edit_task is not None:
+        if self._bulk_edit.is_running():
             self.window.show_status("Ja hi ha una edició massiva en curs.")
             return
         students = self.service.get_all()
@@ -123,15 +124,6 @@ class StudentController:
             return
         changes = [StudentBulkUpdate(**item) for item in dialog.changes()]
         change_date = dialog.effective_date()
-        progress = self.progress_dialog(
-            "Actualitzant alumnes…", "Cancel·lar", 0, len(changes), self.window
-        )
-        progress.setWindowTitle("Edició massiva d’alumnes")
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setAutoClose(False)
-        progress.setAutoReset(False)
-        self._bulk_edit_progress = progress
 
         def operation(report_progress, cancel_requested):
             return self.service.bulk_update_with_worker_connection(
@@ -139,25 +131,18 @@ class StudentController:
                 cancel_requested=cancel_requested,
             )
 
-        self._bulk_edit_task = self.task_runner.start(
+        self._bulk_edit.start(
             operation,
-            on_progress=self._update_bulk_progress,
+            title="Edició massiva d’alumnes",
+            label="Actualitzant alumnes…",
+            maximum=len(changes),
             on_success=self._bulk_edit_finished,
             on_failure=self._bulk_edit_failed,
+            progress_label=lambda completed, total:
+                f"Actualitzant alumnes… {completed} de {total}",
         )
-        progress.canceled.connect(self._bulk_edit_task.cancel)
-        progress.show()
-
-    def _update_bulk_progress(self, completed: int, total: int) -> None:
-        progress = self._bulk_edit_progress
-        if progress is None:
-            return
-        progress.setMaximum(total)
-        progress.setValue(completed)
-        progress.setLabelText(f"Actualitzant alumnes… {completed} de {total}")
 
     def _bulk_edit_finished(self, result) -> None:
-        self._close_bulk_progress()
         if result.cancelled:
             self.window.show_status("Edició massiva cancel·lada.", 5000)
             return
@@ -171,15 +156,7 @@ class StudentController:
         )
 
     def _bulk_edit_failed(self, error: Exception) -> None:
-        self._close_bulk_progress()
         self.error_handler(str(error))
-
-    def _close_bulk_progress(self) -> None:
-        progress = self._bulk_edit_progress
-        self._bulk_edit_progress = None
-        self._bulk_edit_task = None
-        if progress is not None:
-            progress.close()
 
     def _select_in_list(self, student_id: int) -> None:
         for row in range(self.window.student_list.list_widget.count()):
