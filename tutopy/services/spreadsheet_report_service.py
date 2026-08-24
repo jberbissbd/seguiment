@@ -93,8 +93,8 @@ class SpreadsheetReportService:
         from openpyxl.styles import Alignment, Font, PatternFill
 
         sheet = workbook.create_sheet(self._sheet_title(course_name))
-        rows = [(note, self._group_for(note.date, histories, student.group_name))
-                for note in notes]
+        group_by_note_id = self._group_for_notes(notes, histories, student.group_name)
+        rows = [(note, group_by_note_id[note.id]) for note in notes]
         groups = list(dict.fromkeys(group for _note, group in rows if group))
         last_column = len(categories) + (2 if include_terms else 1)
         sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_column)
@@ -166,15 +166,36 @@ class SpreadsheetReportService:
         return names
 
     @staticmethod
-    def _group_for(note_date: str, histories, fallback: str) -> str:
-        candidates = [
-            history for history in histories
-            if history.start_date <= note_date
-            and (history.end_date is None or note_date <= history.end_date)
-        ]
-        if not candidates:
-            return fallback
-        return max(candidates, key=lambda history: (history.start_date, history.id)).group_name
+    def _group_for_notes(notes, histories, fallback: str) -> dict[int, str]:
+        """Resol el grup de cada nota en un únic recorregut ordenat.
+
+        Aprofita que `notes` ja arriba ordenat per data i que
+        `StudentGroupHistoryDAO.get_by_students` retorna l'historial ordenat
+        per `start_date`, evitant tornar a recórrer tot l'historial per cada
+        nota (O(N·H) -> O(N + H) en el cas habitual de trams no superposats).
+        """
+        ordered_histories = sorted(
+            histories, key=lambda history: (history.start_date, history.id)
+        )
+        active: list = []
+        next_index = 0
+        result: dict[int, str] = {}
+        for note in notes:
+            while (
+                next_index < len(ordered_histories)
+                and ordered_histories[next_index].start_date <= note.date
+            ):
+                active.append(ordered_histories[next_index])
+                next_index += 1
+            active = [
+                history for history in active
+                if history.end_date is None or note.date <= history.end_date
+            ]
+            result[note.id] = (
+                max(active, key=lambda history: (history.start_date, history.id)).group_name
+                if active else fallback
+            )
+        return result
 
     @staticmethod
     def _sheet_title(course_name: str) -> str:

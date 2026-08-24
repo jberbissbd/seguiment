@@ -1,5 +1,6 @@
 from openpyxl import load_workbook
 from datetime import date
+from types import SimpleNamespace
 import pytest
 import unicodedata
 
@@ -9,6 +10,7 @@ from tutopy.models.messaging import (
 )
 from tutopy.models.reporting import TermConfigurationNew
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
+from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
 
 
 def _report_scenario(db, tmp_path):
@@ -122,3 +124,37 @@ def test_saneja_unicode_controls_formules_i_longitud(db, tmp_path):
     assert "😊" in sheet["B4"].value
     assert len(sheet["B4"].value) == 32_767
     assert sheet["B4"].data_type == "s"
+
+
+def _note(note_id, note_date):
+    return SimpleNamespace(id=note_id, date=note_date)
+
+
+def _history(history_id, group_name, start_date, end_date=None):
+    return SimpleNamespace(
+        id=history_id, group_name=group_name,
+        start_date=start_date, end_date=end_date,
+    )
+
+
+def test_group_for_notes_gestiona_buits_i_solapaments():
+    notes = [
+        _note(1, "2025-08-01"),  # abans de qualsevol tram: usa el fallback
+        _note(2, "2025-09-15"),  # dins del primer tram
+        _note(3, "2026-01-20"),  # en un buit entre trams: usa el fallback
+        _note(4, "2026-03-01"),  # dins del segon tram
+        _note(5, "2026-03-10"),  # coincidència de dates: desempat per start_date/id
+    ]
+    histories = [
+        _history(1, "3r A", "2025-09-01", "2025-12-31"),
+        _history(2, "3r B", "2026-02-01", None),
+        _history(3, "3r B (repetit)", "2026-03-05", None),
+    ]
+
+    result = SpreadsheetReportService._group_for_notes(notes, histories, "Sense grup")
+
+    assert result[1] == "Sense grup"
+    assert result[2] == "3r A"
+    assert result[3] == "Sense grup"
+    assert result[4] == "3r B"
+    assert result[5] == "3r B (repetit)"
