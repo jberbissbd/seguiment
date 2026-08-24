@@ -1,10 +1,12 @@
+import dataclasses
+
 from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
 from tutopy.models.messaging import (
-    Note, NoteNew, NoteRecord, StudentGroupHistory, StudentGroupHistoryNew,
+    Note, NoteNew, NoteRecord, StudentGroupHistoryNew,
 )
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
@@ -59,7 +61,7 @@ class NoteService:
 
     def update(self, note: Note) -> Note:
         with self.transaction_factory():
-            self.get_by_id(note.id)
+            existing = self.get_by_id(note.id)
             prepared = self._prepare(NoteNew(
                 student_id=note.student_id,
                 category_id=note.category_id,
@@ -68,9 +70,13 @@ class NoteService:
                 content=note.content,
             ))
             self._ensure_group_history(prepared)
-            updated = Note(
-                note.id, prepared.student_id, prepared.category_id, prepared.date,
-                prepared.course_id, prepared.content,
+            updated = dataclasses.replace(
+                existing,
+                student_id=prepared.student_id,
+                category_id=prepared.category_id,
+                date=prepared.date,
+                course_id=prepared.course_id,
+                content=prepared.content,
             )
             self.note_dao.update(updated)
             return updated
@@ -123,10 +129,9 @@ class NoteService:
         )
         start_date = self._course_start(note.course_id) if first_entry_in_course else note.date
         if current and start_date >= current.start_date:
-            self.group_history_dao.update(StudentGroupHistory(
-                current.id, current.student_id, current.group_name,
-                current.start_date, start_date, current.academic_course_id,
-            ))
+            self.group_history_dao.update(
+                dataclasses.replace(current, end_date=start_date)
+            )
             group_name = student.group_name
             end_date = None
         else:

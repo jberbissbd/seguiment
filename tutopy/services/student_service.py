@@ -1,3 +1,4 @@
+import dataclasses
 from datetime import datetime
 from typing import Optional
 from tutopy.database.daos.student_dao import StudentDAO
@@ -77,17 +78,13 @@ class StudentService:
             data = StudentNew(student.name, student.surnames, student.group_name)
             data = self.validation_service.validate_student(data)
             requested_group = data.group_name
-            updated = Student(
-                student.id, existing.uuid, data.name, data.surnames,
-                existing.group_name,
+            updated = dataclasses.replace(
+                existing, name=data.name, surnames=data.surnames
             )
             self.student_dao.update(updated)
             if requested_group != existing.group_name:
                 self.change_student_group(student.id, requested_group)
-                updated = Student(
-                    updated.id, updated.uuid, updated.name, updated.surnames,
-                    requested_group,
-                )
+                updated = dataclasses.replace(updated, group_name=requested_group)
         return updated
 
     def bulk_update(
@@ -132,9 +129,8 @@ class StudentService:
                     ):
                         unchanged += 1
                     else:
-                        self.student_dao.update(Student(
-                            existing.id, existing.uuid, data.name, data.surnames,
-                            existing.group_name,
+                        self.student_dao.update(dataclasses.replace(
+                            existing, name=data.name, surnames=data.surnames
                         ))
                         if data.group_name != existing.group_name:
                             self.change_student_group(
@@ -218,11 +214,9 @@ class StudentService:
 
             current_history = self.group_history_dao.get_current(student_id)
             if current_history:
-                self.group_history_dao.update(StudentGroupHistory(
-                    current_history.id, current_history.student_id,
-                    current_history.group_name, current_history.start_date,
-                    change_date, current_history.academic_course_id,
-                ))
+                self.group_history_dao.update(
+                    dataclasses.replace(current_history, end_date=change_date)
+                )
 
             if academic_course_id is None:
                 course_str = AcademicCourseDeterminator().curs_academic_singular(change_date)
@@ -240,9 +234,9 @@ class StudentService:
                 end_date=None,
             )
             history = self.group_history_dao.create(new_history)
-            self.student_dao.update(Student(
-                student.id, student.uuid, student.name, student.surnames, new_group
-            ))
+            self.student_dao.update(
+                dataclasses.replace(student, group_name=new_group)
+            )
             return history
 
     def _require_student(self, student_id: int) -> Student:

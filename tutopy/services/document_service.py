@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import shutil
 import uuid
@@ -103,10 +104,9 @@ class DocumentService:
             date=document.date,
             course_id=document.course_id,
         ))
-        updated = StudentDocument(
-            document.id, existing.student_id, prepared.name, prepared.description,
-            existing.uuid_filename, existing.original_filename, existing.file_path,
-            prepared.date, prepared.course_id,
+        updated = dataclasses.replace(
+            existing, name=prepared.name, description=prepared.description,
+            date=prepared.date, course_id=prepared.course_id,
         )
         self.document_dao.update(updated)
         return updated

@@ -1,3 +1,4 @@
+import dataclasses
 from typing import Optional
 from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.models.messaging import Category, CategoryNew
@@ -71,7 +72,7 @@ class CategoryService:
             raise DuplicateEntityError(
                 f"Ja existeix una categoria amb el nom '{name}'"
             )
-        self.category_dao.rename(Category(category.id, name))
+        self.category_dao.rename(dataclasses.replace(existing, name=name))
 
     def can_delete(self, id: int) -> bool:
         """Comprova si una categoria es pot eliminar.
