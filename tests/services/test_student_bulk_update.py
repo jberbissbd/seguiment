@@ -41,6 +41,32 @@ def test_edicio_massiva_valida_tot_el_lot_abans_d_escriure(db):
     assert services.students.get_by_id(second.id) == second
 
 
+def test_edicio_massiva_resol_el_curs_academic_una_sola_vegada(db):
+    services = create_services(db)
+    students = [
+        services.students.create(StudentNew(f"Nom {index}", "Cognom", "1A"))
+        for index in range(5)
+    ]
+
+    statements = []
+    db.conn._connection.set_trace_callback(statements.append)
+    try:
+        result = services.students.bulk_update(
+            [StudentBulkUpdate(item.id, item.name, item.surnames, "2B")
+             for item in students],
+            "2026-09-01",
+        )
+    finally:
+        db.conn._connection.set_trace_callback(None)
+
+    assert result.group_changes == 5
+    resolution_statements = [
+        item for item in statements
+        if "academic_courses" in item and "WHERE course" in item
+    ]
+    assert len(resolution_statements) == 1
+
+
 def test_cancel_lacio_de_l_edicio_massiva_fa_rollback(db):
     services = create_services(db)
     students = [

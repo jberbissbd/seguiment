@@ -138,12 +138,13 @@ class StudentService:
         updated = unchanged = group_changes = 0
         try:
             with self.transaction_factory():
+                academic_course_id = self._resolve_academic_course_id(change_date)
                 total = len(prepared)
                 for completed, (existing, data) in enumerate(prepared, 1):
                     if cancel_requested is not None and cancel_requested():
                         raise _BulkUpdateCancelled
                     changed, group_changed = self._apply_single_bulk_change(
-                        existing, data, change_date
+                        existing, data, change_date, academic_course_id
                     )
                     if changed:
                         updated += 1
@@ -157,7 +158,8 @@ class StudentService:
         return StudentBulkUpdateResult(updated, unchanged, group_changes)
 
     def _apply_single_bulk_change(
-        self, existing: Student, data: StudentNew, change_date: str
+        self, existing: Student, data: StudentNew, change_date: str,
+        academic_course_id: int,
     ) -> tuple[bool, bool]:
         """Aplica un canvi individual i retorna (s'ha actualitzat, ha canviat de grup)."""
         if (
@@ -171,8 +173,16 @@ class StudentService:
         ))
         group_changed = data.group_name != existing.group_name
         if group_changed:
-            self.change_student_group(existing.id, data.group_name, change_date=change_date)
+            self.change_student_group(
+                existing.id, data.group_name,
+                academic_course_id=academic_course_id, change_date=change_date,
+            )
         return True, group_changed
+
+    def _resolve_academic_course_id(self, change_date: str) -> int:
+        """Resol (o crea) una sola vegada el curs acadèmic d'una data de canvi."""
+        course_str = AcademicCourseDeterminator().curs_academic_singular(change_date)
+        return self.academic_course_dao.get_or_create(course_str).id
 
     def bulk_update_with_worker_connection(self, *args, **kwargs):
         """Executa l'edició amb una connexió creada dins del treballador."""
