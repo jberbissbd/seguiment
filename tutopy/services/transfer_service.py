@@ -233,7 +233,8 @@ class TransferService:
             total_bytes, tuple(conflicts),
         )
 
-    def execute(  # noqa: C901 -- orquestra decisions/conflictes, refactor pendent
+    # Complexitat ciclomàtica elevada: orquestra decisions/conflictes, refactor pendent.
+    def execute(  # noqa: C901
         self, preview: TransferPreview,
         decisions: tuple[TransferDecision, ...] = (),
         password: str = "",
@@ -433,7 +434,8 @@ class TransferService:
             names.update(item["course"] for item in student["documents"] if item["course"])
         return {name: self.courses.get_or_create(name).id for name in names}
 
-    def _read_package(  # noqa: C901 -- validació de paquet en múltiples passos, refactor pendent
+    # Complexitat ciclomàtica elevada: validació de paquet en múltiples passos, refactor pendent.
+    def _read_package(  # noqa: C901
         self, source, password, verify_documents
     ):
         path = Path(source)
@@ -468,7 +470,8 @@ class TransferService:
             ) from error
         return path, data
 
-    def _validate_payload(  # noqa: C901 -- validació exhaustiva del format, refactor pendent
+    # Complexitat ciclomàtica elevada: validació exhaustiva del format, refactor pendent.
+    def _validate_payload(  # noqa: C901
         self, manifest, data, checksums
     ):
         if not all(isinstance(value, dict) for value in (manifest, data, checksums)):
