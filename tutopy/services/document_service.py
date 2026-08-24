@@ -3,6 +3,7 @@ import logging
 import shutil
 import uuid
 from pathlib import Path
+from typing import cast
 
 from tutopy.database.daos.document_dao import DocumentDAO
 from tutopy.database.daos.student_dao import StudentDAO
@@ -104,10 +105,10 @@ class DocumentService:
             date=document.date,
             course_id=document.course_id,
         ))
-        updated = dataclasses.replace(
+        updated = cast(StudentDocument, dataclasses.replace(
             existing, name=prepared.name, description=prepared.description,
             date=prepared.date, course_id=prepared.course_id,
-        )
+        ))
         self.document_dao.update(updated)
         return updated
 

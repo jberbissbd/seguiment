@@ -1,6 +1,6 @@
 import dataclasses
 from datetime import datetime
-from typing import Optional
+from typing import Optional, cast
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.contact_dao import ContactDAO
 from tutopy.database.daos.document_dao import DocumentDAO
@@ -78,13 +78,15 @@ class StudentService:
             data = StudentNew(student.name, student.surnames, student.group_name)
             data = self.validation_service.validate_student(data)
             requested_group = data.group_name
-            updated = dataclasses.replace(
+            updated = cast(Student, dataclasses.replace(
                 existing, name=data.name, surnames=data.surnames
-            )
+            ))
             self.student_dao.update(updated)
             if requested_group != existing.group_name:
                 self.change_student_group(student.id, requested_group)
-                updated = dataclasses.replace(updated, group_name=requested_group)
+                updated = cast(
+                    Student, dataclasses.replace(updated, group_name=requested_group)
+                )
         return updated
 
     # Complexitat ciclomàtica elevada: validació + aplicació per lots, refactor pendent.

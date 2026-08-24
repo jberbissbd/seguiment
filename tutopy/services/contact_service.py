@@ -1,4 +1,5 @@
 import dataclasses
+from typing import cast
 
 from tutopy.database.daos.contact_dao import ContactDAO
 from tutopy.database.daos.student_dao import StudentDAO
@@ -38,10 +39,10 @@ class ContactService:
             existing.student_id, contact.name, contact.description,
             contact.phone, contact.email,
         ))
-        updated = dataclasses.replace(
+        updated = cast(Contact, dataclasses.replace(
             existing, name=prepared.name, description=prepared.description,
             phone=prepared.phone, email=prepared.email,
-        )
+        ))
         self.contact_dao.update(updated)
         return updated
 

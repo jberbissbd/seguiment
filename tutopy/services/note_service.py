@@ -1,4 +1,5 @@
 import dataclasses
+from typing import cast
 
 from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
@@ -70,14 +71,14 @@ class NoteService:
                 content=note.content,
             ))
             self._ensure_group_history(prepared)
-            updated = dataclasses.replace(
+            updated = cast(Note, dataclasses.replace(
                 existing,
                 student_id=prepared.student_id,
                 category_id=prepared.category_id,
                 date=prepared.date,
                 course_id=prepared.course_id,
                 content=prepared.content,
-            )
+            ))
             self.note_dao.update(updated)
             return updated
 
