@@ -2,11 +2,12 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+    QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QListWidget,
     QListWidgetItem, QPushButton, QVBoxLayout,
 )
 
 from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
+from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
 
 class TransferStudentSelectionDialog(QDialog):
@@ -19,7 +20,7 @@ class TransferStudentSelectionDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Selecciona els alumnes que vols transferir."))
 
-        self.search_input = QLineEdit()
+        self.search_input = DebouncedLineEdit()
         self.search_input.setPlaceholderText("Cercar per nom, cognoms o grup…")
         self.search_input.setClearButtonEnabled(True)
         layout.addWidget(self.search_input)
@@ -66,7 +67,7 @@ class TransferStudentSelectionDialog(QDialog):
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
 
-        self.search_input.textChanged.connect(self._filter_students)
+        self.search_input.debounced_text_changed.connect(self._filter_students)
         self.select_visible_button.clicked.connect(self._select_visible)
         self.clear_button.clicked.connect(self._clear_selection)
         self.student_list.itemChanged.connect(self._update_selection_label)

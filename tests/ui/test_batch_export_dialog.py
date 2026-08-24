@@ -13,7 +13,8 @@ def test_selecciona_alumnes_visibles_i_conserva_els_ocults(qtbot):
     dialog = BatchExportDialog(students, [Category(1, "Acadèmic")])
     qtbot.addWidget(dialog)
     dialog.student_list.item(1).setCheckState(Qt.CheckState.Checked)
-    dialog.search_input.setText("Laia")
+    with qtbot.waitSignal(dialog.search_input.debounced_text_changed, timeout=1_000):
+        dialog.search_input.setText("Laia")
     dialog._select_visible()
     assert dialog.student_ids() == [1, 2]
     assert dialog.selection_label.text() == "2 alumnes seleccionats"
