@@ -87,7 +87,7 @@ class StudentService:
                 updated = dataclasses.replace(updated, group_name=requested_group)
         return updated
 
-    def bulk_update(
+    def bulk_update(  # noqa: C901 -- validació + aplicació per lots, refactor pendent
         self, changes: list[StudentBulkUpdate], change_date: str,
         progress_callback=None, cancel_requested=None,
     ) -> StudentBulkUpdateResult:

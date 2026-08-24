@@ -233,7 +233,7 @@ class TransferService:
             total_bytes, tuple(conflicts),
         )
 
-    def execute(
+    def execute(  # noqa: C901 -- orquestra decisions/conflictes, refactor pendent
         self, preview: TransferPreview,
         decisions: tuple[TransferDecision, ...] = (),
         password: str = "",
@@ -433,7 +433,9 @@ class TransferService:
             names.update(item["course"] for item in student["documents"] if item["course"])
         return {name: self.courses.get_or_create(name).id for name in names}
 
-    def _read_package(self, source, password, verify_documents):
+    def _read_package(  # noqa: C901 -- validació de paquet en múltiples passos, refactor pendent
+        self, source, password, verify_documents
+    ):
         path = Path(source)
         if not path.is_file() or path.suffix.lower() != self.EXTENSION:
             raise ValidationError("Cal seleccionar un paquet .tpy vàlid.")
@@ -466,7 +468,9 @@ class TransferService:
             ) from error
         return path, data
 
-    def _validate_payload(self, manifest, data, checksums):
+    def _validate_payload(  # noqa: C901 -- validació exhaustiva del format, refactor pendent
+        self, manifest, data, checksums
+    ):
         if not all(isinstance(value, dict) for value in (manifest, data, checksums)):
             raise ValidationError("L’estructura JSON del paquet no és vàlida.")
         if manifest.get("format") != self.FORMAT:

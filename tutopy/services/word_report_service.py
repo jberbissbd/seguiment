@@ -132,7 +132,7 @@ class WordReportService:
         cells = table.add_row().cells
         cells[0].text = date.fromisoformat(note.date).strftime("%d/%m/%Y")
         cells[1].text = self._safe_text(note.content)
-        for cell, width in zip(cells, (Cm(3), Cm(14))):
+        for cell, width in zip(cells, (Cm(3), Cm(14)), strict=True):
             cell.width = width
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
 
@@ -197,7 +197,7 @@ class WordReportService:
             table._tbl.tblPr.append(table_width)
         table_width.set(qn("w:type"), "pct")
         table_width.set(qn("w:w"), "5000")
-        for cell, width in zip(table.rows[0].cells, (Cm(3), Cm(14))):
+        for cell, width in zip(table.rows[0].cells, (Cm(3), Cm(14)), strict=True):
             cell.width = width
 
     @staticmethod
