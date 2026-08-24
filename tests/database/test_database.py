@@ -766,11 +766,14 @@ def test_transaccio_niuada_desfa_nomes_els_canvis_interiors(db):
 
 
 def test_rollback_exterior_desfa_savepoints_ja_confirmats(db):
-    with pytest.raises(RuntimeError, match="error exterior"):
+    def commit_and_fail() -> None:
         with db.transaction():
             db.categories.create(CategoryNew("Exterior"))
             with db.transaction():
                 db.categories.create(CategoryNew("Interior confirmat"))
             raise RuntimeError("error exterior")
+
+    with pytest.raises(RuntimeError, match="error exterior"):
+        commit_and_fail()
 
     assert db.categories.get_all() == []

@@ -30,11 +30,12 @@ def test_edicio_massiva_valida_tot_el_lot_abans_d_escriure(db):
     first = services.students.create(StudentNew("Anna", "Serra", "1A"))
     second = services.students.create(StudentNew("Biel", "Puig", "1A"))
 
+    changes = [
+        StudentBulkUpdate(first.id, "Anna modificada", "Serra", "2B"),
+        StudentBulkUpdate(second.id, "", "Puig", "1A"),
+    ]
     with pytest.raises(ValidationError):
-        services.students.bulk_update([
-            StudentBulkUpdate(first.id, "Anna modificada", "Serra", "2B"),
-            StudentBulkUpdate(second.id, "", "Puig", "1A"),
-        ], "2026-09-01")
+        services.students.bulk_update(changes, "2026-09-01")
 
     assert services.students.get_by_id(first.id) == first
     assert services.students.get_by_id(second.id) == second
