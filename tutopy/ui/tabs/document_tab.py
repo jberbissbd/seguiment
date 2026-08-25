@@ -1,3 +1,5 @@
+"""Pestanya de documents de l'alumne (CRUD sobre una taula, amb obrir/exportar)."""
+
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QPushButton
 
@@ -7,10 +9,17 @@ from tutopy.ui.widgets.crud_views import CrudTableView
 
 
 class DocumentTab(CrudTableView):
+    """Taula de documents adjunts a l'alumne, amb accions d'obrir i exportar.
+
+    Emet `open_requested` i `export_requested` amb l'ID del document quan
+    l'usuari prem els botons corresponents.
+    """
+
     open_requested = Signal(int)
     export_requested = Signal(int)
 
     def __init__(self, parent=None):
+        """Configura la taula de documents i afegeix els botons Obrir/Exportar."""
         super().__init__(["Data", "Nom", "Descripció", "Fitxer"], "Nou document", parent)
         self.open_button = QPushButton("Obrir")
         set_button_icon(self.open_button, "open")

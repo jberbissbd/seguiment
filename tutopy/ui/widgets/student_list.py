@@ -1,3 +1,11 @@
+"""Llista d'alumnes amb cerca, selecció i accions massives.
+
+Mostra els alumnes en una `QListWidget` amb files personalitzades
+(`StudentListItem`), permet cercar-los amb debounce i emet senyals per
+crear, editar, eliminar o exportar-ne, sense consultar cap servei
+directament.
+"""
+
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
@@ -16,6 +24,12 @@ class StudentListItem(QWidget):
     note_requested = Signal(int)
 
     def __init__(self, student, parent=None):
+        """Construeix la fila (avatar, nom, grup i botó de nota) per a `student`.
+
+        Args:
+            student: Alumne a representar.
+            parent: Widget pare de Qt.
+        """
         super().__init__(parent)
         self.setMinimumHeight(52)
         self._student_id = student.id
@@ -64,11 +78,13 @@ class StudentListItem(QWidget):
         self._update_note_button()
 
     def enterEvent(self, event) -> None:
+        """Mostra el botó de nota mentre el ratolí és sobre la fila."""
         self._hovered = True
         self._update_note_button()
         super().enterEvent(event)
 
     def leaveEvent(self, event) -> None:
+        """Amaga el botó de nota quan el ratolí surt de la fila (si no és la seleccionada)."""
         self._hovered = False
         self._update_note_button()
         super().leaveEvent(event)
@@ -81,7 +97,11 @@ class StudentListItem(QWidget):
 
 
 class StudentList(QFrame):
-    """Llista visual d'alumnes; no consulta directament cap servei."""
+    """Llista visual d'alumnes; no consulta directament cap servei.
+
+    Inclou un camp de cerca amb debounce de 180 ms (`DebouncedLineEdit`) que
+    emet `search_changed` un cop l'usuari deixa d'escriure.
+    """
 
     student_selected = Signal(int)
     edit_requested = Signal(int)
@@ -93,6 +113,7 @@ class StudentList(QFrame):
     note_create_requested = Signal(int)
 
     def __init__(self, parent=None):
+        """Construeix la capçalera d'accions, el cercador i la llista d'alumnes."""
         super().__init__(parent)
         self.setObjectName("panel")
         self.setMinimumWidth(300)
@@ -201,6 +222,7 @@ class StudentList(QFrame):
         self._update_selected_row()
 
     def current_student_id(self):
+        """Retorna l'ID de l'alumne seleccionat, o `None` si no n'hi ha cap."""
         item = self.list_widget.currentItem()
         return item.data(Qt.ItemDataRole.UserRole) if item else None
 

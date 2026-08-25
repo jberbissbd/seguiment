@@ -1,3 +1,11 @@
+"""Pantalla d'estadístiques: filtres, targetes resum, gràfics i taula de cobertura.
+
+Presenta un instantani (`snapshot`) de les notes de seguiment filtrat per
+curs, grup, categoria i dates, sense calcular-lo ella mateixa: només mostra
+el que se li passa via `set_snapshot` i emet `refresh_requested` quan cal
+tornar-lo a calcular.
+"""
+
 from PySide6.QtCore import QDate, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QFrame, QGridLayout, QHBoxLayout,
@@ -11,9 +19,16 @@ from tutopy.ui.widgets.statistics_chart import BarChart
 
 
 class StatisticsView(QWidget):
+    """Filtres, resum, gràfics i taula de cobertura de notes de seguiment.
+
+    Emet `refresh_requested` quan cal recalcular l'instantani mostrat, tant
+    en prémer "Actualitzar" com quan canvia algun filtre (amb debounce).
+    """
+
     refresh_requested = Signal()
 
     def __init__(self, parent=None):
+        """Construeix els filtres, les targetes resum, els gràfics i la taula."""
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -148,6 +163,13 @@ class StatisticsView(QWidget):
         return panel, chart
 
     def set_filter_options(self, courses, groups, categories) -> None:
+        """Omple els combos de filtre conservant la selecció actual si segueix vigent.
+
+        Args:
+            courses: Cursos acadèmics disponibles (amb `course` i `id`).
+            groups: Noms de grup disponibles.
+            categories: Categories de nota disponibles (amb `name` i `id`).
+        """
         selections = (
             (self.course_input, "Tots els cursos", [(item.course, item.id) for item in courses]),
             (self.group_input, "Tots els grups", [(item, item) for item in groups]),
@@ -169,6 +191,7 @@ class StatisticsView(QWidget):
         self._refresh_timer.start()
 
     def filter_values(self) -> dict:
+        """Retorna els filtres actuals com a diccionari per a la consulta d'estadístiques."""
         dates_enabled = self.date_filter.isChecked()
         return {
             "course_id": self.course_input.currentData(),
@@ -181,6 +204,13 @@ class StatisticsView(QWidget):
         }
 
     def set_snapshot(self, snapshot, context: str) -> None:
+        """Mostra un instantani d'estadístiques ja calculat.
+
+        Args:
+            snapshot: Resultat de la consulta d'estadístiques (comptadors,
+                sèries per mes/categoria i cobertura per alumne).
+            context: Text descriptiu de l'abast del filtre (p. ex. el grup).
+        """
         self.summary_values["notes"].setText(str(snapshot.note_count))
         self.summary_values["covered"].setText(str(snapshot.students_with_notes))
         self.summary_values["uncovered"].setText(str(snapshot.students_without_notes))

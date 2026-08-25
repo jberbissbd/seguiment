@@ -1,3 +1,10 @@
+"""Paleta de colors i full d'estil Qt (QSS) de l'aplicació.
+
+Defineix les constants de color base i la fulla d'estil `MAIN_STYLESHEET`
+que s'aplica a la finestra principal per donar un aspecte coherent als
+widgets estàndard de Qt (botons, camps de text, taules, pestanyes, etc.).
+"""
+
 PRIMARY_COLOR = "#2B73B7"
 SECONDARY_COLOR = "#3D85C6"
 ACCENT_COLOR = "#FF6B35"

@@ -11,6 +11,12 @@ from PySide6.QtWidgets import QProgressDialog
 
 
 class BackgroundTaskSignals(QObject):
+    """Senyals Qt emeses per una `BackgroundTask` en execució.
+
+    `progress` porta `(completat, total)`, `succeeded` porta el resultat
+    retornat per l'operació i `failed` porta l'excepció capturada.
+    """
+
     progress = Signal(int, int)
     succeeded = Signal(object)
     failed = Signal(object)
@@ -20,19 +26,28 @@ class BackgroundTask(QRunnable):
     """Executa una funció i permet cancel·lació cooperativa."""
 
     def __init__(self, operation: Callable[[Callable, Callable], Any]):
+        """Prepara la tasca amb l'operació a executar al fil secundari.
+
+        Args:
+            operation: Funció que rep `(report_progress, is_cancelled)` i
+                retorna el resultat final.
+        """
         super().__init__()
         self.operation = operation
         self.signals = BackgroundTaskSignals()
         self._cancelled = Event()
 
     def cancel(self) -> None:
+        """Marca la tasca com a cancel·lada de forma cooperativa."""
         self._cancelled.set()
 
     def is_cancelled(self) -> bool:
+        """Indica si s'ha sol·licitat la cancel·lació de la tasca."""
         return self._cancelled.is_set()
 
     @Slot()
     def run(self) -> None:
+        """Executa l'operació al fil del `QThreadPool` i n'emet el resultat."""
         try:
             result = self.operation(self.signals.progress.emit, self.is_cancelled)
         except Exception as error:
@@ -45,6 +60,12 @@ class BackgroundTaskRunner:
     """Construeix i inicia tasques al conjunt global de fils de Qt."""
 
     def __init__(self, pool: QThreadPool | None = None):
+        """Guarda el `QThreadPool` a utilitzar (el global per defecte).
+
+        Args:
+            pool: Conjunt de fils on encuar les tasques. Si és `None`
+                s'utilitza `QThreadPool.globalInstance()`.
+        """
         self.pool = pool or QThreadPool.globalInstance()
 
     def start(
@@ -55,6 +76,17 @@ class BackgroundTaskRunner:
         on_success=None,
         on_failure=None,
     ) -> BackgroundTask:
+        """Crea una `BackgroundTask`, hi connecta els callbacks i l'encua.
+
+        Args:
+            operation: Funció a executar al fil secundari.
+            on_progress: Callback opcional `(completat, total)`.
+            on_success: Callback opcional amb el resultat en cas d'èxit.
+            on_failure: Callback opcional amb l'excepció en cas d'error.
+
+        Returns:
+            La tasca creada, ja encuada al `QThreadPool`.
+        """
         task = BackgroundTask(operation)
         if on_progress is not None:
             task.signals.progress.connect(on_progress)
@@ -81,6 +113,15 @@ class BackgroundOperationPresenter:
         task_runner: BackgroundTaskRunner | None = None,
         progress_dialog_factory=QProgressDialog,
     ):
+        """Configura el presentador amb la finestra pare i les fàbriques a usar.
+
+        Args:
+            window: Finestra sobre la qual es mostrarà el diàleg modal.
+            task_runner: `BackgroundTaskRunner` a utilitzar; si és `None`
+                se'n crea un de nou.
+            progress_dialog_factory: Fàbrica del diàleg de progrés,
+                substituïble en proves.
+        """
         self.window = window
         self.task_runner = task_runner or BackgroundTaskRunner()
         self.progress_dialog_factory = progress_dialog_factory
@@ -88,6 +129,7 @@ class BackgroundOperationPresenter:
         self.progress: QProgressDialog | None = None
 
     def is_running(self) -> bool:
+        """Indica si hi ha una tasca en curs."""
         return self.task is not None
 
     def start(
@@ -102,6 +144,19 @@ class BackgroundOperationPresenter:
         cancellable: bool = True,
         progress_label: Callable[[int, int], str] | None = None,
     ) -> None:
+        """Mostra el diàleg de progrés i llança l'operació en segon pla.
+
+        Args:
+            operation: Funció a executar al fil secundari.
+            title: Títol del `QProgressDialog`.
+            label: Text inicial del diàleg.
+            on_success: Callback invocat amb el resultat quan acaba amb èxit.
+            on_failure: Callback invocat amb l'excepció si falla.
+            maximum: Valor màxim de la barra de progrés (0 = indeterminat).
+            cancellable: Si és `False`, s'amaga el botó de cancel·lar.
+            progress_label: Funció opcional `(completat, total) -> text` per
+                actualitzar l'etiqueta del diàleg a cada progrés.
+        """
         progress = self.progress_dialog_factory(
             label, "Cancel·lar" if cancellable else "", 0, maximum, self.window
         )
@@ -143,6 +198,7 @@ class BackgroundOperationPresenter:
         progress.show()
 
     def close(self) -> None:
+        """Tanca i oblida el diàleg de progrés i la tasca associada."""
         progress = self.progress
         self.progress = None
         self.task = None

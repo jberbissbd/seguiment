@@ -1,3 +1,5 @@
+"""Gràfic de barres lleuger, dibuixat a mà, per a la pantalla d'estadístiques."""
+
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import QSizePolicy, QWidget
@@ -7,6 +9,15 @@ class BarChart(QWidget):
     """Gràfic lleuger amb alternativa textual per accessibilitat."""
 
     def __init__(self, parent=None, show_latest=False, max_items=12):
+        """Configura el nombre màxim de barres visibles i quines es mostren.
+
+        Args:
+            parent: Widget pare de Qt.
+            show_latest: Si és `True`, quan hi ha més valors que `max_items`
+                es mostren els darrers en lloc dels primers.
+            max_items: Nombre màxim de barres visibles; `None` per no
+                limitar-lo (el widget s'amplia i s'ha de fer scroll).
+        """
         super().__init__(parent)
         self._values = ()
         self._show_latest = show_latest
@@ -16,6 +27,11 @@ class BarChart(QWidget):
         self.setAccessibleName("Gràfic de barres")
 
     def set_values(self, values) -> None:
+        """Actualitza les dades a representar i el text alternatiu accessible.
+
+        Args:
+            values: Iterable d'objectes amb atributs `label` i `value`.
+        """
         self._values = tuple(values)
         visible_count = (
             len(self._values) if self._max_items is None
@@ -30,6 +46,7 @@ class BarChart(QWidget):
         self.update()
 
     def paintEvent(self, _event) -> None:
+        """Dibuixa les barres (o un missatge buit) sobre el widget."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.fillRect(self.rect(), QColor("#FFFFFF"))

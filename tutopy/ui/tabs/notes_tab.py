@@ -1,3 +1,10 @@
+"""Pestanya de notes de seguiment: filtres, taula i accions d'edició.
+
+Mostra les notes de l'alumne seleccionat amb filtres per categoria, curs,
+dates i contingut (aquest darrer amb debounce de 180 ms), i emet
+`filters_changed` perquè el controlador torni a consultar les dades.
+"""
+
 from PySide6.QtCore import QDate, QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QFormLayout, QHBoxLayout, QHeaderView,
@@ -17,6 +24,7 @@ class NotesTab(QWidget):
     delete_requested = Signal(int)
 
     def __init__(self, parent=None):
+        """Construeix els filtres, els botons d'acció i la taula de notes."""
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -106,6 +114,12 @@ class NotesTab(QWidget):
         )
 
     def set_options(self, categories, courses) -> None:
+        """Omple els combos de categoria i curs sense disparar els filtres.
+
+        Args:
+            categories: Categories de nota disponibles (amb `name` i `id`).
+            courses: Cursos acadèmics disponibles (amb `course` i `id`).
+        """
         blockers = [
             QSignalBlocker(self.category_filter),
             QSignalBlocker(self.course_filter),
@@ -121,9 +135,11 @@ class NotesTab(QWidget):
         del blockers
 
     def set_student_context(self, student_id) -> None:
+        """Estableix l'alumne actual perquè `filters()` l'inclogui a les consultes."""
         self.current_student_id = student_id
 
     def filters(self) -> dict:
+        """Retorna els filtres actuals (alumne, categoria, curs, dates i contingut)."""
         result = {
             "student_id": self.current_student_id,
             "category_id": self.category_filter.currentData(),
@@ -139,6 +155,7 @@ class NotesTab(QWidget):
         return result
 
     def clear_filters(self) -> None:
+        """Restableix tots els filtres (incloent el cercador amb debounce) i els reemet."""
         self.category_filter.setCurrentIndex(0)
         self.course_filter.setCurrentIndex(0)
         self.date_from_enabled.setChecked(False)
@@ -175,6 +192,7 @@ class NotesTab(QWidget):
         self._selection_changed()
 
     def current_note_id(self):
+        """Retorna l'ID de la nota seleccionada, o `None` si no n'hi ha cap."""
         rows = self.table.selectionModel().selectedRows()
         return self._note_id_at(rows[0].row()) if rows else None
 

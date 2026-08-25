@@ -1,3 +1,11 @@
+"""Panell de detall de l'alumne: capçalera d'identitat i pestanyes de dades.
+
+Mostra el resum visual d'un alumne (avatar, nom, grup i descriptors) i les
+pestanyes de notes, descriptors, contactes, documents i històric. No conté
+lògica de negoci: rep les dades ja preparades i emet senyals per a les
+accions de l'usuari.
+"""
+
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -15,12 +23,17 @@ from tutopy.ui.resources import icon
 
 
 class StudentDetailPanel(QFrame):
-    """Capçalera i pestanyes de detall de l'alumne seleccionat."""
+    """Capçalera i pestanyes de detall de l'alumne seleccionat.
+
+    Emet `export_requested` amb l'ID de l'alumne quan l'usuari prem
+    "Exportar informe".
+    """
 
     TAB_NAMES = ("Notes", "Descriptors", "Contactes", "Documents", "Històric")
     export_requested = Signal(int)
 
     def __init__(self, parent=None):
+        """Construeix la capçalera d'identitat (oculta) i les cinc pestanyes."""
         super().__init__(parent)
         self.setObjectName("panel")
         self.current_student_id = None
@@ -97,6 +110,12 @@ class StudentDetailPanel(QFrame):
         layout.addWidget(self.tabs, 1)
 
     def show_student(self, student) -> None:
+        """Mostra la capçalera i les pestanyes per a `student`.
+
+        Args:
+            student: Alumne seleccionat, o `None` per netejar el panell
+                (equivalent a `clear()`).
+        """
         if student is None:
             self.clear()
             return
@@ -110,6 +129,7 @@ class StudentDetailPanel(QFrame):
         self.tabs.show()
 
     def clear(self) -> None:
+        """Amaga el detall i torna a mostrar el missatge de selecció."""
         self.current_student_id = None
         self.set_descriptors([])
         self.student_summary.hide()
@@ -121,6 +141,12 @@ class StudentDetailPanel(QFrame):
             self.export_requested.emit(self.current_student_id)
 
     def set_descriptors(self, descriptors) -> None:
+        """Refà les etiquetes de descriptors de la capçalera.
+
+        Args:
+            descriptors: Descriptors de l'alumne (amb `id` i `content`); una
+                llista buida mostra "Sense descriptors".
+        """
         self.descriptor_flow.clear()
         self.descriptor_labels = []
         if not descriptors:

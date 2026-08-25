@@ -1,3 +1,10 @@
+"""Finestra principal de Tutopy: barra lateral, pàgines i diàlegs comuns.
+
+Construeix l'esquelet de navegació de l'aplicació (alumnes, estadístiques,
+configuració i gestió de dades) i ofereix punts d'entrada per mostrar
+missatges d'estat, errors i confirmacions estàndard.
+"""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QScrollArea, QSplitter,
@@ -16,9 +23,10 @@ from tutopy.ui.resources import application_icon
 
 
 class MainWindow(QMainWindow):
-    """Contenidor mínim sobre el qual es construirà la UI definitiva."""
+    """Finestra principal: barra lateral de navegació i pila de pàgines."""
 
     def __init__(self, parent=None):
+        """Construeix la barra lateral, les pàgines i mostra la d'alumnes."""
         super().__init__(parent)
         self.setWindowTitle("Tutopy — Seguiment d'alumnes")
         self.setWindowIcon(application_icon())
@@ -168,6 +176,12 @@ class MainWindow(QMainWindow):
         return page
 
     def show_section(self, section: str) -> None:
+        """Mostra la pàgina associada a `section` i marca el botó actiu.
+
+        Args:
+            section: Clau de la secció (`"students"`, `"statistics"`,
+                `"configuration"` o `"data"`).
+        """
         page = self._pages.get(section)
         if page is None:
             return
@@ -175,12 +189,24 @@ class MainWindow(QMainWindow):
         self.sidebar.set_current_section(section)
 
     def show_status(self, message: str, timeout: int = 3000) -> None:
+        """Mostra un missatge temporal a la barra d'estat.
+
+        Args:
+            message: Text a mostrar.
+            timeout: Durada en mil·lisegons abans que el missatge desaparegui.
+        """
         self.statusBar().showMessage(message, timeout)
 
     def show_error(self, message: str) -> None:
+        """Mostra un diàleg d'error modal amb el missatge indicat."""
         QMessageBox.critical(self, "Error", message)
 
     def show_import_issues(self, issues) -> None:
+        """Mostra les files rebutjades d'una importació de full de càlcul.
+
+        Args:
+            issues: Col·lecció d'incidències (convertibles a text) a llistar.
+        """
         QMessageBox.critical(
             self, "Errors al full de càlcul",
             "No s’ha importat cap dada. Revisa aquestes files:\n\n"
@@ -188,6 +214,11 @@ class MainWindow(QMainWindow):
         )
 
     def confirm_student_deletion(self, full_name: str) -> bool:
+        """Demana confirmació abans d'eliminar un alumne i les seves dades.
+
+        Returns:
+            `True` si l'usuari confirma l'eliminació.
+        """
         answer = QMessageBox.question(
             self,
             "Eliminar alumne",
@@ -198,6 +229,11 @@ class MainWindow(QMainWindow):
         return answer == QMessageBox.StandardButton.Yes
 
     def confirm_note_deletion(self) -> bool:
+        """Demana confirmació abans d'eliminar una nota de seguiment.
+
+        Returns:
+            `True` si l'usuari confirma l'eliminació.
+        """
         answer = QMessageBox.question(
             self,
             "Eliminar nota",
@@ -208,6 +244,11 @@ class MainWindow(QMainWindow):
         return answer == QMessageBox.StandardButton.Yes
 
     def confirm_deletion(self, entity_name: str) -> bool:
+        """Demana confirmació genèrica abans d'eliminar `entity_name`.
+
+        Returns:
+            `True` si l'usuari confirma l'eliminació.
+        """
         answer = QMessageBox.question(
             self, "Confirmar eliminació", f"Vols eliminar {entity_name}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
