@@ -1,3 +1,5 @@
+"""Copia l'artefacte de build generat a la carpeta `release/` amb el nom final."""
+
 import os
 import shutil
 from pathlib import Path

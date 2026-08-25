@@ -1,3 +1,5 @@
+"""Comprova que el tag de release coincideix amb `project.version` de pyproject.toml."""
+
 import sys
 
 try:
@@ -7,6 +9,7 @@ except ModuleNotFoundError:  # Execució directa des del directori scripts.
 
 
 def main(tag: str) -> int:
+    """Retorna 0 si `tag` (format `vX.Y.Z`) coincideix amb la versió del projecte, 1 altrament."""
     version = read_project_version()
     expected_tag = f"v{version}"
     if tag != expected_tag:

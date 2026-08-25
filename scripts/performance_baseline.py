@@ -79,6 +79,18 @@ def _measure(operation: Callable[[], Any], repetitions: int) -> dict[str, float]
 def run_baseline(
     *, student_count: int, note_count: int, repetitions: int
 ) -> dict[str, Any]:
+    """Sembra una base de dades temporal i mesura les operacions principals.
+
+    Args:
+        student_count: Nombre d'alumnes a generar.
+        note_count: Nombre de notes a generar.
+        repetitions: Vegades que es repeteix cada operació mesurada, per
+            calcular mediana i p95.
+
+    Returns:
+        Un diccionari amb el volum de dades, les repeticions, el temps de
+        sembra i les mesures (mediana/p95/min/max en ms) per operació.
+    """
     if student_count < 1:
         raise ValueError("student_count ha de ser com a mínim 1")
     if note_count < 0:
@@ -136,6 +148,7 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Executa la línia de comandes: sembra, mesura i imprimeix els resultats."""
     arguments = _parser().parse_args(argv)
     result = run_baseline(
         student_count=arguments.students,
