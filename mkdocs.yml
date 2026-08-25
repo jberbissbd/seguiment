@@ -4,6 +4,8 @@ site_url: https://jberbissbd.github.io/seguiment/
 repo_url: https://github.com/jberbissbd/seguiment
 repo_name: jberbissbd/seguiment
 docs_dir: docs
+hooks:
+  - scripts/docs_hooks.py
 
 theme:
   name: material
