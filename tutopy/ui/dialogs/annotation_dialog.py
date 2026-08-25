@@ -1,14 +1,20 @@
 """Diàleg per crear o editar un descriptor general d'un alumne."""
 
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QPlainTextEdit, QVBoxLayout
+from PySide6.QtWidgets import (
+    QDialog, QDialogButtonBox, QLabel, QPlainTextEdit, QVBoxLayout, QWidget,
+)
 
+from tutopy.models.messaging import StudentAnnotation
 from tutopy.ui.resources import set_dialog_button_icons
 
 
 class AnnotationDialog(QDialog):
     """Recull el text d'un descriptor general, nou o existent."""
 
-    def __init__(self, parent=None, annotation=None):
+    def __init__(
+        self, parent: QWidget | None = None,
+        annotation: StudentAnnotation | None = None,
+    ):
         """Construeix el diàleg, precarregant el contingut si s'edita un descriptor existent.
 
         Args:

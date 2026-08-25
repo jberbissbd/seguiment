@@ -1,5 +1,7 @@
 """Pestanya d'històric de grups i cursos de l'alumne (només lectura)."""
 
+from collections.abc import Iterable
+
 from PySide6.QtWidgets import QHeaderView, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
 
@@ -18,7 +20,7 @@ class HistoryTab(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self.table)
 
-    def set_history(self, rows) -> None:
+    def set_history(self, rows: Iterable[tuple[str, str, str, str]]) -> None:
         """Omple la taula amb l'històric de grups i cursos.
 
         Args:

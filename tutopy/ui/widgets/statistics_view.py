@@ -6,6 +6,8 @@ el que se li passa via `set_snapshot` i emet `refresh_requested` quan cal
 tornar-lo a calcular.
 """
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import QDate, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QFrame, QGridLayout, QHBoxLayout,
@@ -13,6 +15,8 @@ from PySide6.QtWidgets import (
     QScrollArea, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import AcademicCourse, Category
+from tutopy.models.statistics import StatisticsSnapshot
 from tutopy.ui.resources import set_button_icon
 
 from tutopy.ui.widgets.statistics_chart import BarChart
@@ -162,7 +166,10 @@ class StatisticsView(QWidget):
             layout.addWidget(chart, 1)
         return panel, chart
 
-    def set_filter_options(self, courses, groups, categories) -> None:
+    def set_filter_options(
+        self, courses: Sequence[AcademicCourse], groups: Sequence[str],
+        categories: Sequence[Category],
+    ) -> None:
         """Omple els combos de filtre conservant la selecció actual si segueix vigent.
 
         Args:
@@ -203,7 +210,7 @@ class StatisticsView(QWidget):
                        if dates_enabled else None,
         }
 
-    def set_snapshot(self, snapshot, context: str) -> None:
+    def set_snapshot(self, snapshot: StatisticsSnapshot, context: str) -> None:
         """Mostra un instantani d'estadístiques ja calculat.
 
         Args:

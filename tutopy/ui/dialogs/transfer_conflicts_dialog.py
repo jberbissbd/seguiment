@@ -1,13 +1,15 @@
 """Diàleg per resoldre conflictes d'identitat durant una transferència."""
 
+from collections.abc import Sequence
+
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QHeaderView, QLabel, QTableWidget,
-    QTableWidgetItem, QVBoxLayout,
+    QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from tutopy.ui.resources import set_dialog_button_icons
 
-from tutopy.models.transfer import TransferAction, TransferDecision
+from tutopy.models.transfer import TransferAction, TransferConflict, TransferDecision
 
 
 class TransferConflictsDialog(QDialog):
@@ -19,7 +21,9 @@ class TransferConflictsDialog(QDialog):
         ("Importar com un alumne nou", TransferAction.IMPORT_AS_NEW),
     )
 
-    def __init__(self, conflicts, parent=None):
+    def __init__(
+        self, conflicts: Sequence[TransferConflict], parent: QWidget | None = None
+    ):
         """Construeix una fila de decisió per cada conflicte, amb les opcions disponibles.
 
         Args:

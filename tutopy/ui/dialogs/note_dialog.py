@@ -1,11 +1,14 @@
 """Diàleg per crear o editar una nota de seguiment d'un alumne."""
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel,
-    QPlainTextEdit, QVBoxLayout,
+    QPlainTextEdit, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Category, Note
 from tutopy.ui.resources import set_dialog_button_icons
 
 from tutopy.ui.widgets.date_input import DateInput
@@ -14,7 +17,10 @@ from tutopy.ui.widgets.date_input import DateInput
 class NoteDialog(QDialog):
     """Recull una nota de seguiment sense accedir als serveis."""
 
-    def __init__(self, parent=None, note=None, student_id=None, categories=()):
+    def __init__(
+        self, parent: QWidget | None = None, note: Note | None = None,
+        student_id: int | None = None, categories: Sequence[Category] = (),
+    ):
         """Construeix el diàleg, precarregant les dades si s'edita una nota existent.
 
         Args:

@@ -6,12 +6,15 @@ lògica de negoci: rep les dades ja preparades i emet senyals per a les
 accions de l'usuari.
 """
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Student, StudentAnnotation
 from tutopy.ui.tabs.annotation_tab import AnnotationTab
 from tutopy.ui.tabs.contact_tab import ContactTab
 from tutopy.ui.tabs.document_tab import DocumentTab
@@ -109,7 +112,7 @@ class StudentDetailPanel(QFrame):
         self.tabs.hide()
         layout.addWidget(self.tabs, 1)
 
-    def show_student(self, student) -> None:
+    def show_student(self, student: Student | None) -> None:
         """Mostra la capçalera i les pestanyes per a `student`.
 
         Args:
@@ -140,7 +143,7 @@ class StudentDetailPanel(QFrame):
         if self.current_student_id is not None:
             self.export_requested.emit(self.current_student_id)
 
-    def set_descriptors(self, descriptors) -> None:
+    def set_descriptors(self, descriptors: Sequence[StudentAnnotation]) -> None:
         """Refà les etiquetes de descriptors de la capçalera.
 
         Args:

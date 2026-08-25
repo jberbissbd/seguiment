@@ -5,12 +5,15 @@ dates i contingut (aquest darrer amb debounce de 180 ms), i emet
 `filters_changed` perquè el controlador torni a consultar les dades.
 """
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import QDate, QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QFormLayout, QHBoxLayout, QHeaderView,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import AcademicCourse, Category
 from tutopy.ui.resources import set_button_icon
 
 from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
@@ -113,7 +116,9 @@ class NotesTab(QWidget):
             lambda row, _column: self.edit_requested.emit(self._note_id_at(row))
         )
 
-    def set_options(self, categories, courses) -> None:
+    def set_options(
+        self, categories: Sequence[Category], courses: Sequence[AcademicCourse]
+    ) -> None:
         """Omple els combos de categoria i curs sense disparar els filtres.
 
         Args:

@@ -6,6 +6,8 @@ transferència entre instàncies, configuració del logotip dels informes,
 dels trimestres i l'esborrat total de dades.
 """
 
+from collections.abc import Iterable, Sequence
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView, QFrame, QHeaderView, QHBoxLayout, QLabel, QLayout,
@@ -218,7 +220,7 @@ class DataToolsView(QWidget):
         self.term_delete_button.clicked.connect(self._request_term_delete)
         self.term_table.itemSelectionChanged.connect(self._term_selection_changed)
 
-    def set_term_configurations(self, rows) -> None:
+    def set_term_configurations(self, rows: Iterable[tuple[int, Sequence]]) -> None:
         """Omple la taula de trimestres.
 
         Args:

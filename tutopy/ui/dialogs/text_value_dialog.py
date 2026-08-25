@@ -1,6 +1,8 @@
 """Diàleg genèric per demanar un únic valor de text a l'usuari."""
 
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout
+from PySide6.QtWidgets import (
+    QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout, QWidget,
+)
 
 from tutopy.ui.resources import set_dialog_button_icons
 
@@ -8,7 +10,9 @@ from tutopy.ui.resources import set_dialog_button_icons
 class TextValueDialog(QDialog):
     """Recull un valor de text obligatori, amb títol i etiqueta configurables."""
 
-    def __init__(self, title, label, value="", parent=None):
+    def __init__(
+        self, title: str, label: str, value: str = "", parent: QWidget | None = None
+    ):
         """Construeix el diàleg amb el títol i l'etiqueta indicats.
 
         Args:

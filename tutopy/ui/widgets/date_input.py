@@ -15,7 +15,7 @@ class DateInput(QWidget):
     dateChanged = Signal(QDate)
     DATE_FORMAT = "dd/MM/yyyy"
 
-    def __init__(self, date=None, parent=None):
+    def __init__(self, date: QDate | None = None, parent: QWidget | None = None):
         """Inicialitza el camp amb `date` (o la data actual) i el calendari emergent.
 
         Args:

@@ -64,8 +64,4 @@ jobs:
       - name: Install project without resolving dependencies
         run: python -m pip install --no-deps -e .
       - name: Build documentation site
-        # TODO: passar a `--strict` un cop tutopy/ui/ tingui anotacions de
-        # tipus completes (griffe avisa de paràmetres sense tipar; no bloqueja
-        # la construcció, però impedeix l'enllaç automàtic al tipus a la
-        # referència generada).
-        run: python -m mkdocs build
+        run: python -m mkdocs build --strict

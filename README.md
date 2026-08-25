@@ -199,7 +199,7 @@ docstrings) es construeix amb [MkDocs](https://www.mkdocs.org/) i
 .venv/bin/python -m pip install --require-hashes -r requirements-docs.lock
 .venv/bin/python -m pip install --no-deps -e .
 .venv/bin/mkdocs serve   # previsualització local a http://127.0.0.1:8000
-.venv/bin/mkdocs build   # genera site/; falla si hi ha enllaços o referències trencades
+.venv/bin/mkdocs build --strict   # genera site/; falla si hi ha enllaços o referències trencades
 ```
 
 El contingut de les guies viu a `docs/*.md`; la referència d'API es genera

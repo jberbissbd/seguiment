@@ -1,11 +1,14 @@
 """Diàleg de selecció múltiple d'alumnes per a una transferència."""
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QListWidget,
-    QListWidgetItem, QPushButton, QVBoxLayout,
+    QListWidgetItem, QPushButton, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Student
 from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
 from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
@@ -13,7 +16,7 @@ from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 class TransferStudentSelectionDialog(QDialog):
     """Permet cercar i marcar un o diversos alumnes, mostrant-ne el grup."""
 
-    def __init__(self, students, parent=None):
+    def __init__(self, students: Sequence[Student], parent: QWidget | None = None):
         """Construeix el diàleg amb la llista d'alumnes marcables.
 
         Args:

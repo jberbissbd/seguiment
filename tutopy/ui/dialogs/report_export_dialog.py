@@ -1,10 +1,13 @@
 """Diàleg per configurar l'exportació de l'informe d'un sol alumne."""
 
+from collections.abc import Sequence
+
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QLabel,
-    QListWidget, QListWidgetItem, QVBoxLayout,
+    QListWidget, QListWidgetItem, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Category
 from tutopy.ui.resources import set_dialog_button_icons
 from PySide6.QtCore import Qt
 
@@ -12,7 +15,10 @@ from PySide6.QtCore import Qt
 class ReportExportDialog(QDialog):
     """Selecciona l'ordre de les categories i el format de sortida de l'informe."""
 
-    def __init__(self, categories, parent=None, show_term_option=True):
+    def __init__(
+        self, categories: Sequence[Category], parent: QWidget | None = None,
+        show_term_option: bool = True,
+    ):
         """Construeix el diàleg amb les categories disponibles per ordenar.
 
         Args:

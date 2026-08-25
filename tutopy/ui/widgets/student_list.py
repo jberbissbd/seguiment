@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QPushButton, QToolButton, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Student
 from tutopy.ui.resources import icon, set_button_icon
 
 from tutopy.ui.widgets.avatar import avatar_stylesheet, initials
@@ -23,7 +24,7 @@ class StudentListItem(QWidget):
 
     note_requested = Signal(int)
 
-    def __init__(self, student, parent=None):
+    def __init__(self, student: Student, parent: QWidget | None = None):
         """Construeix la fila (avatar, nom, grup i botó de nota) per a `student`.
 
         Args:

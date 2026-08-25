@@ -5,6 +5,8 @@ configuració i gestió de dades) i ofereix punts d'entrada per mostrar
 missatges d'estat, errors i confirmacions estàndard.
 """
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QScrollArea, QSplitter,
@@ -12,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidget, QMessageBox,
 )
 
+from tutopy.models.bulk_import import ImportIssue
 from tutopy.ui.styles import MAIN_STYLESHEET
 from tutopy.ui.widgets.sidebar import Sidebar
 from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
@@ -201,7 +204,7 @@ class MainWindow(QMainWindow):
         """Mostra un diàleg d'error modal amb el missatge indicat."""
         QMessageBox.critical(self, "Error", message)
 
-    def show_import_issues(self, issues) -> None:
+    def show_import_issues(self, issues: Sequence[ImportIssue]) -> None:
         """Mostra les files rebutjades d'una importació de full de càlcul.
 
         Args:

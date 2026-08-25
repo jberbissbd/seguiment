@@ -1,12 +1,15 @@
 """Diàleg per exportar informes de diversos alumnes alhora."""
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
     QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
-    QVBoxLayout,
+    QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Category, Student
 from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
 from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
@@ -14,7 +17,10 @@ from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 class BatchExportDialog(QDialog):
     """Selecciona diversos alumnes i les opcions comunes d'exportació."""
 
-    def __init__(self, students, categories, parent=None):
+    def __init__(
+        self, students: Sequence[Student], categories: Sequence[Category],
+        parent: QWidget | None = None,
+    ):
         """Construeix el diàleg amb els alumnes i categories disponibles.
 
         Args:

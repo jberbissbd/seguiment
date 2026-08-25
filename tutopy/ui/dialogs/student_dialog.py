@@ -1,17 +1,23 @@
 """Diàleg per crear o editar les dades bàsiques d'un alumne."""
 
+from collections.abc import Sequence
+
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QLabel,
-    QLineEdit, QToolButton, QVBoxLayout,
+    QLineEdit, QToolButton, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Student
 from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
 
 
 class StudentDialog(QDialog):
     """Recull les dades necessàries per crear o editar un alumne."""
 
-    def __init__(self, parent=None, student=None, groups=()):
+    def __init__(
+        self, parent: QWidget | None = None, student: Student | None = None,
+        groups: Sequence[str] = (),
+    ):
         """Construeix el diàleg, precarregant les dades si s'edita un alumne existent.
 
         Args:

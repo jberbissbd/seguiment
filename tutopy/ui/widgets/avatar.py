@@ -21,7 +21,7 @@ def initials(name: str, surnames: str) -> str:
     return "".join(part[0].upper() for part in parts[:2]) or "?"
 
 
-def avatar_colors(key) -> tuple[str, str]:
+def avatar_colors(key: int | str) -> tuple[str, str]:
     """Tria de forma determinista una parella (fons, text) de la paleta.
 
     Args:
@@ -36,7 +36,7 @@ def avatar_colors(key) -> tuple[str, str]:
     return AVATAR_PALETTE[index]
 
 
-def avatar_stylesheet(key, radius: int) -> str:
+def avatar_stylesheet(key: int | str, radius: int) -> str:
     """Construeix el QSS d'un avatar circular acolorit a partir de `key`.
 
     Args:

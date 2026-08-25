@@ -7,7 +7,7 @@ from threading import Event
 from typing import Any
 
 from PySide6.QtCore import QObject, Qt, QRunnable, QThreadPool, Signal, Slot
-from PySide6.QtWidgets import QProgressDialog
+from PySide6.QtWidgets import QProgressDialog, QWidget
 
 
 class BackgroundTaskSignals(QObject):
@@ -70,11 +70,11 @@ class BackgroundTaskRunner:
 
     def start(
         self,
-        operation,
+        operation: Callable[[Callable, Callable], Any],
         *,
-        on_progress=None,
-        on_success=None,
-        on_failure=None,
+        on_progress: Callable[[int, int], None] | None = None,
+        on_success: Callable[[Any], None] | None = None,
+        on_failure: Callable[[Exception], None] | None = None,
     ) -> BackgroundTask:
         """Crea una `BackgroundTask`, hi connecta els callbacks i l'encua.
 
@@ -109,9 +109,9 @@ class BackgroundOperationPresenter:
 
     def __init__(
         self,
-        window,
+        window: QWidget,
         task_runner: BackgroundTaskRunner | None = None,
-        progress_dialog_factory=QProgressDialog,
+        progress_dialog_factory: Callable[..., QProgressDialog] = QProgressDialog,
     ):
         """Configura el presentador amb la finestra pare i les fàbriques a usar.
 

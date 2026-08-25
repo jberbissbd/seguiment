@@ -6,6 +6,8 @@ servir només ha de proporcionar les files a mostrar i escoltar els senyals
 `create_requested`, `edit_requested` i `delete_requested`.
 """
 
+from collections.abc import Iterable, Sequence
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QTableWidget,
@@ -22,7 +24,7 @@ class CrudActions(QWidget):
     edit_requested = Signal(int)
     delete_requested = Signal(int)
 
-    def __init__(self, create_text="Nou", parent=None):
+    def __init__(self, create_text: str = "Nou", parent: QWidget | None = None):
         """Crea els tres botons d'acció, amb editar/eliminar deshabilitats.
 
         Args:
@@ -62,7 +64,7 @@ class CrudListView(QWidget):
     edit_requested = Signal(int)
     delete_requested = Signal(int)
 
-    def __init__(self, create_text="Nou", parent=None):
+    def __init__(self, create_text: str = "Nou", parent: QWidget | None = None):
         """Munta la capçalera d'accions i la llista, connectant els senyals.
 
         Args:
@@ -84,7 +86,7 @@ class CrudListView(QWidget):
             lambda item: self.edit_requested.emit(item.data(Qt.ItemDataRole.UserRole))
         )
 
-    def set_items(self, items) -> None:
+    def set_items(self, items: Iterable[tuple[int, str]]) -> None:
         """Reconstrueix la llista i conserva la selecció si l'ID hi segueix.
 
         Args:
@@ -124,7 +126,10 @@ class CrudTableView(QWidget):
     edit_requested = Signal(int)
     delete_requested = Signal(int)
 
-    def __init__(self, headers, create_text="Nou", parent=None):
+    def __init__(
+        self, headers: Sequence[str], create_text: str = "Nou",
+        parent: QWidget | None = None,
+    ):
         """Munta la capçalera d'accions i la taula, connectant els senyals.
 
         Args:
@@ -154,7 +159,7 @@ class CrudTableView(QWidget):
             lambda row, _column: self.edit_requested.emit(self._id_at(row))
         )
 
-    def set_rows(self, rows) -> None:
+    def set_rows(self, rows: Iterable[tuple[int, Sequence]]) -> None:
         """Reconstrueix la taula i conserva la selecció si l'ID hi segueix.
 
         Args:

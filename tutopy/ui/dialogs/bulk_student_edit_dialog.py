@@ -1,19 +1,25 @@
 """Diàleg per editar diversos alumnes alhora en una taula."""
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QDateEdit, QDialog, QDialogButtonBox,
     QHBoxLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem,
-    QVBoxLayout,
+    QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Student
 from tutopy.ui.resources import set_dialog_button_icons
 
 
 class BulkStudentEditDialog(QDialog):
     """Edita diversos alumnes i aplica opcionalment un grup a files seleccionades."""
 
-    def __init__(self, students, groups=(), parent=None):
+    def __init__(
+        self, students: Sequence[Student], groups: Sequence[str] = (),
+        parent: QWidget | None = None,
+    ):
         """Construeix la taula d'edició amb una fila per alumne.
 
         Args:

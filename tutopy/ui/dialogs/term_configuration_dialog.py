@@ -1,10 +1,14 @@
 """Diàleg per configurar les dates d'inici dels trimestres d'un curs i grup."""
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QVBoxLayout,
+    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import AcademicCourse
+from tutopy.models.reporting import TermConfiguration
 from tutopy.ui.resources import set_dialog_button_icons
 
 from tutopy.ui.widgets.date_input import DateInput
@@ -13,7 +17,11 @@ from tutopy.ui.widgets.date_input import DateInput
 class TermConfigurationDialog(QDialog):
     """Recull el curs, el grup i les dates d'inici del 2n i 3r trimestre."""
 
-    def __init__(self, courses, groups, configuration=None, parent=None):
+    def __init__(
+        self, courses: Sequence[AcademicCourse], groups: Sequence[str],
+        configuration: TermConfiguration | None = None,
+        parent: QWidget | None = None,
+    ):
         """Construeix el diàleg, precarregant les dades si s'edita una configuració existent.
 
         Args:

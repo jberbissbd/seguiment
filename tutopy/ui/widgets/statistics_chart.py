@@ -1,14 +1,21 @@
 """Gràfic de barres lleuger, dibuixat a mà, per a la pantalla d'estadístiques."""
 
+from collections.abc import Iterable
+
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import QSizePolicy, QWidget
+
+from tutopy.models.statistics import StatisticValue
 
 
 class BarChart(QWidget):
     """Gràfic lleuger amb alternativa textual per accessibilitat."""
 
-    def __init__(self, parent=None, show_latest=False, max_items=12):
+    def __init__(
+        self, parent: QWidget | None = None, show_latest: bool = False,
+        max_items: int | None = 12,
+    ):
         """Configura el nombre màxim de barres visibles i quines es mostren.
 
         Args:
@@ -26,7 +33,7 @@ class BarChart(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setAccessibleName("Gràfic de barres")
 
-    def set_values(self, values) -> None:
+    def set_values(self, values: Iterable[StatisticValue]) -> None:
         """Actualitza les dades a representar i el text alternatiu accessible.
 
         Args:
