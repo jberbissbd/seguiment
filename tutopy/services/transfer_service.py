@@ -56,6 +56,11 @@ class TransferService:
     FORMAT = "tutopy-transfer"
     FORMAT_VERSION = 1
     EXTENSION = ".tpy"
+    MANIFEST_MEMBER = "manifest.json"
+    DATA_MEMBER = "data.json"
+    CHECKSUMS_MEMBER = "checksums.json"
+    METADATA_MEMBERS = frozenset({MANIFEST_MEMBER, DATA_MEMBER, CHECKSUMS_MEMBER})
+    DOCUMENTS_PREFIX = "documents/"
     MAX_ARCHIVE_SIZE = 1_000 * 1024 * 1024
     MAX_UNCOMPRESSED_SIZE = 2_000 * 1024 * 1024
     MAX_MEMBERS = 20_000
@@ -184,9 +189,9 @@ class TransferService:
             with tempfile.TemporaryDirectory(prefix="tutopy-export-") as temporary:
                 plain_path = Path(temporary) / "payload.zip"
                 with ZipFile(plain_path, "w", compression=ZIP_DEFLATED) as archive:
-                    archive.writestr("manifest.json", self._json(manifest))
-                    archive.writestr("data.json", self._json(data))
-                    archive.writestr("checksums.json", self._json(checksums))
+                    archive.writestr(self.MANIFEST_MEMBER, self._json(manifest))
+                    archive.writestr(self.DATA_MEMBER, self._json(data))
+                    archive.writestr(self.CHECKSUMS_MEMBER, self._json(checksums))
                     for source, archive_name in document_sources:
                         archive.write(source, archive_name)
                 self._encrypt_file(
@@ -398,7 +403,9 @@ class TransferService:
         sources = []
         for item in related["documents"][student.id]:
             source = self.document_service.get_readable_document_path(item)
-            archive_name = f"documents/{student.uuid}/{item.uuid_filename}"
+            archive_name = (
+                f"{self.DOCUMENTS_PREFIX}{student.uuid}/{item.uuid_filename}"
+            )
             documents_by_path[archive_name] = {
                 "name": item.name, "description": item.description,
                 "original_filename": item.original_filename, "date": item.date,
@@ -476,9 +483,9 @@ class TransferService:
         try:
             with self._decrypted_archive(path, password) as archive:
                 self._validate_archive_members(archive.infolist())
-                manifest = self._load_json(archive, "manifest.json")
-                data = self._load_json(archive, "data.json")
-                checksums = self._load_json(archive, "checksums.json")
+                manifest = self._load_json(archive, self.MANIFEST_MEMBER)
+                data = self._load_json(archive, self.DATA_MEMBER)
+                checksums = self._load_json(archive, self.CHECKSUMS_MEMBER)
                 self._validate_payload(manifest, data, checksums)
                 if verify_documents:
                     self._verify_checksums(archive, checksums)
@@ -731,13 +738,13 @@ class TransferService:
             except OSError:
                 pass
 
-    @staticmethod
-    def _validate_member_name(name):
+    @classmethod
+    def _validate_member_name(cls, name):
         path = PurePosixPath(name)
         if path.is_absolute() or ".." in path.parts or "\\" in name:
             raise ValidationError("El paquet conté una ruta no segura.")
-        allowed = name in {"manifest.json", "data.json", "checksums.json"}
-        if not allowed and not name.startswith("documents/"):
+        allowed = name in cls.METADATA_MEMBERS
+        if not allowed and not name.startswith(cls.DOCUMENTS_PREFIX):
             raise ValidationError("El paquet conté fitxers desconeguts.")
 
     @staticmethod
