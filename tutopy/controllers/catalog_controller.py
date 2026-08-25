@@ -1,3 +1,10 @@
+"""Controladors dels catàlegs editables de la barra lateral (categories).
+
+Connecta les peticions de creació, edició i eliminació de la vista de
+catàleg amb `CategoryService`, delegant el comportament comú de CRUD a
+`_CatalogController`.
+"""
+
 from PySide6.QtWidgets import QDialog
 
 from tutopy.models.messaging import Category, CategoryNew
@@ -29,17 +36,21 @@ class _CatalogController:
         self.view.delete_requested.connect(self.delete)
 
     def start(self):
+        """Inicia el controlador carregant els elements del catàleg a la vista."""
         self.refresh()
 
     def refresh(self):
+        """Actualitza la vista amb els elements actuals retornats pel servei."""
         self.view.set_items([(item.id, self._text(item)) for item in self.service.get_all()])
 
     def create(self):
+        """Obre el diàleg de creació i desa el nou element si s'accepta."""
         dialog = self._dialog()
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._run(lambda: self._create(dialog.value()), self.create_status)
 
     def edit(self, entity_id):
+        """Obre el diàleg d'edició per a `entity_id` i desa els canvis si s'accepten."""
         entity = self.service.get_by_id(entity_id)
         if entity is None:
             self.error_handler(f"No s'ha trobat {self.entity_label}.")
@@ -49,10 +60,12 @@ class _CatalogController:
             self._run(lambda: self._update(entity_id, dialog.value()), self.update_status)
 
     def delete(self, entity_id):
+        """Elimina `entity_id` del catàleg prèvia confirmació de l'usuari."""
         if self.confirm_delete(self.entity_label):
             self._run(lambda: self.service.delete(entity_id), self.delete_status)
 
     def _run(self, operation, status):
+        """Executa `operation`, gestiona errors de domini i notifica l'usuari."""
         try:
             operation()
         except DomainError as error:
@@ -65,12 +78,15 @@ class _CatalogController:
 
 
 class CategoryController(_CatalogController):
+    """Gestiona el catàleg de categories mostrat a la barra lateral."""
+
     entity_label = "aquesta categoria"
     create_status = "Categoria creada"
     update_status = "Categoria actualitzada"
     delete_status = "Categoria eliminada"
 
     def __init__(self, window: MainWindow, service: CategoryService, **kwargs):
+        """Configura el controlador sobre la vista de categories de la finestra."""
         super().__init__(window, service, window.category_view, **kwargs)
 
     def _dialog(self, value=""):

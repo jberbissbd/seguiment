@@ -1,3 +1,5 @@
+"""Controlador de notes: connecta els filtres i el CRUD de la vista amb `NoteService`."""
+
 from PySide6.QtWidgets import QDialog
 
 from tutopy.models.messaging import Note, NoteNew
@@ -16,6 +18,7 @@ class NoteController:
         category_service: CategoryService, course_service: AcademicCourseService,
         dialog_factory=NoteDialog,
         confirm_delete=None, error_handler=None):
+        """Desa les dependències i connecta les accions de notes de la vista."""
         self.window = window
         self.view = window.student_detail.notes_tab
         self.note_service = note_service
@@ -28,6 +31,7 @@ class NoteController:
         self._connect_signals()
 
     def start(self) -> None:
+        """Carrega les opcions de filtre i les notes inicials a la vista."""
         self.refresh_options()
         self.refresh()
 
@@ -41,17 +45,24 @@ class NoteController:
         self.view.delete_requested.connect(self.delete)
 
     def refresh_options(self) -> None:
+        """Actualitza les opcions de categoria i curs disponibles als filtres."""
         self.view.set_options(
             self.category_service.get_all(),
             self.course_service.get_all(),
         )
 
     def set_student_context(self, student_id: int) -> None:
+        """Fixa l'alumne actiu i recarrega les seves notes.
+
+        Args:
+            student_id: Identificador de l'alumne seleccionat a la llista.
+        """
         self.current_student_id = student_id
         self.view.set_student_context(student_id)
         self.refresh()
 
     def refresh(self, filters=None) -> None:
+        """Recarrega les notes segons els filtres indicats o els actuals de la vista."""
         try:
             records = self.note_service.get_records(filters or self.view.filters())
         except DomainError as error:
@@ -60,6 +71,7 @@ class NoteController:
         self.view.set_records(records)
 
     def create(self) -> None:
+        """Obre el diàleg de creació de nota per a l'alumne actiu i la desa."""
         categories = self.category_service.get_all()
         if self.current_student_id is None:
             self.error_handler("Cal seleccionar un alumne abans d'afegir notes.")
@@ -94,6 +106,11 @@ class NoteController:
         self.create()
 
     def edit(self, note_id: int) -> None:
+        """Obre el diàleg d'edició per a `note_id` i desa els canvis si s'accepten.
+
+        Args:
+            note_id: Identificador de la nota a editar.
+        """
         try:
             note = self.note_service.get_by_id(note_id)
         except DomainError as error:
@@ -121,6 +138,11 @@ class NoteController:
         self.window.show_status("Nota actualitzada correctament")
 
     def delete(self, note_id: int) -> None:
+        """Elimina `note_id` prèvia confirmació de l'usuari.
+
+        Args:
+            note_id: Identificador de la nota a eliminar.
+        """
         if not self.confirm_delete():
             return
         try:

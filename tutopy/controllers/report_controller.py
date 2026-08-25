@@ -1,3 +1,10 @@
+"""Controlador d'informes: configuració, logotip, ordre de categories i exportació.
+
+Orquestra `ReportConfigurationService`, `ReportFileService` i
+`StudentExportService`, delegant l'exportació massiva a
+`BackgroundOperationPresenter` perquè no bloquegi la interfície.
+"""
+
 import re
 
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QProgressDialog
@@ -17,6 +24,8 @@ from tutopy.ui.background_task import BackgroundOperationPresenter, BackgroundTa
 
 
 class ReportController:
+    """Gestiona la configuració i l'exportació d'informes d'alumnes."""
+
     def __init__(self, window: MainWindow, students: StudentService,
                  courses: AcademicCourseService,
                  configuration: ReportConfigurationService,
@@ -27,6 +36,7 @@ class ReportController:
                  batch_export_dialog=BatchExportDialog,
                  error_handler=None, confirm_delete=None,
                  task_runner=None, progress_dialog=QProgressDialog):
+        """Desa les dependències i connecta les accions d'informes de la vista."""
         self.window = window
         self.students = students
         self.courses = courses
@@ -54,9 +64,11 @@ class ReportController:
         window.student_list.batch_export_requested.connect(self.export_students)
 
     def start(self) -> None:
+        """Carrega les configuracions de trimestres i el logotip a la vista."""
         self.refresh()
 
     def refresh(self) -> None:
+        """Actualitza la taula de configuracions de trimestres i el logotip mostrats."""
         course_names = {course.id: course.course for course in self.courses.get_all()}
         rows = []
         for configuration in self.configuration.get_term_configurations():
@@ -71,6 +83,7 @@ class ReportController:
         self.window.data_tools.set_report_logo(logo.name if logo else None)
 
     def configure_report_logo(self) -> None:
+        """Selecciona i desa una imatge com a logotip dels informes."""
         filename, _ = QFileDialog.getOpenFileName(
             self.window, "Seleccionar logotip dels informes", "",
             "Imatges (*.png *.jpg *.jpeg *.bmp *.gif *.tif *.tiff)",
@@ -86,6 +99,7 @@ class ReportController:
         self.window.show_status("Logotip dels informes desat")
 
     def remove_report_logo(self) -> None:
+        """Elimina el logotip configurat per als informes."""
         try:
             self.configuration.clear_header_image()
         except DomainError as error:
@@ -95,9 +109,15 @@ class ReportController:
         self.window.show_status("Logotip dels informes eliminat")
 
     def create_term_configuration(self) -> None:
+        """Obre el diàleg per crear una nova configuració de trimestres."""
         self._open_term_dialog()
 
     def edit_term_configuration(self, configuration_id: int) -> None:
+        """Obre el diàleg d'edició per a una configuració de trimestres existent.
+
+        Args:
+            configuration_id: Identificador de la configuració a editar.
+        """
         configuration = next((item for item in self.configuration.get_term_configurations()
                               if item.id == configuration_id), None)
         if configuration is None:
@@ -126,6 +146,11 @@ class ReportController:
         self.window.show_status("Configuració de trimestres desada")
 
     def delete_term_configuration(self, configuration_id: int) -> None:
+        """Elimina una configuració de trimestres prèvia confirmació de l'usuari.
+
+        Args:
+            configuration_id: Identificador de la configuració a eliminar.
+        """
         if not self.confirm_delete("aquesta configuració de trimestres"):
             return
         try:
@@ -137,6 +162,7 @@ class ReportController:
         self.window.show_status("Configuració de trimestres eliminada")
 
     def configure_category_order(self) -> None:
+        """Obre el diàleg per definir l'ordre de les categories als informes."""
         dialog = self.export_dialog(
             self.configuration.get_ordered_categories(), parent=self.window,
             show_term_option=False,
@@ -151,6 +177,11 @@ class ReportController:
         self.window.show_status("Ordre de categories desat")
 
     def export_student(self, student_id: int) -> None:
+        """Genera i desa l'informe d'un alumne, opcionalment amb els seus documents.
+
+        Args:
+            student_id: Identificador de l'alumne a exportar.
+        """
         student = self.students.get_by_id(student_id)
         if student is None:
             self.error_handler("No s’ha trobat l’alumne.")
@@ -207,6 +238,7 @@ class ReportController:
         self.window.show_status(f"Informe desat a {path}", 5000)
 
     def export_students(self) -> None:
+        """Exporta els informes d'un lot d'alumnes sense bloquejar la interfície."""
         if self._batch_export.is_running():
             self.window.show_status("Ja hi ha una exportació en curs.")
             return

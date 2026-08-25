@@ -1,3 +1,11 @@
+"""Controlador de les eines de dades: plantilles, importació, transferències i esborrat.
+
+Orquestra `BulkImportService`, `DataManagementService` i el servei de
+transferència, delegant les operacions llargues (exportació, anàlisi i
+importació de paquets) a `BackgroundOperationPresenter` perquè no bloquegin
+la interfície.
+"""
+
 import logging
 
 from PySide6.QtWidgets import (
@@ -21,6 +29,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class DataManagementController:
+    """Gestiona plantilles, importació, transferències i esborrat de dades."""
+
     def __init__(self, window: MainWindow, importer: BulkImportService,
                  data_service: DataManagementService, transfer_service=None,
                  student_service=None,
@@ -30,6 +40,7 @@ class DataManagementController:
                  transfer_conflict_dialog=TransferConflictsDialog,
                  transfer_selection_dialog=TransferStudentSelectionDialog,
                  task_runner=None, progress_dialog=QProgressDialog):
+        """Desa les dependències i connecta les accions de la vista d'eines de dades."""
         self.window = window
         self.importer = importer
         self.data_service = data_service
@@ -269,6 +280,7 @@ class DataManagementController:
         self.window.show_error(message)
 
     def export_template(self) -> None:
+        """Desa una plantilla Excel buida per a la importació massiva."""
         filename, _ = QFileDialog.getSaveFileName(
             self.window, "Desar plantilla", "plantilla_tutopy.xlsx",
             "Full de càlcul Excel (*.xlsx)",
@@ -283,6 +295,7 @@ class DataManagementController:
         self.window.show_status(f"Plantilla desada a {path}", 5000)
 
     def import_spreadsheet(self) -> None:
+        """Analitza un full de càlcul, resol conflictes i importa els alumnes."""
         filename, _ = QFileDialog.getOpenFileName(
             self.window, "Importar dades", "",
             "Fulls de càlcul (*.xlsx *.ods);;Excel (*.xlsx);;OpenDocument (*.ods)"
@@ -315,6 +328,7 @@ class DataManagementController:
         )
 
     def clear_all(self) -> None:
+        """Demana confirmació i elimina totes les dades de la instància."""
         dialog = self.clear_dialog(self.window)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return

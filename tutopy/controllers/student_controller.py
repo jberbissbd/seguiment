@@ -1,3 +1,5 @@
+"""Controlador del CRUD d'alumnes, incloent l'edició massiva en segon pla."""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QMessageBox, QProgressDialog
 
@@ -18,6 +20,7 @@ class StudentController:
         dialog_factory=StudentDialog, confirm_delete=None, error_handler=None,
         bulk_dialog_factory=BulkStudentEditDialog, task_runner=None,
         progress_dialog=QProgressDialog):
+        """Desa les dependències i connecta les accions d'alumnes de la vista."""
         self.window = window
         self.service = service
         self.dialog_factory = dialog_factory
@@ -32,6 +35,7 @@ class StudentController:
         self._connect_signals()
 
     def start(self) -> None:
+        """Carrega la llista d'alumnes a la vista."""
         self.refresh()
 
     def _connect_signals(self) -> None:
@@ -44,17 +48,29 @@ class StudentController:
         view.bulk_edit_requested.connect(self.bulk_edit)
 
     def refresh(self) -> None:
+        """Recarrega tots els alumnes a la llista i n'actualitza el comptador."""
         students = self.service.get_all()
         self.window.student_list.set_students(students)
         self.window.show_status(f"{len(students)} alumnes")
 
     def search(self, query: str) -> None:
+        """Filtra la llista d'alumnes segons el text de cerca.
+
+        Args:
+            query: Text de cerca introduït per l'usuari.
+        """
         self.window.student_list.set_students(self.service.search(query))
 
     def select(self, student_id: int) -> None:
+        """Mostra el detall de l'alumne seleccionat.
+
+        Args:
+            student_id: Identificador de l'alumne a mostrar.
+        """
         self.window.student_detail.show_student(self.service.get_by_id(student_id))
 
     def create(self) -> None:
+        """Obre el diàleg de creació d'alumne i el desa si s'accepta."""
         dialog = self.dialog_factory(
             parent=self.window, groups=self.service.get_groups()
         )
@@ -71,6 +87,11 @@ class StudentController:
         self.window.show_status("Alumne creat correctament")
 
     def edit(self, student_id: int) -> None:
+        """Obre el diàleg d'edició per a `student_id` i desa els canvis si s'accepten.
+
+        Args:
+            student_id: Identificador de l'alumne a editar.
+        """
         student = self.service.get_by_id(student_id)
         if student is None:
             return
@@ -97,6 +118,11 @@ class StudentController:
         self.window.show_status("Alumne actualitzat correctament")
 
     def delete(self, student_id: int) -> None:
+        """Elimina `student_id` prèvia confirmació de l'usuari.
+
+        Args:
+            student_id: Identificador de l'alumne a eliminar.
+        """
         student = self.service.get_by_id(student_id)
         if student is None or not self.confirm_delete(student.full_name):
             return

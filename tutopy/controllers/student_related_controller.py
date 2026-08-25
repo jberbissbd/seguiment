@@ -1,3 +1,10 @@
+"""Controlador dels elements associats a l'alumne.
+
+Connecta les pestanyes de descriptors, contactes, documents i historial de
+grups del detall d'alumne amb `AnnotationService`, `ContactService`,
+`DocumentService` i `StudentService`.
+"""
+
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog, QFileDialog
@@ -27,6 +34,7 @@ class StudentRelatedController:
         contact_dialog=ContactDialog, document_dialog=DocumentDialog,
         confirm_delete=None, error_handler=None, document_opener=None,
         export_destination=None):
+        """Desa les dependències i connecta les pestanyes de detall de l'alumne."""
         self.window = window
         self.students = students
         self.annotations = annotations
@@ -61,10 +69,16 @@ class StudentRelatedController:
         document.export_requested.connect(self.export_document)
 
     def set_student(self, student_id: int):
+        """Fixa l'alumne actiu i recarrega totes les seves dades associades.
+
+        Args:
+            student_id: Identificador de l'alumne seleccionat a la llista.
+        """
         self.student_id = student_id
         self.refresh_all()
 
     def refresh_all(self):
+        """Recarrega descriptors, contactes, documents i historial de l'alumne actiu."""
         if self.student_id is None:
             return
         annotations = self.annotations.get_by_student(self.student_id)
@@ -91,6 +105,7 @@ class StudentRelatedController:
         ])
 
     def create_annotation(self):
+        """Obre el diàleg de creació d'un descriptor per a l'alumne actiu."""
         if self.student_id is None:
             return
         dialog = self.annotation_dialog(parent=self.window)
@@ -101,6 +116,7 @@ class StudentRelatedController:
         ), "Descriptor creat")
 
     def edit_annotation(self, entity_id):
+        """Obre el diàleg d'edició d'un descriptor i desa els canvis si s'accepten."""
         annotation = self.annotations.get_by_id(entity_id)
         dialog = self.annotation_dialog(parent=self.window, annotation=annotation)
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -109,10 +125,12 @@ class StudentRelatedController:
             )), "Descriptor actualitzat")
 
     def delete_annotation(self, entity_id):
+        """Elimina un descriptor prèvia confirmació de l'usuari."""
         if self.confirm_delete("aquest descriptor"):
             self._run(lambda: self.annotations.delete(entity_id), "Descriptor eliminat")
 
     def create_contact(self):
+        """Obre el diàleg de creació d'un contacte per a l'alumne actiu."""
         if self.student_id is None:
             return
         dialog = self.contact_dialog(parent=self.window)
@@ -122,6 +140,7 @@ class StudentRelatedController:
             )), "Contacte creat")
 
     def edit_contact(self, entity_id):
+        """Obre el diàleg d'edició d'un contacte i desa els canvis si s'accepten."""
         contact = self.contacts.get_by_id(entity_id)
         dialog = self.contact_dialog(parent=self.window, contact=contact)
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -130,10 +149,12 @@ class StudentRelatedController:
             )), "Contacte actualitzat")
 
     def delete_contact(self, entity_id):
+        """Elimina un contacte prèvia confirmació de l'usuari."""
         if self.confirm_delete("aquest contacte"):
             self._run(lambda: self.contacts.delete(entity_id), "Contacte eliminat")
 
     def create_document(self):
+        """Obre el diàleg d'importació d'un document per a l'alumne actiu."""
         if self.student_id is None:
             return
         dialog = self.document_dialog(parent=self.window)
@@ -146,6 +167,7 @@ class StudentRelatedController:
             ), "Document importat")
 
     def edit_document(self, entity_id):
+        """Obre el diàleg d'edició d'un document i desa els canvis si s'accepten."""
         document = self.documents.get_by_id(entity_id)
         dialog = self.document_dialog(parent=self.window, document=document)
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -161,10 +183,12 @@ class StudentRelatedController:
             self._run(lambda: self.documents.update(updated), "Document actualitzat")
 
     def delete_document(self, entity_id):
+        """Elimina un document prèvia confirmació de l'usuari."""
         if self.confirm_delete("aquest document"):
             self._run(lambda: self.documents.delete(entity_id), "Document eliminat")
 
     def open_document(self, entity_id):
+        """Obre el fitxer del document amb l'aplicació predeterminada del sistema."""
         try:
             path = self.documents.get_readable_path(entity_id)
             opened = self.document_opener(str(path))
@@ -174,6 +198,7 @@ class StudentRelatedController:
             self.error_handler(str(error))
 
     def export_document(self, entity_id):
+        """Copia el fitxer del document a una destinació triada per l'usuari."""
         try:
             document = self.documents.get_by_id(entity_id)
             destination = self.export_destination(document.original_filename)
