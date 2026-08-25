@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QDialog, QDialogButtonBox
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox
 
 from tutopy.application import create_services
 from tutopy.controllers.student_controller import StudentController
@@ -131,5 +131,49 @@ def test_controller_respecta_cancel_lacio_eliminacio(qtbot, tmp_path):
         controller.delete(student.id)
 
         assert services.students.get_by_id(student.id) is not None
+    finally:
+        database.close()
+
+
+def test_controller_aplica_edicio_massiva_en_segon_pla(
+    qtbot, tmp_path, monkeypatch
+):
+    database, services, window, controller, errors = build_controller(qtbot, tmp_path)
+    try:
+        first = services.students.create(StudentNew("Anna", "Serra", "1A"))
+        second = services.students.create(StudentNew("Biel", "Puig", "1B"))
+
+        class AcceptedBulkDialog:
+            def __init__(self, students, groups, parent=None):
+                assert {item.id for item in students} == {first.id, second.id}
+
+            def exec(self):
+                return QDialog.DialogCode.Accepted
+
+            def changes(self):
+                return [{
+                    "student_id": first.id,
+                    "name": "Anna Maria",
+                    "surnames": "Serra",
+                    "group_name": "2A",
+                }]
+
+            def effective_date(self):
+                return "2026-09-01"
+
+        messages = []
+        monkeypatch.setattr(
+            QMessageBox, "information", lambda *args: messages.append(args[2])
+        )
+        controller.bulk_dialog_factory = AcceptedBulkDialog
+
+        controller.bulk_edit()
+        qtbot.waitUntil(lambda: not controller._bulk_edit.is_running(), timeout=5000)
+
+        updated = services.students.get_by_id(first.id)
+        assert updated.name == "Anna Maria"
+        assert updated.group_name == "2A"
+        assert "Alumnes actualitzats: 1" in messages[0]
+        assert errors == []
     finally:
         database.close()

@@ -1,6 +1,11 @@
+from pathlib import Path
+
 import pytest
 
 from tutopy.application import create_services
+from tutopy.database.daos.report_configuration_dao import (
+    ReportConfigurationPersistenceError,
+)
 from tutopy.models.messaging import CategoryNew
 from tutopy.models.reporting import TermConfigurationNew
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
@@ -118,3 +123,53 @@ def test_logotip_es_global_es_copia_i_es_pot_eliminar(reporting, tmp_path):
     reporting.clear_header_image()
     assert reporting.get_header_image() is None
     assert not stored.exists()
+
+
+def test_neteja_el_fitxer_nou_si_falla_la_persistencia(
+    reporting, tmp_path, monkeypatch
+):
+    reporting.storage_dir = tmp_path / "reporting"
+    source = tmp_path / "logo.png"
+    source.write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDAT\x08\xd7c\xf8"
+        b"\xcf\xc0\xf0\x1f\x00\x05\x00\x01\xff\x89\x99=\x1d\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    monkeypatch.setattr(
+        reporting.configuration_dao,
+        "set_setting",
+        lambda *_args: (_ for _ in ()).throw(ReportConfigurationPersistenceError()),
+    )
+
+    with pytest.raises(ValidationError, match="desar la imatge"):
+        reporting.set_header_image(source)
+
+    assert reporting.get_header_image() is None
+    assert list(reporting.storage_dir.iterdir()) == []
+
+
+def test_fallada_netejant_el_logotip_antic_no_invalida_la_substitucio(
+    reporting, tmp_path, monkeypatch, caplog
+):
+    reporting.storage_dir = tmp_path / "reporting"
+    source = tmp_path / "logo.png"
+    source.write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDAT\x08\xd7c\xf8"
+        b"\xcf\xc0\xf0\x1f\x00\x05\x00\x01\xff\x89\x99=\x1d\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    previous = reporting.set_header_image(source)
+    original_unlink = Path.unlink
+
+    def fail_for_previous(path, *args, **kwargs):
+        if path == previous:
+            raise OSError("fitxer bloquejat")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", fail_for_previous)
+
+    current = reporting.set_header_image(source)
+
+    assert reporting.get_header_image() == current
+    assert current.is_file()
+    assert "logotip anterior" in caplog.text

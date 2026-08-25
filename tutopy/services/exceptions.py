@@ -1,3 +1,6 @@
+"""Excepcions de domini compartides per la capa de serveis de Tutopy."""
+
+
 class DomainError(Exception):
     """Error de negoci que els controladors poden mostrar a l'usuari."""
 
@@ -16,6 +19,10 @@ class DuplicateEntityError(DomainError, ValueError):
 
 class EntityInUseError(DomainError, ValueError):
     """L'entitat no es pot modificar o eliminar perquè està en ús."""
+
+
+class FileCleanupError(DomainError):
+    """L'operació s'ha completat, però ha quedat un fitxer per netejar."""
 
 
 class TransferAuthenticationError(DomainError, ValueError):

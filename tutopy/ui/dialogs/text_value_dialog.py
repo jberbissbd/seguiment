@@ -1,10 +1,26 @@
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout
+"""Diàleg genèric per demanar un únic valor de text a l'usuari."""
+
+from PySide6.QtWidgets import (
+    QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout, QWidget,
+)
 
 from tutopy.ui.resources import set_dialog_button_icons
 
 
 class TextValueDialog(QDialog):
-    def __init__(self, title, label, value="", parent=None):
+    """Recull un valor de text obligatori, amb títol i etiqueta configurables."""
+
+    def __init__(
+        self, title: str, label: str, value: str = "", parent: QWidget | None = None
+    ):
+        """Construeix el diàleg amb el títol i l'etiqueta indicats.
+
+        Args:
+            title: Títol de la finestra del diàleg.
+            label: Text de l'etiqueta que acompanya el camp de text.
+            value: Valor inicial del camp de text.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle(title)
         layout = QVBoxLayout(self)
@@ -25,6 +41,7 @@ class TextValueDialog(QDialog):
         layout.addWidget(self.buttons)
 
     def value(self):
+        """Retorna el valor introduït sense espais sobrants."""
         return self.value_input.text().strip()
 
     def _accept_valid(self):

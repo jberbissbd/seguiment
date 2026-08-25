@@ -1,3 +1,5 @@
+"""Càlcul d'estadístiques agregades de notes per a la pantalla de resum."""
+
 from datetime import date
 
 from dataclasses import replace
@@ -9,11 +11,15 @@ from tutopy.services.exceptions import ValidationError
 
 
 class StatisticsService:
+    """Calcula instantànies estadístiques de notes filtrades pel curs i la categoria."""
+
     MONTH_NAMES = (
         "Gener", "Febrer", "Març", "Abril", "Maig", "Juny",
         "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre",
     )
+
     def __init__(self, statistics_dao, courses, categories):
+        """Rep el DAO d'estadístiques i els repositoris de cursos i categories."""
         self.statistics_dao = statistics_dao
         self.courses = courses
         self.categories = categories
@@ -26,6 +32,18 @@ class StatisticsService:
         )
 
     def get_snapshot(self, filters: StatisticsFilters) -> StatisticsSnapshot:
+        """Valida els filtres i retorna la instantània estadística corresponent.
+
+        Args:
+            filters: Filtres de curs, categoria, grup i interval de dates.
+
+        Returns:
+            Instantània amb els mesos ja formatats amb nom en català.
+
+        Raises:
+            ValidationError: Si algun filtre no és vàlid o l'interval de
+                dates és inconsistent.
+        """
         if not isinstance(filters, StatisticsFilters):
             raise ValidationError("Els filtres estadístics no són vàlids.")
         self._validate_optional_id(filters.course_id, self.courses, "curs acadèmic")

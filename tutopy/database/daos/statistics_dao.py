@@ -1,3 +1,5 @@
+"""DAO per a consultes agregades de seguiment usades a les estadístiques."""
+
 from tutopy.models.statistics import (
     StatisticValue, StatisticsFilters, StatisticsSnapshot, StudentStatistic,
 )
@@ -7,9 +9,11 @@ class StatisticsDAO:
     """Consultes agregades de seguiment; no carrega el text de les notes."""
 
     def __init__(self, conn):
+        """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
 
     def get_course_ids_with_notes(self) -> tuple[int, ...]:
+        """Retorna els identificadors de curs que tenen alguna nota, del més recent al més antic."""
         rows = self.conn.execute(
             "SELECT DISTINCT n.course_id FROM notes n "
             "JOIN academic_courses c ON c.id = n.course_id "
@@ -18,6 +22,19 @@ class StatisticsDAO:
         return tuple(row[0] for row in rows)
 
     def get_snapshot(self, filters: StatisticsFilters) -> StatisticsSnapshot:
+        """Calcula un resum estadístic filtrat sense carregar el text de les notes.
+
+        Totes les agregacions (recomptes, agrupacions per mes/categoria i per
+        alumne) es fan amb SQL, de manera que el cost és ``O(N + S)`` i no
+        creix amb la mida del contingut de les notes.
+
+        Args:
+            filters: Filtres opcionals de curs, categoria, grup i rang de
+                dates a aplicar.
+
+        Returns:
+            Un `StatisticsSnapshot` amb els recomptes i les sèries agregades.
+        """
         note_where, note_params = self._note_filters(filters)
         student_where, student_params = self._student_filters(filters)
 

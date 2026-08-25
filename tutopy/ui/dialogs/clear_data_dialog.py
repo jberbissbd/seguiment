@@ -1,3 +1,5 @@
+"""Diàleg de confirmació per eliminar totes les dades de l'aplicació."""
+
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QLabel, QLineEdit, QVBoxLayout,
 )
@@ -6,9 +8,12 @@ from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
 
 
 class ClearDataDialog(QDialog):
+    """Exigeix escriure una paraula de confirmació abans d'habilitar l'eliminació."""
+
     CONFIRMATION = "ELIMINAR"
 
     def __init__(self, parent=None):
+        """Construeix el diàleg de confirmació."""
         super().__init__(parent)
         self.setWindowTitle("Eliminar totes les dades")
         layout = QVBoxLayout(self)

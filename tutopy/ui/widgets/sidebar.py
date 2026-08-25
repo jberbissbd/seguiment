@@ -1,3 +1,5 @@
+"""Barra lateral de navegació entre les seccions principals de l'aplicació."""
+
 from PySide6.QtCore import QSize, Signal
 from PySide6.QtWidgets import QButtonGroup, QFrame, QLabel, QPushButton, QVBoxLayout
 
@@ -17,6 +19,7 @@ class Sidebar(QFrame):
     )
 
     def __init__(self, parent=None):
+        """Construeix el botó de cada secció de `SECTIONS` i selecciona "Alumnes"."""
         super().__init__(parent)
         self.setObjectName("sidebar")
         self.setFixedWidth(210)
@@ -49,6 +52,7 @@ class Sidebar(QFrame):
         self.set_current_section("students")
 
     def set_current_section(self, section: str) -> None:
+        """Marca com a seleccionat el botó corresponent a `section`, si existeix."""
         button = self.buttons.get(section)
         if button is not None:
             button.setChecked(True)

@@ -1,3 +1,5 @@
+"""Validacions i normalitzacions de dades compartides entre serveis de domini."""
+
 import datetime
 import re
 
@@ -10,22 +12,28 @@ ACADEMIC_COURSE_PATTERN = re.compile(r"^(\d{4})-(\d{4})$")
 
 
 class ValidationService:
+    """Agrupa validacions i normalitzacions de dades reutilitzades pels serveis."""
+
     def __init__(self, category_dao: CategoryDAO = None):
+        """Rep, opcionalment, el DAO de categories per validar notes."""
         self.category_dao = category_dao
 
-    def validate_student(self, student: StudentNew) -> None:
-        """Valida i normalitza les dades d'un alumne nou."""
-        student.name = self.person_name(
-            student.name, "El nom de l'alumne no pot estar buit i ha de ser text."
+    def validate_student(self, student: StudentNew) -> StudentNew:
+        """Valida i retorna les dades normalitzades d'un alumne nou."""
+        return StudentNew(
+            self.person_name(
+                student.name, "El nom de l'alumne no pot estar buit i ha de ser text."
+            ),
+            self.person_name(
+                student.surnames,
+                "Els cognoms no poden estar buits i han de ser text.",
+            ),
+            self.optional_text(student.group_name),
         )
-        student.surnames = self.person_name(
-            student.surnames, "Els cognoms no poden estar buits i han de ser text."
-        )
-        student.group_name = self.optional_text(student.group_name)
 
-    def validate_note(self, note: NoteNew) -> None:
-        """Valida i normalitza les dades d'una nota nova."""
-        note.content = self.required_text(
+    def validate_note(self, note: NoteNew) -> NoteNew:
+        """Valida i retorna les dades normalitzades d'una nota nova."""
+        content = self.required_text(
             note.content, "El contingut de la nota no pot estar buit."
         )
         self.iso_date(note.date)
@@ -39,6 +47,9 @@ class ValidationService:
             raise EntityNotFoundError(
                 f"La categoria amb ID {note.category_id} no existeix."
             )
+        return NoteNew(
+            note.student_id, note.category_id, note.date, note.course_id, content
+        )
 
     def can_delete_category(self, category_id: int) -> bool:
         """Comprova si una categoria es pot eliminar (no té notes associades)."""

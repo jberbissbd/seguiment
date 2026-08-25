@@ -1,14 +1,32 @@
+"""Diàleg per configurar l'exportació de l'informe d'un sol alumne."""
+
+from collections.abc import Sequence
+
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QLabel,
-    QListWidget, QListWidgetItem, QVBoxLayout,
+    QListWidget, QListWidgetItem, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Category
 from tutopy.ui.resources import set_dialog_button_icons
 from PySide6.QtCore import Qt
 
 
 class ReportExportDialog(QDialog):
-    def __init__(self, categories, parent=None, show_term_option=True):
+    """Selecciona l'ordre de les categories i el format de sortida de l'informe."""
+
+    def __init__(
+        self, categories: Sequence[Category], parent: QWidget | None = None,
+        show_term_option: bool = True,
+    ):
+        """Construeix el diàleg amb les categories disponibles per ordenar.
+
+        Args:
+            categories: Categories disponibles, per definir-ne l'ordre a l'informe.
+            parent: Widget pare de Qt, si escau.
+            show_term_option: Si cal mostrar les opcions de trimestres i documents,
+                que no s'apliquen als formats de document de text.
+        """
         super().__init__(parent)
         self.setWindowTitle("Exportar informe")
         self.setMinimumSize(430, 430)
@@ -53,12 +71,14 @@ class ReportExportDialog(QDialog):
         self._update_term_visibility()
 
     def category_order(self) -> list[int]:
+        """Retorna els identificadors de categoria en l'ordre triat per l'usuari."""
         return [
             self.category_list.item(row).data(Qt.ItemDataRole.UserRole)
             for row in range(self.category_list.count())
         ]
 
     def export_format(self) -> str:
+        """Retorna el format d'exportació seleccionat (`xlsx`, `docx`, `odt` o `pdf`)."""
         return self.format_input.currentData()
 
     def _update_term_visibility(self) -> None:

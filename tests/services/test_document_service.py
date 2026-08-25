@@ -1,8 +1,15 @@
+from dataclasses import replace
+from pathlib import Path
+
 import pytest
 
 from tutopy.models.messaging import StudentDocumentNew, StudentNew
 from tutopy.services.document_service import DocumentService
-from tutopy.services.exceptions import EntityNotFoundError, ValidationError
+from tutopy.services.exceptions import (
+    EntityNotFoundError,
+    FileCleanupError,
+    ValidationError,
+)
 
 
 def test_document_service_crud(document_dao, student_dao, db):
@@ -15,7 +22,7 @@ def test_document_service_crud(document_dao, student_dao, db):
 
     assert document.name == "Informe"
     assert service.get_by_student(student.id) == [document]
-    document.name = "Informe actualitzat"
+    document = replace(document, name="Informe actualitzat")
     updated = service.update(document)
     assert updated.name == "Informe actualitzat"
     assert updated.uuid_filename == "uuid.pdf"
@@ -102,3 +109,59 @@ def test_document_service_rebutja_fitxer_extern_al_magatzem(
 
     with pytest.raises(ValidationError):
         service.get_readable_path(document.id)
+
+
+def test_document_service_avisa_si_no_pot_netejar_el_fitxer_eliminat(
+    document_dao, student_dao, db, tmp_path, monkeypatch
+):
+    student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+    source = tmp_path / "informe.txt"
+    source.write_text("Informe", encoding="utf-8")
+    service = DocumentService(
+        document_dao, student_dao, db.academic_courses,
+        storage_dir=tmp_path / "documents",
+    )
+    document = service.import_file(
+        student.id, "Informe", "", str(source), "2026-02-01"
+    )
+    original_unlink = Path.unlink
+
+    def fail_for_quarantine(path, *args, **kwargs):
+        if path.name.endswith(".deleting"):
+            raise OSError("fitxer bloquejat")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", fail_for_quarantine)
+
+    with pytest.raises(FileCleanupError, match="document s'ha eliminat"):
+        service.delete(document.id)
+
+    with pytest.raises(EntityNotFoundError):
+        service.get_by_id(document.id)
+
+
+def test_document_service_restaura_el_fitxer_si_falla_la_base_de_dades(
+    document_dao, student_dao, db, tmp_path, monkeypatch
+):
+    student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+    source = tmp_path / "informe.txt"
+    source.write_text("Informe", encoding="utf-8")
+    service = DocumentService(
+        document_dao, student_dao, db.academic_courses,
+        storage_dir=tmp_path / "documents",
+    )
+    document = service.import_file(
+        student.id, "Informe", "", str(source), "2026-02-01"
+    )
+    managed = Path(document.file_path)
+    monkeypatch.setattr(
+        document_dao,
+        "delete",
+        lambda _id: (_ for _ in ()).throw(RuntimeError("database unavailable")),
+    )
+
+    with pytest.raises(RuntimeError, match="database unavailable"):
+        service.delete(document.id)
+
+    assert managed.read_text(encoding="utf-8") == "Informe"
+    assert service.get_by_id(document.id) == document

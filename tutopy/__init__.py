@@ -1,3 +1,5 @@
+"""Tutopy: eina d'escriptori per al seguiment educatiu d'alumnes."""
+
 from importlib.metadata import PackageNotFoundError, version
 
 

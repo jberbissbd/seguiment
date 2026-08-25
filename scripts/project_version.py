@@ -1,3 +1,5 @@
+"""Llegeix la versió del projecte declarada a pyproject.toml."""
+
 from pathlib import Path
 
 try:
@@ -10,6 +12,7 @@ PROJECT_FILE = Path(__file__).parents[1] / "pyproject.toml"
 
 
 def read_project_version(project_file: Path = PROJECT_FILE) -> str:
+    """Retorna el valor de `project.version` del fitxer TOML indicat."""
     project = tomllib.loads(project_file.read_text(encoding="utf-8"))
     return project["project"]["version"]
 

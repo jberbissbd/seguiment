@@ -44,3 +44,4 @@ tutopy/__pycache__/__init__.cpython-312.pyc
 .coverage
 coverage.xml
 htmlcov/
+/site/

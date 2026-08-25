@@ -1,18 +1,9 @@
+"""Generació d'informes ODT i PDF de les notes de seguiment d'un alumne."""
+
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from xml.sax.saxutils import escape
-
-from odf import draw, style, table, text
-from odf.opendocument import OpenDocumentText
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.platypus import (
-    Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
-)
 
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
@@ -22,35 +13,68 @@ from tutopy.services.utils import sanitize_xml_text
 class OpenDocumentReportService:
     """Genera els informes de text oberts (ODT) i PDF sense eines externes."""
 
-    def __init__(self, students, notes, courses, configuration):
+    def __init__(self, students, notes, courses, configuration, batch_loader=None):
+        """Rep els repositoris de domini i, opcionalment, el carregador de lots."""
         self.students = students
         self.notes = notes
         self.courses = courses
         self.configuration = configuration
+        self.batch_loader = batch_loader
         self.validation = ValidationService()
 
     def export_student(self, student_id: int, destination: str | Path,
                        report_format: str) -> Path:
+        """Exporta l'informe ODT o PDF d'un únic alumne.
+
+        Args:
+            student_id: ID de l'alumne.
+            destination: Ruta de destinació (l'extensió es normalitza
+                segons `report_format`).
+            report_format: `"odt"` o `"pdf"`.
+
+        Returns:
+            Ruta final del fitxer generat.
+
+        Raises:
+            ValidationError: Si el format no és vàlid o l'alumne no té notes.
+            EntityNotFoundError: Si l'alumne no existeix.
+        """
         if report_format not in {"odt", "pdf"}:
             raise ValidationError("El format del document no és vàlid.")
         student_id = self.validation.positive_id(student_id)
-        student = self.students.get_by_id(student_id)
+        data = self.prepare_students([student_id])
+        return self.export_prepared(student_id, destination, report_format, data)
+
+    def prepare_students(self, student_ids: list[int]):
+        """Carrega una vegada les dades compartides dels informes ODT i PDF."""
+        return self.batch_loader.load(student_ids, include_header=True)
+
+    def export_prepared(
+        self, student_id: int, destination: str | Path, report_format: str, data
+    ) -> Path:
+        """Genera un ODT o PDF a partir d'un snapshot carregat prèviament."""
+        if report_format not in {"odt", "pdf"}:
+            raise ValidationError("El format del document no és vàlid.")
+        student = data.students.get(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
         notes = sorted(
-            self.notes.get_by_student(student_id), key=lambda item: (item.date, item.id)
+            data.notes[student_id], key=lambda item: (item.date, item.id)
         )
         if not notes:
             raise ValidationError("L’alumne no té notes per exportar.")
         path = self._destination(destination, report_format)
-        courses = self._report_courses(notes)
-        categories = self.configuration.get_ordered_categories()
+        courses = self._report_courses(notes, data.course_names)
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             if report_format == "odt":
-                self._save_odt(path, student, courses, categories)
+                self._save_odt(
+                    path, student, courses, data.categories, data.header_image
+                )
             else:
-                self._save_pdf(path, student, courses, categories)
+                self._save_pdf(
+                    path, student, courses, data.categories, data.header_image
+                )
         except (OSError, ValueError) as error:
             raise ValidationError("No s’ha pogut desar l’informe.") from error
         return path
@@ -64,11 +88,11 @@ class OpenDocumentReportService:
             raise ValidationError("Cal indicar una destinació per a l’informe.")
         return path
 
-    def _report_courses(self, notes):
+    @staticmethod
+    def _report_courses(notes, course_names):
         grouped = defaultdict(list)
         for note in notes:
             grouped[note.course_id].append(note)
-        course_names = {course.id: course.course for course in self.courses.get_all()}
         missing = set(grouped) - course_names.keys()
         if missing:
             raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
@@ -77,8 +101,20 @@ class OpenDocumentReportService:
             result.append((course_names[course_id], course_notes))
         return sorted(result, key=lambda item: item[0])
 
-    def _save_odt(self, path, student, courses, categories):
+    def _save_odt(self, path, student, courses, categories, header_image):
+        from odf.opendocument import OpenDocumentText
+
         document = OpenDocumentText()
+        styles = self._build_odt_styles(document)
+        self._add_odt_header(document, student, header_image, styles)
+        self._add_odt_courses(document, courses, categories, styles)
+        document.save(str(path), addsuffix=False)
+
+    @staticmethod
+    def _build_odt_styles(document) -> dict:
+        """Registra i retorna els estils ODT reutilitzats per tot l'informe."""
+        from odf import style
+
         title_style = style.Style(name="TutopyTitle", family="paragraph")
         title_style.addElement(style.TextProperties(fontsize="20pt", fontweight="bold"))
         document.styles.addElement(title_style)
@@ -94,62 +130,104 @@ class OpenDocumentReportService:
         header_style = style.Style(name="TutopyTableHeader", family="table-cell")
         header_style.addElement(style.TextProperties(fontweight="bold"))
         document.styles.addElement(header_style)
+        return {
+            "title": title_style, "heading": heading_style,
+            "category": category_style, "page_break": page_break_style,
+            "header": header_style,
+        }
 
-        logo = self.configuration.get_header_image()
-        if logo:
-            href = document.addPicture(str(logo))
+    def _add_odt_header(self, document, student, header_image, styles: dict) -> None:
+        """Afegeix el logotip opcional i la capçalera (títol, grup, data) del document."""
+        from odf import draw, text
+
+        if header_image:
+            href = document.addPicture(str(header_image))
             frame = draw.Frame(width="5cm", height="2cm", anchortype="paragraph")
             frame.addElement(draw.Image(href=href))
             paragraph = text.P()
             paragraph.addElement(frame)
             document.text.addElement(paragraph)
-        document.text.addElement(text.P(stylename=title_style, text=self._safe(student.filing_name)))
-        document.text.addElement(text.P(text=f"Grup: {self._safe(student.group_name) or 'Sense grup'}"))
+        document.text.addElement(
+            text.P(stylename=styles["title"], text=self._safe(student.filing_name))
+        )
+        document.text.addElement(
+            text.P(text=f"Grup: {self._safe(student.group_name) or 'Sense grup'}")
+        )
         document.text.addElement(text.P(
             text=f"Data d’exportació: {date.today().strftime('%d/%m/%Y')}"
         ))
+
+    def _add_odt_courses(self, document, courses, categories, styles: dict) -> None:
+        """Afegeix un bloc per curs, amb salt de pàgina entre cursos successius."""
+        from odf import text
+
         for course_index, (course_name, course_notes) in enumerate(courses):
             if course_index:
-                document.text.addElement(text.P(stylename=page_break_style))
-            document.text.addElement(text.P(stylename=heading_style, text=self._safe(course_name)))
-            by_category = defaultdict(list)
-            for note in course_notes:
-                by_category[note.category_id].append(note)
-            for category in categories:
-                category_notes = by_category.get(category.id)
-                if not category_notes:
-                    continue
-                document.text.addElement(text.P(
-                    stylename=category_style, text=self._safe(category.name)
-                ))
-                report_table = table.Table()
-                header = table.TableRow()
-                for value in ("Data", "Anotació"):
-                    cell = table.TableCell(stylename=header_style)
-                    cell.addElement(text.P(text=value))
-                    header.addElement(cell)
-                report_table.addElement(header)
-                for note in category_notes:
-                    row = table.TableRow()
-                    for value in (
-                        date.fromisoformat(note.date).strftime("%d/%m/%Y"),
-                        self._safe(note.content),
-                    ):
-                        cell = table.TableCell()
-                        cell.addElement(text.P(text=value))
-                        row.addElement(cell)
-                    report_table.addElement(row)
-                document.text.addElement(report_table)
-        document.save(str(path), addsuffix=False)
+                document.text.addElement(text.P(stylename=styles["page_break"]))
+            document.text.addElement(
+                text.P(stylename=styles["heading"], text=self._safe(course_name))
+            )
+            self._add_odt_course_categories(document, course_notes, categories, styles)
 
-    def _save_pdf(self, path, student, courses, categories):
+    def _add_odt_course_categories(
+        self, document, course_notes, categories, styles: dict
+    ) -> None:
+        """Agrupa les notes d'un curs per categoria i n'afegeix la taula corresponent."""
+        by_category = defaultdict(list)
+        for note in course_notes:
+            by_category[note.category_id].append(note)
+        for category in categories:
+            category_notes = by_category.get(category.id)
+            if not category_notes:
+                continue
+            self._add_odt_category_table(document, category, category_notes, styles)
+
+    def _add_odt_category_table(
+        self, document, category, category_notes, styles: dict
+    ) -> None:
+        """Afegeix el títol de la categoria i la taula de notes corresponent."""
+        from odf import table, text
+
+        document.text.addElement(
+            text.P(stylename=styles["category"], text=self._safe(category.name))
+        )
+        report_table = table.Table()
+        header = table.TableRow()
+        for value in ("Data", "Anotació"):
+            cell = table.TableCell(stylename=styles["header"])
+            cell.addElement(text.P(text=value))
+            header.addElement(cell)
+        report_table.addElement(header)
+        for note in category_notes:
+            row = table.TableRow()
+            for value in (
+                date.fromisoformat(note.date).strftime("%d/%m/%Y"),
+                self._safe(note.content),
+            ):
+                cell = table.TableCell()
+                cell.addElement(text.P(text=value))
+                row.addElement(cell)
+            report_table.addElement(row)
+        document.text.addElement(report_table)
+
+    def _save_pdf(self, path, student, courses, categories, header_image):
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import cm
+        from reportlab.platypus import (
+            Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table,
+            TableStyle,
+        )
+
         styles = getSampleStyleSheet()
         styles.add(ParagraphStyle(
             name="TutopyTitle", parent=styles["Title"], alignment=TA_CENTER,
             spaceAfter=10,
         ))
         story = []
-        logo = self.configuration.get_header_image()
+        logo = header_image
         if logo:
             story.extend((Image(str(logo), width=5 * cm, height=2 * cm, kind="proportional"),
                           Spacer(1, 0.25 * cm)))

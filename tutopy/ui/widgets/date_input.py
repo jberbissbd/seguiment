@@ -1,3 +1,5 @@
+"""Entrada de data combinant text lliure i selector visual."""
+
 from PySide6.QtCore import QDate, Signal
 from PySide6.QtWidgets import (
     QCalendarWidget, QHBoxLayout, QLineEdit, QMenu, QToolButton, QWidget,
@@ -13,7 +15,13 @@ class DateInput(QWidget):
     dateChanged = Signal(QDate)
     DATE_FORMAT = "dd/MM/yyyy"
 
-    def __init__(self, date=None, parent=None):
+    def __init__(self, date: QDate | None = None, parent: QWidget | None = None):
+        """Inicialitza el camp amb `date` (o la data actual) i el calendari emergent.
+
+        Args:
+            date: Data inicial (`QDate`); si és `None` s'utilitza la data d'avui.
+            parent: Widget pare de Qt.
+        """
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -39,12 +47,19 @@ class DateInput(QWidget):
         self.editor.editingFinished.connect(self.interpretText)
 
     def lineEdit(self):
+        """Retorna el `QLineEdit` intern per a integracions que el necessitin."""
         return self.editor
 
     def date(self) -> QDate:
+        """Interpreta el text actual del camp com a `QDate` (invàlida si no ho és)."""
         return QDate.fromString(self.editor.text().strip(), self.DATE_FORMAT)
 
     def setDate(self, date: QDate) -> None:
+        """Estableix `date` al camp de text i al calendari, i emet `dateChanged`.
+
+        Args:
+            date: Nova data; si és invàlida no fa res.
+        """
         if not date.isValid():
             return
         self.editor.setText(date.toString(self.DATE_FORMAT))
@@ -53,6 +68,7 @@ class DateInput(QWidget):
         self.menu.close()
 
     def interpretText(self) -> None:
+        """Sincronitza el calendari amb el text escrit manualment, si és vàlid."""
         date = self.date()
         if date.isValid():
             self.calendar.setSelectedDate(date)

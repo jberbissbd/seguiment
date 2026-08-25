@@ -1,12 +1,19 @@
+"""DAO per a les notes de seguiment dels alumnes."""
+
 from typing import Optional
 from tutopy.models.messaging import Note, NoteNew, NoteRecord
+from ._batch import grouped_by_student
 
 
 class NoteDAO:
+    """Accés a persistència per a les notes de seguiment."""
+
     def __init__(self, conn):
+        """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
 
     def get_by_student(self, student_id: int) -> list[Note]:
+        """Retorna les notes d'un alumne, de la més recent a la més antiga."""
         rows = self.conn.execute(
             "SELECT id, student_id, category_id, date, course_id, content "
             "FROM notes WHERE student_id = ? ORDER BY date DESC, id DESC",
@@ -14,7 +21,19 @@ class NoteDAO:
         ).fetchall()
         return [Note(**row) for row in rows]
 
+    def get_by_students(self, student_ids: list[int]) -> dict[int, list[Note]]:
+        """Retorna les anotacions agrupades per alumne en lectures per lots."""
+        return grouped_by_student(
+            self.conn,
+            student_ids,
+            "SELECT id, student_id, category_id, date, course_id, content "
+            "FROM notes WHERE student_id IN ({placeholders}) "
+            "ORDER BY student_id, date DESC, id DESC",
+            Note,
+        )
+
     def get_by_id(self, id: int) -> Optional[Note]:
+        """Retorna una nota o ``None`` si no existeix."""
         row = self.conn.execute(
             "SELECT id, student_id, category_id, date, course_id, content "
             "FROM notes WHERE id = ?",
@@ -23,6 +42,7 @@ class NoteDAO:
         return Note(**row) if row else None
 
     def get_all(self) -> list[Note]:
+        """Retorna totes les notes, de la més recent a la més antiga."""
         rows = self.conn.execute(
             "SELECT id, student_id, category_id, date, course_id, content "
             "FROM notes ORDER BY date DESC, id DESC"
@@ -30,6 +50,7 @@ class NoteDAO:
         return [Note(**row) for row in rows]
 
     def create(self, data: NoteNew) -> Note:
+        """Crea una nova nota de seguiment."""
         cur = self.conn.execute(
             "INSERT INTO notes (student_id, category_id, date, course_id, content) "
             "VALUES (?, ?, ?, ?, ?)",
@@ -46,6 +67,7 @@ class NoteDAO:
         )
 
     def update(self, note: Note):
+        """Actualitza una nota existent amb totes les dades noves."""
         self.conn.execute(
             "UPDATE notes SET student_id = ?, category_id = ?, date = ?, "
             "course_id = ?, content = ? WHERE id = ?",
@@ -54,10 +76,16 @@ class NoteDAO:
         self.conn.commit()
 
     def delete(self, id: int):
+        """Elimina una nota pel seu identificador."""
         self.conn.execute("DELETE FROM notes WHERE id = ?", (id,))
         self.conn.commit()
 
     def exists(self, student_id: int, category_id: int, date: str, content: str) -> bool:
+        """Indica si ja hi ha una nota idèntica (mateix alumne, categoria, data i contingut).
+
+        Aprofita l'índex ``idx_notes_duplicate_lookup`` per detectar
+        duplicats abans d'inserir, per exemple durant una importació massiva.
+        """
         row = self.conn.execute(
             "SELECT 1 FROM notes "
             "WHERE student_id = ? AND category_id = ? AND date = ? AND content = ? "
@@ -67,7 +95,17 @@ class NoteDAO:
         return row is not None
 
     def get_records(self, filters: dict = None) -> list[NoteRecord]:
-        """Retorna registres desnormalitzats aplicant filtres SQL opcionals."""
+        """Retorna registres desnormalitzats aplicant filtres SQL opcionals.
+
+        Args:
+            filters: Diccionari amb claus opcionals ``student_id``,
+                ``category_id``, ``course_id``, ``date_from``, ``date_to`` i
+                ``content`` (cerca parcial, sense distingir majúscules).
+                Les claus absents o amb valor ``None`` no filtren.
+
+        Returns:
+            Els registres, de la data més recent a la més antiga.
+        """
         filters = filters or {}
         conditions = []
         params = []

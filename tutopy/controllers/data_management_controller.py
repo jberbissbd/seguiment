@@ -1,8 +1,15 @@
+"""Controlador de les eines de dades: plantilles, importació, transferències i esborrat.
+
+Orquestra `BulkImportService`, `DataManagementService` i el servei de
+transferència, delegant les operacions llargues (exportació, anàlisi i
+importació de paquets) a `BackgroundOperationPresenter` perquè no bloquegin
+la interfície.
+"""
+
 import logging
-from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QDialog, QFileDialog, QInputDialog, QLineEdit, QMessageBox,
+    QDialog, QFileDialog, QInputDialog, QLineEdit, QMessageBox, QProgressDialog,
 )
 
 from tutopy.services.bulk_import_service import BulkImportService
@@ -15,12 +22,15 @@ from tutopy.ui.dialogs.transfer_student_selection_dialog import (
     TransferStudentSelectionDialog,
 )
 from tutopy.ui.main_window import MainWindow
+from tutopy.ui.background_task import BackgroundOperationPresenter, BackgroundTaskRunner
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 class DataManagementController:
+    """Gestiona plantilles, importació, transferències i esborrat de dades."""
+
     def __init__(self, window: MainWindow, importer: BulkImportService,
                  data_service: DataManagementService, transfer_service=None,
                  student_service=None,
@@ -28,7 +38,9 @@ class DataManagementController:
                  conflict_dialog=ImportConflictsDialog,
                  clear_dialog=ClearDataDialog,
                  transfer_conflict_dialog=TransferConflictsDialog,
-                 transfer_selection_dialog=TransferStudentSelectionDialog):
+                 transfer_selection_dialog=TransferStudentSelectionDialog,
+                 task_runner=None, progress_dialog=QProgressDialog):
+        """Desa les dependències i connecta les accions de la vista d'eines de dades."""
         self.window = window
         self.importer = importer
         self.data_service = data_service
@@ -39,6 +51,17 @@ class DataManagementController:
         self.clear_dialog = clear_dialog
         self.transfer_conflict_dialog = transfer_conflict_dialog
         self.transfer_selection_dialog = transfer_selection_dialog
+        self.task_runner = task_runner or BackgroundTaskRunner()
+        self.progress_dialog = progress_dialog
+        self._transfer_export = BackgroundOperationPresenter(
+            self.window, self.task_runner, self.progress_dialog
+        )
+        self._transfer_analysis = BackgroundOperationPresenter(
+            self.window, self.task_runner, self.progress_dialog
+        )
+        self._transfer_execution = BackgroundOperationPresenter(
+            self.window, self.task_runner, self.progress_dialog
+        )
         view = window.data_tools
         view.template_requested.connect(self.export_template)
         view.import_requested.connect(self.import_spreadsheet)
@@ -57,22 +80,24 @@ class DataManagementController:
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         student_ids = dialog.student_ids()
-        self._export_transfer(
-            lambda filename, password: self.transfer_service.export_students(
-                student_ids, filename, password
-            ),
-            "alumnes-seleccionats.tpy",
-        )
+        self._export_transfer(student_ids, "alumnes-seleccionats.tpy")
 
     def export_all_students(self) -> None:
         """Exporta tots els agregats de la instància."""
+        students = self.student_service.get_all() if self.student_service else []
+        if not students:
+            self.window.show_error("No hi ha alumnes disponibles per exportar.")
+            return
         self._export_transfer(
-            self.transfer_service.export_all, "tutopy-complet.tpy"
+            [student.id for student in students], "tutopy-complet.tpy"
         )
 
-    def _export_transfer(self, operation, default_name) -> None:
+    def _export_transfer(self, student_ids, default_name) -> None:
         if self.transfer_service is None:
             self.window.show_error("El servei de transferència no està disponible.")
+            return
+        if self._transfer_export.is_running():
+            self.window.show_status("Ja hi ha una transferència en curs.")
             return
         filename, _ = QFileDialog.getSaveFileName(
             self.window, "Exportar paquet Tutopy", default_name,
@@ -84,16 +109,50 @@ class DataManagementController:
         if password is None:
             return
         try:
-            path = operation(filename, password)
+            preparation = self.transfer_service.prepare_export(
+                student_ids, filename, password
+            )
         except Exception as error:
             self._show_operation_error(error, "exportar el paquet")
             return
+
+        def operation(report_progress, cancel_requested):
+            return self.transfer_service.export_prepared(
+                preparation, progress_callback=report_progress,
+                cancel_requested=cancel_requested,
+            )
+
+        def progress_label(completed: int, total: int) -> str:
+            if completed == total:
+                return "Comprimint i xifrant el paquet…"
+            return f"Preparant alumnes… {completed} de {total}"
+
+        self._transfer_export.start(
+            operation,
+            title="Exportació de transferència",
+            label="Preparant el paquet…",
+            maximum=len(student_ids),
+            on_success=self._transfer_export_finished,
+            on_failure=self._transfer_export_failed,
+            progress_label=progress_label,
+        )
+
+    def _transfer_export_finished(self, path) -> None:
+        if path is None:
+            self.window.show_status("Exportació de transferència cancel·lada.", 5000)
+            return
         self.window.show_status(f"Paquet desat a {path}", 5000)
+
+    def _transfer_export_failed(self, error: Exception) -> None:
+        self._show_operation_error(error, "exportar el paquet")
 
     def import_transfer(self) -> None:
         """Analitza, resol conflictes i importa un paquet `.tpy`."""
         if self.transfer_service is None:
             self.window.show_error("El servei de transferència no està disponible.")
+            return
+        if self._transfer_analysis.is_running():
+            self.window.show_status("Ja s’està analitzant una transferència.")
             return
         filename, _ = QFileDialog.getOpenFileName(
             self.window, "Importar paquet Tutopy", "",
@@ -104,8 +163,24 @@ class DataManagementController:
         password = self._transfer_password()
         if password is None:
             return
+
+        def operation(_progress, _cancel_requested):
+            return self.transfer_service.prepare_analysis(filename, password)
+
+        self._transfer_analysis.start(
+            operation,
+            title="Anàlisi de transferència",
+            label="Desxifrant i validant el paquet…",
+            cancellable=False,
+            on_success=lambda preparation: self._transfer_analysis_finished(
+                preparation, password
+            ),
+            on_failure=self._transfer_analysis_failed,
+        )
+
+    def _transfer_analysis_finished(self, preparation, password: str) -> None:
         try:
-            preview = self.transfer_service.analyze(filename, password)
+            preview = self.transfer_service.complete_analysis(preparation)
             decisions = ()
             if preview.conflicts:
                 dialog = self.transfer_conflict_dialog(
@@ -114,11 +189,33 @@ class DataManagementController:
                 if dialog.exec() != QDialog.DialogCode.Accepted:
                     return
                 decisions = dialog.decisions()
-            result = self.transfer_service.execute(
-                preview, decisions, password=password
-            )
         except Exception as error:
             self._show_operation_error(error, "importar el paquet")
+            return
+        self._start_transfer_execution(preview, decisions, password)
+
+    def _start_transfer_execution(self, preview, decisions, password: str) -> None:
+        def operation(report_progress, cancel_requested):
+            return self.transfer_service.execute_with_worker_connection(
+                preview, decisions, password=password,
+                progress_callback=report_progress,
+                cancel_requested=cancel_requested,
+            )
+
+        self._transfer_execution.start(
+            operation,
+            title="Importació de transferència",
+            label="Important alumnes…",
+            maximum=preview.student_count,
+            on_success=self._transfer_execution_finished,
+            on_failure=self._transfer_execution_failed,
+            progress_label=lambda completed, total:
+                f"Important alumnes… {completed} de {total}",
+        )
+
+    def _transfer_execution_finished(self, result) -> None:
+        if result.cancelled:
+            self.window.show_status("Importació de transferència cancel·lada.", 5000)
             return
         self.on_changed()
         QMessageBox.information(
@@ -129,6 +226,12 @@ class DataManagementController:
             f"Importats com a nous: {result.imported_as_new}\n"
             f"Documents importats: {result.documents}",
         )
+
+    def _transfer_execution_failed(self, error: Exception) -> None:
+        self._show_operation_error(error, "importar el paquet")
+
+    def _transfer_analysis_failed(self, error: Exception) -> None:
+        self._show_operation_error(error, "analitzar el paquet")
 
     def _new_transfer_password(self) -> str | None:
         """Demana dues vegades la contrasenya d'un paquet nou."""
@@ -177,6 +280,7 @@ class DataManagementController:
         self.window.show_error(message)
 
     def export_template(self) -> None:
+        """Desa una plantilla Excel buida per a la importació massiva."""
         filename, _ = QFileDialog.getSaveFileName(
             self.window, "Desar plantilla", "plantilla_tutopy.xlsx",
             "Full de càlcul Excel (*.xlsx)",
@@ -191,6 +295,7 @@ class DataManagementController:
         self.window.show_status(f"Plantilla desada a {path}", 5000)
 
     def import_spreadsheet(self) -> None:
+        """Analitza un full de càlcul, resol conflictes i importa els alumnes."""
         filename, _ = QFileDialog.getOpenFileName(
             self.window, "Importar dades", "",
             "Fulls de càlcul (*.xlsx *.ods);;Excel (*.xlsx);;OpenDocument (*.ods)"
@@ -223,6 +328,7 @@ class DataManagementController:
         )
 
     def clear_all(self) -> None:
+        """Demana confirmació i elimina totes les dades de la instància."""
         dialog = self.clear_dialog(self.window)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return

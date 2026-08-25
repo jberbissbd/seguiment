@@ -1,9 +1,19 @@
+"""Pestanya de notes de seguiment: filtres, taula i accions d'edició.
+
+Mostra les notes de l'alumne seleccionat amb filtres per categoria, curs,
+dates i contingut (aquest darrer amb debounce de 180 ms), i emet
+`filters_changed` perquè el controlador torni a consultar les dades.
+"""
+
+from collections.abc import Sequence
+
 from PySide6.QtCore import QDate, QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QFormLayout, QHBoxLayout, QHeaderView,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import AcademicCourse, Category
 from tutopy.ui.resources import set_button_icon
 
 from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
@@ -13,11 +23,11 @@ class NotesTab(QWidget):
     """Taula i filtres de notes sense dependències de negoci."""
 
     filters_changed = Signal(dict)
-    create_requested = Signal()
     edit_requested = Signal(int)
     delete_requested = Signal(int)
 
     def __init__(self, parent=None):
+        """Construeix els filtres, els botons d'acció i la taula de notes."""
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -49,20 +59,16 @@ class NotesTab(QWidget):
         layout.addLayout(filters)
 
         actions = QHBoxLayout()
-        self.create_button = QPushButton("Nova nota")
-        self.create_button.setObjectName("primaryButton")
         self.edit_button = QPushButton("Editar")
         self.edit_button.setObjectName("secondaryButton")
         self.delete_button = QPushButton("Eliminar")
         self.delete_button.setObjectName("dangerButton")
         self.clear_button = QPushButton("Netejar filtres")
-        set_button_icon(self.create_button, "add")
         set_button_icon(self.edit_button, "edit")
         set_button_icon(self.delete_button, "delete")
         set_button_icon(self.clear_button, "clear")
         self.edit_button.setEnabled(False)
         self.delete_button.setEnabled(False)
-        actions.addWidget(self.create_button)
         actions.addWidget(self.edit_button)
         actions.addWidget(self.delete_button)
         actions.addStretch()
@@ -103,7 +109,6 @@ class NotesTab(QWidget):
         self.date_from.dateChanged.connect(self._emit_filters)
         self.date_to.dateChanged.connect(self._emit_filters)
         self.clear_button.clicked.connect(self.clear_filters)
-        self.create_button.clicked.connect(self.create_requested)
         self.edit_button.clicked.connect(self._request_edit)
         self.delete_button.clicked.connect(self._request_delete)
         self.table.itemSelectionChanged.connect(self._selection_changed)
@@ -111,7 +116,15 @@ class NotesTab(QWidget):
             lambda row, _column: self.edit_requested.emit(self._note_id_at(row))
         )
 
-    def set_options(self, categories, courses) -> None:
+    def set_options(
+        self, categories: Sequence[Category], courses: Sequence[AcademicCourse]
+    ) -> None:
+        """Omple els combos de categoria i curs sense disparar els filtres.
+
+        Args:
+            categories: Categories de nota disponibles (amb `name` i `id`).
+            courses: Cursos acadèmics disponibles (amb `course` i `id`).
+        """
         blockers = [
             QSignalBlocker(self.category_filter),
             QSignalBlocker(self.course_filter),
@@ -127,9 +140,11 @@ class NotesTab(QWidget):
         del blockers
 
     def set_student_context(self, student_id) -> None:
+        """Estableix l'alumne actual perquè `filters()` l'inclogui a les consultes."""
         self.current_student_id = student_id
 
     def filters(self) -> dict:
+        """Retorna els filtres actuals (alumne, categoria, curs, dates i contingut)."""
         result = {
             "student_id": self.current_student_id,
             "category_id": self.category_filter.currentData(),
@@ -145,6 +160,7 @@ class NotesTab(QWidget):
         return result
 
     def clear_filters(self) -> None:
+        """Restableix tots els filtres (incloent el cercador amb debounce) i els reemet."""
         self.category_filter.setCurrentIndex(0)
         self.course_filter.setCurrentIndex(0)
         self.date_from_enabled.setChecked(False)
@@ -181,6 +197,7 @@ class NotesTab(QWidget):
         self._selection_changed()
 
     def current_note_id(self):
+        """Retorna l'ID de la nota seleccionada, o `None` si no n'hi ha cap."""
         rows = self.table.selectionModel().selectedRows()
         return self._note_id_at(rows[0].row()) if rows else None
 

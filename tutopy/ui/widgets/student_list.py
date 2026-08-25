@@ -1,10 +1,19 @@
-from PySide6.QtCore import Qt, Signal
+"""Llista d'alumnes amb cerca, selecció i accions massives.
+
+Mostra els alumnes en una `QListWidget` amb files personalitzades
+(`StudentListItem`), permet cercar-los amb debounce i emet senyals per
+crear, editar, eliminar o exportar-ne, sense consultar cap servei
+directament.
+"""
+
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QPushButton, QVBoxLayout, QWidget,
+    QPushButton, QToolButton, QVBoxLayout, QWidget,
 )
 
-from tutopy.ui.resources import set_button_icon
+from tutopy.models.messaging import Student
+from tutopy.ui.resources import icon, set_button_icon
 
 from tutopy.ui.widgets.avatar import avatar_stylesheet, initials
 from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
@@ -13,9 +22,20 @@ from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 class StudentListItem(QWidget):
     """Representació reutilitzable d'un alumne dins la llista."""
 
-    def __init__(self, student, parent=None):
+    note_requested = Signal(int)
+
+    def __init__(self, student: Student, parent: QWidget | None = None):
+        """Construeix la fila (avatar, nom, grup i botó de nota) per a `student`.
+
+        Args:
+            student: Alumne a representar.
+            parent: Widget pare de Qt.
+        """
         super().__init__(parent)
         self.setMinimumHeight(52)
+        self._student_id = student.id
+        self._hovered = False
+        self._selected = False
         layout = QHBoxLayout(self)
         layout.setContentsMargins(8, 6, 8, 6)
         layout.setSpacing(10)
@@ -33,6 +53,17 @@ class StudentListItem(QWidget):
         text_layout.addWidget(self.name)
         text_layout.addWidget(self.group)
         layout.addLayout(text_layout, 1)
+        self.note_button = QToolButton()
+        self.note_button.setObjectName("studentNoteButton")
+        self.note_button.setIcon(icon("add.svg"))
+        self.note_button.setIconSize(QSize(16, 16))
+        self.note_button.setToolTip("Afegir una nota")
+        self.note_button.setAccessibleName("Afegir una nota")
+        self.note_button.setAutoRaise(True)
+        self.note_button.setFixedSize(34, 34)
+        self.note_button.clicked.connect(self._request_note)
+        self.note_button.hide()
+        layout.addWidget(self.note_button)
 
     def update_student(self, student) -> None:
         """Actualitza el contingut sense reconstruir l'arbre de widgets."""
@@ -40,10 +71,38 @@ class StudentListItem(QWidget):
         self.avatar.setStyleSheet(avatar_stylesheet(student.id, 18))
         self.name.setText(student.full_name)
         self.group.setText(student.group_name or "Sense grup")
+        self._student_id = student.id
+
+    def set_selected(self, selected: bool) -> None:
+        """Manté l'acció visible per a la fila activa, també sense ratolí."""
+        self._selected = selected
+        self._update_note_button()
+
+    def enterEvent(self, event) -> None:
+        """Mostra el botó de nota mentre el ratolí és sobre la fila."""
+        self._hovered = True
+        self._update_note_button()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        """Amaga el botó de nota quan el ratolí surt de la fila (si no és la seleccionada)."""
+        self._hovered = False
+        self._update_note_button()
+        super().leaveEvent(event)
+
+    def _update_note_button(self) -> None:
+        self.note_button.setVisible(self._hovered or self._selected)
+
+    def _request_note(self) -> None:
+        self.note_requested.emit(self._student_id)
 
 
 class StudentList(QFrame):
-    """Llista visual d'alumnes; no consulta directament cap servei."""
+    """Llista visual d'alumnes; no consulta directament cap servei.
+
+    Inclou un camp de cerca amb debounce de 180 ms (`DebouncedLineEdit`) que
+    emet `search_changed` un cop l'usuari deixa d'escriure.
+    """
 
     student_selected = Signal(int)
     edit_requested = Signal(int)
@@ -51,8 +110,11 @@ class StudentList(QFrame):
     search_changed = Signal(str)
     create_requested = Signal()
     batch_export_requested = Signal()
+    bulk_edit_requested = Signal()
+    note_create_requested = Signal(int)
 
     def __init__(self, parent=None):
+        """Construeix la capçalera d'accions, el cercador i la llista d'alumnes."""
         super().__init__(parent)
         self.setObjectName("panel")
         self.setMinimumWidth(300)
@@ -77,7 +139,13 @@ class StudentList(QFrame):
         self.batch_export_button.setObjectName("secondaryButton")
         self.batch_export_button.setEnabled(False)
         self.batch_export_button.clicked.connect(self.batch_export_requested)
+        self.bulk_edit_button = QPushButton("Edició massiva…")
+        set_button_icon(self.bulk_edit_button, "edit")
+        self.bulk_edit_button.setObjectName("secondaryButton")
+        self.bulk_edit_button.setEnabled(False)
+        self.bulk_edit_button.clicked.connect(self.bulk_edit_requested)
         header_actions.addWidget(self.create_button)
+        header_actions.addWidget(self.bulk_edit_button)
         header_actions.addWidget(self.batch_export_button)
         header.addLayout(header_actions)
         layout.addLayout(header)
@@ -139,6 +207,7 @@ class StudentList(QFrame):
                 item = QListWidgetItem()
                 item.setData(Qt.ItemDataRole.UserRole, student.id)
                 widget = StudentListItem(student)
+                widget.note_requested.connect(self._request_note)
                 size = widget.sizeHint()
                 size.setHeight(max(size.height(), 52))
                 item.setSizeHint(size)
@@ -150,8 +219,11 @@ class StudentList(QFrame):
         self.list_widget.setVisible(has_students)
         self.empty_label.setVisible(not has_students)
         self.batch_export_button.setEnabled(has_students)
+        self.bulk_edit_button.setEnabled(has_students)
+        self._update_selected_row()
 
     def current_student_id(self):
+        """Retorna l'ID de l'alumne seleccionat, o `None` si no n'hi ha cap."""
         item = self.list_widget.currentItem()
         return item.data(Qt.ItemDataRole.UserRole) if item else None
 
@@ -159,8 +231,25 @@ class StudentList(QFrame):
         has_selection = current is not None
         self.edit_button.setEnabled(has_selection)
         self.delete_button.setEnabled(has_selection)
+        self._update_selected_row()
         if current is not None:
             self.student_selected.emit(current.data(Qt.ItemDataRole.UserRole))
+
+    def _update_selected_row(self) -> None:
+        current = self.list_widget.currentItem()
+        for row in range(self.list_widget.count()):
+            item = self.list_widget.item(row)
+            widget = self.list_widget.itemWidget(item)
+            if widget is not None:
+                widget.set_selected(item is current)
+
+    def _request_note(self, student_id: int) -> None:
+        for row in range(self.list_widget.count()):
+            item = self.list_widget.item(row)
+            if item.data(Qt.ItemDataRole.UserRole) == student_id:
+                self.list_widget.setCurrentItem(item)
+                break
+        self.note_create_requested.emit(student_id)
 
     def _request_edit(self) -> None:
         student_id = self.current_student_id()

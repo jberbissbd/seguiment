@@ -1,13 +1,8 @@
+"""Generació de l'informe DOCX de les notes de seguiment d'un alumne."""
+
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-
-from docx import Document
-from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
-from docx.image.exceptions import UnrecognizedImageError
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.shared import Cm
 
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.note_dao import NoteDAO
@@ -23,32 +18,57 @@ class WordReportService:
 
     def __init__(self, students: StudentDAO, notes: NoteDAO,
                  courses: AcademicCourseDAO,
-                 configuration: ReportConfigurationService):
+                 configuration: ReportConfigurationService, batch_loader=None):
+        """Rep els repositoris de domini i, opcionalment, el carregador de lots."""
         self.students = students
         self.notes = notes
         self.courses = courses
         self.configuration = configuration
+        self.batch_loader = batch_loader
         self.validation = ValidationService()
 
     def export_student(self, student_id: int, destination: str | Path) -> Path:
+        """Exporta l'informe DOCX d'un únic alumne.
+
+        Args:
+            student_id: ID de l'alumne.
+            destination: Ruta de destinació (l'extensió es normalitza a `.docx`).
+
+        Returns:
+            Ruta final del fitxer generat.
+
+        Raises:
+            ValidationError: Si l'alumne no té notes per exportar.
+            EntityNotFoundError: Si l'alumne no existeix.
+        """
         student_id = self.validation.positive_id(student_id)
-        student, student_notes = self._student_and_notes(student_id)
+        data = self.prepare_students([student_id])
+        return self.export_prepared(student_id, destination, data)
+
+    def prepare_students(self, student_ids: list[int]):
+        """Carrega una vegada les dades compartides dels informes DOCX."""
+        return self.batch_loader.load(student_ids, include_header=True)
+
+    def export_prepared(self, student_id: int, destination: str | Path, data) -> Path:
+        """Genera un DOCX a partir d'un snapshot carregat prèviament."""
+        student, student_notes = self._student_and_notes(student_id, data)
         path = self._document_path(destination)
-        categories = self.configuration.get_ordered_categories()
-        document = self._new_document(student)
+        document = self._new_document(student, data.header_image)
         by_course = self._group_by_course(student_notes)
         self._add_courses(
-            document, by_course, categories, self._course_names(by_course)
+            document, by_course, data.categories,
+            self._course_names(by_course, data.course_names),
         )
         self._save_document(document, path)
         return path
 
-    def _student_and_notes(self, student_id: int):
-        student = self.students.get_by_id(student_id)
+    @staticmethod
+    def _student_and_notes(student_id: int, data):
+        student = data.students.get(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
         student_notes = sorted(
-            self.notes.get_by_student(student_id), key=lambda note: (note.date, note.id)
+            data.notes[student_id], key=lambda note: (note.date, note.id)
         )
         if not student_notes:
             raise ValidationError("L’alumne no té notes per exportar.")
@@ -70,7 +90,9 @@ class WordReportService:
             by_course[note.course_id].append(note)
         return by_course
 
-    def _new_document(self, student):
+    def _new_document(self, student, header_image):
+        from docx import Document
+
         document = Document()
         document.core_properties.title = self._safe_text(
             f"Informe de {student.filing_name}"
@@ -78,7 +100,7 @@ class WordReportService:
         document.core_properties.subject = "Notes de seguiment"
         self._configure_page(document)
         self._add_student_header(
-            document, student, self.configuration.get_header_image()
+            document, student, header_image
         )
         return document
 
@@ -120,10 +142,13 @@ class WordReportService:
                 run.bold = True
 
     def _add_note_row(self, table, note) -> None:
+        from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+        from docx.shared import Cm
+
         cells = table.add_row().cells
         cells[0].text = date.fromisoformat(note.date).strftime("%d/%m/%Y")
         cells[1].text = self._safe_text(note.content)
-        for cell, width in zip(cells, (Cm(3), Cm(14))):
+        for cell, width in zip(cells, (Cm(3), Cm(14)), strict=True):
             cell.width = width
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
 
@@ -138,6 +163,8 @@ class WordReportService:
     @staticmethod
     def _configure_page(document) -> None:
         """Configura un A4 amb marges de 2 cm."""
+        from docx.shared import Cm
+
         section = document.sections[0]
         section.page_width = Cm(21)
         section.page_height = Cm(29.7)
@@ -148,6 +175,9 @@ class WordReportService:
 
     def _add_student_header(self, document, student, header_image) -> None:
         """Afegeix el bloc inicial identificatiu i, opcionalment, un logotip."""
+        from docx.image.exceptions import UnrecognizedImageError
+        from docx.shared import Cm
+
         if header_image:
             image_path = Path(header_image)
             if not image_path.is_file():
@@ -168,6 +198,11 @@ class WordReportService:
     @staticmethod
     def _configure_table_width(table) -> None:
         """Fixa la taula al 100% dels 17 cm disponibles entre marges."""
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+        from docx.shared import Cm
+
         table.autofit = False
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         table.columns[0].width = Cm(3)
@@ -178,11 +213,11 @@ class WordReportService:
             table._tbl.tblPr.append(table_width)
         table_width.set(qn("w:type"), "pct")
         table_width.set(qn("w:w"), "5000")
-        for cell, width in zip(table.rows[0].cells, (Cm(3), Cm(14))):
+        for cell, width in zip(table.rows[0].cells, (Cm(3), Cm(14)), strict=True):
             cell.width = width
 
-    def _course_names(self, by_course) -> dict[int, str]:
-        names = {course.id: course.course for course in self.courses.get_all()}
+    @staticmethod
+    def _course_names(by_course, names) -> dict[int, str]:
         missing = set(by_course) - names.keys()
         if missing:
             raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")

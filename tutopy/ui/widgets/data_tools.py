@@ -1,3 +1,13 @@
+"""Panell d'eines de dades: importació massiva, transferència i trimestres.
+
+Agrupa les accions de manteniment de dades que no pertanyen a la fitxa d'un
+alumne concret: descàrrega de plantilla, importació de fulls de càlcul,
+transferència entre instàncies, configuració del logotip dels informes,
+dels trimestres i l'esborrat total de dades.
+"""
+
+from collections.abc import Iterable, Sequence
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView, QFrame, QHeaderView, QHBoxLayout, QLabel, QLayout,
@@ -9,6 +19,12 @@ from tutopy.ui.resources import set_button_icon
 
 
 class DataToolsView(QWidget):
+    """Panell d'importació, transferència, informes i esborrat de dades.
+
+    Cada botó del panell emet un senyal `*_requested`; aquesta vista no
+    executa cap operació de negoci per si mateixa.
+    """
+
     template_requested = Signal()
     import_requested = Signal()
     clear_requested = Signal()
@@ -23,6 +39,7 @@ class DataToolsView(QWidget):
     term_delete_requested = Signal(int)
 
     def __init__(self, parent=None):
+        """Construeix els panells d'importació, transferència, informes i esborrat."""
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -203,7 +220,12 @@ class DataToolsView(QWidget):
         self.term_delete_button.clicked.connect(self._request_term_delete)
         self.term_table.itemSelectionChanged.connect(self._term_selection_changed)
 
-    def set_term_configurations(self, rows) -> None:
+    def set_term_configurations(self, rows: Iterable[tuple[int, Sequence]]) -> None:
+        """Omple la taula de trimestres.
+
+        Args:
+            rows: Iterable de tuples `(id_configuració, valors_de_columna)`.
+        """
         self.term_table.setRowCount(0)
         for configuration_id, values in rows:
             row = self.term_table.rowCount()
@@ -216,10 +238,16 @@ class DataToolsView(QWidget):
         self._term_selection_changed()
 
     def set_report_logo(self, filename: str | None) -> None:
+        """Actualitza l'etiqueta del logotip i habilita el botó d'eliminar-lo.
+
+        Args:
+            filename: Nom del fitxer seleccionat, o `None` si no n'hi ha.
+        """
         self.report_logo_label.setText(f"Logotip: {filename}" if filename else "Logotip: cap")
         self.report_logo_remove_button.setEnabled(bool(filename))
 
     def current_term_configuration_id(self):
+        """Retorna l'ID de la configuració de trimestres seleccionada, o `None`."""
         rows = self.term_table.selectionModel().selectedRows()
         if not rows:
             return None

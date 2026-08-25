@@ -1,7 +1,7 @@
 """Controls de text que coalesceixen canvis consecutius de l'usuari."""
 
 from PySide6.QtCore import QTimer, Signal
-from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QLineEdit, QWidget
 
 
 class DebouncedLineEdit(QLineEdit):
@@ -13,7 +13,14 @@ class DebouncedLineEdit(QLineEdit):
 
     debounced_text_changed = Signal(str)
 
-    def __init__(self, parent=None, delay_ms: int = 180):
+    def __init__(self, parent: QWidget | None = None, delay_ms: int = 180):
+        """Configura el temporitzador de debounce.
+
+        Args:
+            parent: Widget pare de Qt.
+            delay_ms: Mil·lisegons d'inactivitat abans d'emetre
+                `debounced_text_changed` (180 ms per defecte).
+        """
         super().__init__(parent)
         self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)

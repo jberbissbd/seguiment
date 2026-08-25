@@ -1,11 +1,15 @@
+"""DAO per a l'històric de grups dels alumnes."""
+
 from typing import Optional
 from tutopy.models.messaging import StudentGroupHistory, StudentGroupHistoryNew
+from ._batch import grouped_by_student
 
 
 class StudentGroupHistoryDAO:
     """DAO per gestionar l'històric de grups d'alumnes."""
 
     def __init__(self, conn):
+        """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
 
     def create(self, data: StudentGroupHistoryNew) -> StudentGroupHistory:
@@ -56,6 +60,20 @@ class StudentGroupHistoryDAO:
             (student_id,)
         ).fetchall()
         return [StudentGroupHistory(**row) for row in rows]
+
+    def get_by_students(
+        self, student_ids: list[int]
+    ) -> dict[int, list[StudentGroupHistory]]:
+        """Retorna els historials agrupats per alumne en lectures per lots."""
+        return grouped_by_student(
+            self.conn,
+            student_ids,
+            "SELECT id, student_id, group_name, academic_course_id, "
+            "start_date, end_date FROM student_group_history "
+            "WHERE student_id IN ({placeholders}) "
+            "ORDER BY student_id, start_date",
+            StudentGroupHistory,
+        )
 
     def update(self, history: StudentGroupHistory):
         """Actualitza un registre d'històric (normalment per posar end_date)."""

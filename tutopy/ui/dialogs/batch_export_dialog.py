@@ -1,24 +1,41 @@
+"""Diàleg per exportar informes de diversos alumnes alhora."""
+
+from collections.abc import Sequence
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
-    QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
-    QVBoxLayout,
+    QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
+    QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Category, Student
 from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
+from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
 
 class BatchExportDialog(QDialog):
     """Selecciona diversos alumnes i les opcions comunes d'exportació."""
 
-    def __init__(self, students, categories, parent=None):
+    def __init__(
+        self, students: Sequence[Student], categories: Sequence[Category],
+        parent: QWidget | None = None,
+    ):
+        """Construeix el diàleg amb els alumnes i categories disponibles.
+
+        Args:
+            students: Alumnes que es poden marcar per exportar, amb cerca per nom,
+                cognoms o grup mitjançant un camp de cerca amb `debounce`.
+            categories: Categories disponibles, per definir-ne l'ordre a l'informe.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle("Exportar diversos alumnes")
         self.setMinimumSize(560, 620)
         layout = QVBoxLayout(self)
 
         layout.addWidget(QLabel("Selecciona els alumnes que vols exportar."))
-        self.search_input = QLineEdit()
+        self.search_input = DebouncedLineEdit()
         self.search_input.setPlaceholderText("Cercar per nom, cognoms o grup…")
         self.search_input.setClearButtonEnabled(True)
         layout.addWidget(self.search_input)
@@ -87,13 +104,14 @@ class BatchExportDialog(QDialog):
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
 
-        self.search_input.textChanged.connect(self._filter_students)
+        self.search_input.debounced_text_changed.connect(self._filter_students)
         self.select_visible_button.clicked.connect(self._select_visible)
         self.clear_button.clicked.connect(self._clear_selection)
         self.student_list.itemChanged.connect(self._update_selection_label)
         self.format_input.currentIndexChanged.connect(self._update_options)
 
     def student_ids(self) -> list[int]:
+        """Retorna els identificadors dels alumnes marcats."""
         return [
             item.data(Qt.ItemDataRole.UserRole)
             for row in range(self.student_list.count())
@@ -101,12 +119,14 @@ class BatchExportDialog(QDialog):
         ]
 
     def category_order(self) -> list[int]:
+        """Retorna els identificadors de categoria en l'ordre triat per l'usuari."""
         return [
             self.category_list.item(row).data(Qt.ItemDataRole.UserRole)
             for row in range(self.category_list.count())
         ]
 
     def export_format(self) -> str:
+        """Retorna el format d'exportació seleccionat (`xlsx`, `docx`, `odt` o `pdf`)."""
         return self.format_input.currentData()
 
     def _filter_students(self, query: str) -> None:

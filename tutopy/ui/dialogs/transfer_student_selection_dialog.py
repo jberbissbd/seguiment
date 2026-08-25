@@ -1,25 +1,36 @@
 """Diàleg de selecció múltiple d'alumnes per a una transferència."""
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QPushButton, QVBoxLayout,
+    QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QListWidget,
+    QListWidgetItem, QPushButton, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import Student
 from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
+from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
 
 class TransferStudentSelectionDialog(QDialog):
     """Permet cercar i marcar un o diversos alumnes, mostrant-ne el grup."""
 
-    def __init__(self, students, parent=None):
+    def __init__(self, students: Sequence[Student], parent: QWidget | None = None):
+        """Construeix el diàleg amb la llista d'alumnes marcables.
+
+        Args:
+            students: Alumnes que es poden marcar per transferir, amb cerca per nom,
+                cognoms o grup mitjançant un camp de cerca amb `debounce`.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle("Seleccionar alumnes per exportar")
         self.setMinimumSize(540, 480)
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Selecciona els alumnes que vols transferir."))
 
-        self.search_input = QLineEdit()
+        self.search_input = DebouncedLineEdit()
         self.search_input.setPlaceholderText("Cercar per nom, cognoms o grup…")
         self.search_input.setClearButtonEnabled(True)
         layout.addWidget(self.search_input)
@@ -66,7 +77,7 @@ class TransferStudentSelectionDialog(QDialog):
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
 
-        self.search_input.textChanged.connect(self._filter_students)
+        self.search_input.debounced_text_changed.connect(self._filter_students)
         self.select_visible_button.clicked.connect(self._select_visible)
         self.clear_button.clicked.connect(self._clear_selection)
         self.student_list.itemChanged.connect(self._update_selection_label)

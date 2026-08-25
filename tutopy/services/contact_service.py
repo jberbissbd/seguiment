@@ -1,3 +1,8 @@
+"""Servei de gestió dels contactes associats als alumnes."""
+
+import dataclasses
+from typing import cast
+
 from tutopy.database.daos.contact_dao import ContactDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.models.messaging import Contact, ContactNew
@@ -10,15 +15,18 @@ class ContactService:
 
     def __init__(self, contact_dao: ContactDAO, student_dao: StudentDAO,
         validation_service: ValidationService = None):
+        """Rep el DAO de contactes, el d'alumnes i el servei de validació."""
         self.contact_dao = contact_dao
         self.student_dao = student_dao
         self.validation_service = validation_service or ValidationService()
 
     def get_by_student(self, student_id: int) -> list[Contact]:
+        """Retorna els contactes d'un alumne existent."""
         self._require_student(student_id)
         return self.contact_dao.get_by_student(student_id)
 
     def get_by_id(self, contact_id: int) -> Contact:
+        """Retorna un contacte pel seu ID."""
         self.validation_service.positive_id(contact_id)
         contact = self.contact_dao.get_by_id(contact_id)
         if contact is None:
@@ -26,25 +34,27 @@ class ContactService:
         return contact
 
     def create(self, data: ContactNew) -> Contact:
+        """Valida i crea un nou contacte per a un alumne existent."""
         self._require_student(data.student_id)
         prepared = self._prepare(data)
         return self.contact_dao.create(prepared)
 
     def update(self, contact: Contact) -> Contact:
+        """Valida i actualitza les dades d'un contacte existent."""
         existing = self.get_by_id(contact.id)
         prepared = self._prepare(ContactNew(
             existing.student_id, contact.name, contact.description,
             contact.phone, contact.email,
         ))
-        contact.student_id = existing.student_id
-        contact.name = prepared.name
-        contact.description = prepared.description
-        contact.phone = prepared.phone
-        contact.email = prepared.email
-        self.contact_dao.update(contact)
-        return contact
+        updated = cast(Contact, dataclasses.replace(
+            existing, name=prepared.name, description=prepared.description,
+            phone=prepared.phone, email=prepared.email,
+        ))
+        self.contact_dao.update(updated)
+        return updated
 
     def delete(self, contact_id: int) -> None:
+        """Elimina un contacte pel seu ID."""
         self.get_by_id(contact_id)
         self.contact_dao.delete(contact_id)
 

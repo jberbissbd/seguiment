@@ -1,10 +1,15 @@
+"""Controlador del CRUD d'alumnes, incloent l'edició massiva en segon pla."""
+
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QMessageBox, QProgressDialog
 
 from tutopy.models.messaging import Student, StudentNew
+from tutopy.models.student_bulk import StudentBulkUpdate
 from tutopy.services.exceptions import DomainError
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.student_dialog import StudentDialog
+from tutopy.ui.dialogs.bulk_student_edit_dialog import BulkStudentEditDialog
+from tutopy.ui.background_task import BackgroundOperationPresenter, BackgroundTaskRunner
 from tutopy.ui.main_window import MainWindow
 
 
@@ -12,15 +17,25 @@ class StudentController:
     """Gestiona el CRUD d'alumnes entre la vista i `StudentService`."""
 
     def __init__(self, window: MainWindow, service: StudentService,
-        dialog_factory=StudentDialog, confirm_delete=None, error_handler=None):
+        dialog_factory=StudentDialog, confirm_delete=None, error_handler=None,
+        bulk_dialog_factory=BulkStudentEditDialog, task_runner=None,
+        progress_dialog=QProgressDialog):
+        """Desa les dependències i connecta les accions d'alumnes de la vista."""
         self.window = window
         self.service = service
         self.dialog_factory = dialog_factory
         self.confirm_delete = confirm_delete or window.confirm_student_deletion
         self.error_handler = error_handler or window.show_error
+        self.bulk_dialog_factory = bulk_dialog_factory
+        self.task_runner = task_runner or BackgroundTaskRunner()
+        self.progress_dialog = progress_dialog
+        self._bulk_edit = BackgroundOperationPresenter(
+            self.window, self.task_runner, self.progress_dialog
+        )
         self._connect_signals()
 
     def start(self) -> None:
+        """Carrega la llista d'alumnes a la vista."""
         self.refresh()
 
     def _connect_signals(self) -> None:
@@ -30,19 +45,32 @@ class StudentController:
         view.create_requested.connect(self.create)
         view.edit_requested.connect(self.edit)
         view.delete_requested.connect(self.delete)
+        view.bulk_edit_requested.connect(self.bulk_edit)
 
     def refresh(self) -> None:
+        """Recarrega tots els alumnes a la llista i n'actualitza el comptador."""
         students = self.service.get_all()
         self.window.student_list.set_students(students)
         self.window.show_status(f"{len(students)} alumnes")
 
     def search(self, query: str) -> None:
+        """Filtra la llista d'alumnes segons el text de cerca.
+
+        Args:
+            query: Text de cerca introduït per l'usuari.
+        """
         self.window.student_list.set_students(self.service.search(query))
 
     def select(self, student_id: int) -> None:
+        """Mostra el detall de l'alumne seleccionat.
+
+        Args:
+            student_id: Identificador de l'alumne a mostrar.
+        """
         self.window.student_detail.show_student(self.service.get_by_id(student_id))
 
     def create(self) -> None:
+        """Obre el diàleg de creació d'alumne i el desa si s'accepta."""
         dialog = self.dialog_factory(
             parent=self.window, groups=self.service.get_groups()
         )
@@ -59,6 +87,11 @@ class StudentController:
         self.window.show_status("Alumne creat correctament")
 
     def edit(self, student_id: int) -> None:
+        """Obre el diàleg d'edició per a `student_id` i desa els canvis si s'accepten.
+
+        Args:
+            student_id: Identificador de l'alumne a editar.
+        """
         student = self.service.get_by_id(student_id)
         if student is None:
             return
@@ -85,6 +118,11 @@ class StudentController:
         self.window.show_status("Alumne actualitzat correctament")
 
     def delete(self, student_id: int) -> None:
+        """Elimina `student_id` prèvia confirmació de l'usuari.
+
+        Args:
+            student_id: Identificador de l'alumne a eliminar.
+        """
         student = self.service.get_by_id(student_id)
         if student is None or not self.confirm_delete(student.full_name):
             return
@@ -96,6 +134,55 @@ class StudentController:
         self.window.student_detail.clear()
         self.refresh()
         self.window.show_status("Alumne eliminat correctament")
+
+    def bulk_edit(self) -> None:
+        """Recull i aplica una edició massiva sense bloquejar la interfície."""
+        if self._bulk_edit.is_running():
+            self.window.show_status("Ja hi ha una edició massiva en curs.")
+            return
+        students = self.service.get_all()
+        if not students:
+            return
+        dialog = self.bulk_dialog_factory(
+            students, self.service.get_groups(), parent=self.window
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        changes = [StudentBulkUpdate(**item) for item in dialog.changes()]
+        change_date = dialog.effective_date()
+
+        def operation(report_progress, cancel_requested):
+            return self.service.bulk_update_with_worker_connection(
+                changes, change_date, progress_callback=report_progress,
+                cancel_requested=cancel_requested,
+            )
+
+        self._bulk_edit.start(
+            operation,
+            title="Edició massiva d’alumnes",
+            label="Actualitzant alumnes…",
+            maximum=len(changes),
+            on_success=self._bulk_edit_finished,
+            on_failure=self._bulk_edit_failed,
+            progress_label=lambda completed, total:
+                f"Actualitzant alumnes… {completed} de {total}",
+        )
+
+    def _bulk_edit_finished(self, result) -> None:
+        if result.cancelled:
+            self.window.show_status("Edició massiva cancel·lada.", 5000)
+            return
+        self.window.student_detail.clear()
+        self.refresh()
+        QMessageBox.information(
+            self.window, "Edició massiva completada",
+            f"Alumnes actualitzats: {result.updated}\n"
+            f"Sense canvis: {result.unchanged}\n"
+            f"Canvis de grup: {result.group_changes}",
+        )
+
+    def _bulk_edit_failed(self, error: Exception) -> None:
+        self.error_handler(str(error))
 
     def _select_in_list(self, student_id: int) -> None:
         for row in range(self.window.student_list.list_widget.count()):

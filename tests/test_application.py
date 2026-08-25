@@ -1,5 +1,8 @@
-import pytest
+import subprocess
+import sys
 from types import SimpleNamespace
+
+import pytest
 
 from tutopy.application import ServiceContainer, create_services
 from tutopy.database.database import Database
@@ -8,6 +11,7 @@ from tutopy.services.student_service import StudentService
 from tutopy.services.report_configuration_service import ReportConfigurationService
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
 from tutopy.services.word_report_service import WordReportService
+from tutopy.services.report_file_service import ReportFileService
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.statistics_service import StatisticsService
 from tutopy.main import ControllerContainer, create_controllers
@@ -31,6 +35,7 @@ def test_create_services_compon_la_capa_de_negoci(tmp_path):
         assert isinstance(services.report_configuration, ReportConfigurationService)
         assert isinstance(services.spreadsheet_reports, SpreadsheetReportService)
         assert isinstance(services.word_reports, WordReportService)
+        assert isinstance(services.report_files, ReportFileService)
         assert isinstance(services.student_exports, StudentExportService)
         assert isinstance(services.statistics, StatisticsService)
         assert not hasattr(services, "database")
@@ -42,6 +47,15 @@ def test_main_es_importable_sense_executar_la_ui():
     from tutopy.main import main
 
     assert callable(main)
+
+
+def test_application_no_carrega_backends_de_documents_a_l_arrencada():
+    code = (
+        "import sys; import tutopy.application; "
+        "assert not ({'openpyxl', 'docx', 'odf', 'reportlab'} & sys.modules.keys())"
+    )
+
+    subprocess.run([sys.executable, "-c", code], check=True)
 
 
 def test_controller_container_inicia_nomes_controladors_visibles():

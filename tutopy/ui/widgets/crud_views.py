@@ -1,3 +1,13 @@
+"""Vistes CRUD genèriques (llista i taula) reutilitzades per diverses pestanyes.
+
+Ofereix un patró comú de "crear / editar / eliminar" sobre una `QListWidget`
+o una `QTableWidget`, sense conèixer el tipus d'entitat concret: qui les fa
+servir només ha de proporcionar les files a mostrar i escoltar els senyals
+`create_requested`, `edit_requested` i `delete_requested`.
+"""
+
+from collections.abc import Iterable, Sequence
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QTableWidget,
@@ -8,11 +18,19 @@ from tutopy.ui.resources import set_button_icon
 
 
 class CrudActions(QWidget):
+    """Fila de botons "crear / editar / eliminar" compartida per les vistes CRUD."""
+
     create_requested = Signal()
     edit_requested = Signal(int)
     delete_requested = Signal(int)
 
-    def __init__(self, create_text="Nou", parent=None):
+    def __init__(self, create_text: str = "Nou", parent: QWidget | None = None):
+        """Crea els tres botons d'acció, amb editar/eliminar deshabilitats.
+
+        Args:
+            create_text: Text del botó de creació (p. ex. "Nou alumne").
+            parent: Widget pare de Qt.
+        """
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -34,16 +52,25 @@ class CrudActions(QWidget):
         layout.addStretch()
 
     def set_selection_enabled(self, enabled: bool) -> None:
+        """Activa o desactiva els botons d'editar i eliminar."""
         self.edit_button.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
 
 
 class CrudListView(QWidget):
+    """CRUD genèric sobre una `QListWidget` d'una sola columna de text."""
+
     create_requested = Signal()
     edit_requested = Signal(int)
     delete_requested = Signal(int)
 
-    def __init__(self, create_text="Nou", parent=None):
+    def __init__(self, create_text: str = "Nou", parent: QWidget | None = None):
+        """Munta la capçalera d'accions i la llista, connectant els senyals.
+
+        Args:
+            create_text: Text del botó de creació.
+            parent: Widget pare de Qt.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -59,7 +86,12 @@ class CrudListView(QWidget):
             lambda item: self.edit_requested.emit(item.data(Qt.ItemDataRole.UserRole))
         )
 
-    def set_items(self, items) -> None:
+    def set_items(self, items: Iterable[tuple[int, str]]) -> None:
+        """Reconstrueix la llista i conserva la selecció si l'ID hi segueix.
+
+        Args:
+            items: Iterable de tuples `(id, text)`.
+        """
         selected_id = self.current_id()
         self.list_widget.clear()
         for item_id, text in items:
@@ -71,6 +103,7 @@ class CrudListView(QWidget):
         self._selection_changed()
 
     def current_id(self):
+        """Retorna l'ID de l'element seleccionat, o `None` si no n'hi ha cap."""
         item = self.list_widget.currentItem()
         return item.data(Qt.ItemDataRole.UserRole) if item else None
 
@@ -87,11 +120,23 @@ class CrudListView(QWidget):
 
 
 class CrudTableView(QWidget):
+    """CRUD genèric sobre una `QTableWidget` de columnes configurables."""
+
     create_requested = Signal()
     edit_requested = Signal(int)
     delete_requested = Signal(int)
 
-    def __init__(self, headers, create_text="Nou", parent=None):
+    def __init__(
+        self, headers: Sequence[str], create_text: str = "Nou",
+        parent: QWidget | None = None,
+    ):
+        """Munta la capçalera d'accions i la taula, connectant els senyals.
+
+        Args:
+            headers: Títols de les columnes de la taula.
+            create_text: Text del botó de creació.
+            parent: Widget pare de Qt.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -114,7 +159,12 @@ class CrudTableView(QWidget):
             lambda row, _column: self.edit_requested.emit(self._id_at(row))
         )
 
-    def set_rows(self, rows) -> None:
+    def set_rows(self, rows: Iterable[tuple[int, Sequence]]) -> None:
+        """Reconstrueix la taula i conserva la selecció si l'ID hi segueix.
+
+        Args:
+            rows: Iterable de tuples `(id, valors_de_columna)`.
+        """
         selected_id = self.current_id()
         self.table.setRowCount(0)
         for entity_id, values in rows:
@@ -130,6 +180,7 @@ class CrudTableView(QWidget):
         self._selection_changed()
 
     def current_id(self):
+        """Retorna l'ID de la fila seleccionada, o `None` si no n'hi ha cap."""
         rows = self.table.selectionModel().selectedRows()
         return self._id_at(rows[0].row()) if rows else None
 

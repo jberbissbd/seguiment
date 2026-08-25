@@ -114,3 +114,31 @@ def test_noms_de_carpeta_son_segurs_i_disponibles(tmp_path):
     original.mkdir()
     (tmp_path / "Informe (2)").mkdir()
     assert StudentExportService._available_path(original).name == "Informe (3)"
+
+
+def test_exportacio_preparada_es_pot_cancel_lar_entre_alumnes(db, tmp_path):
+    services = create_services(db)
+    category = services.categories.create(CategoryNew("Seguiment"))
+    student_ids = []
+    for index in range(3):
+        student = services.students.create(
+            StudentNew(f"Nom {index}", "Cognom", "1A")
+        )
+        services.notes.create(
+            NoteNew(student.id, category.id, "2026-02-01", 0, "Seguiment")
+        )
+        student_ids.append(student.id)
+    preparation = services.student_exports.prepare_students_export(
+        student_ids, tmp_path / "lots", "xlsx"
+    )
+    progress = []
+
+    result = services.student_exports.export_prepared(
+        preparation,
+        progress_callback=lambda completed, total: progress.append((completed, total)),
+        cancel_requested=lambda: bool(progress),
+    )
+
+    assert result.cancelled is True
+    assert result.exported == 1
+    assert progress == [(1, 3)]

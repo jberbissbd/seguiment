@@ -10,6 +10,26 @@ from tutopy.models.messaging import (
     StudentAnnotation, StudentAnnotationNew,
     StudentDocument, StudentDocumentNew
 )
+from tutopy.database.database import Database
+
+
+def test_database_assigna_la_versio_actual_de_l_esquema(db):
+    version = db.conn.execute("PRAGMA user_version").fetchone()[0]
+
+    assert version == Database.SCHEMA_VERSION
+
+
+def test_database_rebutja_un_esquema_mes_nou(tmp_path):
+    path = tmp_path / "future.db"
+    connection = sqlite3.connect(path)
+    connection.execute(f"PRAGMA user_version = {Database.SCHEMA_VERSION + 1}")
+    connection.close()
+
+    database = Database(str(path))
+    with pytest.raises(RuntimeError, match="versió més nova"):
+        database.connect()
+
+    assert database.conn is None
 
 
 class TestDatabasePaths:
@@ -727,3 +747,33 @@ def test_transaccio_exterior_agrupa_commits_dels_daos(db):
         if statement.strip().upper() in {"BEGIN", "COMMIT"}
     ]
     assert transaction_statements == ["BEGIN", "COMMIT"]
+
+
+def test_transaccio_niuada_desfa_nomes_els_canvis_interiors(db):
+    with db.transaction():
+        db.categories.create(CategoryNew("Exterior abans"))
+        try:
+            with db.transaction():
+                db.categories.create(CategoryNew("Interior"))
+                raise RuntimeError("error interior")
+        except RuntimeError:
+            pass
+        db.categories.create(CategoryNew("Exterior després"))
+
+    assert [category.name for category in db.categories.get_all()] == [
+        "Exterior abans", "Exterior després",
+    ]
+
+
+def test_rollback_exterior_desfa_savepoints_ja_confirmats(db):
+    def commit_and_fail() -> None:
+        with db.transaction():
+            db.categories.create(CategoryNew("Exterior"))
+            with db.transaction():
+                db.categories.create(CategoryNew("Interior confirmat"))
+            raise RuntimeError("error exterior")
+
+    with pytest.raises(RuntimeError, match="error exterior"):
+        commit_and_fail()
+
+    assert db.categories.get_all() == []

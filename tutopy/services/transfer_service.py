@@ -8,6 +8,7 @@ import os
 import tempfile
 import uuid
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
@@ -22,14 +23,31 @@ from tutopy.models.messaging import (
     StudentNew,
 )
 from tutopy.models.transfer import (
-    TransferAction, TransferConflict, TransferDecision, TransferPreview,
-    TransferResult,
+    TransferAction, TransferAnalysisPreparation, TransferConflict,
+    TransferDecision, TransferPreview, TransferResult,
 )
 from tutopy.services.exceptions import (
     EntityNotFoundError, TransferAuthenticationError, TransferFormatError,
     ValidationError,
 )
 from tutopy.services.validation_service import ValidationService
+
+
+@dataclass(frozen=True, slots=True)
+class TransferExportPreparation:
+    """Snapshot d'una transferència que ja no requereix lectures SQLite."""
+
+    student_ids: tuple[int, ...]
+    destination: Path
+    password: str
+    students_by_id: dict
+    categories: dict[int, str]
+    courses: dict[int, str]
+    related: dict
+
+
+class _TransferExecutionCancelled(RuntimeError):
+    """Senyal intern per provocar rollback davant una cancel·lació."""
 
 
 class TransferService:
@@ -55,7 +73,9 @@ class TransferService:
     def __init__(
         self, students, notes, categories, courses, contacts, annotations,
         documents, history, document_service, transaction_factory,
+        worker_service_factory=None,
     ):
+        """Injecta els DAOs, el servei de documents i la factoria de transaccions."""
         self.students = students
         self.notes = notes
         self.categories = categories
@@ -66,6 +86,7 @@ class TransferService:
         self.history = history
         self.document_service = document_service
         self.transaction_factory = transaction_factory
+        self.worker_service_factory = worker_service_factory
         self.validation = ValidationService()
 
     def export_student(
@@ -73,8 +94,6 @@ class TransferService:
     ) -> Path:
         """Exporta un únic alumne i totes les seves dades relacionades."""
         student_id = self.validation.positive_id(student_id)
-        if self.students.get_by_id(student_id) is None:
-            raise EntityNotFoundError("L’alumne seleccionat no existeix.")
         return self.export_students([student_id], destination, password)
 
     def export_all(self, destination: str | Path, password: str) -> Path:
@@ -87,6 +106,13 @@ class TransferService:
         self, student_ids: list[int], destination: str | Path, password: str,
     ) -> Path:
         """Construeix un paquet `.tpy` amb els alumnes indicats."""
+        preparation = self.prepare_export(student_ids, destination, password)
+        return self.export_prepared(preparation)
+
+    def prepare_export(
+        self, student_ids: list[int], destination: str | Path, password: str,
+    ) -> TransferExportPreparation:
+        """Valida i carrega totes les dades abans d'iniciar un treballador."""
         password = self._validate_password(password)
         if not student_ids:
             raise ValidationError("No hi ha alumnes per exportar.")
@@ -98,18 +124,38 @@ class TransferService:
         if not path.name:
             raise ValidationError("Cal indicar un fitxer de destinació.")
 
+        validated_ids = [self.validation.positive_id(item) for item in student_ids]
+        students_by_id = self.students.get_by_ids(validated_ids)
+        missing_ids = [item for item in validated_ids if item not in students_by_id]
+        if missing_ids:
+            raise EntityNotFoundError(
+                f"L’alumne amb ID {missing_ids[0]} no existeix."
+            )
         categories = {item.id: item.name for item in self.categories.get_all()}
         courses = {item.id: item.course for item in self.courses.get_all()}
+        related = self._related_by_student(validated_ids)
+        return TransferExportPreparation(
+            tuple(validated_ids), path, password, students_by_id,
+            categories, courses, related,
+        )
+
+    def export_prepared(
+        self, preparation: TransferExportPreparation,
+        progress_callback=None, cancel_requested=None,
+    ) -> Path | None:
+        """Comprimeix i xifra un snapshot sense consultar SQLite."""
         payload = []
         document_sources: list[tuple[Path, str]] = []
         checksums = {}
-        for student_id in student_ids:
-            student = self.students.get_by_id(
-                self.validation.positive_id(student_id)
+        total = len(preparation.student_ids)
+        for completed, student_id in enumerate(preparation.student_ids, 1):
+            if cancel_requested is not None and cancel_requested():
+                return None
+            student = preparation.students_by_id[student_id]
+            item, sources = self._export_student_data(
+                student, preparation.categories, preparation.courses,
+                preparation.related,
             )
-            if student is None:
-                raise EntityNotFoundError(f"L’alumne amb ID {student_id} no existeix.")
-            item, sources = self._export_student_data(student, categories, courses)
             payload.append(item)
             for source, archive_name in sources:
                 digest = self._sha256_file(source)
@@ -118,6 +164,11 @@ class TransferService:
                 item["documents_by_path"][archive_name]["size"] = source.stat().st_size
                 document_sources.append((source, archive_name))
             item["documents"] = list(item.pop("documents_by_path").values())
+            if progress_callback is not None:
+                progress_callback(completed, total)
+
+        if cancel_requested is not None and cancel_requested():
+            return None
 
         manifest = {
             "format": self.FORMAT,
@@ -129,7 +180,7 @@ class TransferService:
         }
         data = {"students": payload}
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)
+            preparation.destination.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.TemporaryDirectory(prefix="tutopy-export-") as temporary:
                 plain_path = Path(temporary) / "payload.zip"
                 with ZipFile(plain_path, "w", compression=ZIP_DEFLATED) as archive:
@@ -138,21 +189,39 @@ class TransferService:
                     archive.writestr("checksums.json", self._json(checksums))
                     for source, archive_name in document_sources:
                         archive.write(source, archive_name)
-                self._encrypt_file(plain_path, path, password)
+                self._encrypt_file(
+                    plain_path, preparation.destination, preparation.password
+                )
         except OSError as error:
             reason = error.strerror or str(error)
             raise ValidationError(
                 f"No s’ha pogut crear el paquet de transferència: {reason}."
             ) from error
-        return path
+        return preparation.destination
 
     def analyze(self, source: str | Path, password: str) -> TransferPreview:
         """Valida completament un paquet sense modificar dades locals."""
+        return self.complete_analysis(self.prepare_analysis(source, password))
+
+    def prepare_analysis(
+        self, source: str | Path, password: str
+    ) -> TransferAnalysisPreparation:
+        """Desxifra i valida el paquet sense consultar la base de dades."""
         path, data = self._read_package(source, password, verify_documents=True)
+        return TransferAnalysisPreparation(path, data)
+
+    def complete_analysis(
+        self, preparation: TransferAnalysisPreparation
+    ) -> TransferPreview:
+        """Completa al fil de la base de dades la detecció de conflictes UUID."""
+        data = preparation.data
+        local_by_uuid = self.students.get_by_uuids(
+            [item["uuid"] for item in data["students"]]
+        )
         conflicts = []
         note_count = document_count = total_bytes = 0
         for item in data["students"]:
-            local = self.students.get_by_uuid(item["uuid"])
+            local = local_by_uuid.get(item["uuid"])
             if local:
                 conflicts.append(TransferConflict(
                     item["uuid"], self._full_name(item), local.full_name,
@@ -161,7 +230,7 @@ class TransferService:
             document_count += len(item["documents"])
             total_bytes += sum(document["size"] for document in item["documents"])
         return TransferPreview(
-            path, len(data["students"]), note_count, document_count,
+            preparation.source, len(data["students"]), note_count, document_count,
             total_bytes, tuple(conflicts),
         )
 
@@ -169,15 +238,51 @@ class TransferService:
         self, preview: TransferPreview,
         decisions: tuple[TransferDecision, ...] = (),
         password: str = "",
+        progress_callback=None,
+        cancel_requested=None,
     ) -> TransferResult:
         """Importa el paquet de manera transaccional segons les decisions donades."""
+        if cancel_requested is not None and cancel_requested():
+            return TransferResult(0, 0, 0, 0, 0, cancelled=True)
         path, data = self._read_package(
             preview.source, password, verify_documents=True
         )
+        local_by_uuid = self.students.get_by_uuids(
+            [item["uuid"] for item in data["students"]]
+        )
+        decision_by_uuid = self._validate_decisions(data, decisions, local_by_uuid)
+
+        new_file_paths: list[Path] = []
+        old_file_paths: list[Path] = []
+        try:
+            with tempfile.TemporaryDirectory(prefix="tutopy-transfer-") as temporary:
+                temporary_path = Path(temporary)
+                self._extract_documents(
+                    path, password, data, temporary_path, cancel_requested
+                )
+                try:
+                    with self.transaction_factory():
+                        counts = self._import_students(
+                            data, decision_by_uuid, local_by_uuid, temporary_path,
+                            new_file_paths, old_file_paths,
+                            progress_callback, cancel_requested,
+                        )
+                except Exception:
+                    self._remove_managed_files(new_file_paths)
+                    raise
+        except _TransferExecutionCancelled:
+            return TransferResult(0, 0, 0, 0, 0, cancelled=True)
+        self._remove_managed_files(old_file_paths)
+        return TransferResult(*counts)
+
+    def _validate_decisions(
+        self, data, decisions: tuple[TransferDecision, ...], local_by_uuid: dict
+    ) -> dict[str, TransferAction]:
+        """Comprova que hi hagi exactament una decisió vàlida per cada conflicte."""
         decision_by_uuid = {decision.uuid: decision.action for decision in decisions}
         conflict_uuids = {
             item["uuid"] for item in data["students"]
-            if self.students.get_by_uuid(item["uuid"]) is not None
+            if item["uuid"] in local_by_uuid
         }
         missing = conflict_uuids - decision_by_uuid.keys()
         unknown = decision_by_uuid.keys() - conflict_uuids
@@ -188,84 +293,111 @@ class TransferService:
             or any(not isinstance(item.action, TransferAction) for item in decisions)
         ):
             raise ValidationError("Les decisions de transferència no són vàlides.")
+        return decision_by_uuid
 
-        created = replaced = skipped = imported_as_new = imported_documents = 0
-        new_file_paths: list[Path] = []
-        old_file_paths: list[Path] = []
-        with tempfile.TemporaryDirectory(prefix="tutopy-transfer-") as temporary:
-            temporary_path = Path(temporary)
-            self._extract_documents(path, password, data, temporary_path)
-            try:
-                with self.transaction_factory():
-                    category_ids = self._category_ids(data)
-                    course_ids = self._course_ids(data)
-                    for item in data["students"]:
-                        local = self.students.get_by_uuid(item["uuid"])
-                        action = decision_by_uuid.get(item["uuid"])
-                        if local and action == TransferAction.KEEP_LOCAL:
-                            skipped += 1
-                            continue
-                        target_uuid = item["uuid"]
-                        if local and action == TransferAction.REPLACE:
-                            old_file_paths.extend(
-                                Path(document.file_path)
-                                for document in self.documents.get_by_student(local.id)
-                                if document.file_path
-                            )
-                            self.students.delete(local.id)
-                            replaced += 1
-                        elif local and action == TransferAction.IMPORT_AS_NEW:
-                            target_uuid = str(uuid.uuid4())
-                            imported_as_new += 1
-                        else:
-                            created += 1
-                        student = self.students.create_with_uuid(
-                            StudentNew(
-                                self.validation.person_name(
-                                    item["name"], "El nom no és vàlid."
-                                ),
-                                self.validation.person_name(
-                                    item["surnames"], "Els cognoms no són vàlids."
-                                ),
-                                self.validation.optional_text(item["group_name"]),
-                            ),
-                            target_uuid,
-                        )
-                        count = self._import_related(
-                            student.id, item, category_ids, course_ids,
-                            temporary_path, new_file_paths,
-                        )
-                        imported_documents += count
-            except Exception:
-                self._remove_managed_files(new_file_paths)
-                raise
-        self._remove_managed_files(old_file_paths)
-        return TransferResult(
-            created, replaced, skipped, imported_as_new, imported_documents
+    def _import_students(
+        self, data, decision_by_uuid, local_by_uuid, temporary_path,
+        new_file_paths, old_file_paths, progress_callback, cancel_requested,
+    ) -> tuple[int, int, int, int, int]:
+        """Importa tots els alumnes del paquet dins la transacció ja oberta."""
+        category_ids = self._category_ids(data)
+        course_ids = self._course_ids(data)
+        counters = {"created": 0, "replaced": 0, "skipped": 0, "imported_as_new": 0}
+        imported_documents = 0
+        total = len(data["students"])
+        for completed, item in enumerate(data["students"], 1):
+            if cancel_requested is not None and cancel_requested():
+                raise _TransferExecutionCancelled
+            outcome, document_count = self._import_one_student(
+                item, decision_by_uuid, local_by_uuid, category_ids, course_ids,
+                temporary_path, new_file_paths, old_file_paths,
+            )
+            counters[outcome] += 1
+            imported_documents += document_count
+            if progress_callback is not None:
+                progress_callback(completed, total)
+        return (
+            counters["created"], counters["replaced"], counters["skipped"],
+            counters["imported_as_new"], imported_documents,
         )
 
-    def _export_student_data(self, student, categories, courses):
+    def _import_one_student(
+        self, item, decision_by_uuid, local_by_uuid, category_ids, course_ids,
+        temporary_path, new_file_paths, old_file_paths,
+    ) -> tuple[str, int]:
+        """Importa un alumne del paquet i retorna (resultat, documents importats)."""
+        local = local_by_uuid.get(item["uuid"])
+        action = decision_by_uuid.get(item["uuid"])
+        if local and action == TransferAction.KEEP_LOCAL:
+            return "skipped", 0
+        target_uuid = item["uuid"]
+        if local and action == TransferAction.REPLACE:
+            old_file_paths.extend(
+                Path(document.file_path)
+                for document in self.documents.get_by_student(local.id)
+                if document.file_path
+            )
+            self.students.delete(local.id)
+            outcome = "replaced"
+        elif local and action == TransferAction.IMPORT_AS_NEW:
+            target_uuid = str(uuid.uuid4())
+            outcome = "imported_as_new"
+        else:
+            outcome = "created"
+        student = self.students.create_with_uuid(
+            StudentNew(
+                self.validation.person_name(item["name"], "El nom no és vàlid."),
+                self.validation.person_name(
+                    item["surnames"], "Els cognoms no són vàlids."
+                ),
+                self.validation.optional_text(item["group_name"]),
+            ),
+            target_uuid,
+        )
+        document_count = self._import_related(
+            student.id, item, category_ids, course_ids,
+            temporary_path, new_file_paths,
+        )
+        return outcome, document_count
+
+    def execute_with_worker_connection(self, *args, **kwargs) -> TransferResult:
+        """Executa la importació amb un servei vinculat a una connexió pròpia."""
+        if self.worker_service_factory is None:
+            return self.execute(*args, **kwargs)
+        with self.worker_service_factory() as worker_service:
+            return worker_service.execute(*args, **kwargs)
+
+    def _related_by_student(self, student_ids):
+        return {
+            "notes": self.notes.get_by_students(student_ids),
+            "contacts": self.contacts.get_by_students(student_ids),
+            "annotations": self.annotations.get_by_students(student_ids),
+            "history": self.history.get_by_students(student_ids),
+            "documents": self.documents.get_by_students(student_ids),
+        }
+
+    def _export_student_data(self, student, categories, courses, related):
         notes = [{
             "date": item.date, "content": item.content,
             "category": categories[item.category_id], "course": courses[item.course_id],
-        } for item in self.notes.get_by_student(student.id)]
+        } for item in related["notes"][student.id]]
         contacts = [{
             "name": item.name, "description": item.description,
             "phone": item.phone, "email": item.email,
-        } for item in self.contacts.get_by_student(student.id)]
+        } for item in related["contacts"][student.id]]
         annotations = [
             {"content": item.content}
-            for item in self.annotations.get_by_student(student.id)
+            for item in related["annotations"][student.id]
         ]
         history = [{
             "group_name": item.group_name,
             "course": courses.get(item.academic_course_id),
             "start_date": item.start_date, "end_date": item.end_date,
-        } for item in self.history.get_by_student(student.id)]
+        } for item in related["history"][student.id]]
         documents_by_path = {}
         sources = []
-        for item in self.documents.get_by_student(student.id):
-            source = self.document_service.get_readable_path(item.id)
+        for item in related["documents"][student.id]:
+            source = self.document_service.get_readable_document_path(item)
             archive_name = f"documents/{student.uuid}/{item.uuid_filename}"
             documents_by_path[archive_name] = {
                 "name": item.name, "description": item.description,
@@ -343,34 +475,48 @@ class TransferService:
             raise ValidationError("El paquet supera la mida màxima admesa.")
         try:
             with self._decrypted_archive(path, password) as archive:
-                members = archive.infolist()
-                if len(members) > self.MAX_MEMBERS:
-                    raise ValidationError("El paquet conté massa fitxers.")
-                if sum(item.file_size for item in members) > self.MAX_UNCOMPRESSED_SIZE:
-                    raise ValidationError("El paquet descomprimit és massa gran.")
-                if len({item.filename for item in members}) != len(members):
-                    raise ValidationError("El paquet conté fitxers duplicats.")
-                for member in members:
-                    self._validate_member_name(member.filename)
-                    if member.flag_bits & 0x1:
-                        raise ValidationError("No s’admeten paquets ZIP xifrats.")
+                self._validate_archive_members(archive.infolist())
                 manifest = self._load_json(archive, "manifest.json")
                 data = self._load_json(archive, "data.json")
                 checksums = self._load_json(archive, "checksums.json")
                 self._validate_payload(manifest, data, checksums)
                 if verify_documents:
-                    for name, expected in checksums.items():
-                        if self._sha256_bytes(archive.read(name)) != expected:
-                            raise ValidationError("Un document del paquet està corrupte.")
+                    self._verify_checksums(archive, checksums)
         except (BadZipFile, KeyError, json.JSONDecodeError, UnicodeDecodeError) as error:
             raise TransferFormatError(
                 "El contingut del paquet de transferència està corrupte."
             ) from error
         return path, data
 
-    def _validate_payload(self, manifest, data, checksums):
+    def _validate_archive_members(self, members) -> None:
+        """Comprova límits de mida i noms abans de llegir el contingut del ZIP."""
+        if len(members) > self.MAX_MEMBERS:
+            raise ValidationError("El paquet conté massa fitxers.")
+        if sum(item.file_size for item in members) > self.MAX_UNCOMPRESSED_SIZE:
+            raise ValidationError("El paquet descomprimit és massa gran.")
+        if len({item.filename for item in members}) != len(members):
+            raise ValidationError("El paquet conté fitxers duplicats.")
+        for member in members:
+            self._validate_member_name(member.filename)
+            if member.flag_bits & 0x1:
+                raise ValidationError("No s’admeten paquets ZIP xifrats.")
+
+    def _verify_checksums(self, archive, checksums) -> None:
+        """Recalcula el sha256 de cada document i el compara amb el manifest."""
+        for name, expected in checksums.items():
+            if self._sha256_bytes(archive.read(name)) != expected:
+                raise ValidationError("Un document del paquet està corrupte.")
+
+    def _validate_payload(self, manifest, data, checksums) -> None:
         if not all(isinstance(value, dict) for value in (manifest, data, checksums)):
             raise ValidationError("L’estructura JSON del paquet no és vàlida.")
+        students = self._validate_manifest(manifest, data)
+        seen: set[str] = set()
+        for student in students:
+            self._validate_student(student, checksums, seen)
+
+    def _validate_manifest(self, manifest, data) -> list:
+        """Comprova el format del paquet i retorna la llista d'alumnes declarada."""
         if manifest.get("format") != self.FORMAT:
             raise ValidationError("El fitxer no és un paquet de Tutopy.")
         if manifest.get("format_version") != self.FORMAT_VERSION:
@@ -380,78 +526,99 @@ class TransferService:
             raise ValidationError("El paquet no conté alumnes.")
         if manifest.get("student_count") != len(students):
             raise ValidationError("El manifest del paquet és inconsistent.")
-        seen = set()
-        for student in students:
-            required = {
-                "uuid", "name", "surnames", "group_name", "notes", "contacts",
-                "annotations", "history", "documents",
-            }
-            if not isinstance(student, dict) or not required <= student.keys():
-                raise ValidationError("Les dades d’un alumne són incompletes.")
-            try:
-                uuid.UUID(student["uuid"])
-            except (ValueError, TypeError, AttributeError) as error:
-                raise ValidationError("Un UUID d’alumne no és vàlid.") from error
-            if student["uuid"] in seen:
-                raise ValidationError("El paquet conté UUID d’alumne duplicats.")
-            seen.add(student["uuid"])
-            self.validation.person_name(student["name"], "El nom no és vàlid.")
-            self.validation.person_name(student["surnames"], "Els cognoms no són vàlids.")
-            self.validation.optional_text(student["group_name"])
-            for key in ("notes", "contacts", "annotations", "history", "documents"):
-                if not isinstance(student[key], list):
-                    raise ValidationError("El contingut del paquet no és vàlid.")
-            for note in student["notes"]:
-                self._require_keys(note, "date", "content", "category", "course")
-                self.validation.iso_date(note["date"])
-                self.validation.required_text(note["content"], "Una nota no és vàlida.")
-                self.validation.required_text(note["category"], "Una categoria no és vàlida.")
-                self.validation.academic_course(note["course"])
-            for contact in student["contacts"]:
-                self._require_keys(contact, "name", "description", "phone", "email")
-                self.validation.required_text(contact["name"], "Un contacte no és vàlid.")
-                for key in ("description", "phone", "email"):
-                    self.validation.optional_text(contact[key])
-            for annotation in student["annotations"]:
-                self._require_keys(annotation, "content")
-                self.validation.required_text(
-                    annotation["content"], "Un descriptor no és vàlid."
-                )
-            for item in student["history"]:
-                self._require_keys(
-                    item, "group_name", "course", "start_date", "end_date"
-                )
-                self.validation.required_text(
-                    item["group_name"], "Un grup de l’historial no és vàlid."
-                )
-                self.validation.iso_date(item["start_date"])
-                if item["end_date"] is not None:
-                    self.validation.iso_date(item["end_date"])
-                if item["course"] is not None:
-                    self.validation.academic_course(item["course"])
-            for document in student["documents"]:
-                self._require_keys(
-                    document, "name", "description", "original_filename", "date",
-                    "course", "archive_path", "sha256", "size",
-                )
-                self.validation.required_text(
-                    document["name"], "Un document no és vàlid."
-                )
-                self.validation.iso_date(document["date"])
-                if document["course"] is not None:
-                    self.validation.academic_course(document["course"])
-                name = document.get("archive_path")
-                if name not in checksums or document.get("sha256") != checksums[name]:
-                    raise ValidationError("Els hashes dels documents són inconsistents.")
-                if not isinstance(document.get("size"), int) or document["size"] < 0:
-                    raise ValidationError("La mida d’un document no és vàlida.")
+        return students
+
+    def _validate_student(self, student, checksums, seen: set[str]) -> None:
+        """Valida les dades d'un alumne i tot el seu contingut relacionat."""
+        required = {
+            "uuid", "name", "surnames", "group_name", "notes", "contacts",
+            "annotations", "history", "documents",
+        }
+        if not isinstance(student, dict) or not required <= student.keys():
+            raise ValidationError("Les dades d’un alumne són incompletes.")
+        try:
+            uuid.UUID(student["uuid"])
+        except (ValueError, TypeError, AttributeError) as error:
+            raise ValidationError("Un UUID d’alumne no és vàlid.") from error
+        if student["uuid"] in seen:
+            raise ValidationError("El paquet conté UUID d’alumne duplicats.")
+        seen.add(student["uuid"])
+        self.validation.person_name(student["name"], "El nom no és vàlid.")
+        self.validation.person_name(student["surnames"], "Els cognoms no són vàlids.")
+        self.validation.optional_text(student["group_name"])
+        for key in ("notes", "contacts", "annotations", "history", "documents"):
+            if not isinstance(student[key], list):
+                raise ValidationError("El contingut del paquet no és vàlid.")
+        self._validate_notes(student["notes"])
+        self._validate_contacts(student["contacts"])
+        self._validate_annotations(student["annotations"])
+        self._validate_history(student["history"])
+        self._validate_documents(student["documents"], checksums)
+
+    def _validate_notes(self, notes) -> None:
+        for note in notes:
+            self._require_keys(note, "date", "content", "category", "course")
+            self.validation.iso_date(note["date"])
+            self.validation.required_text(note["content"], "Una nota no és vàlida.")
+            self.validation.required_text(
+                note["category"], "Una categoria no és vàlida."
+            )
+            self.validation.academic_course(note["course"])
+
+    def _validate_contacts(self, contacts) -> None:
+        for contact in contacts:
+            self._require_keys(contact, "name", "description", "phone", "email")
+            self.validation.required_text(contact["name"], "Un contacte no és vàlid.")
+            for key in ("description", "phone", "email"):
+                self.validation.optional_text(contact[key])
+
+    def _validate_annotations(self, annotations) -> None:
+        for annotation in annotations:
+            self._require_keys(annotation, "content")
+            self.validation.required_text(
+                annotation["content"], "Un descriptor no és vàlid."
+            )
+
+    def _validate_history(self, history) -> None:
+        for item in history:
+            self._require_keys(
+                item, "group_name", "course", "start_date", "end_date"
+            )
+            self.validation.required_text(
+                item["group_name"], "Un grup de l’historial no és vàlid."
+            )
+            self.validation.iso_date(item["start_date"])
+            if item["end_date"] is not None:
+                self.validation.iso_date(item["end_date"])
+            if item["course"] is not None:
+                self.validation.academic_course(item["course"])
+
+    def _validate_documents(self, documents, checksums) -> None:
+        for document in documents:
+            self._require_keys(
+                document, "name", "description", "original_filename", "date",
+                "course", "archive_path", "sha256", "size",
+            )
+            self.validation.required_text(
+                document["name"], "Un document no és vàlid."
+            )
+            self.validation.iso_date(document["date"])
+            if document["course"] is not None:
+                self.validation.academic_course(document["course"])
+            name = document.get("archive_path")
+            if name not in checksums or document.get("sha256") != checksums[name]:
+                raise ValidationError("Els hashes dels documents són inconsistents.")
+            if not isinstance(document.get("size"), int) or document["size"] < 0:
+                raise ValidationError("La mida d’un document no és vàlida.")
 
     @staticmethod
     def _require_keys(value, *keys):
         if not isinstance(value, dict) or not set(keys) <= value.keys():
             raise ValidationError("El contingut del paquet no és vàlid.")
 
-    def _extract_documents(self, path, password, data, destination):
+    def _extract_documents(
+        self, path, password, data, destination, cancel_requested=None
+    ):
         with self._decrypted_archive(path, password) as archive:
             for student in data["students"]:
                 for document in student["documents"]:
@@ -460,6 +627,8 @@ class TransferService:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     with archive.open(name) as source, target.open("wb") as output:
                         while chunk := source.read(1024 * 1024):
+                            if cancel_requested is not None and cancel_requested():
+                                raise _TransferExecutionCancelled
                             output.write(chunk)
 
     @classmethod

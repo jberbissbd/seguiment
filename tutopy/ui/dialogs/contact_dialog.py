@@ -1,10 +1,23 @@
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout
+"""Diàleg per crear o editar un contacte d'un alumne."""
 
+from PySide6.QtWidgets import (
+    QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout, QWidget,
+)
+
+from tutopy.models.messaging import Contact
 from tutopy.ui.resources import set_dialog_button_icons
 
 
 class ContactDialog(QDialog):
-    def __init__(self, parent=None, contact=None):
+    """Recull nom, relació, telèfon i correu d'un contacte, nou o existent."""
+
+    def __init__(self, parent: QWidget | None = None, contact: Contact | None = None):
+        """Construeix el diàleg, precarregant les dades si s'edita un contacte existent.
+
+        Args:
+            parent: Widget pare de Qt, si escau.
+            contact: Contacte existent a editar, o `None` per crear-ne un de nou.
+        """
         super().__init__(parent)
         self.setWindowTitle("Editar contacte" if contact else "Nou contacte")
         layout = QVBoxLayout(self)
@@ -31,6 +44,7 @@ class ContactDialog(QDialog):
         layout.addWidget(self.buttons)
 
     def values(self):
+        """Retorna les dades del contacte introduïdes, sense espais sobrants."""
         return {
             "name": self.name_input.text().strip(),
             "description": self.description_input.text().strip(),

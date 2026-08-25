@@ -1,18 +1,32 @@
+"""Servei de gestió de les notes de seguiment dels alumnes."""
+
+import dataclasses
+from typing import cast
+
 from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
-from tutopy.models.messaging import Note, NoteNew, NoteRecord, StudentGroupHistoryNew
+from tutopy.models.messaging import (
+    Note, NoteNew, NoteRecord, StudentGroupHistoryNew,
+)
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import AcademicCourseDeterminator
 
 
 class NoteService:
+    """Servei per gestionar notes de seguiment, amb registre automàtic de grup."""
+
     def __init__(self, note_dao: NoteDAO, academic_course_dao: AcademicCourseDAO,
         category_dao: CategoryDAO, student_dao: StudentDAO, transaction_factory,
         group_history_dao: StudentGroupHistoryDAO = None):
+        """Rep els DAOs de domini i, opcionalment, l'historial de grups.
+
+        Si `group_history_dao` no s'indica, no es registra automàticament
+        l'historial de grup en crear o actualitzar notes.
+        """
         self.note_dao = note_dao
         self.academic_course_dao = academic_course_dao
         self.category_dao = category_dao
@@ -29,6 +43,7 @@ class NoteService:
             return self.note_dao.create(prepared)
 
     def create(self, note_data: NoteNew) -> Note:
+        """Àlies de `create_note`."""
         return self.create_note(note_data)
 
     def _resolve_academic_course(self, date_str: str) -> int:
@@ -43,12 +58,15 @@ class NoteService:
         return self.note_dao.get_by_student(student_id)
 
     def get_by_student(self, student_id: int) -> list[Note]:
+        """Àlies de `get_notes_by_student`."""
         return self.get_notes_by_student(student_id)
 
     def get_all(self) -> list[Note]:
+        """Retorna totes les notes de tots els alumnes."""
         return self.note_dao.get_all()
 
     def get_by_id(self, note_id: int) -> Note:
+        """Retorna una nota pel seu ID."""
         self.validation_service.positive_id(note_id)
         note = self.note_dao.get_by_id(note_id)
         if note is None:
@@ -56,8 +74,9 @@ class NoteService:
         return note
 
     def update(self, note: Note) -> Note:
+        """Valida i actualitza una nota existent, actualitzant l'historial de grup."""
         with self.transaction_factory():
-            self.get_by_id(note.id)
+            existing = self.get_by_id(note.id)
             prepared = self._prepare(NoteNew(
                 student_id=note.student_id,
                 category_id=note.category_id,
@@ -66,15 +85,19 @@ class NoteService:
                 content=note.content,
             ))
             self._ensure_group_history(prepared)
-            note.student_id = prepared.student_id
-            note.category_id = prepared.category_id
-            note.date = prepared.date
-            note.course_id = prepared.course_id
-            note.content = prepared.content
-            self.note_dao.update(note)
-            return note
+            updated = cast(Note, dataclasses.replace(
+                existing,
+                student_id=prepared.student_id,
+                category_id=prepared.category_id,
+                date=prepared.date,
+                course_id=prepared.course_id,
+                content=prepared.content,
+            ))
+            self.note_dao.update(updated)
+            return updated
 
     def delete(self, note_id: int) -> None:
+        """Elimina una nota pel seu ID."""
         self.get_by_id(note_id)
         self.note_dao.delete(note_id)
 
@@ -90,7 +113,7 @@ class NoteService:
             course_id=note_data.course_id,
             content=note_data.content,
         )
-        self.validation_service.validate_note(prepared)
+        prepared = self.validation_service.validate_note(prepared)
         self._require_student(prepared.student_id)
         # El curs és una dada derivada de la data, no una elecció manual.
         course_id = self._resolve_academic_course(prepared.date)
@@ -122,8 +145,9 @@ class NoteService:
         )
         start_date = self._course_start(note.course_id) if first_entry_in_course else note.date
         if current and start_date >= current.start_date:
-            current.end_date = start_date
-            self.group_history_dao.update(current)
+            self.group_history_dao.update(
+                dataclasses.replace(current, end_date=start_date)
+            )
             group_name = student.group_name
             end_date = None
         else:

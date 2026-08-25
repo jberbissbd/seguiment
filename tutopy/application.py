@@ -1,4 +1,13 @@
+"""Composition root: construeix la capa de serveis a partir d'una `Database`.
+
+Cap altra capa (controladors, UI) ha de construir serveis directament; sempre
+ho fan a través de `create_services`, que és l'únic lloc que coneix com
+s'enllacen els DAOs, els serveis i les fàbriques de connexió per als
+treballadors en fils.
+"""
+
 from dataclasses import dataclass
+from contextlib import contextmanager
 
 from tutopy.database.database import Database
 from tutopy.services.academic_course_service import AcademicCourseService
@@ -14,6 +23,8 @@ from tutopy.services.report_configuration_service import ReportConfigurationServ
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
 from tutopy.services.word_report_service import WordReportService
 from tutopy.services.open_document_report_service import OpenDocumentReportService
+from tutopy.services.report_file_service import ReportFileService
+from tutopy.services.report_batch_loader import ReportBatchLoader
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.directories import get_app_data_dir
 from tutopy.services.statistics_service import StatisticsService
@@ -37,13 +48,32 @@ class ServiceContainer:
     spreadsheet_reports: SpreadsheetReportService
     word_reports: WordReportService
     open_document_reports: OpenDocumentReportService
+    report_files: ReportFileService
     student_exports: StudentExportService
     statistics: StatisticsService
     transfers: TransferService
 
 
-def create_services(database: Database) -> ServiceContainer:
-    """Construeix la capa de negoci sense exposar DAOs a la UI."""
+def create_services(
+    database: Database, *, configure_worker_services: bool = True
+) -> ServiceContainer:
+    """Construeix la capa de negoci sense exposar DAOs a la UI.
+
+    Args:
+        database: Base de dades ja connectada (`database.conn` no pot ser
+            `None`).
+        configure_worker_services: Si cal configurar les fàbriques que creen
+            una connexió SQLite pròpia per a un fil secundari (transferències,
+            edició massiva). Es passa `False` en la crida recursiva que crea
+            el `ServiceContainer` del propi treballador, per evitar-ne una
+            cadena infinita.
+
+    Returns:
+        El contenidor amb tots els serveis de l'aplicació.
+
+    Raises:
+        RuntimeError: Si `database` no està connectada.
+    """
     if database.conn is None:
         raise RuntimeError("La base de dades ha d'estar connectada.")
 
@@ -63,23 +93,30 @@ def create_services(database: Database) -> ServiceContainer:
         database.categories, database.transaction,
         storage_dir=app_data_dir / "reporting",
     )
-    spreadsheet_reports = SpreadsheetReportService(
+    report_batch_loader = ReportBatchLoader(
         database.students, database.notes, database.academic_courses,
         database.student_group_history, report_configuration,
     )
+    spreadsheet_reports = SpreadsheetReportService(
+        database.students, database.notes, database.academic_courses,
+        database.student_group_history, report_configuration, report_batch_loader,
+    )
     word_reports = WordReportService(
         database.students, database.notes, database.academic_courses,
-        report_configuration,
+        report_configuration, report_batch_loader,
     )
     open_document_reports = OpenDocumentReportService(
         database.students, database.notes, database.academic_courses,
-        report_configuration,
+        report_configuration, report_batch_loader,
+    )
+    report_files = ReportFileService(
+        spreadsheet_reports, word_reports, open_document_reports
     )
     documents = DocumentService(
         database.documents, database.students, database.academic_courses,
         storage_dir=storage_dir,
     )
-    return ServiceContainer(
+    container = ServiceContainer(
         students=students,
         notes=NoteService(
             database.notes,
@@ -105,9 +142,10 @@ def create_services(database: Database) -> ServiceContainer:
         spreadsheet_reports=spreadsheet_reports,
         word_reports=word_reports,
         open_document_reports=open_document_reports,
+        report_files=report_files,
         student_exports=StudentExportService(
             database.students, documents, database.academic_courses,
-            spreadsheet_reports, word_reports, open_document_reports,
+            report_files,
         ),
         statistics=StatisticsService(
             database.statistics, database.academic_courses, database.categories,
@@ -119,3 +157,31 @@ def create_services(database: Database) -> ServiceContainer:
             database.transaction,
         ),
     )
+    if configure_worker_services:
+        @contextmanager
+        def transfer_worker_service():
+            worker_database = Database(database.path).connect()
+            try:
+                worker = create_services(
+                    worker_database, configure_worker_services=False
+                )
+                worker.documents.storage_dir = container.documents.storage_dir
+                yield worker.transfers
+            finally:
+                worker_database.close()
+
+        container.transfers.worker_service_factory = transfer_worker_service
+
+        @contextmanager
+        def student_worker_service():
+            worker_database = Database(database.path).connect()
+            try:
+                worker = create_services(
+                    worker_database, configure_worker_services=False
+                )
+                yield worker.students
+            finally:
+                worker_database.close()
+
+        container.students.worker_service_factory = student_worker_service
+    return container

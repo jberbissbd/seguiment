@@ -1,3 +1,5 @@
+"""Gestor de connexió SQLite i orquestració de l'esquema i les DAOs."""
+
 import os
 import sqlite3
 import sys
@@ -28,11 +30,14 @@ class ManagedConnection:
     """Fa que els ``commit`` dels DAOs respectin una transacció exterior."""
 
     def __init__(self, connection: sqlite3.Connection):
+        """Embolcalla una connexió SQLite ja oberta."""
         self._connection = connection
         self._transaction_depth = 0
+        self._savepoint_counter = 0
 
     @property
     def row_factory(self):
+        """Retorna la ``row_factory`` de la connexió subjacent."""
         return self._connection.row_factory
 
     @row_factory.setter
@@ -40,29 +45,46 @@ class ManagedConnection:
         self._connection.row_factory = value
 
     def execute(self, *args, **kwargs):
+        """Delega a ``sqlite3.Connection.execute``."""
         return self._connection.execute(*args, **kwargs)
 
     def executescript(self, *args, **kwargs):
+        """Delega a ``sqlite3.Connection.executescript``."""
         return self._connection.executescript(*args, **kwargs)
 
     def executemany(self, *args, **kwargs):
+        """Delega a ``sqlite3.Connection.executemany``."""
         return self._connection.executemany(*args, **kwargs)
 
     def commit(self):
+        """Confirma la connexió, tret que hi hagi una transacció exterior oberta."""
         if self._transaction_depth == 0:
             self._connection.commit()
 
     def rollback(self):
+        """Desfà els canvis pendents a la connexió subjacent."""
         self._connection.rollback()
 
     def close(self):
+        """Tanca la connexió subjacent."""
         self._connection.close()
 
     @contextmanager
     def transaction(self):
+        """Obre una transacció (o un ``SAVEPOINT`` si ja n'hi ha una activa).
+
+        Fa de context manager: confirma en sortir amb èxit i desfà els canvis
+        (fins al ``SAVEPOINT`` corresponent si la transacció està niuada) si
+        el bloc llança una excepció.
+        """
         outermost = self._transaction_depth == 0
         if outermost:
             self._connection.execute("BEGIN")
+            savepoint = None
+        else:
+            self._savepoint_counter += 1
+            savepoint = f"tutopy_savepoint_{self._savepoint_counter}"
+            self._connection.execute(f"SAVEPOINT {savepoint}")
         self._transaction_depth += 1
         try:
             yield
@@ -70,11 +92,16 @@ class ManagedConnection:
             self._transaction_depth -= 1
             if outermost:
                 self._connection.rollback()
+            else:
+                self._connection.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                self._connection.execute(f"RELEASE SAVEPOINT {savepoint}")
             raise
         else:
             self._transaction_depth -= 1
             if outermost:
                 self._connection.commit()
+            else:
+                self._connection.execute(f"RELEASE SAVEPOINT {savepoint}")
 
 
 class Database:
@@ -84,7 +111,10 @@ class Database:
     ``.notes``, ``.contacts``, ``.annotations``, ``.documents``).
     """
 
+    SCHEMA_VERSION = 1
+
     def __init__(self, path: str = None):
+        """Prepara el gestor amb la ruta indicada, sense obrir encara la connexió."""
         self.path = path or _default_db_path()
         self.conn: Optional[ManagedConnection] = None
         self.academic_courses: AcademicCourseDAO = None
@@ -100,20 +130,32 @@ class Database:
         self.statistics: StatisticsDAO = None
 
     def connect(self):
+        """Obre la connexió, aplica les migracions pendents i inicialitza les DAOs.
+
+        Retorna la pròpia instància, per permetre encadenar
+        ``Database().connect()``.
+        """
         self.conn = ManagedConnection(sqlite3.connect(self.path))
-        self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA foreign_keys = ON")
-        self._create_tables()
-        self._init_daos()
+        try:
+            self.conn.row_factory = sqlite3.Row
+            self.conn.execute("PRAGMA foreign_keys = ON")
+            self._migrate_schema()
+            self._init_daos()
+        except Exception:
+            self.conn.close()
+            self.conn = None
+            raise
         return self
 
     def close(self):
+        """Confirma els canvis pendents i tanca la connexió, si n'hi ha una d'oberta."""
         if self.conn:
             self.conn.commit()
             self.conn.close()
             self.conn = None
 
     def commit(self):
+        """Confirma els canvis pendents a la connexió actual, si n'hi ha una."""
         if self.conn:
             self.conn.commit()
 
@@ -136,8 +178,21 @@ class Database:
         self.report_configuration = ReportConfigurationDAO(self.conn)
         self.statistics = StatisticsDAO(self.conn)
 
-    def _create_tables(self):
+    def _migrate_schema(self) -> None:
+        """Aplica, en ordre, les migracions pendents de l'esquema."""
+        current_version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+        if current_version > self.SCHEMA_VERSION:
+            raise RuntimeError(
+                "La base de dades ha estat creada amb una versió més nova "
+                "de Tutopy."
+            )
+        if current_version < 1:
+            self._create_schema_v1()
+
+    def _create_schema_v1(self) -> None:
+        """Crea atòmicament la versió inicial de l'esquema."""
         self.conn.executescript("""
+            BEGIN IMMEDIATE;
             CREATE TABLE IF NOT EXISTS academic_courses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 course TEXT NOT NULL UNIQUE
@@ -228,6 +283,8 @@ class Database:
             CREATE UNIQUE INDEX IF NOT EXISTS idx_one_current_group_per_student
                 ON student_group_history(student_id) WHERE end_date IS NULL;
             CREATE INDEX IF NOT EXISTS idx_notes_student ON notes(student_id);
+            CREATE INDEX IF NOT EXISTS idx_notes_student_course
+                ON notes(student_id, course_id);
             CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category_id);
             CREATE INDEX IF NOT EXISTS idx_notes_course ON notes(course_id);
             CREATE INDEX IF NOT EXISTS idx_notes_date ON notes(date);
@@ -247,4 +304,6 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_term_config_course_group
                 ON term_configurations(academic_course_id, group_name);
             CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_name);
+            PRAGMA user_version = 1;
+            COMMIT;
         """)

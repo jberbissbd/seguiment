@@ -1,3 +1,5 @@
+"""Models de domini: alumnes, notes, contactes, documents i entitats relacionades."""
+
 from dataclasses import dataclass, fields
 from typing import Optional, Union, get_args, get_origin
 import datetime
@@ -25,7 +27,7 @@ def _validate(dataclass_obj):
             )
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Category:
     """Categoria per classificar les notes de seguiment.
 
@@ -37,10 +39,11 @@ class Category:
     name: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CategoryNew:
     """Categoria per classificar les notes de seguiment.
 
@@ -51,36 +54,39 @@ class CategoryNew:
     name: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class AcademicCourse:
-    """Curs acadèmic, generat de manera automàtica a partir dels registres
-    
+    """Curs acadèmic, generat de manera automàtica a partir dels registres.
+
     Attributes:
-        id: identificador a la base de dades.
-        course: curs acadèmic, en format YYYY-YYYYY
+        id: Identificador a la base de dades.
+        course: Curs acadèmic, en format YYYY-YYYY.
     """
     id: int
     course: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class AcademicCourseNew:
-    """Curs acadèmic, generat de manera automàtica a partir dels registres
-    
+    """Curs acadèmic, generat de manera automàtica a partir dels registres.
+
     Attributes:
-        course: curs acadèmic, en format YYYY-YYYYY
+        course: Curs acadèmic, en format YYYY-YYYY.
     """
     course: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Student:
     """Alumne del qual es fa el seguiment.
 
@@ -98,12 +104,13 @@ class Student:
     group_name: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
     @property
     def full_name(self) -> str:
         """Retorna el nom complet: ``name`` + ``surnames``."""
-        return f"{self.name}"+" "+f"{self.surnames}".strip()
+        return f"{self.name} {self.surnames}".strip()
 
     @property
     def filing_name(self) -> str:
@@ -111,7 +118,7 @@ class Student:
         return f"{self.surnames}, {self.name}" if self.surnames else self.name
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentNew:
     """Alumne del qual es fa el seguiment.
 
@@ -125,10 +132,11 @@ class StudentNew:
     group_name: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Note:
     """Registre de seguiment datat, classificat i associat a un alumne.
 
@@ -137,6 +145,7 @@ class Note:
         student_id: Referència a l'alumne.
         category_id: Referència a la categoria.
         date: Data en format ISO ``YYYY-MM-DD``.
+        course_id: Referència al curs acadèmic.
         content: Contingut textual de la nota.
     """
     id: int
@@ -147,6 +156,7 @@ class Note:
     content: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps i el format ISO de la data."""
         _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
@@ -154,7 +164,7 @@ class Note:
             raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class NoteNew:
     """Dades d'entrada per crear un registre de seguiment datat.
 
@@ -162,6 +172,7 @@ class NoteNew:
         student_id: Referència a l'alumne.
         category_id: Referència a la categoria.
         date: Data en format ISO ``YYYY-MM-DD``.
+        course_id: Referència al curs acadèmic.
         content: Contingut textual de la nota.
     """
     student_id: int
@@ -171,6 +182,7 @@ class NoteNew:
     content: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps i el format ISO de la data."""
         _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
@@ -178,12 +190,22 @@ class NoteNew:
             raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class NoteRecord:
     """Nota amb dades desnormalitzades per a visualització en taula.
 
-    Atributs obtinguts amb un JOIN de les taules ``notes``,
-    ``students`` i ``categories``.
+    Obtinguda amb un JOIN de les taules ``notes``, ``students`` i
+    ``categories``.
+
+    Attributes:
+        note_id: Identificador de la nota.
+        date: Data en format ISO ``YYYY-MM-DD``.
+        student_name: Nom complet de l'alumne (``name`` + ``surnames``).
+        group_name: Grup de l'alumne.
+        category_name: Nom de la categoria.
+        content: Contingut textual de la nota.
+        student_id: Referència a l'alumne.
+        category_id: Referència a la categoria.
     """
     note_id: int
     date: str
@@ -195,6 +217,7 @@ class NoteRecord:
     category_id: int
 
     def __post_init__(self):
+        """Valida els tipus dels camps i el format ISO de la data."""
         _validate(self)
         try:
             datetime.date.fromisoformat(self.date)
@@ -202,17 +225,16 @@ class NoteRecord:
             raise ValueError(INVALID_DATE_MESSAGE) from error
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Contact:
-    """Persones de contacte associats a l'aulmne. Familiars o altres
-    professionals externs al centre.
+    """Persona de contacte associada a l'alumne: familiar o professional extern.
 
     Attributes:
         id: Identificador únic.
         student_id: Referència a l'alumne.
-        name: Nom de la persona
+        name: Nom de la persona.
         description: Descripció, per a descriure la relació amb l'alumne.
-        phone: Numero de telèfon de la persona de contacte.
+        phone: Número de telèfon de la persona de contacte.
         email: Correu electrònic de la persona de contacte.
     """
     id: int
@@ -223,18 +245,18 @@ class Contact:
     email: str = ""
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ContactNew:
-    """Persones de contacte associats a l'aulmne. Familiars o altres
-    professionals externs al centre.
+    """Persona de contacte associada a l'alumne: familiar o professional extern.
 
     Attributes:
         student_id: Referència a l'alumne.
-        name: Nom de la persona
+        name: Nom de la persona.
         description: Descripció, per a descriure la relació amb l'alumne.
-        phone: Numero de telèfon de la persona de contacte.
+        phone: Número de telèfon de la persona de contacte.
         email: Correu electrònic de la persona de contacte.
     """
     student_id: int
@@ -244,11 +266,12 @@ class ContactNew:
     email: str = ""
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentAnnotation:
     """Descriptor general i no datat d'un alumne.
 
@@ -264,12 +287,13 @@ class StudentAnnotation:
     content: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentAnnotationNew:
-    """Dades d'entrada per a un descriptor general i no datat de l'alumne.
-    Entrada nova.
+    """Dades d'entrada per crear un descriptor general i no datat de l'alumne.
+
     Attributes:
         student_id: Referència a l'alumne.
         content: Descripció.
@@ -278,10 +302,24 @@ class StudentAnnotationNew:
     content: str
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentDocument:
+    """Document adjuntat a l'expedient d'un alumne.
+
+    Attributes:
+        id: Identificador únic.
+        student_id: Referència a l'alumne.
+        name: Nom visible del document.
+        description: Descripció del document.
+        uuid_filename: Nom del fitxer al disc (UUID, evita col·lisions).
+        original_filename: Nom original del fitxer tal com es va pujar.
+        file_path: Ruta relativa on es guarda el fitxer.
+        date: Data associada al document, en format ``YYYY-MM-DD``.
+        course_id: Referència al curs acadèmic (opcional).
+    """
     id: int
     student_id: int
     name: str
@@ -293,11 +331,24 @@ class StudentDocument:
     course_id: Optional[int] = None
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentDocumentNew:
+    """Dades d'entrada per registrar un nou document per a un alumne.
+
+    Attributes:
+        student_id: Referència a l'alumne.
+        name: Nom visible del document.
+        description: Descripció del document.
+        uuid_filename: Nom del fitxer al disc (UUID, evita col·lisions).
+        original_filename: Nom original del fitxer tal com es va pujar.
+        file_path: Ruta relativa on es guarda el fitxer.
+        date: Data associada al document, en format ``YYYY-MM-DD``.
+        course_id: Referència al curs acadèmic (opcional).
+    """
     student_id: int
     name: str
     description: str
@@ -308,10 +359,11 @@ class StudentDocumentNew:
     course_id: Optional[int] = None
 
     def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
         _validate(self)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentGroupHistory:
     """Històric de grups d'un alumne.
     
@@ -331,6 +383,7 @@ class StudentGroupHistory:
     academic_course_id: Optional[int] = None
 
     def __post_init__(self):
+        """Valida els tipus dels camps i el format ISO de ``start_date``/``end_date``."""
         _validate(self)
         try:
             datetime.date.fromisoformat(self.start_date)
@@ -343,7 +396,7 @@ class StudentGroupHistory:
                 raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None") from error
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StudentGroupHistoryNew:
     """Nou registre d'històric de grup d'un alumne.
     
@@ -361,6 +414,7 @@ class StudentGroupHistoryNew:
     academic_course_id: Optional[int] = None
 
     def __post_init__(self):
+        """Valida els tipus dels camps i el format ISO de ``start_date``/``end_date``."""
         _validate(self)
         try:
             datetime.date.fromisoformat(self.start_date)
@@ -371,3 +425,16 @@ class StudentGroupHistoryNew:
                 datetime.date.fromisoformat(self.end_date)
             except ValueError as error:
                 raise ValueError("Incorrect end_date format, should be YYYY-MM-DD or None") from error
+
+
+@dataclass(frozen=True, slots=True)
+class StudentDetails:
+    """Alumne amb les relacions necessàries per a la vista de detall."""
+
+    student: Student
+    contacts: tuple[Contact, ...]
+    documents: tuple[StudentDocument, ...]
+
+    def __getattr__(self, name):
+        """Delega els atributs no trobats a ``self.student`` (ex: ``full_name``)."""
+        return getattr(self.student, name)

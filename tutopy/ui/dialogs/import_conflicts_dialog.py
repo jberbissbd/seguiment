@@ -1,4 +1,7 @@
-from PySide6.QtCore import Qt
+"""Diàleg per resoldre possibles alumnes duplicats durant una importació massiva."""
+
+from collections.abc import Sequence
+
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QGridLayout, QLabel, QScrollArea,
     QVBoxLayout, QWidget,
@@ -6,11 +9,21 @@ from PySide6.QtWidgets import (
 
 from tutopy.ui.resources import set_dialog_button_icons
 
-from tutopy.models.bulk_import import ImportAction, ImportDecision
+from tutopy.models.bulk_import import ImportAction, ImportDecision, StudentConflict
 
 
 class ImportConflictsDialog(QDialog):
-    def __init__(self, conflicts, parent=None):
+    """Recull una decisió per cada nom similar trobat durant la importació."""
+
+    def __init__(
+        self, conflicts: Sequence[StudentConflict], parent: QWidget | None = None
+    ):
+        """Construeix una fila d'acció per cada conflicte detectat.
+
+        Args:
+            conflicts: Conflictes trobats entre les files importades i alumnes existents.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle("Revisar possibles alumnes duplicats")
         self.resize(760, 420)
@@ -60,6 +73,7 @@ class ImportConflictsDialog(QDialog):
         layout.addWidget(buttons)
 
     def decisions(self) -> tuple[ImportDecision, ...]:
+        """Retorna la decisió triada per a cada fila conflictiva."""
         return tuple(
             ImportDecision(row, action.currentData(),
                            target.currentData() if action.currentData() == ImportAction.UPDATE else None)

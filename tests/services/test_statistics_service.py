@@ -77,7 +77,7 @@ def test_selector_de_cursos_omet_cursos_sense_notes_despres_deditar(db):
     ))
     old_course = services.academic_courses.get_by_course("2025-2026")
 
-    note.date = "2026-09-10"
+    note = replace(note, date="2026-09-10")
     services.notes.update(note)
 
     assert services.academic_courses.get_by_course("2025-2026") == old_course
@@ -90,3 +90,4 @@ def test_nom_del_mes_es_localitzat_en_catala():
     from tutopy.services.statistics_service import StatisticsService
 
     assert StatisticsService._month_label("2026-09") == "Setembre 2026"
+from dataclasses import replace

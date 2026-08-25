@@ -1,4 +1,7 @@
-from typing import Optional
+"""Servei de gestió dels descriptors (anotacions) d'alumnes."""
+
+import dataclasses
+
 from tutopy.database.daos.annotation_dao import AnnotationDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.models.messaging import StudentAnnotation, StudentAnnotationNew
@@ -15,6 +18,7 @@ class AnnotationService:
 
     def __init__(self, annotation_dao: AnnotationDAO, student_dao: StudentDAO,
         validation_service: ValidationService = None):
+        """Rep el DAO d'anotacions, el d'alumnes i el servei de validació."""
         self.annotation_dao = annotation_dao
         self.student_dao = student_dao
         self.validation_service = validation_service or ValidationService()
@@ -32,6 +36,7 @@ class AnnotationService:
         return self.annotation_dao.get_by_student(student_id)
 
     def get_by_id(self, annotation_id: int) -> StudentAnnotation:
+        """Retorna una anotació pel seu ID."""
         self.validation_service.positive_id(annotation_id)
         annotation = self.annotation_dao.get_by_id(annotation_id)
         if annotation is None:
@@ -66,9 +71,9 @@ class AnnotationService:
             annotation.content, "El contingut del descriptor no pot estar buit."
         )
         self._require_student(annotation.student_id)
-        annotation.content = content
-        annotation.student_id = existing.student_id
-        self.annotation_dao.update(annotation)
+        self.annotation_dao.update(
+            dataclasses.replace(existing, content=content)
+        )
 
     def delete(self, id: int) -> None:
         """Elimina una anotació pel seu ID.

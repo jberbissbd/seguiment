@@ -1,3 +1,9 @@
+"""Resolució de recursos visuals (icones i imatges) de la interfície.
+
+Centralitza l'accés a la carpeta d'assets perquè funcioni tant en execució
+des del codi font com empaquetada amb PyInstaller.
+"""
+
 import sys
 from pathlib import Path
 
@@ -34,10 +40,12 @@ def asset_path(filename: str) -> Path:
 
 
 def icon(filename: str) -> QIcon:
+    """Carrega una icona de la carpeta d'assets a partir del seu nom de fitxer."""
     return QIcon(str(asset_path(filename)))
 
 
 def application_icon() -> QIcon:
+    """Retorna la icona principal de l'aplicació Tutopy."""
     return icon("tutopy.svg")
 
 

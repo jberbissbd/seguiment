@@ -1,17 +1,31 @@
+"""Diàleg per crear o editar un document adjunt d'un alumne."""
+
 from pathlib import Path
 
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QVBoxLayout,
+    QLineEdit, QPushButton, QVBoxLayout, QWidget,
 )
 
+from tutopy.models.messaging import StudentDocument
 from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
 from tutopy.ui.widgets.date_input import DateInput
 
 
 class DocumentDialog(QDialog):
-    def __init__(self, parent=None, document=None):
+    """Recull nom, descripció, data i fitxer d'un document, nou o existent."""
+
+    def __init__(
+        self, parent: QWidget | None = None,
+        document: StudentDocument | None = None,
+    ):
+        """Construeix el diàleg, precarregant les dades si s'edita un document existent.
+
+        Args:
+            parent: Widget pare de Qt, si escau.
+            document: Document existent a editar, o `None` per crear-ne un de nou.
+        """
         super().__init__(parent)
         self.document = document
         self.setWindowTitle("Editar document" if document else "Nou document")
@@ -51,6 +65,7 @@ class DocumentDialog(QDialog):
         layout.addWidget(self.buttons)
 
     def values(self):
+        """Retorna les dades del document introduïdes, sense espais sobrants."""
         return {
             "name": self.name_input.text().strip(),
             "description": self.description_input.text().strip(),

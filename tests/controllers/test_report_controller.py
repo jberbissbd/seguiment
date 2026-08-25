@@ -74,8 +74,7 @@ def _controller(db, qtbot, tmp_path, monkeypatch):
     errors = []
     controller = ReportController(
         window, services.students, services.academic_courses,
-        services.report_configuration, services.spreadsheet_reports,
-        services.word_reports,
+        services.report_configuration, services.report_files,
         services.student_exports,
         term_dialog=AcceptedTermDialog, export_dialog=AcceptedExportDialog,
         batch_export_dialog=AcceptedBatchExportDialog,
@@ -272,6 +271,7 @@ def test_controlador_exporta_diversos_alumnes(db, qtbot, tmp_path, monkeypatch):
 
     controller.export_students()
 
+    qtbot.waitUntil(lambda: bool(messages), timeout=5000)
     assert any("Alumnes exportats: 2" in message for message in messages)
     assert len(list((tmp_path / "lots").glob("Informes *"))) == 1
     assert errors == []

@@ -1,3 +1,5 @@
+"""Servei de gestió dels cursos acadèmics."""
+
 from typing import Optional
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.models.messaging import AcademicCourse, AcademicCourseNew
@@ -16,6 +18,7 @@ class AcademicCourseService:
 
     def __init__(self, academic_course_dao: AcademicCourseDAO,
         validation_service: ValidationService = None):
+        """Rep el DAO de cursos acadèmics i el servei de validació."""
         self.academic_course_dao = academic_course_dao
         self.validation_service = validation_service or ValidationService()
 
@@ -71,6 +74,7 @@ class AcademicCourseService:
         return self.academic_course_dao.create(AcademicCourseNew(course))
 
     def can_delete(self, id: int) -> bool:
+        """Comprova si el curs acadèmic es pot eliminar (no té notes associades)."""
         return self.academic_course_dao.is_deletable(id)
 
     def delete(self, id: int) -> None:

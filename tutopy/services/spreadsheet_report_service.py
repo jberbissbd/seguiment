@@ -1,12 +1,9 @@
+"""Generació de l'informe XLSX de les notes de seguiment d'un alumne."""
+
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 import unicodedata
-
-from openpyxl import Workbook
-from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
 
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.note_dao import NoteDAO
@@ -24,22 +21,55 @@ class SpreadsheetReportService:
 
     def __init__(self, students: StudentDAO, notes: NoteDAO,
                  courses: AcademicCourseDAO, group_history: StudentGroupHistoryDAO,
-                 configuration: ReportConfigurationService):
+                 configuration: ReportConfigurationService, batch_loader=None):
+        """Rep els repositoris de domini i, opcionalment, el carregador de lots."""
         self.students = students
         self.notes = notes
         self.courses = courses
         self.group_history = group_history
         self.configuration = configuration
+        self.batch_loader = batch_loader
         self.validation = ValidationService()
 
     def export_student(self, student_id: int, destination: str | Path,
                        include_terms: bool = False) -> Path:
+        """Exporta l'informe XLSX d'un únic alumne.
+
+        Args:
+            student_id: ID de l'alumne.
+            destination: Ruta de destinació (l'extensió es normalitza a `.xlsx`).
+            include_terms: Si cal afegir una columna amb el trimestre de
+                cada nota, segons la configuració de trimestres del grup.
+
+        Returns:
+            Ruta final del fitxer generat.
+
+        Raises:
+            ValidationError: Si l'alumne no té notes per exportar.
+            EntityNotFoundError: Si l'alumne no existeix.
+        """
         student_id = self.validation.positive_id(student_id)
-        student = self.students.get_by_id(student_id)
+        data = self.prepare_students([student_id], include_terms=include_terms)
+        return self.export_prepared(student_id, destination, data, include_terms)
+
+    def prepare_students(self, student_ids: list[int], include_terms: bool = False):
+        """Carrega una vegada les dades compartides dels informes XLSX."""
+        return self.batch_loader.load(
+            student_ids, include_histories=True, include_terms=include_terms
+        )
+
+    def export_prepared(
+        self, student_id: int, destination: str | Path, data,
+        include_terms: bool = False,
+    ) -> Path:
+        """Genera un XLSX a partir d'un snapshot carregat prèviament."""
+        from openpyxl import Workbook
+
+        student = data.students.get(student_id)
         if student is None:
             raise EntityNotFoundError("L’alumne seleccionat no existeix.")
         student_notes = sorted(
-            self.notes.get_by_student(student_id), key=lambda note: (note.date, note.id)
+            data.notes[student_id], key=lambda note: (note.date, note.id)
         )
         if not student_notes:
             raise ValidationError("L’alumne no té notes per exportar.")
@@ -49,12 +79,12 @@ class SpreadsheetReportService:
         if not path.name:
             raise ValidationError("Cal indicar una destinació per a l’informe.")
 
-        categories = self.configuration.get_ordered_categories()
-        histories = self.group_history.get_by_student(student_id)
+        categories = data.categories
+        histories = data.histories[student_id]
         by_course = defaultdict(list)
         for note in student_notes:
             by_course[note.course_id].append(note)
-        course_names = self._course_names(by_course)
+        course_names = self._course_names(by_course, data.course_names)
 
         workbook = Workbook()
         workbook.remove(workbook.active)
@@ -64,7 +94,7 @@ class SpreadsheetReportService:
             self._add_course_sheet(
                 workbook, student, course_id, course_names[course_id],
                 course_notes, histories,
-                categories, include_terms,
+                categories, include_terms, data.term_configurations,
             )
 
         try:
@@ -76,11 +106,13 @@ class SpreadsheetReportService:
 
     def _add_course_sheet(
         self, workbook, student, course_id, course_name, notes, histories,
-        categories, include_terms: bool,
+        categories, include_terms: bool, term_configurations,
     ) -> None:
+        from openpyxl.styles import Alignment, Font, PatternFill
+
         sheet = workbook.create_sheet(self._sheet_title(course_name))
-        rows = [(note, self._group_for(note.date, histories, student.group_name))
-                for note in notes]
+        group_by_note_id = self._group_for_notes(notes, histories, student.group_name)
+        rows = [(note, group_by_note_id[note.id]) for note in notes]
         groups = list(dict.fromkeys(group for _note, group in rows if group))
         last_column = len(categories) + (2 if include_terms else 1)
         sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_column)
@@ -114,7 +146,9 @@ class SpreadsheetReportService:
             for index, category in enumerate(categories, 3 if include_terms else 2)
         }
         for row_number, (note, group) in enumerate(rows, 4):
-            group_column = self._write_term(sheet, row_number, course_id, group, note.date) \
+            group_column = self._write_term(
+                sheet, row_number, course_id, group, note.date, term_configurations
+            ) \
                 if include_terms else 1
             self._set_text(sheet.cell(row_number, group_column), group)
             category_column = category_columns.get(note.category_id)
@@ -127,28 +161,59 @@ class SpreadsheetReportService:
             self._merge_consecutive_terms(sheet, 4, 3 + len(rows))
         self._format_sheet(sheet, last_column)
 
-    def _write_term(self, sheet, row_number, course_id, group, note_date) -> int:
-        term = self.configuration.term_for_date(course_id, group, note_date) if group else ""
+    def _write_term(
+        self, sheet, row_number, course_id, group, note_date, term_configurations
+    ) -> int:
+        configuration = term_configurations.get((course_id, group)) if group else None
+        if configuration is None:
+            term = ""
+        elif note_date < configuration.second_term_start:
+            term = "1r"
+        elif note_date < configuration.third_term_start:
+            term = "2n"
+        else:
+            term = "3r"
         self._set_text(sheet.cell(row_number, 1), term)
         return 2
 
-    def _course_names(self, by_course) -> dict[int, str]:
-        names = {course.id: course.course for course in self.courses.get_all()}
+    @staticmethod
+    def _course_names(by_course, names) -> dict[int, str]:
         missing = set(by_course) - names.keys()
         if missing:
             raise ValidationError("Una nota fa referència a un curs acadèmic inexistent.")
         return names
 
     @staticmethod
-    def _group_for(note_date: str, histories, fallback: str) -> str:
-        candidates = [
-            history for history in histories
-            if history.start_date <= note_date
-            and (history.end_date is None or note_date <= history.end_date)
-        ]
-        if not candidates:
-            return fallback
-        return max(candidates, key=lambda history: (history.start_date, history.id)).group_name
+    def _group_for_notes(notes, histories, fallback: str) -> dict[int, str]:
+        """Resol el grup de cada nota en un únic recorregut ordenat.
+
+        Aprofita que `notes` ja arriba ordenat per data i que
+        `StudentGroupHistoryDAO.get_by_students` retorna l'historial ordenat
+        per `start_date`, evitant tornar a recórrer tot l'historial per cada
+        nota (O(N·H) -> O(N + H) en el cas habitual de trams no superposats).
+        """
+        ordered_histories = sorted(
+            histories, key=lambda history: (history.start_date, history.id)
+        )
+        active: list = []
+        next_index = 0
+        result: dict[int, str] = {}
+        for note in notes:
+            while (
+                next_index < len(ordered_histories)
+                and ordered_histories[next_index].start_date <= note.date
+            ):
+                active.append(ordered_histories[next_index])
+                next_index += 1
+            active = [
+                history for history in active
+                if history.end_date is None or note.date <= history.end_date
+            ]
+            result[note.id] = (
+                max(active, key=lambda history: (history.start_date, history.id)).group_name
+                if active else fallback
+            )
+        return result
 
     @staticmethod
     def _sheet_title(course_name: str) -> str:
@@ -159,6 +224,8 @@ class SpreadsheetReportService:
     @classmethod
     def _safe_text(cls, value) -> str:
         """Prepara text Unicode vàlid per a una cel·la OOXML d'Excel."""
+        from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+
         text = unicodedata.normalize("NFC", "" if value is None else str(value))
         text = ILLEGAL_CHARACTERS_RE.sub("", text)
         return text[:cls.EXCEL_CELL_LIMIT]
@@ -171,6 +238,8 @@ class SpreadsheetReportService:
 
     @staticmethod
     def _merge_consecutive_terms(sheet, first_row: int, last_row: int) -> None:
+        from openpyxl.styles import Alignment
+
         start = first_row
         while start <= last_row:
             value = sheet.cell(start, 1).value
@@ -187,6 +256,9 @@ class SpreadsheetReportService:
 
     @staticmethod
     def _format_sheet(sheet, last_column: int) -> None:
+        from openpyxl.styles import Alignment
+        from openpyxl.utils import get_column_letter
+
         sheet.freeze_panes = "A4"
         sheet.auto_filter.ref = f"A3:{get_column_letter(last_column)}{sheet.max_row}"
         for column in range(1, last_column + 1):
