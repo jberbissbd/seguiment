@@ -1,3 +1,9 @@
+"""Punt d'entrada de l'aplicació.
+
+Crea els serveis, els controladors i la finestra principal, i arrenca el
+bucle d'esdeveniments de Qt.
+"""
+
 import sys
 from dataclasses import dataclass
 

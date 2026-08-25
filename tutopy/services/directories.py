@@ -1,3 +1,5 @@
+"""Utilitats multiplataforma per resoldre rutes de dades i executable de l'aplicació."""
+
 import os
 import sys
 from pathlib import Path

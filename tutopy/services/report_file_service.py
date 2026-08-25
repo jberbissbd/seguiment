@@ -1,3 +1,5 @@
+"""Punt d'entrada únic per exportar informes d'alumnes en qualsevol format."""
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,6 +11,8 @@ from tutopy.services.word_report_service import WordReportService
 
 @dataclass(frozen=True, slots=True)
 class ReportFormat:
+    """Descriu un format d'informe exportable (etiqueta i extensió de fitxer)."""
+
     label: str
     extension: str
 
@@ -29,11 +33,17 @@ class ReportFileService:
         word_reports: WordReportService,
         open_document_reports: OpenDocumentReportService,
     ):
+        """Rep els generadors especialitzats per a cadascun dels formats admesos."""
         self.spreadsheets = spreadsheets
         self.word_reports = word_reports
         self.open_document_reports = open_document_reports
 
     def get_format(self, report_format: str) -> ReportFormat:
+        """Retorna la descripció del format sol·licitat.
+
+        Raises:
+            ValidationError: Si `report_format` no és una clau de `FORMATS`.
+        """
         try:
             return self.FORMATS[report_format]
         except (KeyError, TypeError) as error:

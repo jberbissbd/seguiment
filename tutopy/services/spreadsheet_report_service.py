@@ -1,3 +1,5 @@
+"""Generació de l'informe XLSX de les notes de seguiment d'un alumne."""
+
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -20,6 +22,7 @@ class SpreadsheetReportService:
     def __init__(self, students: StudentDAO, notes: NoteDAO,
                  courses: AcademicCourseDAO, group_history: StudentGroupHistoryDAO,
                  configuration: ReportConfigurationService, batch_loader=None):
+        """Rep els repositoris de domini i, opcionalment, el carregador de lots."""
         self.students = students
         self.notes = notes
         self.courses = courses
@@ -30,6 +33,21 @@ class SpreadsheetReportService:
 
     def export_student(self, student_id: int, destination: str | Path,
                        include_terms: bool = False) -> Path:
+        """Exporta l'informe XLSX d'un únic alumne.
+
+        Args:
+            student_id: ID de l'alumne.
+            destination: Ruta de destinació (l'extensió es normalitza a `.xlsx`).
+            include_terms: Si cal afegir una columna amb el trimestre de
+                cada nota, segons la configuració de trimestres del grup.
+
+        Returns:
+            Ruta final del fitxer generat.
+
+        Raises:
+            ValidationError: Si l'alumne no té notes per exportar.
+            EntityNotFoundError: Si l'alumne no existeix.
+        """
         student_id = self.validation.positive_id(student_id)
         data = self.prepare_students([student_id], include_terms=include_terms)
         return self.export_prepared(student_id, destination, data, include_terms)

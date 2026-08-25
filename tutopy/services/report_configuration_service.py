@@ -1,3 +1,5 @@
+"""Configuració persistent (categories, trimestres, logotip) dels informes."""
+
 import logging
 from pathlib import Path
 import shutil
@@ -26,6 +28,11 @@ class ReportConfigurationService:
                  courses: AcademicCourseDAO, categories: CategoryDAO,
                  transaction_factory, storage_dir: str | Path | None = None,
                  validation_service: ValidationService = None):
+        """Rep els DAOs de configuració, cursos i categories.
+
+        `storage_dir` és opcional: si no s'indica, `set_header_image` no es
+        pot utilitzar.
+        """
         self.configuration_dao = configuration_dao
         self.courses = courses
         self.categories = categories
@@ -34,10 +41,12 @@ class ReportConfigurationService:
         self.storage_dir = Path(storage_dir) if storage_dir else None
 
     def get_term_configurations(self) -> list[TermConfiguration]:
+        """Retorna totes les configuracions de trimestres desades."""
         return self.configuration_dao.get_term_configurations()
 
     def get_term_configuration(self, academic_course_id: int,
                                group_name: str) -> TermConfiguration | None:
+        """Retorna la configuració de trimestres d'un curs i grup, o `None`."""
         self.validation.positive_id(academic_course_id)
         group_name = self.validation.required_text(group_name, "El grup és obligatori.")
         return self.configuration_dao.get_term_configuration(
@@ -45,6 +54,12 @@ class ReportConfigurationService:
         )
 
     def save_term_configuration(self, data: TermConfigurationNew) -> TermConfiguration:
+        """Valida i desa la configuració de trimestres d'un curs i grup.
+
+        Raises:
+            ValidationError: Si el tercer trimestre no és posterior al segon,
+                o si les dates no pertanyen al curs acadèmic seleccionat.
+        """
         course = self.courses.get_by_id(
             self.validation.positive_id(data.academic_course_id)
         )
@@ -68,6 +83,7 @@ class ReportConfigurationService:
         )
 
     def delete_term_configuration(self, configuration_id: int) -> None:
+        """Elimina una configuració de trimestres pel seu ID."""
         configuration_id = self.validation.positive_id(configuration_id)
         existing = next((item for item in self.get_term_configurations()
                          if item.id == configuration_id), None)
@@ -77,6 +93,10 @@ class ReportConfigurationService:
 
     def term_for_date(self, academic_course_id: int, group_name: str,
                       date: str) -> str | None:
+        """Retorna el trimestre ("1r"/"2n"/"3r") al qual pertany una data.
+
+        Retorna `None` si no hi ha configuració de trimestres pel curs i grup.
+        """
         self.validation.iso_date(date)
         configuration = self.get_term_configuration(academic_course_id, group_name)
         if configuration is None:
@@ -88,6 +108,7 @@ class ReportConfigurationService:
         return "3r"
 
     def get_ordered_categories(self) -> list[Category]:
+        """Retorna les categories segons l'ordre desat, amb les noves al final."""
         categories = self.categories.get_all()
         by_id = {category.id: category for category in categories}
         ordered = [by_id.pop(category_id) for category_id
@@ -97,6 +118,19 @@ class ReportConfigurationService:
         return ordered
 
     def set_category_order(self, category_ids: list[int]) -> list[Category]:
+        """Fixa l'ordre de totes les categories per als informes.
+
+        Args:
+            category_ids: IDs de totes les categories existents, en l'ordre
+                desitjat (no se n'admet cap repetició ni omissió).
+
+        Returns:
+            Les categories ja ordenades segons `get_ordered_categories`.
+
+        Raises:
+            ValidationError: Si la llista no conté exactament totes les
+                categories existents, sense repeticions.
+        """
         if not isinstance(category_ids, list) or any(
             isinstance(item, bool) or not isinstance(item, int) for item in category_ids
         ):
@@ -111,6 +145,11 @@ class ReportConfigurationService:
         return self.get_ordered_categories()
 
     def get_header_image(self) -> Path | None:
+        """Retorna la ruta del logotip de capçalera configurat, o `None`.
+
+        Retorna `None` si no hi ha logotip configurat o si el fitxer desat ja
+        no existeix al disc.
+        """
         value = self.configuration_dao.get_setting("header_image")
         if not value:
             return None
@@ -118,6 +157,21 @@ class ReportConfigurationService:
         return path if path.is_file() else None
 
     def set_header_image(self, source: str | Path) -> Path:
+        """Copia una imatge al magatzem intern i la fixa com a logotip de capçalera.
+
+        Substitueix i elimina el logotip anterior si es trobava dins del
+        mateix magatzem.
+
+        Args:
+            source: Ruta de la imatge d'origen (jpg, png, etc.).
+
+        Returns:
+            Ruta del fitxer copiat dins del magatzem.
+
+        Raises:
+            ValidationError: Si l'origen no existeix, no és una imatge
+                vàlida, o no s'ha configurat cap magatzem.
+        """
         from docx.image.exceptions import UnrecognizedImageError
         from docx.image.image import Image
 
@@ -161,6 +215,7 @@ class ReportConfigurationService:
         return destination
 
     def clear_header_image(self) -> None:
+        """Elimina la configuració del logotip i, si escau, el fitxer del magatzem."""
         previous = self.get_header_image()
         try:
             self.configuration_dao.delete_setting("header_image")

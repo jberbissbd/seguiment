@@ -1,3 +1,5 @@
+"""Exportació d'informes i documents d'alumnes a carpetes locals, individual o en lot."""
+
 from pathlib import Path
 import re
 from datetime import date
@@ -31,6 +33,7 @@ class StudentExportService:
 
     def __init__(self, students: StudentDAO, documents: DocumentService,
                  courses: AcademicCourseDAO, report_files: ReportFileService):
+        """Injecta els DAOs i serveis necessaris per exportar alumnes."""
         self.students = students
         self.documents = documents
         self.courses = courses
@@ -41,6 +44,20 @@ class StudentExportService:
                        report_format: str, include_terms: bool = False,
                        include_documents: bool = True,
                        folder_name: str | None = None) -> Path:
+        """Exporta l'informe i, opcionalment, els documents d'un sol alumne.
+
+        Args:
+            student_id: ID de l'alumne a exportar.
+            destination: Carpeta on crear la carpeta d'exportació.
+            report_format: Format de l'informe (ex: "pdf", "docx").
+            include_terms: Si cal incloure els trimestres a l'informe.
+            include_documents: Si cal copiar-hi també els documents de l'alumne.
+            folder_name: Nom de la subcarpeta a crear. Si no s'especifica,
+                es deriva del nom de l'alumne.
+
+        Returns:
+            La carpeta creada amb l'informe (i documents, si s'escau).
+        """
         student_id = self.validation.positive_id(student_id)
         student = self.students.get_by_id(student_id)
         if student is None:
@@ -70,6 +87,20 @@ class StudentExportService:
                         progress_callback: Callable[[int, int], None] | None = None,
                         cancel_requested: Callable[[], bool] | None = None,
                         ) -> BatchExportResult:
+        """Prepara i exporta en lot l'informe (i documents) de diversos alumnes.
+
+        Args:
+            student_ids: IDs dels alumnes a exportar.
+            destination: Carpeta on crear la carpeta del lot.
+            report_format: Format de l'informe (ex: "pdf", "docx").
+            include_terms: Si cal incloure els trimestres a l'informe.
+            include_documents: Si cal copiar-hi també els documents de cada alumne.
+            progress_callback: Rebut amb (processats, total) després de cada alumne.
+            cancel_requested: Consultat entre alumnes per aturar el lot.
+
+        Returns:
+            El resultat del lot, amb els alumnes processats i les fallades.
+        """
         preparation = self.prepare_students_export(
             student_ids, destination, report_format, include_terms, include_documents
         )

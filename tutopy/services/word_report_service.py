@@ -1,3 +1,5 @@
+"""Generació de l'informe DOCX de les notes de seguiment d'un alumne."""
+
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -17,6 +19,7 @@ class WordReportService:
     def __init__(self, students: StudentDAO, notes: NoteDAO,
                  courses: AcademicCourseDAO,
                  configuration: ReportConfigurationService, batch_loader=None):
+        """Rep els repositoris de domini i, opcionalment, el carregador de lots."""
         self.students = students
         self.notes = notes
         self.courses = courses
@@ -25,6 +28,19 @@ class WordReportService:
         self.validation = ValidationService()
 
     def export_student(self, student_id: int, destination: str | Path) -> Path:
+        """Exporta l'informe DOCX d'un únic alumne.
+
+        Args:
+            student_id: ID de l'alumne.
+            destination: Ruta de destinació (l'extensió es normalitza a `.docx`).
+
+        Returns:
+            Ruta final del fitxer generat.
+
+        Raises:
+            ValidationError: Si l'alumne no té notes per exportar.
+            EntityNotFoundError: Si l'alumne no existeix.
+        """
         student_id = self.validation.positive_id(student_id)
         data = self.prepare_students([student_id])
         return self.export_prepared(student_id, destination, data)

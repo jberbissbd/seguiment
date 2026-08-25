@@ -1,3 +1,5 @@
+"""Validacions i normalitzacions de dades compartides entre serveis de domini."""
+
 import datetime
 import re
 
@@ -10,7 +12,10 @@ ACADEMIC_COURSE_PATTERN = re.compile(r"^(\d{4})-(\d{4})$")
 
 
 class ValidationService:
+    """Agrupa validacions i normalitzacions de dades reutilitzades pels serveis."""
+
     def __init__(self, category_dao: CategoryDAO = None):
+        """Rep, opcionalment, el DAO de categories per validar notes."""
         self.category_dao = category_dao
 
     def validate_student(self, student: StudentNew) -> StudentNew:

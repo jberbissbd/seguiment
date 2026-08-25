@@ -1,3 +1,5 @@
+"""Servei de gestió de documents d'alumnes: metadades i fitxers gestionats."""
+
 import dataclasses
 import logging
 import shutil
@@ -27,6 +29,7 @@ class DocumentService:
     def __init__(self, document_dao: DocumentDAO, student_dao: StudentDAO,
         academic_course_dao: AcademicCourseDAO = None,
         validation_service: ValidationService = None, storage_dir=None):
+        """Injecta els DAOs i el directori de magatzem de fitxers gestionats."""
         self.document_dao = document_dao
         self.student_dao = student_dao
         self.academic_course_dao = academic_course_dao
@@ -34,9 +37,11 @@ class DocumentService:
         self.storage_dir = Path(storage_dir) if storage_dir else None
 
     def get_all(self) -> list[StudentDocument]:
+        """Retorna tots els documents registrats."""
         return self.document_dao.get_all()
 
     def get_by_student(self, student_id: int) -> list[StudentDocument]:
+        """Retorna els documents d'un alumne existent."""
         self._require_student(student_id)
         return self.document_dao.get_by_student(student_id)
 
@@ -54,6 +59,7 @@ class DocumentService:
         return self.document_dao.get_by_students(validated)
 
     def get_by_id(self, document_id: int) -> StudentDocument:
+        """Retorna un document pel seu ID o llança `EntityNotFoundError`."""
         self.validation_service.positive_id(document_id)
         document = self.document_dao.get_by_id(document_id)
         if document is None:
@@ -61,6 +67,7 @@ class DocumentService:
         return document
 
     def create(self, data: StudentDocumentNew) -> StudentDocument:
+        """Valida i registra les metadades d'un nou document per a un alumne."""
         self._require_student(data.student_id)
         return self.document_dao.create(self._prepare(data))
 
@@ -94,6 +101,7 @@ class DocumentService:
             raise
 
     def update(self, document: StudentDocument) -> StudentDocument:
+        """Actualitza les metadades d'un document, conservant el fitxer gestionat."""
         existing = self.get_by_id(document.id)
         prepared = self._prepare(StudentDocumentNew(
             student_id=existing.student_id,
@@ -154,6 +162,7 @@ class DocumentService:
         return destination
 
     def delete(self, document_id: int) -> StudentDocument:
+        """Elimina un document i el seu fitxer gestionat, amb neteja transaccional."""
         document = self.get_by_id(document_id)
         path = Path(document.file_path) if document.file_path else None
         quarantined = self._quarantine_document_file(path)

@@ -1,3 +1,11 @@
+"""Composition root: construeix la capa de serveis a partir d'una `Database`.
+
+Cap altra capa (controladors, UI) ha de construir serveis directament; sempre
+ho fan a través de `create_services`, que és l'únic lloc que coneix com
+s'enllacen els DAOs, els serveis i les fàbriques de connexió per als
+treballadors en fils.
+"""
+
 from dataclasses import dataclass
 from contextlib import contextmanager
 
@@ -49,7 +57,23 @@ class ServiceContainer:
 def create_services(
     database: Database, *, configure_worker_services: bool = True
 ) -> ServiceContainer:
-    """Construeix la capa de negoci sense exposar DAOs a la UI."""
+    """Construeix la capa de negoci sense exposar DAOs a la UI.
+
+    Args:
+        database: Base de dades ja connectada (`database.conn` no pot ser
+            `None`).
+        configure_worker_services: Si cal configurar les fàbriques que creen
+            una connexió SQLite pròpia per a un fil secundari (transferències,
+            edició massiva). Es passa `False` en la crida recursiva que crea
+            el `ServiceContainer` del propi treballador, per evitar-ne una
+            cadena infinita.
+
+    Returns:
+        El contenidor amb tots els serveis de l'aplicació.
+
+    Raises:
+        RuntimeError: Si `database` no està connectada.
+    """
     if database.conn is None:
         raise RuntimeError("La base de dades ha d'estar connectada.")
 

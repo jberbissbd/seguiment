@@ -1,3 +1,5 @@
+"""Servei de gestió d'alumnes: CRUD, cerca i historial de grup."""
+
 import dataclasses
 from datetime import datetime
 from typing import Optional, cast
@@ -18,12 +20,15 @@ from tutopy.services.validation_service import ValidationService
 
 
 class StudentService:
+    """Gestiona el cicle de vida dels alumnes i el seu historial de grup."""
+
     def __init__(self, student_dao: StudentDAO, contact_dao: ContactDAO,
         document_dao: DocumentDAO, group_history_dao: StudentGroupHistoryDAO,
         academic_course_dao: AcademicCourseDAO,
         transaction_factory,
         validation_service: ValidationService = None,
         worker_service_factory=None):
+        """Injecta els DAOs necessaris i la factoria de transaccions."""
         self.student_dao = student_dao
         self.contact_dao = contact_dao
         self.document_dao = document_dao
@@ -232,17 +237,18 @@ class StudentService:
         academic_course_id: Optional[int] = None,
         change_date: Optional[str] = None
     ) -> StudentGroupHistory:
-        """
-        Canvia el grup d'un alumne.
+        """Canvia el grup d'un alumne i tanca l'històric anterior.
 
         Args:
             student_id: ID de l'alumne.
             new_group: Nom del nou grup (ex: "4t A").
-            academic_course_id: ID del curs acadèmic. Si no s'especifica, es resol automàticament.
-            change_date: Data del canvi (format YYYY-MM-DD). Si no s'especifica, usa avui.
+            academic_course_id: ID del curs acadèmic. Si no s'especifica, es
+                resol automàticament a partir de `change_date`.
+            change_date: Data del canvi (format YYYY-MM-DD). Si no s'especifica,
+                usa la data d'avui.
 
         Returns:
-            StudentGroupHistory: El registre creat.
+            El registre d'històric creat.
         """
         with self.transaction_factory():
             change_date = change_date or datetime.now().strftime("%Y-%m-%d")

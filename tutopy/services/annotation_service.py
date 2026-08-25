@@ -1,3 +1,5 @@
+"""Servei de gestió dels descriptors (anotacions) d'alumnes."""
+
 import dataclasses
 
 from tutopy.database.daos.annotation_dao import AnnotationDAO
@@ -16,6 +18,7 @@ class AnnotationService:
 
     def __init__(self, annotation_dao: AnnotationDAO, student_dao: StudentDAO,
         validation_service: ValidationService = None):
+        """Rep el DAO d'anotacions, el d'alumnes i el servei de validació."""
         self.annotation_dao = annotation_dao
         self.student_dao = student_dao
         self.validation_service = validation_service or ValidationService()
@@ -33,6 +36,7 @@ class AnnotationService:
         return self.annotation_dao.get_by_student(student_id)
 
     def get_by_id(self, annotation_id: int) -> StudentAnnotation:
+        """Retorna una anotació pel seu ID."""
         self.validation_service.positive_id(annotation_id)
         annotation = self.annotation_dao.get_by_id(annotation_id)
         if annotation is None:

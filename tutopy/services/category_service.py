@@ -1,3 +1,5 @@
+"""Servei de gestió de les categories de notes."""
+
 import dataclasses
 from typing import Optional
 from tutopy.database.daos.category_dao import CategoryDAO
@@ -16,6 +18,7 @@ class CategoryService:
     """
 
     def __init__(self, category_dao: CategoryDAO, validation_service: ValidationService = None):
+        """Rep el DAO de categories i el servei de validació."""
         self.category_dao = category_dao
         self.validation_service = validation_service or ValidationService(category_dao)
 

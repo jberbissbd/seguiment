@@ -1,3 +1,5 @@
+"""Servei de gestió de les notes de seguiment dels alumnes."""
+
 import dataclasses
 from typing import cast
 
@@ -15,9 +17,16 @@ from tutopy.services.utils import AcademicCourseDeterminator
 
 
 class NoteService:
+    """Servei per gestionar notes de seguiment, amb registre automàtic de grup."""
+
     def __init__(self, note_dao: NoteDAO, academic_course_dao: AcademicCourseDAO,
         category_dao: CategoryDAO, student_dao: StudentDAO, transaction_factory,
         group_history_dao: StudentGroupHistoryDAO = None):
+        """Rep els DAOs de domini i, opcionalment, l'historial de grups.
+
+        Si `group_history_dao` no s'indica, no es registra automàticament
+        l'historial de grup en crear o actualitzar notes.
+        """
         self.note_dao = note_dao
         self.academic_course_dao = academic_course_dao
         self.category_dao = category_dao
@@ -34,6 +43,7 @@ class NoteService:
             return self.note_dao.create(prepared)
 
     def create(self, note_data: NoteNew) -> Note:
+        """Àlies de `create_note`."""
         return self.create_note(note_data)
 
     def _resolve_academic_course(self, date_str: str) -> int:
@@ -48,12 +58,15 @@ class NoteService:
         return self.note_dao.get_by_student(student_id)
 
     def get_by_student(self, student_id: int) -> list[Note]:
+        """Àlies de `get_notes_by_student`."""
         return self.get_notes_by_student(student_id)
 
     def get_all(self) -> list[Note]:
+        """Retorna totes les notes de tots els alumnes."""
         return self.note_dao.get_all()
 
     def get_by_id(self, note_id: int) -> Note:
+        """Retorna una nota pel seu ID."""
         self.validation_service.positive_id(note_id)
         note = self.note_dao.get_by_id(note_id)
         if note is None:
@@ -61,6 +74,7 @@ class NoteService:
         return note
 
     def update(self, note: Note) -> Note:
+        """Valida i actualitza una nota existent, actualitzant l'historial de grup."""
         with self.transaction_factory():
             existing = self.get_by_id(note.id)
             prepared = self._prepare(NoteNew(
@@ -83,6 +97,7 @@ class NoteService:
             return updated
 
     def delete(self, note_id: int) -> None:
+        """Elimina una nota pel seu ID."""
         self.get_by_id(note_id)
         self.note_dao.delete(note_id)
 

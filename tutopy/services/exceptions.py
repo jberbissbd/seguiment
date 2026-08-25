@@ -1,3 +1,6 @@
+"""Excepcions de domini compartides per la capa de serveis de Tutopy."""
+
+
 class DomainError(Exception):
     """Error de negoci que els controladors poden mostrar a l'usuari."""
 

@@ -1,3 +1,5 @@
+"""Càrrega en bloc de les dades compartides per generar informes d'alumnes."""
+
 from tutopy.models.reporting import ReportBatchData
 
 
@@ -5,6 +7,7 @@ class ReportBatchLoader:
     """Carrega un snapshot de dades compartides per un lot d'informes."""
 
     def __init__(self, students, notes, courses, history, configuration):
+        """Rep els repositoris necessaris per construir el snapshot d'un lot."""
         self.students = students
         self.notes = notes
         self.courses = courses

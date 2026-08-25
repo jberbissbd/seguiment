@@ -75,6 +75,7 @@ class TransferService:
         documents, history, document_service, transaction_factory,
         worker_service_factory=None,
     ):
+        """Injecta els DAOs, el servei de documents i la factoria de transaccions."""
         self.students = students
         self.notes = notes
         self.categories = categories

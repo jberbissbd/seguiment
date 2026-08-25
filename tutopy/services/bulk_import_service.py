@@ -1,3 +1,5 @@
+"""Importació massiva d'alumnes i categories des de fulls de càlcul XLSX/ODS."""
+
 from difflib import SequenceMatcher
 import math
 from pathlib import Path
@@ -17,6 +19,8 @@ from tutopy.services.validation_service import ValidationService
 
 
 class BulkImportService:
+    """Genera plantilles i importa alumnes/categories des de fulls XLSX o ODS."""
+
     STUDENTS_SHEET = "Alumnes"
     CATEGORIES_SHEET = "Categories"
     STUDENT_HEADERS = ("Nom", "Cognoms", "Grup")
@@ -28,12 +32,22 @@ class BulkImportService:
 
     def __init__(self, students: StudentService, categories: CategoryService,
                  transaction_factory, similarity_threshold: float = 0.86):
+        """Injecta els serveis d'alumnes/categories i el llindar de similitud."""
         self.students = students
         self.categories = categories
         self.transaction_factory = transaction_factory
         self.similarity_threshold = similarity_threshold
 
     def create_template(self, destination: str | Path) -> Path:
+        """Crea un fitxer XLSX en blanc amb els fulls i capçaleres esperats.
+
+        Args:
+            destination: Ruta on desar la plantilla. Si no acaba en ``.xlsx``,
+                se li afegeix l'extensió.
+
+        Returns:
+            La ruta del fitxer creat.
+        """
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill
 
@@ -65,6 +79,15 @@ class BulkImportService:
         return path
 
     def analyze(self, source: str | Path) -> ImportPreview:
+        """Llegeix un full de càlcul i detecta errors i possibles conflictes.
+
+        Args:
+            source: Ruta del fitxer XLSX o ODS a analitzar.
+
+        Returns:
+            Una previsualització amb les files vàlides, els conflictes
+            d'alumnes similars i els problemes de validació trobats.
+        """
         path = Path(source)
         if not path.is_file():
             raise ValidationError("El full de càlcul seleccionat no existeix.")
@@ -138,6 +161,19 @@ class BulkImportService:
 
     def execute(self, preview: ImportPreview,
                 decisions: tuple[ImportDecision, ...] = ()) -> ImportResult:
+        """Importa a la base de dades els alumnes i categories previsualitzats.
+
+        Args:
+            preview: Resultat previ d':meth:`analyze`.
+            decisions: Resolucions per a cada fila d'alumne en conflicte.
+
+        Returns:
+            Recompte d'elements creats, actualitzats i omesos.
+
+        Raises:
+            ValidationError: Si `preview` conté problemes sense resoldre o
+                falten decisions per a algun conflicte.
+        """
         if preview.issues:
             raise ValidationError("\n".join(str(issue) for issue in preview.issues))
         decision_by_row = {decision.row: decision for decision in decisions}

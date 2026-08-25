@@ -1,3 +1,5 @@
+"""Generació d'informes ODT i PDF de les notes de seguiment d'un alumne."""
+
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -12,6 +14,7 @@ class OpenDocumentReportService:
     """Genera els informes de text oberts (ODT) i PDF sense eines externes."""
 
     def __init__(self, students, notes, courses, configuration, batch_loader=None):
+        """Rep els repositoris de domini i, opcionalment, el carregador de lots."""
         self.students = students
         self.notes = notes
         self.courses = courses
@@ -21,6 +24,21 @@ class OpenDocumentReportService:
 
     def export_student(self, student_id: int, destination: str | Path,
                        report_format: str) -> Path:
+        """Exporta l'informe ODT o PDF d'un únic alumne.
+
+        Args:
+            student_id: ID de l'alumne.
+            destination: Ruta de destinació (l'extensió es normalitza
+                segons `report_format`).
+            report_format: `"odt"` o `"pdf"`.
+
+        Returns:
+            Ruta final del fitxer generat.
+
+        Raises:
+            ValidationError: Si el format no és vàlid o l'alumne no té notes.
+            EntityNotFoundError: Si l'alumne no existeix.
+        """
         if report_format not in {"odt", "pdf"}:
             raise ValidationError("El format del document no és vàlid.")
         student_id = self.validation.positive_id(student_id)
