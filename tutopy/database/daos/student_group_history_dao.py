@@ -1,3 +1,5 @@
+"""DAO per a l'històric de grups dels alumnes."""
+
 from typing import Optional
 from tutopy.models.messaging import StudentGroupHistory, StudentGroupHistoryNew
 from ._batch import grouped_by_student
@@ -7,6 +9,7 @@ class StudentGroupHistoryDAO:
     """DAO per gestionar l'històric de grups d'alumnes."""
 
     def __init__(self, conn):
+        """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
 
     def create(self, data: StudentGroupHistoryNew) -> StudentGroupHistory:

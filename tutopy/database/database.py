@@ -1,3 +1,5 @@
+"""Gestor de connexió SQLite i orquestració de l'esquema i les DAOs."""
+
 import os
 import sqlite3
 import sys
@@ -28,12 +30,14 @@ class ManagedConnection:
     """Fa que els ``commit`` dels DAOs respectin una transacció exterior."""
 
     def __init__(self, connection: sqlite3.Connection):
+        """Embolcalla una connexió SQLite ja oberta."""
         self._connection = connection
         self._transaction_depth = 0
         self._savepoint_counter = 0
 
     @property
     def row_factory(self):
+        """Retorna la ``row_factory`` de la connexió subjacent."""
         return self._connection.row_factory
 
     @row_factory.setter
@@ -41,26 +45,38 @@ class ManagedConnection:
         self._connection.row_factory = value
 
     def execute(self, *args, **kwargs):
+        """Delega a ``sqlite3.Connection.execute``."""
         return self._connection.execute(*args, **kwargs)
 
     def executescript(self, *args, **kwargs):
+        """Delega a ``sqlite3.Connection.executescript``."""
         return self._connection.executescript(*args, **kwargs)
 
     def executemany(self, *args, **kwargs):
+        """Delega a ``sqlite3.Connection.executemany``."""
         return self._connection.executemany(*args, **kwargs)
 
     def commit(self):
+        """Confirma la connexió, tret que hi hagi una transacció exterior oberta."""
         if self._transaction_depth == 0:
             self._connection.commit()
 
     def rollback(self):
+        """Desfà els canvis pendents a la connexió subjacent."""
         self._connection.rollback()
 
     def close(self):
+        """Tanca la connexió subjacent."""
         self._connection.close()
 
     @contextmanager
     def transaction(self):
+        """Obre una transacció (o un ``SAVEPOINT`` si ja n'hi ha una activa).
+
+        Fa de context manager: confirma en sortir amb èxit i desfà els canvis
+        (fins al ``SAVEPOINT`` corresponent si la transacció està niuada) si
+        el bloc llança una excepció.
+        """
         outermost = self._transaction_depth == 0
         if outermost:
             self._connection.execute("BEGIN")
@@ -98,6 +114,7 @@ class Database:
     SCHEMA_VERSION = 1
 
     def __init__(self, path: str = None):
+        """Prepara el gestor amb la ruta indicada, sense obrir encara la connexió."""
         self.path = path or _default_db_path()
         self.conn: Optional[ManagedConnection] = None
         self.academic_courses: AcademicCourseDAO = None
@@ -113,6 +130,11 @@ class Database:
         self.statistics: StatisticsDAO = None
 
     def connect(self):
+        """Obre la connexió, aplica les migracions pendents i inicialitza les DAOs.
+
+        Retorna la pròpia instància, per permetre encadenar
+        ``Database().connect()``.
+        """
         self.conn = ManagedConnection(sqlite3.connect(self.path))
         try:
             self.conn.row_factory = sqlite3.Row
@@ -126,12 +148,14 @@ class Database:
         return self
 
     def close(self):
+        """Confirma els canvis pendents i tanca la connexió, si n'hi ha una d'oberta."""
         if self.conn:
             self.conn.commit()
             self.conn.close()
             self.conn = None
 
     def commit(self):
+        """Confirma els canvis pendents a la connexió actual, si n'hi ha una."""
         if self.conn:
             self.conn.commit()
 

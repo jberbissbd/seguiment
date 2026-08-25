@@ -1,3 +1,5 @@
+"""Reexporta les DAOs disponibles per a la capa de persistència de Tutopy."""
+
 from .academic_course_dao import AcademicCourseDAO
 from .category_dao import CategoryDAO
 from .student_dao import StudentDAO

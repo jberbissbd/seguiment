@@ -1,13 +1,19 @@
+"""DAO per als documents adjunts d'alumnes."""
+
 from typing import Optional
 from tutopy.models.messaging import StudentDocument, StudentDocumentNew
 from ._batch import grouped_by_student
 
 
 class DocumentDAO:
+    """Accés a persistència per als documents dels alumnes."""
+
     def __init__(self, conn):
+        """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
 
     def get_by_student(self, student_id: int) -> list[StudentDocument]:
+        """Retorna els documents d'un alumne, ordenats per nom."""
         rows = self.conn.execute(
             "SELECT id, student_id, name, description, uuid_filename, "
             "original_filename, file_path, date, course_id FROM student_documents "
@@ -30,6 +36,7 @@ class DocumentDAO:
         )
 
     def get_by_id(self, id: int) -> Optional[StudentDocument]:
+        """Retorna un document o ``None`` si no existeix."""
         row = self.conn.execute(
             "SELECT id, student_id, name, description, uuid_filename, "
             "original_filename, file_path, date, course_id "
@@ -39,6 +46,7 @@ class DocumentDAO:
         return StudentDocument(**row) if row else None
 
     def get_all(self) -> list[StudentDocument]:
+        """Retorna tots els documents, ordenats per nom."""
         rows = self.conn.execute(
             "SELECT id, student_id, name, description, uuid_filename, "
             "original_filename, file_path, date, course_id "
@@ -47,6 +55,7 @@ class DocumentDAO:
         return [StudentDocument(**row) for row in rows]
 
     def create(self, data: StudentDocumentNew) -> StudentDocument:
+        """Registra un nou document per a un alumne."""
         cur = self.conn.execute(
             "INSERT INTO student_documents "
             "(student_id, name, description, uuid_filename, original_filename, file_path, "
@@ -66,6 +75,7 @@ class DocumentDAO:
         )
 
     def update(self, doc: StudentDocument):
+        """Actualitza les metadades d'un document existent."""
         self.conn.execute(
             "UPDATE student_documents SET name=?, description=?, date=?, course_id=? WHERE id=?",
             (doc.name, doc.description, doc.date, doc.course_id, doc.id),
@@ -73,5 +83,6 @@ class DocumentDAO:
         self.conn.commit()
 
     def delete(self, id: int):
+        """Elimina el registre d'un document pel seu identificador."""
         self.conn.execute("DELETE FROM student_documents WHERE id = ?", (id,))
         self.conn.commit()

@@ -1,3 +1,6 @@
+"""DAO per a operacions globals de manteniment de la base de dades."""
+
+
 class DataManagementDAO:
     """Operacions globals de persistència, sense lògica de presentació."""
 
@@ -8,9 +11,11 @@ class DataManagementDAO:
     )
 
     def __init__(self, conn):
+        """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
 
     def delete_all(self) -> None:
+        """Buida totes les taules de dades i reinicia els comptadors ``AUTOINCREMENT``."""
         for table in self.TABLES:
             self.conn.execute(f"DELETE FROM {table}")
         placeholders = ", ".join("?" for _ in self.TABLES)

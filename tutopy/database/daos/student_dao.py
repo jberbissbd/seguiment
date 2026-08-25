@@ -1,3 +1,5 @@
+"""DAO per als alumnes."""
+
 import uuid as uuid_mod
 from typing import Optional
 from tutopy.models.messaging import Student, StudentNew
@@ -5,10 +7,14 @@ from ._batch import SQLITE_PARAMETER_BATCH
 
 
 class StudentDAO:
+    """Accés a persistència per als alumnes."""
+
     def __init__(self, conn):
+        """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
 
     def get_all(self) -> list[Student]:
+        """Retorna tots els alumnes, ordenats per cognoms i nom."""
         rows = self.conn.execute(
             "SELECT id, uuid, name, surnames, group_name FROM students "
             "ORDER BY surnames, name"
@@ -16,6 +22,7 @@ class StudentDAO:
         return [Student(**row) for row in rows]
 
     def get_by_id(self, id: int) -> Optional[Student]:
+        """Retorna un alumne o ``None`` si no existeix."""
         row = self.conn.execute(
             "SELECT id, uuid, name, surnames, group_name FROM students WHERE id = ?",
             (id,),
@@ -38,6 +45,7 @@ class StudentDAO:
         return students
 
     def get_by_uuid(self, uuid: str) -> Optional[Student]:
+        """Retorna un alumne pel seu UUID, o ``None`` si no existeix."""
         row = self.conn.execute(
             "SELECT id, uuid, name, surnames, group_name FROM students WHERE uuid = ?",
             (uuid,),
@@ -87,6 +95,7 @@ class StudentDAO:
         )
 
     def update(self, student: Student):
+        """Actualitza les dades d'un alumne existent."""
         self.conn.execute(
             "UPDATE students SET name = ?, surnames = ?, group_name = ? WHERE id = ?",
             (student.name, student.surnames, student.group_name, student.id),
@@ -99,6 +108,7 @@ class StudentDAO:
         self.conn.commit()
 
     def search(self, query: str) -> list[Student]:
+        """Cerca alumnes pel nom, cognoms, nom complet o grup (subcadena, sense distingir majúscules)."""
         pattern = f"%{query}%"
         rows = self.conn.execute(
             """SELECT id, uuid, name, surnames, group_name FROM students
@@ -111,6 +121,7 @@ class StudentDAO:
         return [Student(**row) for row in rows]
 
     def get_groups(self) -> list[str]:
+        """Retorna els noms de grup no buits en ús, ordenats alfabèticament."""
         rows = self.conn.execute(
             "SELECT DISTINCT group_name FROM students "
             "WHERE group_name != '' ORDER BY group_name"
@@ -120,6 +131,7 @@ class StudentDAO:
     def get_by_full_name(
         self, name: str, surnames: str, group_name: str
     ) -> Optional[Student]:
+        """Retorna l'alumne amb aquest nom, cognoms i grup exactes, o ``None``."""
         row = self.conn.execute(
             "SELECT id, uuid, name, surnames, group_name FROM students "
             "WHERE name = ? AND surnames = ? AND group_name = ?",
