@@ -195,12 +195,12 @@ def test_execucio_exigeix_decisions_i_valida_alumne_objectiu(db, tmp_path):
                      students=[("Julia", "Martines", "2n B")])
     preview = services.bulk_import.analyze(path)
 
+    decisions = (ImportDecision(2, ImportAction.UPDATE, existing.id + 100),)
+
     with pytest.raises(ValidationError, match="Falten decisions"):
         services.bulk_import.execute(preview)
     with pytest.raises(ValidationError, match="coincidència vàlida"):
-        services.bulk_import.execute(preview, (
-            ImportDecision(2, ImportAction.UPDATE, existing.id + 100),
-        ))
+        services.bulk_import.execute(preview, decisions)
 
 
 def test_execucio_permet_ometre_un_conflicte(db, tmp_path):

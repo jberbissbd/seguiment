@@ -8,6 +8,8 @@ from tutopy.models.statistics import (
 class StatisticsDAO:
     """Consultes agregades de seguiment; no carrega el text de les notes."""
 
+    AND = " AND "
+
     def __init__(self, conn):
         """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
@@ -65,7 +67,7 @@ class StatisticsDAO:
 
         # Els filtres de notes van a l'ON per conservar alumnes amb recompte zero.
         join_conditions, join_params = self._note_conditions(filters, include_group=False)
-        on = " AND " + " AND ".join(join_conditions) if join_conditions else ""
+        on = self.AND + self.AND.join(join_conditions) if join_conditions else ""
         rows = self.conn.execute(
             "SELECT s.id AS student_id, s.surnames || ', ' || s.name AS student_name, "
             "s.group_name, COUNT(n.id) AS note_count FROM students s "
@@ -91,7 +93,7 @@ class StatisticsDAO:
 
     def _note_filters(self, filters):
         conditions, params = self._note_conditions(filters, include_group=True)
-        return (" WHERE " + " AND ".join(conditions) if conditions else "", params)
+        return (" WHERE " + self.AND.join(conditions) if conditions else "", params)
 
     @staticmethod
     def _note_conditions(filters, include_group):

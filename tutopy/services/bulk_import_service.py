@@ -21,6 +21,8 @@ from tutopy.services.validation_service import ValidationService
 class BulkImportService:
     """Genera plantilles i importa alumnes/categories des de fulls XLSX o ODS."""
 
+    XLSX_EXTENSION = ".xlsx"
+    ODS_EXTENSION = ".ods"
     STUDENTS_SHEET = "Alumnes"
     CATEGORIES_SHEET = "Categories"
     STUDENT_HEADERS = ("Nom", "Cognoms", "Grup")
@@ -52,8 +54,8 @@ class BulkImportService:
         from openpyxl.styles import Font, PatternFill
 
         path = Path(destination)
-        if path.suffix.lower() != ".xlsx":
-            path = path.with_suffix(".xlsx")
+        if path.suffix.lower() != self.XLSX_EXTENSION:
+            path = path.with_suffix(self.XLSX_EXTENSION)
         workbook = Workbook()
         instructions = workbook.active
         instructions.title = "Instruccions"
@@ -91,11 +93,11 @@ class BulkImportService:
         path = Path(source)
         if not path.is_file():
             raise ValidationError("El full de càlcul seleccionat no existeix.")
-        if path.suffix.lower() not in {".xlsx", ".ods"}:
+        if path.suffix.lower() not in {self.XLSX_EXTENSION, self.ODS_EXTENSION}:
             raise ValidationError("El format ha de ser XLSX o ODS.")
         self._validate_archive(path)
         try:
-            if path.suffix.lower() == ".ods":
+            if path.suffix.lower() == self.ODS_EXTENSION:
                 workbook = self._load_ods(path)
             else:
                 from openpyxl import load_workbook
@@ -378,6 +380,15 @@ class _OdsSheet:
         self._max_rows = max_rows
 
     def iter_rows(self, min_row=1, max_row=None, max_col=None, values_only=False):
+        for number, values in self._expanded_rows(max_col):
+            if number < min_row:
+                continue
+            if max_row is not None and number > max_row:
+                return
+            yield self._as_row(values, values_only)
+
+    def _expanded_rows(self, max_col):
+        """Genera ``(número, valors)`` desplegant les files repetides de l'ODS."""
         from odf import table as odf_table
 
         current_row = 0
@@ -392,11 +403,11 @@ class _OdsSheet:
                     raise ValidationError(
                         f"El full supera el límit de {self._max_rows} files."
                     )
-                if current_row < min_row:
-                    continue
-                if max_row is not None and current_row > max_row:
-                    return
-                yield tuple(values if values_only else map(_CellValue, values))
+                yield current_row, values
+
+    @staticmethod
+    def _as_row(values, values_only):
+        return tuple(values) if values_only else tuple(map(_CellValue, values))
 
     @staticmethod
     def _row_values(row, max_col):

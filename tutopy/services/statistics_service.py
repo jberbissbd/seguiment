@@ -2,8 +2,6 @@
 
 from datetime import date
 
-from dataclasses import replace
-
 from tutopy.models.statistics import (
     StatisticValue, StatisticsFilters, StatisticsSnapshot,
 )
@@ -56,11 +54,24 @@ class StatisticsService:
             not isinstance(filters.group_name, str) or not filters.group_name.strip()
         ):
             raise ValidationError("El grup seleccionat no és vàlid.")
-        snapshot = self.statistics_dao.get_snapshot(filters)
-        return replace(snapshot, by_month=tuple(
-            StatisticValue(self._month_label(item.label), item.value)
-            for item in snapshot.by_month
-        ))
+        return self._with_month_labels(self.statistics_dao.get_snapshot(filters))
+
+    @classmethod
+    def _with_month_labels(cls, snapshot: StatisticsSnapshot) -> StatisticsSnapshot:
+        """Retorna la mateixa instantània amb els mesos etiquetats en català."""
+        return StatisticsSnapshot(
+            note_count=snapshot.note_count,
+            student_count=snapshot.student_count,
+            students_with_notes=snapshot.students_with_notes,
+            students_without_notes=snapshot.students_without_notes,
+            average_per_student=snapshot.average_per_student,
+            by_month=tuple(
+                StatisticValue(cls._month_label(item.label), item.value)
+                for item in snapshot.by_month
+            ),
+            by_category=snapshot.by_category,
+            by_student=snapshot.by_student,
+        )
 
     @classmethod
     def _month_label(cls, value: str) -> str:

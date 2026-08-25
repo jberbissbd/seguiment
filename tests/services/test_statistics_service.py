@@ -60,12 +60,13 @@ def test_filtres_de_categoria_i_dates_sapliquen_a_tots_els_resultats(db):
 
 def test_rebutja_interval_invertit_i_entitats_inexistents(db):
     services = create_services(db)
+    inverted = StatisticsFilters(date_from="2026-05-01", date_to="2026-01-01")
+    missing_category = StatisticsFilters(category_id=999)
+
     with pytest.raises(ValidationError, match="data inicial"):
-        services.statistics.get_snapshot(StatisticsFilters(
-            date_from="2026-05-01", date_to="2026-01-01"
-        ))
+        services.statistics.get_snapshot(inverted)
     with pytest.raises(ValidationError, match="categoria.*no existeix"):
-        services.statistics.get_snapshot(StatisticsFilters(category_id=999))
+        services.statistics.get_snapshot(missing_category)
 
 
 def test_selector_de_cursos_omet_cursos_sense_notes_despres_deditar(db):
