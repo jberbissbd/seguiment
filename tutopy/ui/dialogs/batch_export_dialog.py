@@ -1,3 +1,5 @@
+"""Diàleg per exportar informes de diversos alumnes alhora."""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
@@ -13,6 +15,14 @@ class BatchExportDialog(QDialog):
     """Selecciona diversos alumnes i les opcions comunes d'exportació."""
 
     def __init__(self, students, categories, parent=None):
+        """Construeix el diàleg amb els alumnes i categories disponibles.
+
+        Args:
+            students: Alumnes que es poden marcar per exportar, amb cerca per nom,
+                cognoms o grup mitjançant un camp de cerca amb `debounce`.
+            categories: Categories disponibles, per definir-ne l'ordre a l'informe.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle("Exportar diversos alumnes")
         self.setMinimumSize(560, 620)
@@ -95,6 +105,7 @@ class BatchExportDialog(QDialog):
         self.format_input.currentIndexChanged.connect(self._update_options)
 
     def student_ids(self) -> list[int]:
+        """Retorna els identificadors dels alumnes marcats."""
         return [
             item.data(Qt.ItemDataRole.UserRole)
             for row in range(self.student_list.count())
@@ -102,12 +113,14 @@ class BatchExportDialog(QDialog):
         ]
 
     def category_order(self) -> list[int]:
+        """Retorna els identificadors de categoria en l'ordre triat per l'usuari."""
         return [
             self.category_list.item(row).data(Qt.ItemDataRole.UserRole)
             for row in range(self.category_list.count())
         ]
 
     def export_format(self) -> str:
+        """Retorna el format d'exportació seleccionat (`xlsx`, `docx`, `odt` o `pdf`)."""
         return self.format_input.currentData()
 
     def _filter_students(self, query: str) -> None:

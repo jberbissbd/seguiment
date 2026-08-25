@@ -1,3 +1,5 @@
+"""Diàleg per editar diversos alumnes alhora en una taula."""
+
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QDateEdit, QDialog, QDialogButtonBox,
@@ -12,6 +14,13 @@ class BulkStudentEditDialog(QDialog):
     """Edita diversos alumnes i aplica opcionalment un grup a files seleccionades."""
 
     def __init__(self, students, groups=(), parent=None):
+        """Construeix la taula d'edició amb una fila per alumne.
+
+        Args:
+            students: Alumnes a mostrar i editar, un per fila.
+            groups: Noms de grup existents per emplenar el desplegable d'assignació ràpida.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle("Edició massiva d’alumnes")
         self.setMinimumSize(760, 560)
@@ -99,6 +108,7 @@ class BulkStudentEditDialog(QDialog):
         return changes
 
     def effective_date(self) -> str:
+        """Retorna la data efectiva dels canvis de grup en format ISO."""
         return self.change_date.date().toString(Qt.DateFormat.ISODate)
 
     def _apply_group(self) -> None:

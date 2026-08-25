@@ -1,3 +1,5 @@
+"""Diàleg per configurar les dates d'inici dels trimestres d'un curs i grup."""
+
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QVBoxLayout,
@@ -9,7 +11,18 @@ from tutopy.ui.widgets.date_input import DateInput
 
 
 class TermConfigurationDialog(QDialog):
+    """Recull el curs, el grup i les dates d'inici del 2n i 3r trimestre."""
+
     def __init__(self, courses, groups, configuration=None, parent=None):
+        """Construeix el diàleg, precarregant les dades si s'edita una configuració existent.
+
+        Args:
+            courses: Cursos acadèmics disponibles per seleccionar.
+            groups: Noms de grup existents per emplenar el desplegable de grup.
+            configuration: Configuració de trimestres existent a editar, o `None`
+                per crear-ne una de nova.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle("Configurar trimestres")
         self.setMinimumWidth(440)
@@ -48,6 +61,7 @@ class TermConfigurationDialog(QDialog):
             self.third_start.setDate(QDate.fromString(configuration.third_term_start, "yyyy-MM-dd"))
 
     def values(self):
+        """Retorna les dades de la configuració de trimestres introduïdes."""
         return {
             "academic_course_id": self.course_input.currentData(),
             "group_name": self.group_input.currentText().strip(),

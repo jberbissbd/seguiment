@@ -20,6 +20,12 @@ class TransferConflictsDialog(QDialog):
     )
 
     def __init__(self, conflicts, parent=None):
+        """Construeix una fila de decisió per cada conflicte, amb les opcions disponibles.
+
+        Args:
+            conflicts: Conflictes detectats entre alumnes locals i importats per UUID.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle("Conflictes de transferència")
         self.resize(760, 360)
@@ -56,6 +62,7 @@ class TransferConflictsDialog(QDialog):
         layout.addWidget(buttons)
 
     def decisions(self) -> tuple[TransferDecision, ...]:
+        """Retorna la decisió triada per a cada alumne en conflicte."""
         return tuple(
             TransferDecision(student_uuid, combo.currentData())
             for student_uuid, combo in self._rows

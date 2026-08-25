@@ -1,3 +1,5 @@
+"""Diàleg per crear o editar les dades bàsiques d'un alumne."""
+
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QToolButton, QVBoxLayout,
@@ -10,6 +12,13 @@ class StudentDialog(QDialog):
     """Recull les dades necessàries per crear o editar un alumne."""
 
     def __init__(self, parent=None, student=None, groups=()):
+        """Construeix el diàleg, precarregant les dades si s'edita un alumne existent.
+
+        Args:
+            parent: Widget pare de Qt, si escau.
+            student: Alumne existent a editar, o `None` per crear-ne un de nou.
+            groups: Noms de grup existents per emplenar el desplegable de grup.
+        """
         super().__init__(parent)
         self.student = student
         self.setWindowTitle("Editar alumne" if student else "Nou alumne")
@@ -67,6 +76,7 @@ class StudentDialog(QDialog):
             self.group_input.setCurrentText(student.group_name)
 
     def values(self) -> dict[str, str]:
+        """Retorna les dades de l'alumne introduïdes, sense espais sobrants."""
         return {
             "name": self.name_input.text().strip(),
             "surnames": self.surnames_input.text().strip(),

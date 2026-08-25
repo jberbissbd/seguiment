@@ -1,3 +1,5 @@
+"""Diàleg per crear o editar una nota de seguiment d'un alumne."""
+
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel,
@@ -13,6 +15,14 @@ class NoteDialog(QDialog):
     """Recull una nota de seguiment sense accedir als serveis."""
 
     def __init__(self, parent=None, note=None, student_id=None, categories=()):
+        """Construeix el diàleg, precarregant les dades si s'edita una nota existent.
+
+        Args:
+            parent: Widget pare de Qt, si escau.
+            note: Nota existent a editar, o `None` per crear-ne una de nova.
+            student_id: Identificador de l'alumne al qual pertany la nota nova.
+            categories: Categories disponibles per classificar la nota.
+        """
         super().__init__(parent)
         self.student_id = note.student_id if note else student_id
         self.setWindowTitle("Editar nota" if note else "Nova nota")
@@ -60,6 +70,7 @@ class NoteDialog(QDialog):
             self.content_input.setPlainText(note.content)
 
     def values(self) -> dict:
+        """Retorna les dades de la nota introduïdes, llestes per desar."""
         return {
             "student_id": self.student_id,
             "category_id": self.category_input.currentData(),

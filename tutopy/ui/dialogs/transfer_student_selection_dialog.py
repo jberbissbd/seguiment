@@ -14,6 +14,13 @@ class TransferStudentSelectionDialog(QDialog):
     """Permet cercar i marcar un o diversos alumnes, mostrant-ne el grup."""
 
     def __init__(self, students, parent=None):
+        """Construeix el diàleg amb la llista d'alumnes marcables.
+
+        Args:
+            students: Alumnes que es poden marcar per transferir, amb cerca per nom,
+                cognoms o grup mitjançant un camp de cerca amb `debounce`.
+            parent: Widget pare de Qt, si escau.
+        """
         super().__init__(parent)
         self.setWindowTitle("Seleccionar alumnes per exportar")
         self.setMinimumSize(540, 480)
