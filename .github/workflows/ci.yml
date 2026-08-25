@@ -47,3 +47,25 @@ jobs:
         with:
           args: >
             -Dsonar.projectVersion=${{ steps.project.outputs.version }}
+
+  docs:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-docs.lock
+      - name: Install locked documentation dependencies
+        run: python -m pip install --require-hashes -r requirements-docs.lock
+      - name: Install project without resolving dependencies
+        run: python -m pip install --no-deps -e .
+      - name: Build documentation site
+        # TODO: passar a `--strict` un cop tutopy/ui/ tingui anotacions de
+        # tipus completes (griffe avisa de paràmetres sense tipar; no bloqueja
+        # la construcció, però impedeix l'enllaç automàtic al tipus a la
+        # referència generada).
+        run: python -m mkdocs build

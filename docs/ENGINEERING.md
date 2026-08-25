@@ -137,10 +137,50 @@ a un sol espai. Es conserven capitalització, accents, apòstrofs i guionets. La
 representació sense accents i amb `casefold` només s'utilitza per comparar
 conflictes d'importació i mai no se substitueix pel valor desat.
 
-El codi públic nou ha d'incloure anotacions de tipus i docstrings segons PEP 257:
-resum en imperatiu, línia en blanc abans dels detalls i contractes excepcionals
-quan no siguin evidents. Els comentaris expliquen el perquè, no repeteixen el codi.
+Tot mòdul, classe i funció o mètode públics de `tutopy/` han d'incloure
+anotacions de tipus i un docstring amb estil **Google** (compatible amb
+`mkdocstrings`), conforme a PEP 257: resum en imperatiu a la primera línia,
+línia en blanc abans dels detalls, i seccions `Args:`/`Returns:`/`Raises:`
+quan aportin informació que la signatura per si sola no dona. Per exemple:
+
+```python
+def change_student_group(
+    self, student_id: int, new_group: str,
+    academic_course_id: int | None = None, change_date: str | None = None,
+) -> StudentGroupHistory:
+    """Canvia el grup d'un alumne i tanca l'històric anterior.
+
+    Args:
+        student_id: ID de l'alumne.
+        new_group: Nom del nou grup (ex: "4t A").
+        academic_course_id: ID del curs acadèmic. Si no s'especifica, es
+            resol automàticament a partir de `change_date`.
+        change_date: Data del canvi (format YYYY-MM-DD). Si no s'especifica,
+            usa la data d'avui.
+
+    Returns:
+        El registre d'històric creat.
+    """
+```
+
+Els mètodes privats (`_prefixats`) no necessiten una secció `Args`/`Returns`
+completa —una frase és suficient— perquè `mkdocstrings` no els inclou al
+lloc generat per defecte. Els comentaris de codi (`#`) continuen explicant el
+perquè, no repetint el codi.
 
 Ruff és una barrera obligatòria del CI per al codi distribuït. Localment
 s'executa amb `python -m ruff check tutopy scripts`; la configuració compartida
 és a `pyproject.toml` i exclou la documentació generada o narrativa de `docs`.
+Les regles `D` (pydocstyle, convenció `google`) fan complir aquesta política
+de docstrings a tot `tutopy/`.
+
+## Documentació generada
+
+El lloc de documentació combina les guies narratives d'aquest directori amb
+una referència d'API generada automàticament a partir dels docstrings, amb
+[MkDocs](https://www.mkdocs.org/) i [mkdocstrings](https://mkdocstrings.github.io/)
+(vegeu `mkdocs.yml` i l'extra `docs` a `pyproject.toml`). Com que la
+referència es genera directament del codi, un docstring desactualitzat o
+absent es reflecteix immediatament al lloc generat: mantenir-los correctes
+no és només una qüestió d'estil, és el mecanisme que manté la documentació
+publicada sincronitzada amb el codi.

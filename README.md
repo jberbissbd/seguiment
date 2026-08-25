@@ -188,3 +188,19 @@ i mantenibilitat es documenten a
 
 El format d'intercanvi entre instàncies i les seves garanties es descriu a
 [docs/TRANSFER.md](docs/TRANSFER.md).
+
+### Documentació generada
+
+El lloc de documentació (guies + referència d'API generada a partir dels
+docstrings) es construeix amb [MkDocs](https://www.mkdocs.org/) i
+[mkdocstrings](https://mkdocstrings.github.io/):
+
+```bash
+.venv/bin/python -m pip install --require-hashes -r requirements-docs.lock
+.venv/bin/python -m pip install --no-deps -e .
+.venv/bin/mkdocs serve   # previsualització local a http://127.0.0.1:8000
+.venv/bin/mkdocs build   # genera site/; falla si hi ha enllaços o referències trencades
+```
+
+El contingut de les guies viu a `docs/*.md`; la referència d'API es genera
+automàticament a partir dels docstrings de `tutopy/` (vegeu `mkdocs.yml`).

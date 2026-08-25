@@ -1,0 +1,66 @@
+site_name: Tutopy
+site_description: Seguiment educatiu d'alumnes — guies i referència d'API
+site_url: https://jberbissbd.github.io/seguiment/
+repo_url: https://github.com/jberbissbd/seguiment
+repo_name: jberbissbd/seguiment
+docs_dir: docs
+
+theme:
+  name: material
+  language: ca
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Tema fosc
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Tema clar
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_submodules: true
+            merge_init_into_class: true
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            summary: true
+            filters: ["!^_"]
+
+nav:
+  - Inici: index.md
+  - Guies:
+      - Criteris d'enginyeria: ENGINEERING.md
+      - Transferència entre instàncies: TRANSFER.md
+      - Empaquetament i releases: PACKAGING.md
+      - Implementació de la UI: UI_IMPLEMENTATION.md
+  - Referència d'API:
+      - Aplicació: reference/application.md
+      - Serveis: reference/services.md
+      - Base de dades: reference/database.md
+      - Controladors: reference/controllers.md
+      - Interfície (UI): reference/ui.md
+      - Models: reference/models.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - toc:
+      permalink: true
