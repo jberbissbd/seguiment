@@ -65,7 +65,7 @@ def test_note_dialog_retorna_valors_valids(qtbot):
         dialog.date_input.setDate(QDate(2026, 1, 15))
         dialog.content_input.setPlainText("  Seguiment positiu  ")
 
-        dialog._validate_and_accept()
+        dialog._accept_valid()
 
         assert dialog.result() == QDialog.DialogCode.Accepted
         assert dialog.values() == {

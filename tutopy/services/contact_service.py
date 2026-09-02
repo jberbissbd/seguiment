@@ -7,10 +7,11 @@ from tutopy.database.daos.contact_dao import ContactDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.models.messaging import Contact, ContactNew
 from tutopy.services.exceptions import EntityNotFoundError
+from tutopy.services._student_requirement import RequiresStudentMixin
 from tutopy.services.validation_service import ValidationService
 
 
-class ContactService:
+class ContactService(RequiresStudentMixin):
     """API de negoci per als contactes associats a alumnes."""
 
     def __init__(self, contact_dao: ContactDAO, student_dao: StudentDAO,
@@ -70,10 +71,3 @@ class ContactService:
             phone=self.validation_service.optional_text(data.phone),
             email=self.validation_service.optional_text(data.email),
         )
-
-    def _require_student(self, student_id: int):
-        self.validation_service.positive_id(student_id)
-        student = self.student_dao.get_by_id(student_id)
-        if student is None:
-            raise EntityNotFoundError(f"L'alumne amb ID {student_id} no existeix.")
-        return student

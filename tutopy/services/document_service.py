@@ -17,13 +17,14 @@ from tutopy.services.exceptions import (
     ValidationError,
 )
 from tutopy.services.validation_service import ValidationService
+from tutopy.services._student_requirement import RequiresStudentMixin
 from tutopy.services.utils import AcademicCourseDeterminator
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class DocumentService:
+class DocumentService(RequiresStudentMixin):
     """API de negoci per a les metadades dels documents d'alumnes."""
 
     def __init__(self, document_dao: DocumentDAO, student_dao: StudentDAO,
@@ -239,10 +240,3 @@ class DocumentService:
             date=document_date,
             course_id=course_id,
         )
-
-    def _require_student(self, student_id: int):
-        self.validation_service.positive_id(student_id)
-        student = self.student_dao.get_by_id(student_id)
-        if student is None:
-            raise EntityNotFoundError(f"L'alumne amb ID {student_id} no existeix.")
-        return student

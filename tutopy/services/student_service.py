@@ -16,10 +16,10 @@ from tutopy.models.student_bulk import StudentBulkUpdate, StudentBulkUpdateResul
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.utils import AcademicCourseDeterminator
 from tutopy.services.validation_service import ValidationService
+from tutopy.services._student_requirement import RequiresStudentMixin
 
 
-
-class StudentService:
+class StudentService(RequiresStudentMixin):
     """Gestiona el cicle de vida dels alumnes i el seu historial de grup."""
 
     def __init__(self, student_dao: StudentDAO, contact_dao: ContactDAO,
@@ -284,13 +284,6 @@ class StudentService:
                 dataclasses.replace(student, group_name=new_group)
             )
             return history
-
-    def _require_student(self, student_id: int) -> Student:
-        self.validation_service.positive_id(student_id)
-        student = self.student_dao.get_by_id(student_id)
-        if student is None:
-            raise EntityNotFoundError(f"L'alumne amb ID {student_id} no existeix.")
-        return student
 
 
 class _BulkUpdateCancelled(RuntimeError):

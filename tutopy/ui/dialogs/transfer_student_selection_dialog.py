@@ -72,6 +72,7 @@ class TransferStudentSelectionDialog(QDialog):
         self.buttons.button(QDialogButtonBox.StandardButton.Save).setText(
             "Continuar"
         )
+        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
         set_dialog_button_icons(self.buttons)
         self.buttons.accepted.connect(self._accept_valid)
         self.buttons.rejected.connect(self.reject)

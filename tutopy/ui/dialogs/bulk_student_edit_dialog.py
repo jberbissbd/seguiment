@@ -4,16 +4,15 @@ from collections.abc import Sequence
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
-    QAbstractItemView, QComboBox, QDateEdit, QDialog, QDialogButtonBox,
-    QHBoxLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget,
+    QAbstractItemView, QComboBox, QDateEdit, QHBoxLayout, QLabel, QPushButton,
+    QTableWidget, QTableWidgetItem, QWidget,
 )
 
 from tutopy.models.messaging import Student
-from tutopy.ui.resources import set_dialog_button_icons
+from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
 
 
-class BulkStudentEditDialog(QDialog):
+class BulkStudentEditDialog(BaseFormDialog):
     """Edita diversos alumnes i aplica opcionalment un grup a files seleccionades."""
 
     def __init__(
@@ -27,20 +26,18 @@ class BulkStudentEditDialog(QDialog):
             groups: Noms de grup existents per emplenar el desplegable d'assignació ràpida.
             parent: Widget pare de Qt, si escau.
         """
-        super().__init__(parent)
-        self.setWindowTitle("Edició massiva d’alumnes")
+        super().__init__(parent, "Edició massiva d’alumnes")
         self.setMinimumSize(760, 560)
         self._original = {
             student.id: (student.name, student.surnames, student.group_name)
             for student in students
         }
-        layout = QVBoxLayout(self)
         description = QLabel(
             "Edita directament les cel·les. Els canvis de grup utilitzaran "
             "la mateixa data efectiva."
         )
         description.setWordWrap(True)
-        layout.addWidget(description)
+        self.layout.addWidget(description)
 
         group_actions = QHBoxLayout()
         group_actions.addWidget(QLabel("Grup per a les files seleccionades:"))
@@ -50,7 +47,7 @@ class BulkStudentEditDialog(QDialog):
         self.apply_group_button = QPushButton("Aplicar grup")
         group_actions.addWidget(self.group_input, 1)
         group_actions.addWidget(self.apply_group_button)
-        layout.addLayout(group_actions)
+        self.layout.addLayout(group_actions)
 
         self.table = QTableWidget(len(students), 3)
         self.table.setHorizontalHeaderLabels(("Nom", "Cognoms", "Grup"))
@@ -67,7 +64,7 @@ class BulkStudentEditDialog(QDialog):
             self.table.setItem(row, 0, name)
             self.table.setItem(row, 1, QTableWidgetItem(student.surnames))
             self.table.setItem(row, 2, QTableWidgetItem(student.group_name))
-        layout.addWidget(self.table, 1)
+        self.layout.addWidget(self.table, 1)
 
         date_row = QHBoxLayout()
         date_row.addWidget(QLabel("Data efectiva dels canvis de grup:"))
@@ -76,25 +73,10 @@ class BulkStudentEditDialog(QDialog):
         self.change_date.setDisplayFormat("dd/MM/yyyy")
         date_row.addWidget(self.change_date)
         date_row.addStretch()
-        layout.addLayout(date_row)
+        self.layout.addLayout(date_row)
 
-        self.validation_label = QLabel()
-        self.validation_label.setObjectName("errorText")
-        self.validation_label.hide()
-        layout.addWidget(self.validation_label)
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save
-            | QDialogButtonBox.StandardButton.Cancel
-        )
-        self.buttons.button(QDialogButtonBox.StandardButton.Save).setText(
-            "Aplicar canvis"
-        )
-        set_dialog_button_icons(self.buttons)
-        layout.addWidget(self.buttons)
-
+        self._add_footer("", save_text="Aplicar canvis")
         self.apply_group_button.clicked.connect(self._apply_group)
-        self.buttons.accepted.connect(self._validate_and_accept)
-        self.buttons.rejected.connect(self.reject)
 
     def changes(self) -> list[dict]:
         """Retorna només les files que difereixen del snapshot inicial."""
@@ -125,9 +107,9 @@ class BulkStudentEditDialog(QDialog):
             return
         for row in rows:
             self.table.item(row, 2).setText(group)
-        self.validation_label.hide()
+        self.error_label.hide()
 
-    def _validate_and_accept(self) -> None:
+    def _accept_valid(self) -> None:
         changes = self.changes()
         if not changes:
             self._show_error("No s’ha modificat cap alumne.")
@@ -139,7 +121,3 @@ class BulkStudentEditDialog(QDialog):
             self._show_error("El grup no pot estar buit en una fila modificada.")
             return
         self.accept()
-
-    def _show_error(self, message: str) -> None:
-        self.validation_label.setText(message)
-        self.validation_label.show()

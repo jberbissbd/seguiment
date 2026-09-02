@@ -21,7 +21,7 @@ def test_dialog_aplica_grup_a_files_seleccionades_i_retorna_canvis(qtbot):
     dialog.table.item(1, 1).setText("Puig-Soler")
     dialog.change_date.setDate(QDate(2026, 9, 1))
 
-    dialog._validate_and_accept()
+    dialog._accept_valid()
 
     assert dialog.result() == QDialog.DialogCode.Accepted
     assert dialog.effective_date() == "2026-09-01"
@@ -35,7 +35,7 @@ def test_dialog_no_accepta_un_lot_sense_canvis(qtbot):
     dialog = BulkStudentEditDialog(_students())
     qtbot.addWidget(dialog)
 
-    dialog._validate_and_accept()
+    dialog._accept_valid()
 
     assert dialog.result() != QDialog.DialogCode.Accepted
-    assert dialog.validation_label.isVisibleTo(dialog)
+    assert dialog.error_label.isVisibleTo(dialog)

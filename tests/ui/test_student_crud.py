@@ -46,7 +46,7 @@ def test_student_dialog_valida_i_retorna_valors(qtbot):
     dialog.surnames_input.setText(" Garcia ")
     dialog.group_input.setCurrentText("2n B")
 
-    dialog._validate_and_accept()
+    dialog._accept_valid()
 
     assert dialog.result() == QDialog.DialogCode.Accepted
     assert dialog.values() == {
@@ -64,7 +64,7 @@ def test_student_dialog_no_accepta_camps_obligatoris_buits(qtbot):
     dialog.buttons.button(QDialogButtonBox.StandardButton.Save).click()
 
     assert dialog.result() != QDialog.DialogCode.Accepted
-    assert not dialog.validation_label.isHidden()
+    assert not dialog.error_label.isHidden()
 
 
 def test_controller_crea_i_selecciona_alumne(qtbot, tmp_path, monkeypatch):

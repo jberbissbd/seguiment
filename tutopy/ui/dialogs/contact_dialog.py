@@ -1,14 +1,12 @@
 """Diàleg per crear o editar un contacte d'un alumne."""
 
-from PySide6.QtWidgets import (
-    QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout, QWidget,
-)
+from PySide6.QtWidgets import QFormLayout, QLineEdit, QWidget
 
 from tutopy.models.messaging import Contact
-from tutopy.ui.resources import set_dialog_button_icons
+from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
 
 
-class ContactDialog(QDialog):
+class ContactDialog(BaseFormDialog):
     """Recull nom, relació, telèfon i correu d'un contacte, nou o existent."""
 
     def __init__(self, parent: QWidget | None = None, contact: Contact | None = None):
@@ -18,9 +16,7 @@ class ContactDialog(QDialog):
             parent: Widget pare de Qt, si escau.
             contact: Contacte existent a editar, o `None` per crear-ne un de nou.
         """
-        super().__init__(parent)
-        self.setWindowTitle("Editar contacte" if contact else "Nou contacte")
-        layout = QVBoxLayout(self)
+        super().__init__(parent, "Editar contacte" if contact else "Nou contacte")
         form = QFormLayout()
         self.name_input = QLineEdit(contact.name if contact else "")
         self.description_input = QLineEdit(contact.description if contact else "")
@@ -30,18 +26,8 @@ class ContactDialog(QDialog):
         form.addRow("Relació:", self.description_input)
         form.addRow("Telèfon:", self.phone_input)
         form.addRow("Correu:", self.email_input)
-        layout.addLayout(form)
-        self.error_label = QLabel("El nom i la relació són obligatoris.")
-        self.error_label.setObjectName("errorText")
-        self.error_label.hide()
-        layout.addWidget(self.error_label)
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
-        )
-        set_dialog_button_icons(self.buttons)
-        self.buttons.accepted.connect(self._accept_valid)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
+        self.layout.addLayout(form)
+        self._add_footer("El nom i la relació són obligatoris.")
 
     def values(self):
         """Retorna les dades del contacte introduïdes, sense espais sobrants."""
@@ -52,9 +38,6 @@ class ContactDialog(QDialog):
             "email": self.email_input.text().strip(),
         }
 
-    def _accept_valid(self):
+    def _is_valid(self):
         values = self.values()
-        if values["name"] and values["description"]:
-            self.accept()
-        else:
-            self.error_label.show()
+        return bool(values["name"] and values["description"])

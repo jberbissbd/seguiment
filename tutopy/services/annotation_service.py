@@ -6,10 +6,11 @@ from tutopy.database.daos.annotation_dao import AnnotationDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.models.messaging import StudentAnnotation, StudentAnnotationNew
 from tutopy.services.exceptions import EntityNotFoundError
+from tutopy.services._student_requirement import RequiresStudentMixin
 from tutopy.services.validation_service import ValidationService
 
 
-class AnnotationService:
+class AnnotationService(RequiresStudentMixin):
     """Servei per gestionar anotacions d'alumnes.
     
     Proporciona una capa d'abstracció sobre AnnotationDAO amb
@@ -83,10 +84,3 @@ class AnnotationService:
         """
         self.get_by_id(id)
         self.annotation_dao.delete(id)
-
-    def _require_student(self, student_id: int):
-        self.validation_service.positive_id(student_id)
-        student = self.student_dao.get_by_id(student_id)
-        if student is None:
-            raise EntityNotFoundError(f"L'alumne amb ID {student_id} no existeix.")
-        return student

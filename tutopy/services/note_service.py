@@ -13,10 +13,11 @@ from tutopy.models.messaging import (
 )
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.validation_service import ValidationService
+from tutopy.services._student_requirement import RequiresStudentMixin
 from tutopy.services.utils import AcademicCourseDeterminator
 
 
-class NoteService:
+class NoteService(RequiresStudentMixin):
     """Servei per gestionar notes de seguiment, amb registre automàtic de grup."""
 
     def __init__(self, note_dao: NoteDAO, academic_course_dao: AcademicCourseDAO,
@@ -170,13 +171,6 @@ class NoteService:
             raise EntityNotFoundError("El curs acadèmic de la nota no existeix.")
         first_year = course.course.split("-", 1)[0]
         return f"{first_year}-09-01"
-
-    def _require_student(self, student_id: int):
-        self.validation_service.positive_id(student_id)
-        student = self.student_dao.get_by_id(student_id)
-        if student is None:
-            raise EntityNotFoundError(f"L'alumne amb ID {student_id} no existeix.")
-        return student
 
     def _validate_filters(self, filters: dict) -> dict:
         allowed = {"student_id", "category_id", "course_id", "date_from", "date_to", "content"}

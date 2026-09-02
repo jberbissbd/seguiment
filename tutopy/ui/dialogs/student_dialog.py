@@ -3,15 +3,15 @@
 from collections.abc import Sequence
 
 from PySide6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QLabel,
-    QLineEdit, QToolButton, QVBoxLayout, QWidget,
+    QComboBox, QFormLayout, QHBoxLayout, QLineEdit, QToolButton, QWidget,
 )
 
 from tutopy.models.messaging import Student
-from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
+from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
+from tutopy.ui.resources import set_button_icon
 
 
-class StudentDialog(QDialog):
+class StudentDialog(BaseFormDialog):
     """Recull les dades necessàries per crear o editar un alumne."""
 
     def __init__(
@@ -25,13 +25,11 @@ class StudentDialog(QDialog):
             student: Alumne existent a editar, o `None` per crear-ne un de nou.
             groups: Noms de grup existents per emplenar el desplegable de grup.
         """
-        super().__init__(parent)
+        super().__init__(parent, "Editar alumne" if student else "Nou alumne")
         self.student = student
-        self.setWindowTitle("Editar alumne" if student else "Nou alumne")
         self.setModal(True)
         self.setMinimumWidth(420)
 
-        layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
 
@@ -58,23 +56,8 @@ class StudentDialog(QDialog):
         form.addRow("Nom:", self.name_input)
         form.addRow("Cognoms:", self.surnames_input)
         form.addRow("Grup:", group_layout)
-        layout.addLayout(form)
-
-        self.validation_label = QLabel("El nom i els cognoms són obligatoris.")
-        self.validation_label.setObjectName("errorText")
-        self.validation_label.hide()
-        layout.addWidget(self.validation_label)
-
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save
-            | QDialogButtonBox.StandardButton.Cancel
-        )
-        self.buttons.button(QDialogButtonBox.StandardButton.Save).setText("Desar")
-        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
-        set_dialog_button_icons(self.buttons)
-        self.buttons.accepted.connect(self._validate_and_accept)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
+        self.layout.addLayout(form)
+        self._add_footer("El nom i els cognoms són obligatoris.")
 
         if student is not None:
             self.name_input.setText(student.name)
@@ -89,9 +72,6 @@ class StudentDialog(QDialog):
             "group_name": self.group_input.currentText().strip(),
         }
 
-    def _validate_and_accept(self) -> None:
+    def _is_valid(self) -> bool:
         values = self.values()
-        if not values["name"] or not values["surnames"]:
-            self.validation_label.show()
-            return
-        self.accept()
+        return bool(values["name"] and values["surnames"])

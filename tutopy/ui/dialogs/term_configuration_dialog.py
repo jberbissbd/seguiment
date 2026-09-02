@@ -3,18 +3,16 @@
 from collections.abc import Sequence
 
 from PySide6.QtCore import QDate
-from PySide6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QVBoxLayout, QWidget,
-)
+from PySide6.QtWidgets import QComboBox, QFormLayout, QWidget
 
 from tutopy.models.messaging import AcademicCourse
 from tutopy.models.reporting import TermConfiguration
-from tutopy.ui.resources import set_dialog_button_icons
+from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
 
 from tutopy.ui.widgets.date_input import DateInput
 
 
-class TermConfigurationDialog(QDialog):
+class TermConfigurationDialog(BaseFormDialog):
     """Recull el curs, el grup i les dates d'inici del 2n i 3r trimestre."""
 
     def __init__(
@@ -31,10 +29,8 @@ class TermConfigurationDialog(QDialog):
                 per crear-ne una de nova.
             parent: Widget pare de Qt, si escau.
         """
-        super().__init__(parent)
-        self.setWindowTitle("Configurar trimestres")
+        super().__init__(parent, "Configurar trimestres")
         self.setMinimumWidth(440)
-        layout = QVBoxLayout(self)
         form = QFormLayout()
         self.course_input = QComboBox()
         for course in courses:
@@ -48,18 +44,8 @@ class TermConfigurationDialog(QDialog):
         form.addRow("Grup:", self.group_input)
         form.addRow("Inici del 2n trimestre:", self.second_start)
         form.addRow("Inici del 3r trimestre:", self.third_start)
-        layout.addLayout(form)
-        self.error_label = QLabel("Cal seleccionar un curs, un grup i dues dates vàlides.")
-        self.error_label.setObjectName("errorText")
-        self.error_label.hide()
-        layout.addWidget(self.error_label)
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
-        )
-        set_dialog_button_icons(buttons)
-        buttons.accepted.connect(self._accept_valid)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        self.layout.addLayout(form)
+        self._add_footer("Cal seleccionar un curs, un grup i dues dates vàlides.")
         if configuration is not None:
             self.course_input.setCurrentIndex(
                 self.course_input.findData(configuration.academic_course_id)
@@ -77,11 +63,8 @@ class TermConfigurationDialog(QDialog):
             "third_term_start": self.third_start.date().toString("yyyy-MM-dd"),
         }
 
-    def _accept_valid(self):
+    def _is_valid(self):
         values = self.values()
-        if (values["academic_course_id"] is None or not values["group_name"]
-                or not self.second_start.date().isValid()
-                or not self.third_start.date().isValid()):
-            self.error_label.show()
-            return
-        self.accept()
+        return not (values["academic_course_id"] is None or not values["group_name"]
+                    or not self.second_start.date().isValid()
+                    or not self.third_start.date().isValid())

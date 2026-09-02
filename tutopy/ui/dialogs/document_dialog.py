@@ -4,16 +4,16 @@ from pathlib import Path
 
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
-    QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QVBoxLayout, QWidget,
+    QFileDialog, QFormLayout, QHBoxLayout, QLineEdit, QPushButton, QWidget,
 )
 
 from tutopy.models.messaging import StudentDocument
-from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
+from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
+from tutopy.ui.resources import set_button_icon
 from tutopy.ui.widgets.date_input import DateInput
 
 
-class DocumentDialog(QDialog):
+class DocumentDialog(BaseFormDialog):
     """Recull nom, descripció, data i fitxer d'un document, nou o existent."""
 
     def __init__(
@@ -26,10 +26,8 @@ class DocumentDialog(QDialog):
             parent: Widget pare de Qt, si escau.
             document: Document existent a editar, o `None` per crear-ne un de nou.
         """
-        super().__init__(parent)
+        super().__init__(parent, "Editar document" if document else "Nou document")
         self.document = document
-        self.setWindowTitle("Editar document" if document else "Nou document")
-        layout = QVBoxLayout(self)
         form = QFormLayout()
         self.name_input = QLineEdit(document.name if document else "")
         self.description_input = QLineEdit(document.description if document else "")
@@ -49,20 +47,8 @@ class DocumentDialog(QDialog):
         form.addRow("Descripció:", self.description_input)
         form.addRow("Data (DD/MM/AAAA):", self.date_input)
         form.addRow("Fitxer:", path_layout)
-        layout.addLayout(form)
-        self.error_label = QLabel(
-            "Cal indicar un nom, una data vàlida i seleccionar un fitxer."
-        )
-        self.error_label.setObjectName("errorText")
-        self.error_label.hide()
-        layout.addWidget(self.error_label)
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
-        )
-        set_dialog_button_icons(self.buttons)
-        self.buttons.accepted.connect(self._accept_valid)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
+        self.layout.addLayout(form)
+        self._add_footer("Cal indicar un nom, una data vàlida i seleccionar un fitxer.")
 
     def values(self):
         """Retorna les dades del document introduïdes, sense espais sobrants."""
@@ -80,10 +66,7 @@ class DocumentDialog(QDialog):
             if not self.name_input.text().strip():
                 self.name_input.setText(Path(path).name)
 
-    def _accept_valid(self):
+    def _is_valid(self):
         values = self.values()
         path_ok = self.document is not None or bool(values["source_path"])
-        if values["name"] and path_ok and self.date_input.date().isValid():
-            self.accept()
-        else:
-            self.error_label.show()
+        return bool(values["name"] and path_ok and self.date_input.date().isValid())

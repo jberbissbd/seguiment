@@ -117,7 +117,11 @@ class StudentRelatedController:
 
     def edit_annotation(self, entity_id):
         """Obre el diàleg d'edició d'un descriptor i desa els canvis si s'accepten."""
-        annotation = self.annotations.get_by_id(entity_id)
+        try:
+            annotation = self.annotations.get_by_id(entity_id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
         dialog = self.annotation_dialog(parent=self.window, annotation=annotation)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._run(lambda: self.annotations.update(StudentAnnotation(
@@ -141,7 +145,11 @@ class StudentRelatedController:
 
     def edit_contact(self, entity_id):
         """Obre el diàleg d'edició d'un contacte i desa els canvis si s'accepten."""
-        contact = self.contacts.get_by_id(entity_id)
+        try:
+            contact = self.contacts.get_by_id(entity_id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
         dialog = self.contact_dialog(parent=self.window, contact=contact)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._run(lambda: self.contacts.update(Contact(
@@ -168,7 +176,11 @@ class StudentRelatedController:
 
     def edit_document(self, entity_id):
         """Obre el diàleg d'edició d'un document i desa els canvis si s'accepten."""
-        document = self.documents.get_by_id(entity_id)
+        try:
+            document = self.documents.get_by_id(entity_id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
         dialog = self.document_dialog(parent=self.window, document=document)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             values = dialog.values()
