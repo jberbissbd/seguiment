@@ -2,18 +2,14 @@
 
 from collections.abc import Sequence
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (
-    QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QListWidget,
-    QListWidgetItem, QPushButton, QVBoxLayout, QWidget,
-)
+from PySide6.QtWidgets import QLabel, QWidget
 
 from tutopy.models.messaging import Student
-from tutopy.ui.resources import set_button_icon, set_dialog_button_icons
-from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
+from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
+from tutopy.ui.widgets.checkable_student_list import CheckableStudentListPanel
 
 
-class TransferStudentSelectionDialog(QDialog):
+class TransferStudentSelectionDialog(BaseFormDialog):
     """Permet cercar i marcar un o diversos alumnes, mostrant-ne el grup."""
 
     def __init__(self, students: Sequence[Student], parent: QWidget | None = None):
@@ -24,97 +20,30 @@ class TransferStudentSelectionDialog(QDialog):
                 cognoms o grup mitjançant un camp de cerca amb `debounce`.
             parent: Widget pare de Qt, si escau.
         """
-        super().__init__(parent)
-        self.setWindowTitle("Seleccionar alumnes per exportar")
+        super().__init__(parent, "Seleccionar alumnes per exportar")
         self.setMinimumSize(540, 480)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Selecciona els alumnes que vols transferir."))
+        self.layout.addWidget(QLabel("Selecciona els alumnes que vols transferir."))
 
-        self.search_input = DebouncedLineEdit()
-        self.search_input.setPlaceholderText("Cercar per nom, cognoms o grup…")
-        self.search_input.setClearButtonEnabled(True)
-        layout.addWidget(self.search_input)
-
-        actions = QHBoxLayout()
-        self.select_visible_button = QPushButton("Seleccionar visibles")
-        self.clear_button = QPushButton("Desmarcar tots")
-        set_button_icon(self.select_visible_button, "select")
-        set_button_icon(self.clear_button, "deselect")
-        self.selection_label = QLabel("0 alumnes seleccionats")
-        actions.addWidget(self.select_visible_button)
-        actions.addWidget(self.clear_button)
-        actions.addStretch()
-        actions.addWidget(self.selection_label)
-        layout.addLayout(actions)
-
-        self.student_list = QListWidget()
-        for student in students:
-            group = student.group_name or "Sense grup"
-            item = QListWidgetItem(f"{student.full_name} — Grup: {group}")
-            item.setData(Qt.ItemDataRole.UserRole, student.id)
-            item.setData(
-                Qt.ItemDataRole.UserRole + 1,
-                f"{student.full_name} {group}".casefold(),
-            )
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Unchecked)
-            self.student_list.addItem(item)
-        layout.addWidget(self.student_list)
-
-        self.validation_label = QLabel("Cal seleccionar almenys un alumne.")
-        self.validation_label.setObjectName("errorText")
-        self.validation_label.hide()
-        layout.addWidget(self.validation_label)
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save
-            | QDialogButtonBox.StandardButton.Cancel
+        self.selection_panel = CheckableStudentListPanel(
+            students,
+            item_text=lambda s: f"{s.full_name} — Grup: {s.group_name or 'Sense grup'}",
+            search_key=lambda s: f"{s.full_name} {s.group_name or 'Sense grup'}".casefold(),
         )
-        self.buttons.button(QDialogButtonBox.StandardButton.Save).setText(
-            "Continuar"
-        )
-        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
-        set_dialog_button_icons(self.buttons)
-        self.buttons.accepted.connect(self._accept_valid)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
+        self.search_input = self.selection_panel.search_input
+        self.select_visible_button = self.selection_panel.select_visible_button
+        self.clear_button = self.selection_panel.clear_button
+        self.selection_label = self.selection_panel.selection_label
+        self.student_list = self.selection_panel.student_list
+        self.layout.addWidget(self.selection_panel)
 
-        self.search_input.debounced_text_changed.connect(self._filter_students)
-        self.select_visible_button.clicked.connect(self._select_visible)
-        self.clear_button.clicked.connect(self._clear_selection)
-        self.student_list.itemChanged.connect(self._update_selection_label)
+        self._add_footer("Cal seleccionar almenys un alumne.", save_text="Continuar")
 
     def student_ids(self) -> list[int]:
         """Retorna els identificadors marcats en l'ordre visible."""
-        return [
-            item.data(Qt.ItemDataRole.UserRole)
-            for row in range(self.student_list.count())
-            if (item := self.student_list.item(row)).checkState()
-            == Qt.CheckState.Checked
-        ]
-
-    def _filter_students(self, query: str) -> None:
-        query = query.strip().casefold()
-        for row in range(self.student_list.count()):
-            item = self.student_list.item(row)
-            item.setHidden(query not in item.data(Qt.ItemDataRole.UserRole + 1))
+        return self.selection_panel.student_ids()
 
     def _select_visible(self) -> None:
-        for row in range(self.student_list.count()):
-            item = self.student_list.item(row)
-            if not item.isHidden():
-                item.setCheckState(Qt.CheckState.Checked)
+        self.selection_panel.select_visible()
 
-    def _clear_selection(self) -> None:
-        for row in range(self.student_list.count()):
-            self.student_list.item(row).setCheckState(Qt.CheckState.Unchecked)
-
-    def _update_selection_label(self, _item=None) -> None:
-        self.selection_label.setText(
-            f"{len(self.student_ids())} alumnes seleccionats"
-        )
-
-    def _accept_valid(self) -> None:
-        if not self.student_ids():
-            self.validation_label.show()
-            return
-        self.accept()
+    def _is_valid(self) -> bool:
+        return bool(self.student_ids())

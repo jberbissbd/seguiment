@@ -33,7 +33,7 @@ def test_filtra_per_grup_i_exigeix_una_seleccio(qtbot):
 
     dialog._accept_valid()
     assert dialog.result() == QDialog.DialogCode.Rejected
-    assert not dialog.validation_label.isHidden()
+    assert not dialog.error_label.isHidden()
     with qtbot.waitSignal(dialog.search_input.debounced_text_changed, timeout=1_000):
         dialog.search_input.setText("3r B")
     dialog._select_visible()

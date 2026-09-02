@@ -9,11 +9,11 @@ from tutopy.database.daos.category_dao import CategoryDAO
 from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
 from tutopy.models.messaging import (
-    Note, NoteNew, NoteRecord, StudentGroupHistoryNew,
+    Note, NoteNew, NoteRecord, Student, StudentGroupHistoryNew,
 )
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
-from tutopy.services.validation_service import ValidationService
 from tutopy.services._student_requirement import RequiresStudentMixin
+from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import AcademicCourseDeterminator
 
 
@@ -39,8 +39,8 @@ class NoteService(RequiresStudentMixin):
     def create_note(self, note_data: NoteNew) -> Note:
         """Valida i crea una nota de seguiment."""
         with self.transaction_factory():
-            prepared = self._prepare(note_data)
-            self._ensure_group_history(prepared)
+            prepared, student = self._prepare(note_data)
+            self._ensure_group_history(prepared, student)
             return self.note_dao.create(prepared)
 
     def create(self, note_data: NoteNew) -> Note:
@@ -78,14 +78,14 @@ class NoteService(RequiresStudentMixin):
         """Valida i actualitza una nota existent, actualitzant l'historial de grup."""
         with self.transaction_factory():
             existing = self.get_by_id(note.id)
-            prepared = self._prepare(NoteNew(
+            prepared, student = self._prepare(NoteNew(
                 student_id=note.student_id,
                 category_id=note.category_id,
                 date=note.date,
                 course_id=note.course_id,
                 content=note.content,
             ))
-            self._ensure_group_history(prepared)
+            self._ensure_group_history(prepared, student)
             updated = cast(Note, dataclasses.replace(
                 existing,
                 student_id=prepared.student_id,
@@ -106,7 +106,7 @@ class NoteService(RequiresStudentMixin):
         """Retorna notes per a la taula de la UI amb filtres combinats amb AND."""
         return self.note_dao.get_records(self._validate_filters(filters or {}))
 
-    def _prepare(self, note_data: NoteNew) -> NoteNew:
+    def _prepare(self, note_data: NoteNew) -> tuple[NoteNew, Student]:
         prepared = NoteNew(
             student_id=note_data.student_id,
             category_id=note_data.category_id,
@@ -115,7 +115,7 @@ class NoteService(RequiresStudentMixin):
             content=note_data.content,
         )
         prepared = self.validation_service.validate_note(prepared)
-        self._require_student(prepared.student_id)
+        student = self._require_student(prepared.student_id)
         # El curs és una dada derivada de la data, no una elecció manual.
         course_id = self._resolve_academic_course(prepared.date)
         return NoteNew(
@@ -124,13 +124,12 @@ class NoteService(RequiresStudentMixin):
             date=prepared.date,
             course_id=course_id,
             content=prepared.content,
-        )
+        ), student
 
-    def _ensure_group_history(self, note: NoteNew) -> None:
+    def _ensure_group_history(self, note: NoteNew, student: Student) -> None:
         """Registra el curs/grup de la data de la nota si encara no consta."""
         if self.group_history_dao is None:
             return
-        student = self._require_student(note.student_id)
         histories = self.group_history_dao.get_by_student(note.student_id)
         if any(
             history.academic_course_id == note.course_id

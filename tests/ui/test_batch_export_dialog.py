@@ -26,7 +26,7 @@ def test_requereix_seleccio_i_retorna_opcions(qtbot):
     qtbot.addWidget(dialog)
     dialog._accept_valid()
     assert dialog.result() == 0
-    assert not dialog.validation_label.isHidden()
+    assert not dialog.error_label.isHidden()
     dialog.student_list.item(0).setCheckState(Qt.CheckState.Checked)
     dialog.format_input.setCurrentIndex(1)
     dialog.include_documents.setChecked(True)

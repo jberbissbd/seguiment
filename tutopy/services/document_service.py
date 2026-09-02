@@ -16,8 +16,8 @@ from tutopy.services.exceptions import (
     FileCleanupError,
     ValidationError,
 )
-from tutopy.services.validation_service import ValidationService
 from tutopy.services._student_requirement import RequiresStudentMixin
+from tutopy.services.validation_service import ValidationService
 from tutopy.services.utils import AcademicCourseDeterminator
 
 

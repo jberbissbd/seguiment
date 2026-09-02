@@ -3,6 +3,7 @@
 from typing import Optional
 from tutopy.models.messaging import Note, NoteNew, NoteRecord
 from ._batch import grouped_by_student
+from ._like import like_pattern
 
 
 class NoteDAO:
@@ -121,8 +122,8 @@ class NoteDAO:
                 conditions.append(condition)
                 params.append(filters[key])
         if filters.get("content"):
-            conditions.append("LOWER(n.content) LIKE ?")
-            params.append(f"%{filters['content'].lower()}%")
+            conditions.append("LOWER(n.content) LIKE ? ESCAPE '\\'")
+            params.append(like_pattern(filters["content"].lower()))
         where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
         query = """
             SELECT n.id AS note_id, n.date,

@@ -4,6 +4,7 @@ import uuid as uuid_mod
 from typing import Optional
 from tutopy.models.messaging import Student, StudentNew
 from ._batch import SQLITE_PARAMETER_BATCH
+from ._like import like_pattern
 
 
 class StudentDAO:
@@ -109,12 +110,12 @@ class StudentDAO:
 
     def search(self, query: str) -> list[Student]:
         """Cerca alumnes pel nom, cognoms, nom complet o grup (subcadena, sense distingir majúscules)."""
-        pattern = f"%{query}%"
+        pattern = like_pattern(query)
         rows = self.conn.execute(
             """SELECT id, uuid, name, surnames, group_name FROM students
-               WHERE name LIKE ? OR surnames LIKE ?
-                  OR (name || ' ' || surnames) LIKE ?
-                  OR group_name LIKE ?
+               WHERE name LIKE ? ESCAPE '\\' OR surnames LIKE ? ESCAPE '\\'
+                  OR (name || ' ' || surnames) LIKE ? ESCAPE '\\'
+                  OR group_name LIKE ? ESCAPE '\\'
                ORDER BY surnames, name""",
             (pattern, pattern, pattern, pattern),
         ).fetchall()

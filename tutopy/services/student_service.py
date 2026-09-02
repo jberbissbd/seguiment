@@ -14,9 +14,9 @@ from tutopy.models.messaging import (
 )
 from tutopy.models.student_bulk import StudentBulkUpdate, StudentBulkUpdateResult
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
+from tutopy.services._student_requirement import RequiresStudentMixin
 from tutopy.services.utils import AcademicCourseDeterminator
 from tutopy.services.validation_service import ValidationService
-from tutopy.services._student_requirement import RequiresStudentMixin
 
 
 class StudentService(RequiresStudentMixin):
