@@ -282,35 +282,25 @@ QPushButton#dangerButton {{
     padding: 8px 12px;
 }}
 
-QListWidget {{
+QListView {{
     background-color: white;
     border: none;
     outline: none;
 }}
 
-QListWidget::item {{
+QListView::item {{
     border-bottom: 1px solid #EDF1F5;
     padding: 10px;
 }}
 
-QListWidget::item:selected {{
+QListView::item:selected {{
     background-color: #E5F1FB;
     color: {TEXT_PRIMARY};
 }}
 
-QListWidget#studentListWidget::item {{
+QListView#studentListWidget::item {{
     padding: 0;
     min-height: 52px;
-}}
-
-QLabel#studentListName {{
-    color: {TEXT_PRIMARY};
-    font-weight: 600;
-}}
-
-QLabel#studentListGroup {{
-    color: {TEXT_SECONDARY};
-    font-size: 12px;
 }}
 
 QTableWidget {{

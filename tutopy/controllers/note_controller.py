@@ -75,8 +75,12 @@ class NoteController:
 
     def refresh(self, filters=None) -> None:
         """Recarrega les notes segons els filtres indicats o els actuals de la vista."""
+        filters = self.view.filters() if filters is None else filters
+        if filters.get("student_id") is None:
+            self.view.set_records([])
+            return
         try:
-            records = self.note_service.get_records(filters or self.view.filters())
+            records = self.note_service.get_records(filters)
         except DomainError as error:
             self.error_handler(str(error))
             return

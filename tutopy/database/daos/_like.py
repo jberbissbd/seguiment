@@ -2,7 +2,7 @@
 
 
 def like_pattern(term: str) -> str:
-    """Retorna `term` com a patró `%...%` amb `%`, `_` i `\\` escapats.
+    r"""Retorna `term` com a patró `%...%` amb `%`, `_` i `\\` escapats.
 
     SQLite interpreta `%` i `_` com a comodins dins de `LIKE`. Sense
     escapar-los, una cerca de l'usuari que contingui aquests caràcters (per

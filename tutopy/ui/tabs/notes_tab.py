@@ -176,12 +176,15 @@ class NotesTab(QWidget):
 
     def clear_filters(self) -> None:
         """Restableix tots els filtres (incloent el cercador amb debounce) i els reemet."""
-        self.category_filter.setCurrentIndex(0)
-        self.course_filter.setCurrentIndex(0)
-        self.date_from_enabled.setChecked(False)
-        self.date_to_enabled.setChecked(False)
-        self.content_filter.clear()
-        self.content_filter.cancel_pending()
+        # Els controls continuen habilitant els editors de data, però el
+        # controlador només rep l'estat final de tots els filtres.
+        with QSignalBlocker(self):
+            self.category_filter.setCurrentIndex(0)
+            self.course_filter.setCurrentIndex(0)
+            self.date_from_enabled.setChecked(False)
+            self.date_to_enabled.setChecked(False)
+            self.content_filter.clear()
+            self.content_filter.cancel_pending()
         self._emit_filters()
 
     def set_records(self, records) -> None:

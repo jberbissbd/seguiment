@@ -117,7 +117,7 @@ def test_controller_elimina_amb_confirmacio(qtbot, tmp_path):
         controller.delete(student.id)
 
         assert services.students.get_all() == []
-        assert window.student_list.list_widget.count() == 0
+        assert window.student_list.list_widget.model().rowCount() == 0
         assert errors == []
     finally:
         database.close()

@@ -91,7 +91,7 @@ def test_create_controllers_compon_i_inicia_la_ui(tmp_path, qtbot):
         assert isinstance(controllers, ControllerContainer)
         assert controllers.students.service is services.students
         assert controllers.notes.note_service is services.notes
-        assert window.student_list.list_widget.count() == 0
+        assert window.student_list.list_widget.model().rowCount() == 0
     finally:
         database.close()
 

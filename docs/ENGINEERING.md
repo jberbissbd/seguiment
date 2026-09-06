@@ -24,7 +24,7 @@ mateix volum de dades.
 | Operació | Temps | Memòria addicional | Decisió |
 | --- | ---: | ---: | --- |
 | Llistar o cercar alumnes | `O(S)` | `O(S)` | La cerca conté comodins; es coalescen pulsacions per no repetir-la. |
-| Mostrar alumnes | `O(S)` | `O(S)` | Els widgets es reutilitzen si es conserva la seqüència d'identificadors. |
+| Mostrar alumnes | `O(S)` actualització, `O(V)` dibuix | `O(S)` model, `O(1)` widgets | El delegat dibuixa només les `V` files visibles; dos botons reutilitzables permeten afegir notes. |
 | Filtrar notes | `O(log N + R)` amb índex aplicable | `O(R)` | Els filtres s'executen a SQLite i només es materialitzen els `R` resultats. |
 | Estadístiques | `O(N + S)` | `O(S + C)` | Les agregacions es fan a SQLite i no carreguen el text sensible. |
 | Generar informes | `O(S + N + C + D)` | `O(S + N + C + D)` | El lot comparteix dades d'informe i metadades dels documents adjunts. |
@@ -109,11 +109,16 @@ Les cerques textuals utilitzen `DebouncedLineEdit` (180 ms). Els canvis de
 selecció explícits continuen sent immediats. Les estadístiques utilitzen el
 mateix principi amb un `QTimer` d'un sol tret.
 
-`StudentList` conserva els widgets quan els identificadors i l'ordre no canvien.
-Les notes ajusten el nombre de files i actualitzen els `QTableWidgetItem` existents.
-Això és virtualització parcial: redueix assignacions en refrescos, però no evita
-el cost lineal de mostrar tots els resultats. Si les llistes creixen molt, el pas
-següent és `QAbstractItemModel` amb `QListView`/`QTableView`.
+`StudentList` utilitza `QAbstractListModel`, `QListView` i un delegat que dibuixa
+les files visibles. Conserva la selecció per identificador en canviar l'ordre
+o els resultats i emet `dataChanged` només per les files modificades quan
+l'ordre es manté. Els botons de notes de la fila seleccionada i de la fila del
+cursor es reutilitzen, sense crear widgets per a cada alumne.
+
+Les notes ajusten el nombre de files i actualitzen els `QTableWidgetItem`
+existents. No es consulten ni es materialitzen notes si no hi ha un alumne
+seleccionat. Netejar els filtres emet un únic estat final, mantenint actius els
+senyals interns que habiliten els editors de dates.
 
 ## DRY, errors i documentació
 
