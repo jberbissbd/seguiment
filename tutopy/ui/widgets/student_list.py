@@ -197,6 +197,8 @@ class StudentList(QFrame):
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.empty_label)
 
+        self._item_by_id: dict[int, QListWidgetItem] = {}
+
     def set_students(self, students) -> None:
         """Mostra alumnes i reutilitza files quan se'n conserva la identitat."""
         students = tuple(students)
@@ -212,6 +214,7 @@ class StudentList(QFrame):
                 self.list_widget.itemWidget(item).update_student(student)
         else:
             self.list_widget.clear()
+            self._item_by_id = {}
             for student in students:
                 item = QListWidgetItem()
                 item.setData(Qt.ItemDataRole.UserRole, student.id)
@@ -222,6 +225,7 @@ class StudentList(QFrame):
                 item.setSizeHint(size)
                 self.list_widget.addItem(item)
                 self.list_widget.setItemWidget(item, widget)
+                self._item_by_id[student.id] = item
                 if student.id == selected_id:
                     self.list_widget.setCurrentItem(item)
         has_students = self.list_widget.count() > 0
@@ -262,12 +266,14 @@ class StudentList(QFrame):
             if widget is not None:
                 widget.set_selected(item is current)
 
+    def select_student(self, student_id: int) -> None:
+        """Selecciona l'alumne `student_id` a la llista, si hi és present."""
+        item = self._item_by_id.get(student_id)
+        if item is not None:
+            self.list_widget.setCurrentItem(item)
+
     def _request_note(self, student_id: int) -> None:
-        for row in range(self.list_widget.count()):
-            item = self.list_widget.item(row)
-            if item.data(Qt.ItemDataRole.UserRole) == student_id:
-                self.list_widget.setCurrentItem(item)
-                break
+        self.select_student(student_id)
         self.note_create_requested.emit(student_id)
 
     def _request_edit(self) -> None:

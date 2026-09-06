@@ -136,8 +136,7 @@ class ReportController:
         Args:
             configuration_id: Identificador de la configuració a editar.
         """
-        configuration = next((item for item in self.configuration.get_term_configurations()
-                              if item.id == configuration_id), None)
+        configuration = self.configuration.get_term_configuration_by_id(configuration_id)
         if configuration is None:
             self.error_handler("No s’ha trobat la configuració de trimestres.")
             return

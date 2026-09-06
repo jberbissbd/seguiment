@@ -37,6 +37,17 @@ class ReportConfigurationDAO:
         ).fetchone()
         return TermConfiguration(**row) if row else None
 
+    def get_term_configuration_by_id(
+        self, configuration_id: int
+    ) -> TermConfiguration | None:
+        """Retorna una configuració de trimestres pel seu identificador, o ``None``."""
+        row = self.conn.execute(
+            "SELECT id, academic_course_id, group_name, second_term_start, "
+            "third_term_start FROM term_configurations WHERE id = ?",
+            (configuration_id,),
+        ).fetchone()
+        return TermConfiguration(**row) if row else None
+
     def save_term_configuration(self, data: TermConfigurationNew) -> TermConfiguration:
         """Crea o actualitza (per curs i grup) la configuració de trimestres."""
         self.conn.execute(
