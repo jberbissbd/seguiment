@@ -179,6 +179,29 @@ s'executa amb `python -m ruff check tutopy scripts`; la configuració compartida
 Les regles `D` (pydocstyle, convenció `google`) fan complir aquesta política
 de docstrings a tot `tutopy/`.
 
+## Proves i cobertura
+
+Per mesurar línies i branques amb el mateix criteri que el CI:
+
+```bash
+.venv/bin/python -m pytest -q --cov=tutopy --cov-branch --cov-report=term-missing
+```
+
+Els escenaris compartits són als `conftest.py` de cada àmbit:
+
+- `tests/services/conftest.py`: base de dades, DAOs i document gestionat temporal.
+- `tests/controllers/conftest.py`: controladors de dades, alumnes i informes amb
+  captura d'errors, missatges i peticions de refresc, sense diàlegs bloquejants.
+  Els d'alumnes i informes comparteixen serveis reals i una base temporal.
+- `tests/ui/conftest.py`: alumne amb dades associades i fixture `related_kind`
+  parametritzada per descriptor, contacte i document.
+
+Les fixtures creen recursos aïllats per prova i només es carreguen quan se
+sol·liciten. Les combinacions específiques d'una prova (acceptar/cancel·lar,
+tipus d'error o fase d'una transferència) utilitzen `pytest.mark.parametrize`
+al mateix test. Es prioritzen garanties observables de persistència,
+cancel·lació i errors, amb assertions sobre el resultat i els efectes laterals.
+
 ## Documentació generada
 
 El lloc de documentació combina les guies narratives d'aquest directori amb

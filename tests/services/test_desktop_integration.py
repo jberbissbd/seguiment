@@ -11,6 +11,100 @@ from tutopy.services.desktop_integration import DESKTOP_ID, install_desktop_entr
 from tutopy.ui.resources import asset_path
 
 
+@pytest.mark.parametrize("command", [[], ["tutopy"], ["./Tutopy"]])
+def test_rebutja_ordres_sense_executable_absolut(tmp_path, monkeypatch, command):
+    """Una ordre invàlida no crea cap recurs d'escriptori."""
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    with pytest.raises(ValueError, match="ruta absoluta"):
+        install_desktop_entry(command, asset_path("tutopy.svg"))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_error_actualitzant_llancador_conserva_anterior_i_neteja_temporal(
+    tmp_path, monkeypatch,
+):
+    """Una fallada en publicar l'actualització no trunca el llançador existent."""
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    entry = install_desktop_entry(["/opt/Tutopy"], asset_path("tutopy.svg"))
+    original = entry.read_bytes()
+    replace = Path.replace
+
+    def fail_entry(source, destination):
+        if destination == entry:
+            raise PermissionError("llançador protegit")
+        return replace(source, destination)
+
+    monkeypatch.setattr(Path, "replace", fail_entry)
+    with pytest.raises(PermissionError, match="protegit"):
+        install_desktop_entry(["/opt/Tutopy nou"], asset_path("tutopy.svg"))
+    assert entry.read_bytes() == original
+    assert list(entry.parent.iterdir()) == [entry]
+
+
+def test_error_creant_temporal_no_publica_recursos(tmp_path, monkeypatch):
+    """La manca de permisos abans d'escriure no deixa una entrada parcial."""
+    import tutopy.services.desktop_integration as integration
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+
+    def denied(**kwargs):
+        raise PermissionError("directori protegit")
+
+    monkeypatch.setattr(integration, "NamedTemporaryFile", denied)
+    with pytest.raises(PermissionError, match="protegit"):
+        install_desktop_entry(["/opt/Tutopy"], asset_path("tutopy.svg"))
+    assert not any(path.is_file() for path in tmp_path.rglob("*"))
+
+
+@pytest.mark.parametrize("platform", ["win32", "darwin"])
+def test_cli_rebutja_instal_lacio_fora_de_linux(monkeypatch, capsys, platform):
+    """Una plataforma no compatible retorna un error sense instal·lar res."""
+    import tutopy.main as main_module
+
+    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(sys, "argv", ["tutopy", "--install-desktop"])
+
+    def unexpected(*args):
+        pytest.fail("No s'ha d'instal·lar el llançador en aquesta plataforma")
+
+    monkeypatch.setattr(main_module, "install_desktop_entry", unexpected)
+    assert main_module.main() == 1
+    assert "només està disponible a Linux" in capsys.readouterr().err
+
+
+def test_cli_des_de_fonts_usa_el_mateix_interpret(tmp_path, monkeypatch, capsys):
+    """El llançador de desenvolupament conserva l'intèrpret i el mòdul."""
+    import tutopy.main as main_module
+
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(sys, "argv", ["tutopy", "--install-desktop"])
+    monkeypatch.setattr(sys, "frozen", False, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "entorn virtual/python"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    assert main_module.main() == 0
+    entry = tmp_path / "applications" / f"{DESKTOP_ID}.desktop"
+    assert f'Exec="{sys.executable}" "-m" "tutopy.main"' in entry.read_text()
+    assert str(entry) in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("error", [PermissionError("permís denegat"), ValueError("ruta invàlida")])
+def test_cli_informa_error_instal_lacio(monkeypatch, capsys, error):
+    """Els errors de configuració i escriptura retornen un codi de fallada."""
+    import tutopy.main as main_module
+
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(sys, "argv", ["tutopy", "--install-desktop"])
+
+    def fail(*args):
+        raise error
+
+    monkeypatch.setattr(main_module, "install_desktop_entry", fail)
+    assert main_module.main() == 1
+    captured = capsys.readouterr()
+    assert str(error) in captured.err
+    assert "Llançador instal·lat" not in captured.out
+
+
 def test_installa_recursos_persistents_i_actualitza_executable(tmp_path, monkeypatch):
     """El desktop apunta al binari real i no a la carpeta temporal del bundle."""
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "dades"))
