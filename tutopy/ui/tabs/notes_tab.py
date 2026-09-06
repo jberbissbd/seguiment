@@ -19,6 +19,19 @@ from tutopy.ui.resources import set_button_icon
 from tutopy.ui.widgets.debounced_line_edit import DebouncedLineEdit
 
 
+class _NotesTable(QTableWidget):
+    """QTableWidget que recalcula l'alçada de les files quan canvia d'amplada.
+
+    La columna "Contingut" s'estira (Stretch), així que el text ajustat
+    (word wrap) pot necessitar més o menys alçada quan la finestra canvia
+    de mida.
+    """
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self.resizeRowsToContents()
+
+
 class NotesTab(QWidget):
     """Taula i filtres de notes sense dependències de negoci."""
 
@@ -75,7 +88,7 @@ class NotesTab(QWidget):
         actions.addWidget(self.clear_button)
         layout.addLayout(actions)
 
-        self.table = QTableWidget(0, 3)
+        self.table = _NotesTable(0, 3)
         self.table.setHorizontalHeaderLabels(
             ["Data", "Categoria", "Contingut"]
         )
@@ -83,6 +96,7 @@ class NotesTab(QWidget):
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
+        self.table.setWordWrap(True)
         self.table.verticalHeader().hide()
         header = self.table.horizontalHeader()
         for column in range(2):
@@ -192,6 +206,7 @@ class NotesTab(QWidget):
                         item.setData(Qt.ItemDataRole.UserRole, record.note_id)
                 if record.note_id == selected_id:
                     self.table.selectRow(row)
+            self.table.resizeRowsToContents()
         finally:
             self.table.setUpdatesEnabled(True)
         self._selection_changed()
