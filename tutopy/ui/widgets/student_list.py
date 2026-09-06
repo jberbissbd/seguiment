@@ -34,6 +34,7 @@ class StudentListItem(QWidget):
         super().__init__(parent)
         self.setMinimumHeight(52)
         self._student_id = student.id
+        self._student = student
         self._hovered = False
         self._selected = False
         layout = QHBoxLayout(self)
@@ -66,12 +67,20 @@ class StudentListItem(QWidget):
         layout.addWidget(self.note_button)
 
     def update_student(self, student) -> None:
-        """Actualitza el contingut sense reconstruir l'arbre de widgets."""
+        """Actualitza el contingut sense reconstruir l'arbre de widgets.
+
+        No fa res si les dades no han canviat, per evitar recalcular
+        l'estil de l'avatar (`setStyleSheet` és costós) en cada refresc de
+        la llista quan l'alumne de la fila no s'ha modificat.
+        """
+        if student == self._student:
+            return
         self.avatar.setText(initials(student.name, student.surnames))
         self.avatar.setStyleSheet(avatar_stylesheet(student.id, 18))
         self.name.setText(student.full_name)
         self.group.setText(student.group_name or "Sense grup")
         self._student_id = student.id
+        self._student = student
 
     def set_selected(self, selected: bool) -> None:
         """Manté l'acció visible per a la fila activa, també sense ratolí."""
@@ -231,9 +240,19 @@ class StudentList(QFrame):
         has_selection = current is not None
         self.edit_button.setEnabled(has_selection)
         self.delete_button.setEnabled(has_selection)
-        self._update_selected_row()
+        # Només cal commutar la fila anterior i la nova, no recórrer tota la
+        # llista: la resta de files no canvien d'estat de selecció.
+        self._set_item_selected(previous, False)
+        self._set_item_selected(current, True)
         if current is not None:
             self.student_selected.emit(current.data(Qt.ItemDataRole.UserRole))
+
+    def _set_item_selected(self, item, selected: bool) -> None:
+        if item is None:
+            return
+        widget = self.list_widget.itemWidget(item)
+        if widget is not None:
+            widget.set_selected(selected)
 
     def _update_selected_row(self) -> None:
         current = self.list_widget.currentItem()

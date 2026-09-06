@@ -74,9 +74,7 @@ def test_controller_container_inicia_nomes_controladors_visibles():
 
     container.start()
 
-    assert calls == [
-        "main", "students", "notes", "categories", "reports", "statistics",
-    ]
+    assert calls == ["main", "students", "notes", "categories", "reports"]
 
 
 @pytest.mark.ui

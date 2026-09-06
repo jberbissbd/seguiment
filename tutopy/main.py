@@ -40,14 +40,20 @@ class ControllerContainer:
     statistics: StatisticsController
 
     def start(self) -> None:
-        """Carrega només els controladors que tenen estat inicial visible."""
+        """Carrega només els controladors que tenen estat inicial visible.
+
+        Les estadístiques no es carreguen aquí: `StatisticsController` ja
+        escolta el canvi de secció de la barra lateral i es carrega sol la
+        primera vegada que l'usuari hi navega, evitant consultes a la base
+        de dades a l'arrencada per a una pestanya que potser no s'obrirà mai
+        en aquella sessió.
+        """
         for controller in (
             self.main,
             self.students,
             self.notes,
             self.categories,
             self.reports,
-            self.statistics,
         ):
             controller.start()
 

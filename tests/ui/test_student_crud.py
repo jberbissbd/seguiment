@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox
 
 from tutopy.application import create_services
@@ -159,7 +161,10 @@ def test_controller_aplica_edicio_massiva_en_segon_pla(
                 }]
 
             def effective_date(self):
-                return "2026-09-01"
+                # L'alumne s'ha creat avui, així que el canvi de grup ha de
+                # ser posterior (o del mateix dia) perquè no violi la
+                # restricció `end_date >= start_date` de l'historial.
+                return (date.today() + timedelta(days=1)).isoformat()
 
         messages = []
         monkeypatch.setattr(

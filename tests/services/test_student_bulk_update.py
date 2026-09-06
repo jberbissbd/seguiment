@@ -1,9 +1,16 @@
+from datetime import date, timedelta
+
 import pytest
 
 from tutopy.application import create_services
 from tutopy.models.messaging import StudentNew
 from tutopy.models.student_bulk import StudentBulkUpdate
 from tutopy.services.exceptions import ValidationError
+
+# Els alumnes es creen "avui" a cada test, així que la data del canvi massiu
+# ha de ser posterior perquè no violi la restricció `end_date >= start_date`
+# de l'historial de grup.
+CHANGE_DATE = (date.today() + timedelta(days=1)).isoformat()
 
 
 def test_edicio_massiva_actualitza_noms_i_historials(db):
@@ -14,7 +21,7 @@ def test_edicio_massiva_actualitza_noms_i_historials(db):
     result = services.students.bulk_update([
         StudentBulkUpdate(first.id, "Anna Maria", "Serra", "2B"),
         StudentBulkUpdate(second.id, "Biel", "Puig-Soler", "1A"),
-    ], "2026-09-01")
+    ], CHANGE_DATE)
 
     assert result.updated == 2
     assert result.group_changes == 1
@@ -22,7 +29,7 @@ def test_edicio_massiva_actualitza_noms_i_historials(db):
     assert services.students.get_by_id(second.id).surnames == "Puig-Soler"
     history = services.students.get_group_history(first.id)
     assert history[-1].group_name == "2B"
-    assert history[-1].start_date == "2026-09-01"
+    assert history[-1].start_date == CHANGE_DATE
 
 
 def test_edicio_massiva_valida_tot_el_lot_abans_d_escriure(db):
@@ -35,7 +42,7 @@ def test_edicio_massiva_valida_tot_el_lot_abans_d_escriure(db):
         StudentBulkUpdate(second.id, "", "Puig", "1A"),
     ]
     with pytest.raises(ValidationError):
-        services.students.bulk_update(changes, "2026-09-01")
+        services.students.bulk_update(changes, CHANGE_DATE)
 
     assert services.students.get_by_id(first.id) == first
     assert services.students.get_by_id(second.id) == second
@@ -54,7 +61,7 @@ def test_edicio_massiva_resol_el_curs_academic_una_sola_vegada(db):
         result = services.students.bulk_update(
             [StudentBulkUpdate(item.id, item.name, item.surnames, "2B")
              for item in students],
-            "2026-09-01",
+            CHANGE_DATE,
         )
     finally:
         db.conn._connection.set_trace_callback(None)
@@ -78,7 +85,7 @@ def test_cancel_lacio_de_l_edicio_massiva_fa_rollback(db):
     result = services.students.bulk_update(
         [StudentBulkUpdate(item.id, item.name, item.surnames, "2B")
          for item in students],
-        "2026-09-01",
+        CHANGE_DATE,
         progress_callback=lambda completed, total: progress.append((completed, total)),
         cancel_requested=lambda: bool(progress),
     )
