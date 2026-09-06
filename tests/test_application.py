@@ -113,6 +113,9 @@ def test_main_configura_cicle_de_vida_sense_executar_qt(monkeypatch):
         def setApplicationName(self, name):
             events.append(("name", name))
 
+        def setDesktopFileName(self, name):
+            events.append(("desktop", name))
+
         def setWindowIcon(self, icon):
             events.append(("icon", icon))
 
@@ -141,5 +144,6 @@ def test_main_configura_cicle_de_vida_sense_executar_qt(monkeypatch):
     assert main_module.main() == 17
     assert window.controllers is controllers
     assert ("name", "Tutopy") in events
+    assert ("desktop", main_module.DESKTOP_ID) in events
     assert ("start", True) in events
     assert ("show", True) in events

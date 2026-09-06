@@ -22,8 +22,9 @@ from tutopy.controllers.report_controller import ReportController
 from tutopy.controllers.statistics_controller import StatisticsController
 from tutopy.database.database import Database
 from tutopy.services.directories import get_db_path
+from tutopy.services.desktop_integration import DESKTOP_ID, install_desktop_entry
 from tutopy.ui.main_window import MainWindow
-from tutopy.ui.resources import application_icon
+from tutopy.ui.resources import application_icon, asset_path
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,11 +135,14 @@ def create_controllers(
 
 def main() -> int:
     """Punt d'entrada i arrel de composició de l'aplicació."""
+    if sys.argv[1:] == ["--install-desktop"]:
+        return _install_desktop()
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
     app = QApplication(sys.argv)
     app.setApplicationName("Tutopy")
+    app.setDesktopFileName(DESKTOP_ID)
     app.setWindowIcon(application_icon())
     database = Database(str(get_db_path())).connect()
     services = create_services(database)
@@ -150,6 +154,22 @@ def main() -> int:
     app.aboutToQuit.connect(database.close)
     window.show()
     return app.exec()
+
+
+def _install_desktop() -> int:
+    if sys.platform != "linux":
+        print("La instal·lació del llançador només està disponible a Linux.", file=sys.stderr)
+        return 1
+    command = [sys.executable]
+    if not getattr(sys, "frozen", False):
+        command.extend(["-m", "tutopy.main"])
+    try:
+        path = install_desktop_entry(command, asset_path("tutopy.svg"))
+    except (OSError, ValueError) as error:
+        print(f"No s'ha pogut instal·lar el llançador: {error}", file=sys.stderr)
+        return 1
+    print(f"Llançador instal·lat: {path}\nJa pots obrir Tutopy des del menú d'aplicacions.")
+    return 0
 
 
 if __name__ == "__main__":

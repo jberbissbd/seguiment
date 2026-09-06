@@ -116,6 +116,22 @@ chmod +x Tutopy-Linux-x86_64
 
 També el pots moure a una carpeta permanent abans d'executar-lo.
 
+Per tenir Tutopy al menú d'aplicacions i amb la seva icona al dock o a la barra
+de tasques, situa primer l'executable a la carpeta on el conservaràs i executa:
+
+```bash
+./Tutopy-Linux-x86_64 --install-desktop
+```
+
+Després, obre **Tutopy** des del menú d'aplicacions. Aquesta ordre instal·la un
+llançador per al teu usuari, sense `sudo`. Si mous o canvies el nom de
+l'executable, torna a executar l'ordre des de la ubicació nova.
+
+Al gestor de fitxers, el binari Linux pot continuar tenint la icona genèrica
+d'executable. El llançador amb la icona de Tutopy es troba habitualment a
+`~/.local/share/applications/io.github.jberbissbd.Tutopy.desktop`. Pots copiar-lo
+a l'escriptori; segons l'entorn, caldrà habilitar-hi «Permetre executar».
+
 ### macOS
 
 Tria l'executable que correspon al processador del Mac:
