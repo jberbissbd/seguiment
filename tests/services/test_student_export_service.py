@@ -39,11 +39,10 @@ def test_destinacio_bloquejada_informa_sense_alterar_fitxers(
     destination = tmp_path / "destinacio.txt"
     destination.write_text("No substituir", encoding="utf-8")
     exporter = create_services(db).student_exports
+    export = exporter.export_students if batch else exporter.export_student
+    selection = [document.student_id] if batch else document.student_id
     with pytest.raises(ValidationError, match="carpeta d’exportació") as error:
-        if batch:
-            exporter.export_students([document.student_id], destination, "xlsx")
-        else:
-            exporter.export_student(document.student_id, destination, "xlsx")
+        export(selection, destination, "xlsx")
     assert isinstance(error.value.__cause__, OSError)
     assert destination.read_text() == "No substituir"
 
@@ -51,16 +50,18 @@ def test_destinacio_bloquejada_informa_sense_alterar_fitxers(
 def test_exportacio_individual_rebutja_alumne_absent(db, tmp_path):
     """L'exportació d'un alumne inexistent no crea cap carpeta."""
     destination = tmp_path / "exportacio"
+    exporter = create_services(db).student_exports
     with pytest.raises(EntityNotFoundError, match="no existeix"):
-        create_services(db).student_exports.export_student(99999, destination, "xlsx")
+        exporter.export_student(99999, destination, "xlsx")
     assert not destination.exists()
 
 
 def test_exportacio_individual_rebutja_destinacio_buida(db, managed_document):
     """Una destinació buida no s'interpreta com el directori de treball."""
     _service, document, _source = managed_document
+    exporter = create_services(db).student_exports
     with pytest.raises(ValidationError, match="destinació"):
-        create_services(db).student_exports.export_student(document.student_id, "", "xlsx")
+        exporter.export_student(document.student_id, "", "xlsx")
 
 
 def test_exporta_informe_i_documents_en_carpetes_per_curs(db, tmp_path):

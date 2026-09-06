@@ -202,6 +202,57 @@ tipus d'error o fase d'una transferència) utilitzen `pytest.mark.parametrize`
 al mateix test. Es prioritzen garanties observables de persistència,
 cancel·lació i errors, amb assertions sobre el resultat i els efectes laterals.
 
+### Tests d'excepcions sense ambigüitat
+
+Cada bloc `pytest.raises` ha de contenir una única crida: l'operació de la qual
+es vol comprovar l'excepció. Aquest criteri evita l'avís de mantenibilitat de
+SonarCloud «Refactor this exception test to have only one invocation possibly
+throwing an exception» i impedeix que el test passi perquè ha fallat una crida
+de preparació en lloc de l'operació esperada.
+
+Abans d'entrar al bloc, cal construir els serveis i models, resoldre recursos,
+convertir rutes i preparar els arguments. Les crides niuades també compten,
+encara que siguin a la mateixa línia.
+
+Exemple a evitar:
+
+```python
+with pytest.raises(ValueError, match="ruta absoluta"):
+    install_desktop_entry(command, asset_path("tutopy.svg"))
+```
+
+Forma correcta:
+
+```python
+icon_source = asset_path("tutopy.svg")
+with pytest.raises(ValueError, match="ruta absoluta"):
+    install_desktop_entry(command, icon_source)
+```
+
+En proves parametritzades, també s'ha de seleccionar l'operació fora del bloc,
+en lloc de posar-hi un `if/else` amb crides diferents:
+
+```python
+exporter = create_services(db).student_exports
+export = exporter.export_students if batch else exporter.export_student
+selection = [document.student_id] if batch else document.student_id
+
+with pytest.raises(ValidationError, match="carpeta d’exportació") as error:
+    export(selection, destination, "xlsx")
+
+assert isinstance(error.value.__cause__, OSError)
+assert destination.read_text() == "No substituir"
+```
+
+Les comprovacions del resultat, de la causa de l'error i de la conservació de
+fitxers o registres van després del bloc. Cal mantenir el tipus d'excepció
+específic i, quan aporti precisió, `match`; no s'han d'ampliar les excepcions
+acceptades ni desactivar la regla per silenciar l'avís.
+
+Després d'aquestes refactoritzacions, cal executar els tests afectats i Ruff.
+Que Ruff passi no substitueix l'anàlisi de SonarCloud: la desaparició dels
+avisos s'ha de comprovar en una nova anàlisi del commit corregit.
+
 ## Documentació generada
 
 El lloc de documentació combina les guies narratives d'aquest directori amb

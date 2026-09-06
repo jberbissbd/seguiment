@@ -124,11 +124,12 @@ def test_metadades_requereixen_data_i_cataleg_de_cursos(managed_document, failur
     service, document, _source = managed_document
     if failure == "courses":
         service.academic_course_dao = None
+    data = StudentDocumentNew(
+        document.student_id, "Informe", "", "nou.txt", "nou.txt", "",
+        "" if failure == "date" else "2026-02-01",
+    )
     with pytest.raises(ValidationError, match="data|curs acadèmic"):
-        service.create(StudentDocumentNew(
-            document.student_id, "Informe", "", "nou.txt", "nou.txt", "",
-            "" if failure == "date" else "2026-02-01",
-        ))
+        service.create(data)
     assert service.get_all() == [document]
 
 

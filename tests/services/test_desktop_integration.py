@@ -15,8 +15,9 @@ from tutopy.ui.resources import asset_path
 def test_rebutja_ordres_sense_executable_absolut(tmp_path, monkeypatch, command):
     """Una ordre invàlida no crea cap recurs d'escriptori."""
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    icon_source = asset_path("tutopy.svg")
     with pytest.raises(ValueError, match="ruta absoluta"):
-        install_desktop_entry(command, asset_path("tutopy.svg"))
+        install_desktop_entry(command, icon_source)
     assert list(tmp_path.iterdir()) == []
 
 
@@ -35,8 +36,9 @@ def test_error_actualitzant_llancador_conserva_anterior_i_neteja_temporal(
         return replace(source, destination)
 
     monkeypatch.setattr(Path, "replace", fail_entry)
+    icon_source = asset_path("tutopy.svg")
     with pytest.raises(PermissionError, match="protegit"):
-        install_desktop_entry(["/opt/Tutopy nou"], asset_path("tutopy.svg"))
+        install_desktop_entry(["/opt/Tutopy nou"], icon_source)
     assert entry.read_bytes() == original
     assert list(entry.parent.iterdir()) == [entry]
 
@@ -51,8 +53,9 @@ def test_error_creant_temporal_no_publica_recursos(tmp_path, monkeypatch):
         raise PermissionError("directori protegit")
 
     monkeypatch.setattr(integration, "NamedTemporaryFile", denied)
+    icon_source = asset_path("tutopy.svg")
     with pytest.raises(PermissionError, match="protegit"):
-        install_desktop_entry(["/opt/Tutopy"], asset_path("tutopy.svg"))
+        install_desktop_entry(["/opt/Tutopy"], icon_source)
     assert not any(path.is_file() for path in tmp_path.rglob("*"))
 
 
