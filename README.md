@@ -1,5 +1,9 @@
 # Tutopy
 
+[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=jberbissbd_seguiment&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jberbissbd_seguiment)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jberbissbd_seguiment&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jberbissbd_seguiment)
+[![CI](https://github.com/jberbissbd/seguiment/actions/workflows/ci.yml/badge.svg)](https://github.com/jberbissbd/seguiment/actions/workflows/ci.yml)
+
 Tutopy és una aplicació d'escriptori en català per registrar i consultar el
 seguiment educatiu de l'alumnat. Funciona localment: la informació es desa a
 l'ordinador de l'usuari i no requereix cap servei web per treballar-hi.
