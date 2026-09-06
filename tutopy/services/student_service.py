@@ -63,21 +63,45 @@ class StudentService(RequiresStudentMixin):
         """Retorna els grups no buits existents."""
         return self.student_dao.get_groups()
 
-    def create_student(self, student_data: StudentNew) -> Student:
-        """Crea l'alumne i registra també el seu grup inicial."""
+    def create_student(
+        self, student_data: StudentNew, academic_course_id: Optional[int] = None
+    ) -> Student:
+        """Crea l'alumne i registra també el seu grup inicial.
+
+        Args:
+            student_data: Dades del nou alumne.
+            academic_course_id: ID del curs acadèmic a registrar amb el grup
+                inicial. Si no s'indica, es resol a partir de la data d'avui
+                (útil per evitar resoldre'l repetidament en importacions
+                massives amb molts alumnes).
+        """
         with self.transaction_factory():
             student_data = self.validation_service.validate_student(student_data)
             student = self.student_dao.create(student_data)
             if student.group_name:
-                self.change_student_group(student.id, student.group_name)
+                self.change_student_group(
+                    student.id, student.group_name,
+                    academic_course_id=academic_course_id,
+                )
         return student
 
-    def create(self, student_data: StudentNew) -> Student:
+    def create(
+        self, student_data: StudentNew, academic_course_id: Optional[int] = None
+    ) -> Student:
         """Àlies CRUD de :meth:`create_student`."""
-        return self.create_student(student_data)
+        return self.create_student(student_data, academic_course_id)
 
-    def update(self, student: Student) -> Student:
-        """Valida i actualitza un alumne existent, conservant el seu UUID."""
+    def update(
+        self, student: Student, academic_course_id: Optional[int] = None
+    ) -> Student:
+        """Valida i actualitza un alumne existent, conservant el seu UUID.
+
+        Args:
+            student: Dades actualitzades de l'alumne.
+            academic_course_id: ID del curs acadèmic a registrar si l'alumne
+                canvia de grup. Si no s'indica, es resol a partir de la data
+                d'avui.
+        """
         with self.transaction_factory():
             existing = self._require_student(student.id)
             data = StudentNew(student.name, student.surnames, student.group_name)
@@ -88,7 +112,10 @@ class StudentService(RequiresStudentMixin):
             ))
             self.student_dao.update(updated)
             if requested_group != existing.group_name:
-                self.change_student_group(student.id, requested_group)
+                self.change_student_group(
+                    student.id, requested_group,
+                    academic_course_id=academic_course_id,
+                )
                 updated = cast(
                     Student, dataclasses.replace(updated, group_name=requested_group)
                 )
@@ -143,7 +170,7 @@ class StudentService(RequiresStudentMixin):
         updated = unchanged = group_changes = 0
         try:
             with self.transaction_factory():
-                academic_course_id = self._resolve_academic_course_id(change_date)
+                academic_course_id = self.resolve_academic_course_id(change_date)
                 total = len(prepared)
                 for completed, (existing, data) in enumerate(prepared, 1):
                     if cancel_requested is not None and cancel_requested():
@@ -184,8 +211,18 @@ class StudentService(RequiresStudentMixin):
             )
         return True, group_changed
 
-    def _resolve_academic_course_id(self, change_date: str) -> int:
-        """Resol (o crea) una sola vegada el curs acadèmic d'una data de canvi."""
+    def resolve_academic_course_id(self, change_date: Optional[str] = None) -> int:
+        """Resol (o crea) l'ID del curs acadèmic d'una data de canvi.
+
+        Pensat perquè els processos que afecten diversos alumnes (edició o
+        importació massives) el resolguin un sol cop i el reutilitzin, en
+        lloc de tornar-lo a calcular per a cada alumne.
+
+        Args:
+            change_date: Data de referència (format YYYY-MM-DD). Si no
+                s'indica, s'utilitza la data d'avui.
+        """
+        change_date = change_date or datetime.now().strftime("%Y-%m-%d")
         course_str = AcademicCourseDeterminator().curs_academic_singular(change_date)
         return self.academic_course_dao.get_or_create(course_str).id
 

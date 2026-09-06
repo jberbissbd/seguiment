@@ -21,14 +21,21 @@ class HistoryTab(QWidget):
         layout.addWidget(self.table)
 
     def set_history(self, rows: Iterable[tuple[str, str, str, str]]) -> None:
-        """Omple la taula amb l'històric de grups i cursos.
+        """Actualitza la taula in situ amb l'històric de grups i cursos.
 
         Args:
             rows: Iterable de tuples `(grup, curs, inici, final)`.
         """
-        self.table.setRowCount(0)
-        for values in rows:
-            row = self.table.rowCount()
-            self.table.insertRow(row)
-            for column, value in enumerate(values):
-                self.table.setItem(row, column, QTableWidgetItem(value))
+        rows = list(rows)
+        self.table.setUpdatesEnabled(False)
+        try:
+            self.table.setRowCount(len(rows))
+            for row, values in enumerate(rows):
+                for column, value in enumerate(values):
+                    item = self.table.item(row, column)
+                    if item is None:
+                        item = QTableWidgetItem()
+                        self.table.setItem(row, column, item)
+                    item.setText(value)
+        finally:
+            self.table.setUpdatesEnabled(True)

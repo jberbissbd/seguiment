@@ -87,19 +87,31 @@ class CrudListView(QWidget):
         )
 
     def set_items(self, items: Iterable[tuple[int, str]]) -> None:
-        """Reconstrueix la llista i conserva la selecció si l'ID hi segueix.
+        """Actualitza la llista in situ i conserva la selecció si l'ID hi segueix.
 
         Args:
             items: Iterable de tuples `(id, text)`.
         """
+        items = list(items)
         selected_id = self.current_id()
-        self.list_widget.clear()
-        for item_id, text in items:
-            item = QListWidgetItem(text)
-            item.setData(Qt.ItemDataRole.UserRole, item_id)
-            self.list_widget.addItem(item)
-            if item_id == selected_id:
-                self.list_widget.setCurrentItem(item)
+        widget = self.list_widget
+        widget.setUpdatesEnabled(False)
+        try:
+            widget.clearSelection()
+            widget.setCurrentItem(None)
+            while widget.count() > len(items):
+                widget.takeItem(widget.count() - 1)
+            for row, (item_id, text) in enumerate(items):
+                item = widget.item(row)
+                if item is None:
+                    item = QListWidgetItem()
+                    widget.addItem(item)
+                item.setText(text)
+                item.setData(Qt.ItemDataRole.UserRole, item_id)
+                if item_id == selected_id:
+                    widget.setCurrentItem(item)
+        finally:
+            widget.setUpdatesEnabled(True)
         self._selection_changed()
 
     def current_id(self):
@@ -160,23 +172,31 @@ class CrudTableView(QWidget):
         )
 
     def set_rows(self, rows: Iterable[tuple[int, Sequence]]) -> None:
-        """Reconstrueix la taula i conserva la selecció si l'ID hi segueix.
+        """Actualitza la taula in situ i conserva la selecció si l'ID hi segueix.
 
         Args:
             rows: Iterable de tuples `(id, valors_de_columna)`.
         """
+        rows = list(rows)
         selected_id = self.current_id()
-        self.table.setRowCount(0)
-        for entity_id, values in rows:
-            row = self.table.rowCount()
-            self.table.insertRow(row)
-            for column, value in enumerate(values):
-                item = QTableWidgetItem(str(value))
-                if column == 0:
-                    item.setData(Qt.ItemDataRole.UserRole, entity_id)
-                self.table.setItem(row, column, item)
-            if entity_id == selected_id:
-                self.table.selectRow(row)
+        table = self.table
+        table.setUpdatesEnabled(False)
+        try:
+            table.clearSelection()
+            table.setRowCount(len(rows))
+            for row, (entity_id, values) in enumerate(rows):
+                for column, value in enumerate(values):
+                    item = table.item(row, column)
+                    if item is None:
+                        item = QTableWidgetItem()
+                        table.setItem(row, column, item)
+                    item.setText(str(value))
+                    if column == 0:
+                        item.setData(Qt.ItemDataRole.UserRole, entity_id)
+                if entity_id == selected_id:
+                    table.selectRow(row)
+        finally:
+            table.setUpdatesEnabled(True)
         self._selection_changed()
 
     def current_id(self):

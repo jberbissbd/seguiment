@@ -49,6 +49,7 @@ class StudentRelatedController:
         self.document_opener = document_opener or self._open_local_file
         self.export_destination = export_destination or self._choose_export_destination
         self.student_id = None
+        self._course_names_cache: dict[int, str] = {}
         self._connect()
 
     def _connect(self):
@@ -97,12 +98,29 @@ class StudentRelatedController:
             for item in documents
         ])
         history = self.students.get_group_history(self.student_id)
-        courses = {course.id: course.course for course in self.courses.get_all()}
+        course_names = self._course_names_for(
+            item.academic_course_id for item in history
+        )
         self.window.student_detail.history_tab.set_history([
-            (item.group_name, courses.get(item.academic_course_id, "—"),
+            (item.group_name, course_names.get(item.academic_course_id, "—"),
              item.start_date, item.end_date or "Actual")
             for item in history
         ])
+
+    def _course_names_for(self, course_ids) -> dict[int, str]:
+        """Retorna el mapa ID→nom de curs, refrescant-lo només si cal.
+
+        Els cursos acadèmics gairebé no canvien (només se'n crea un de nou
+        quan apareix una data que encara no en tenia cap associat), així que
+        es conserva un cau entre seleccions d'alumne i només es torna a
+        consultar la base de dades quan un ID demanat no hi és present.
+        """
+        wanted = {course_id for course_id in course_ids if course_id is not None}
+        if not wanted <= self._course_names_cache.keys():
+            self._course_names_cache = {
+                course.id: course.course for course in self.courses.get_all()
+            }
+        return self._course_names_cache
 
     def create_annotation(self):
         """Obre el diàleg de creació d'un descriptor per a l'alumne actiu."""

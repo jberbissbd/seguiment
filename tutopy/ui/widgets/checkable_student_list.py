@@ -8,7 +8,7 @@ etiqueta amb el recompte i la llista marcable pròpiament dita.
 
 from collections.abc import Callable, Sequence
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
     QVBoxLayout, QWidget,
@@ -89,14 +89,20 @@ class CheckableStudentListPanel(QWidget):
 
     def select_visible(self) -> None:
         """Marca tots els alumnes actualment visibles (no filtrats per la cerca)."""
+        blocker = QSignalBlocker(self.student_list)
         for row in range(self.student_list.count()):
             item = self.student_list.item(row)
             if not item.isHidden():
                 item.setCheckState(Qt.CheckState.Checked)
+        del blocker
+        self._update_selection_label()
 
     def _clear_selection(self) -> None:
+        blocker = QSignalBlocker(self.student_list)
         for row in range(self.student_list.count()):
             self.student_list.item(row).setCheckState(Qt.CheckState.Unchecked)
+        del blocker
+        self._update_selection_label()
 
     def _update_selection_label(self, _item=None) -> None:
         self.selection_label.setText(f"{len(self.student_ids())} alumnes seleccionats")

@@ -40,6 +40,22 @@ class ContactDAO:
         ).fetchone()
         return Contact(**row) if row else None
 
+    def create_many(self, items: list[ContactNew]) -> None:
+        """Insereix diversos contactes en una sola operació, sense retornar-los.
+
+        Pensat per a càrregues massives (p. ex. importacions) on cada
+        contacte creat no cal reutilitzar-lo immediatament.
+        """
+        if not items:
+            return
+        self.conn.executemany(
+            "INSERT INTO contacts (student_id, name, description, phone, email) "
+            "VALUES (?, ?, ?, ?, ?)",
+            [(item.student_id, item.name, item.description, item.phone, item.email)
+             for item in items],
+        )
+        self.conn.commit()
+
     def create(self, data: ContactNew) -> Contact:
         """Crea un nou contacte per a un alumne."""
         cur = self.conn.execute(

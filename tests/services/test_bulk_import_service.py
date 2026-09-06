@@ -139,12 +139,12 @@ def test_error_durant_execucio_desfa_tota_la_importacio(db, tmp_path):
     original_create = services.students.create
     calls = 0
 
-    def failing_create(data):
+    def failing_create(data, academic_course_id=None):
         nonlocal calls
         calls += 1
         if calls == 2:
             raise RuntimeError("error simulat")
-        return original_create(data)
+        return original_create(data, academic_course_id)
 
     services.students.create = failing_create
     try:
