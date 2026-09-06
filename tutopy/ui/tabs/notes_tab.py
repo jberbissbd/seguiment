@@ -29,7 +29,8 @@ class _NotesTable(QTableWidget):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self.resizeRowsToContents()
+        if event.size().width() != event.oldSize().width():
+            self.resizeRowsToContents()
 
 
 class NotesTab(QWidget):
