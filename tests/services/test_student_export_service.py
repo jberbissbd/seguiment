@@ -1,10 +1,67 @@
 from datetime import date
+from pathlib import Path
 
 import pytest
 
 from tutopy.application import create_services
 from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew
-from tutopy.services.exceptions import ValidationError
+from tutopy.services.exceptions import EntityNotFoundError, ValidationError
+
+
+@pytest.mark.parametrize("available", [True, False], ids=["adjunt-present", "adjunt-absent"])
+def test_informe_fallit_recupera_adjunts_sense_ocultar_error_original(
+    db, managed_document, tmp_path, available,
+):
+    """Sense notes, el lot informa de la fallada i conserva els adjunts recuperables."""
+    document_service, document, _source = managed_document
+    services = create_services(db)
+    services.documents.storage_dir = document_service.storage_dir
+    if not available:
+        document_service.get_readable_path(document.id).unlink()
+    result = services.student_exports.export_students(
+        [document.student_id], tmp_path / "lots", "xlsx", include_documents=True,
+    )
+    assert result.exported == 0
+    assert len(result.failures) == 1
+    assert "no té notes" in result.failures[0].reason
+    recovered = list(Path(result.destination).rglob("*.txt"))
+    assert len(recovered) == int(available)
+    if available:
+        assert recovered[0].read_text() == "Document original"
+
+
+@pytest.mark.parametrize("batch", [False, True], ids=["individual", "lot"])
+def test_destinacio_bloquejada_informa_sense_alterar_fitxers(
+    db, managed_document, tmp_path, batch,
+):
+    """Una destinació que és un fitxer no es reemplaça ni amaga l'error del sistema."""
+    _service, document, _source = managed_document
+    destination = tmp_path / "destinacio.txt"
+    destination.write_text("No substituir", encoding="utf-8")
+    exporter = create_services(db).student_exports
+    export = exporter.export_students if batch else exporter.export_student
+    selection = [document.student_id] if batch else document.student_id
+    with pytest.raises(ValidationError, match="carpeta d’exportació") as error:
+        export(selection, destination, "xlsx")
+    assert isinstance(error.value.__cause__, OSError)
+    assert destination.read_text() == "No substituir"
+
+
+def test_exportacio_individual_rebutja_alumne_absent(db, tmp_path):
+    """L'exportació d'un alumne inexistent no crea cap carpeta."""
+    destination = tmp_path / "exportacio"
+    exporter = create_services(db).student_exports
+    with pytest.raises(EntityNotFoundError, match="no existeix"):
+        exporter.export_student(99999, destination, "xlsx")
+    assert not destination.exists()
+
+
+def test_exportacio_individual_rebutja_destinacio_buida(db, managed_document):
+    """Una destinació buida no s'interpreta com el directori de treball."""
+    _service, document, _source = managed_document
+    exporter = create_services(db).student_exports
+    with pytest.raises(ValidationError, match="destinació"):
+        exporter.export_student(document.student_id, "", "xlsx")
 
 
 def test_exporta_informe_i_documents_en_carpetes_per_curs(db, tmp_path):

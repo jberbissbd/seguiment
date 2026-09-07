@@ -307,6 +307,15 @@ class TransferService:
         """Importa tots els alumnes del paquet dins la transacció ja oberta."""
         category_ids = self._category_ids(data)
         course_ids = self._course_ids(data)
+        replaced_ids = [
+            local_by_uuid[item["uuid"]].id
+            for item in data["students"]
+            if item["uuid"] in local_by_uuid
+            and decision_by_uuid.get(item["uuid"]) == TransferAction.REPLACE
+        ]
+        # Es recuperen els documents de tots els alumnes reemplaçats d'un
+        # sol cop, en lloc d'una consulta per alumne dins del bucle.
+        documents_by_replaced_student = self.documents.get_by_students(replaced_ids)
         counters = {"created": 0, "replaced": 0, "skipped": 0, "imported_as_new": 0}
         imported_documents = 0
         total = len(data["students"])
@@ -316,6 +325,7 @@ class TransferService:
             outcome, document_count = self._import_one_student(
                 item, decision_by_uuid, local_by_uuid, category_ids, course_ids,
                 temporary_path, new_file_paths, old_file_paths,
+                documents_by_replaced_student,
             )
             counters[outcome] += 1
             imported_documents += document_count
@@ -329,6 +339,7 @@ class TransferService:
     def _import_one_student(
         self, item, decision_by_uuid, local_by_uuid, category_ids, course_ids,
         temporary_path, new_file_paths, old_file_paths,
+        documents_by_replaced_student,
     ) -> tuple[str, int]:
         """Importa un alumne del paquet i retorna (resultat, documents importats)."""
         local = local_by_uuid.get(item["uuid"])
@@ -339,7 +350,7 @@ class TransferService:
         if local and action == TransferAction.REPLACE:
             old_file_paths.extend(
                 Path(document.file_path)
-                for document in self.documents.get_by_student(local.id)
+                for document in documents_by_replaced_student.get(local.id, ())
                 if document.file_path
             )
             self.students.delete(local.id)
@@ -423,24 +434,30 @@ class TransferService:
         self, student_id, item, category_ids, course_ids, temporary,
         created_file_paths,
     ):
-        for note in item["notes"]:
-            self.notes.create(NoteNew(
+        self.notes.create_many([
+            NoteNew(
                 student_id, category_ids[self._category_key(note["category"])],
                 note["date"], course_ids[note["course"]], note["content"],
-            ))
-        for contact in item["contacts"]:
-            self.contacts.create(ContactNew(student_id=student_id, **contact))
-        for annotation in item["annotations"]:
-            self.annotations.create(StudentAnnotationNew(
-                student_id, annotation["content"]
-            ))
-        for history in item["history"]:
-            self.history.create(StudentGroupHistoryNew(
+            )
+            for note in item["notes"]
+        ])
+        self.contacts.create_many([
+            ContactNew(student_id=student_id, **contact)
+            for contact in item["contacts"]
+        ])
+        self.annotations.create_many([
+            StudentAnnotationNew(student_id, annotation["content"])
+            for annotation in item["annotations"]
+        ])
+        self.history.create_many([
+            StudentGroupHistoryNew(
                 student_id=student_id, group_name=history["group_name"],
                 academic_course_id=(course_ids[history["course"]]
                                     if history["course"] else None),
                 start_date=history["start_date"], end_date=history["end_date"],
-            ))
+            )
+            for history in item["history"]
+        ])
         count = 0
         for document in item["documents"]:
             created = self.document_service.import_file(

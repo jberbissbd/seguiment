@@ -74,9 +74,7 @@ def test_controller_container_inicia_nomes_controladors_visibles():
 
     container.start()
 
-    assert calls == [
-        "main", "students", "notes", "categories", "reports", "statistics",
-    ]
+    assert calls == ["main", "students", "notes", "categories", "reports"]
 
 
 @pytest.mark.ui
@@ -93,7 +91,7 @@ def test_create_controllers_compon_i_inicia_la_ui(tmp_path, qtbot):
         assert isinstance(controllers, ControllerContainer)
         assert controllers.students.service is services.students
         assert controllers.notes.note_service is services.notes
-        assert window.student_list.list_widget.count() == 0
+        assert window.student_list.list_widget.model().rowCount() == 0
     finally:
         database.close()
 
@@ -114,6 +112,9 @@ def test_main_configura_cicle_de_vida_sense_executar_qt(monkeypatch):
 
         def setApplicationName(self, name):
             events.append(("name", name))
+
+        def setDesktopFileName(self, name):
+            events.append(("desktop", name))
 
         def setWindowIcon(self, icon):
             events.append(("icon", icon))
@@ -143,5 +144,6 @@ def test_main_configura_cicle_de_vida_sense_executar_qt(monkeypatch):
     assert main_module.main() == 17
     assert window.controllers is controllers
     assert ("name", "Tutopy") in events
+    assert ("desktop", main_module.DESKTOP_ID) in events
     assert ("start", True) in events
     assert ("show", True) in events

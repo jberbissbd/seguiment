@@ -1,13 +1,11 @@
 """Diàleg genèric per demanar un únic valor de text a l'usuari."""
 
-from PySide6.QtWidgets import (
-    QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout, QWidget,
-)
+from PySide6.QtWidgets import QFormLayout, QLineEdit, QWidget
 
-from tutopy.ui.resources import set_dialog_button_icons
+from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
 
 
-class TextValueDialog(QDialog):
+class TextValueDialog(BaseFormDialog):
     """Recull un valor de text obligatori, amb títol i etiqueta configurables."""
 
     def __init__(
@@ -21,31 +19,16 @@ class TextValueDialog(QDialog):
             value: Valor inicial del camp de text.
             parent: Widget pare de Qt, si escau.
         """
-        super().__init__(parent)
-        self.setWindowTitle(title)
-        layout = QVBoxLayout(self)
+        super().__init__(parent, title)
         form = QFormLayout()
         self.value_input = QLineEdit(value)
         form.addRow(label, self.value_input)
-        layout.addLayout(form)
-        self.error_label = QLabel("El valor no pot estar buit.")
-        self.error_label.setObjectName("errorText")
-        self.error_label.hide()
-        layout.addWidget(self.error_label)
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
-        )
-        set_dialog_button_icons(self.buttons)
-        self.buttons.accepted.connect(self._accept_valid)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
+        self.layout.addLayout(form)
+        self._add_footer("El valor no pot estar buit.")
 
     def value(self):
         """Retorna el valor introduït sense espais sobrants."""
         return self.value_input.text().strip()
 
-    def _accept_valid(self):
-        if self.value():
-            self.accept()
-        else:
-            self.error_label.show()
+    def _is_valid(self):
+        return bool(self.value())

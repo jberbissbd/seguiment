@@ -221,20 +221,28 @@ class DataToolsView(QWidget):
         self.term_table.itemSelectionChanged.connect(self._term_selection_changed)
 
     def set_term_configurations(self, rows: Iterable[tuple[int, Sequence]]) -> None:
-        """Omple la taula de trimestres.
+        """Actualitza in situ la taula de trimestres.
 
         Args:
             rows: Iterable de tuples `(id_configuració, valors_de_columna)`.
         """
-        self.term_table.setRowCount(0)
-        for configuration_id, values in rows:
-            row = self.term_table.rowCount()
-            self.term_table.insertRow(row)
-            for column, value in enumerate(values):
-                item = QTableWidgetItem(str(value))
-                if column == 0:
-                    item.setData(Qt.ItemDataRole.UserRole, configuration_id)
-                self.term_table.setItem(row, column, item)
+        rows = list(rows)
+        table = self.term_table
+        table.setUpdatesEnabled(False)
+        try:
+            table.clearSelection()
+            table.setRowCount(len(rows))
+            for row, (configuration_id, values) in enumerate(rows):
+                for column, value in enumerate(values):
+                    item = table.item(row, column)
+                    if item is None:
+                        item = QTableWidgetItem()
+                        table.setItem(row, column, item)
+                    item.setText(str(value))
+                    if column == 0:
+                        item.setData(Qt.ItemDataRole.UserRole, configuration_id)
+        finally:
+            table.setUpdatesEnabled(True)
         self._term_selection_changed()
 
     def set_report_logo(self, filename: str | None) -> None:

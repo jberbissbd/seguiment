@@ -62,6 +62,7 @@ class ReportExportDialog(QDialog):
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
         buttons.button(QDialogButtonBox.StandardButton.Save).setText("Continuar")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
         set_dialog_button_icons(buttons)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)

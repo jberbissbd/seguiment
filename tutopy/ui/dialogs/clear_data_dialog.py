@@ -31,6 +31,7 @@ class ClearDataDialog(QDialog):
         )
         self.ok_button = self.buttons.button(QDialogButtonBox.StandardButton.Ok)
         self.ok_button.setText("Eliminar definitivament")
+        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
         set_dialog_button_icons(self.buttons)
         set_button_icon(self.ok_button, "delete")
         self.ok_button.setEnabled(False)

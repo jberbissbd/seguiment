@@ -53,6 +53,13 @@ class ReportConfigurationService:
             academic_course_id, group_name
         )
 
+    def get_term_configuration_by_id(
+        self, configuration_id: int
+    ) -> TermConfiguration | None:
+        """Retorna una configuració de trimestres pel seu identificador, o `None`."""
+        self.validation.positive_id(configuration_id)
+        return self.configuration_dao.get_term_configuration_by_id(configuration_id)
+
     def save_term_configuration(self, data: TermConfigurationNew) -> TermConfiguration:
         """Valida i desa la configuració de trimestres d'un curs i grup.
 

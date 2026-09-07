@@ -8,6 +8,10 @@ icon_path = (
     if sys.platform == "win32"
     else "tutopy/ui/assets/tutopy.png"
 )
+# Els binaris ELF no admeten la icona de PyInstaller. A Linux s'instal·la
+# amb --install-desktop i s'associa amb QGuiApplication.setDesktopFileName.
+if sys.platform == "linux":
+    icon_path = None
 
 a = Analysis(
     ["tutopy/main.py"],

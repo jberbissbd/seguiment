@@ -150,7 +150,9 @@ class SpreadsheetReportService:
                 sheet, row_number, course_id, group, note.date, term_configurations
             ) \
                 if include_terms else 1
-            self._set_text(sheet.cell(row_number, group_column), group)
+            group_cell = sheet.cell(row_number, group_column)
+            self._set_text(group_cell, group)
+            group_cell.alignment = Alignment(vertical="top")
             category_column = category_columns.get(note.category_id)
             if category_column is not None:
                 display_date = date.fromisoformat(note.date).strftime("%d/%m/%Y")
@@ -164,6 +166,8 @@ class SpreadsheetReportService:
     def _write_term(
         self, sheet, row_number, course_id, group, note_date, term_configurations
     ) -> int:
+        from openpyxl.styles import Alignment
+
         configuration = term_configurations.get((course_id, group)) if group else None
         if configuration is None:
             term = ""
@@ -173,7 +177,11 @@ class SpreadsheetReportService:
             term = "2n"
         else:
             term = "3r"
-        self._set_text(sheet.cell(row_number, 1), term)
+        cell = sheet.cell(row_number, 1)
+        self._set_text(cell, term)
+        # `_merge_consecutive_terms` sobreescriu aquest valor amb alineació
+        # centrada per a les cel·les que encapçalen un grup fusionat.
+        cell.alignment = Alignment(vertical="top")
         return 2
 
     @staticmethod
@@ -256,7 +264,6 @@ class SpreadsheetReportService:
 
     @staticmethod
     def _format_sheet(sheet, last_column: int) -> None:
-        from openpyxl.styles import Alignment
         from openpyxl.utils import get_column_letter
 
         sheet.freeze_panes = "A4"
@@ -264,7 +271,3 @@ class SpreadsheetReportService:
         for column in range(1, last_column + 1):
             letter = get_column_letter(column)
             sheet.column_dimensions[letter].width = 14 if column <= 2 else 34
-        for row in sheet.iter_rows(min_row=4):
-            for cell in row:
-                if cell.alignment == Alignment():
-                    cell.alignment = Alignment(vertical="top")

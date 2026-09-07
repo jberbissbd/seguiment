@@ -28,6 +28,7 @@ class NoteController:
         self.confirm_delete = confirm_delete or window.confirm_note_deletion
         self.error_handler = error_handler or window.show_error
         self.current_student_id = None
+        self._known_course_ids: set[int] = set()
         self._connect_signals()
 
     def start(self) -> None:
@@ -46,10 +47,21 @@ class NoteController:
 
     def refresh_options(self) -> None:
         """Actualitza les opcions de categoria i curs disponibles als filtres."""
-        self.view.set_options(
-            self.category_service.get_all(),
-            self.course_service.get_all(),
-        )
+        courses = self.course_service.get_all()
+        self._known_course_ids = {course.id for course in courses}
+        self.view.set_options(self.category_service.get_all(), courses)
+
+    def _refresh_options_if_new_course(self, course_id) -> None:
+        """Refresca les opcions només si la nota ha fet aparèixer un curs nou.
+
+        Crear o editar una nota pot crear un curs acadèmic sobre la marxa
+        (segons la seva data), però mai una categoria nova. Refer les dues
+        consultes a cada nota seria un cost innecessari en l'acció més
+        freqüent de l'aplicació, així que només es torna a consultar quan
+        `course_id` no és cap dels ja coneguts.
+        """
+        if course_id not in self._known_course_ids:
+            self.refresh_options()
 
     def set_student_context(self, student_id: int) -> None:
         """Fixa l'alumne actiu i recarrega les seves notes.
@@ -63,8 +75,12 @@ class NoteController:
 
     def refresh(self, filters=None) -> None:
         """Recarrega les notes segons els filtres indicats o els actuals de la vista."""
+        filters = self.view.filters() if filters is None else filters
+        if filters.get("student_id") is None:
+            self.view.set_records([])
+            return
         try:
-            records = self.note_service.get_records(filters or self.view.filters())
+            records = self.note_service.get_records(filters)
         except DomainError as error:
             self.error_handler(str(error))
             return
@@ -93,7 +109,7 @@ class NoteController:
         except DomainError as error:
             self.error_handler(str(error))
             return
-        self.refresh_options()
+        self._refresh_options_if_new_course(note.course_id)
         self.view.set_student_context(note.student_id)
         self.refresh()
         self._select_note(note.id)
@@ -127,11 +143,14 @@ class NoteController:
         values["student_id"] = note.student_id
         updated = Note(id=note.id, **values)
         try:
-            self.note_service.update(updated)
+            # `course_id` a `updated` és un valor de rebliment (vegeu
+            # `NoteDialog.values`): el real es resol a partir de la data i
+            # el retorna `update`.
+            updated = self.note_service.update(updated)
         except DomainError as error:
             self.error_handler(str(error))
             return
-        self.refresh_options()
+        self._refresh_options_if_new_course(updated.course_id)
         self.view.set_student_context(updated.student_id)
         self.refresh()
         self._select_note(note_id)

@@ -225,13 +225,30 @@ class StatisticsView(QWidget):
         self.month_chart.set_values(snapshot.by_month)
         self.category_chart.set_values(snapshot.by_category)
         self.context_label.setText(context)
-        self.student_table.setSortingEnabled(False)
-        self.student_table.setRowCount(len(snapshot.by_student))
-        for row, item in enumerate(snapshot.by_student):
-            self.student_table.setItem(row, 0, QTableWidgetItem(item.student_name))
-            self.student_table.setItem(row, 1, QTableWidgetItem(item.group_name or "—"))
-            count = QTableWidgetItem()
-            count.setData(Qt.ItemDataRole.DisplayRole, item.note_count)
-            count.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.student_table.setItem(row, 2, count)
-        self.student_table.setSortingEnabled(True)
+        table = self.student_table
+        table.setSortingEnabled(False)
+        table.setUpdatesEnabled(False)
+        try:
+            table.setRowCount(len(snapshot.by_student))
+            for row, item in enumerate(snapshot.by_student):
+                name_item = table.item(row, 0)
+                if name_item is None:
+                    name_item = QTableWidgetItem()
+                    table.setItem(row, 0, name_item)
+                name_item.setText(item.student_name)
+
+                group_item = table.item(row, 1)
+                if group_item is None:
+                    group_item = QTableWidgetItem()
+                    table.setItem(row, 1, group_item)
+                group_item.setText(item.group_name or "—")
+
+                count_item = table.item(row, 2)
+                if count_item is None:
+                    count_item = QTableWidgetItem()
+                    count_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    table.setItem(row, 2, count_item)
+                count_item.setData(Qt.ItemDataRole.DisplayRole, item.note_count)
+        finally:
+            table.setUpdatesEnabled(True)
+            table.setSortingEnabled(True)

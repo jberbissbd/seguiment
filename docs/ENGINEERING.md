@@ -24,7 +24,7 @@ mateix volum de dades.
 | Operació | Temps | Memòria addicional | Decisió |
 | --- | ---: | ---: | --- |
 | Llistar o cercar alumnes | `O(S)` | `O(S)` | La cerca conté comodins; es coalescen pulsacions per no repetir-la. |
-| Mostrar alumnes | `O(S)` | `O(S)` | Els widgets es reutilitzen si es conserva la seqüència d'identificadors. |
+| Mostrar alumnes | `O(S)` actualització, `O(V)` dibuix | `O(S)` model, `O(1)` widgets | El delegat dibuixa només les `V` files visibles; dos botons reutilitzables permeten afegir notes. |
 | Filtrar notes | `O(log N + R)` amb índex aplicable | `O(R)` | Els filtres s'executen a SQLite i només es materialitzen els `R` resultats. |
 | Estadístiques | `O(N + S)` | `O(S + C)` | Les agregacions es fan a SQLite i no carreguen el text sensible. |
 | Generar informes | `O(S + N + C + D)` | `O(S + N + C + D)` | El lot comparteix dades d'informe i metadades dels documents adjunts. |
@@ -109,11 +109,16 @@ Les cerques textuals utilitzen `DebouncedLineEdit` (180 ms). Els canvis de
 selecció explícits continuen sent immediats. Les estadístiques utilitzen el
 mateix principi amb un `QTimer` d'un sol tret.
 
-`StudentList` conserva els widgets quan els identificadors i l'ordre no canvien.
-Les notes ajusten el nombre de files i actualitzen els `QTableWidgetItem` existents.
-Això és virtualització parcial: redueix assignacions en refrescos, però no evita
-el cost lineal de mostrar tots els resultats. Si les llistes creixen molt, el pas
-següent és `QAbstractItemModel` amb `QListView`/`QTableView`.
+`StudentList` utilitza `QAbstractListModel`, `QListView` i un delegat que dibuixa
+les files visibles. Conserva la selecció per identificador en canviar l'ordre
+o els resultats i emet `dataChanged` només per les files modificades quan
+l'ordre es manté. Els botons de notes de la fila seleccionada i de la fila del
+cursor es reutilitzen, sense crear widgets per a cada alumne.
+
+Les notes ajusten el nombre de files i actualitzen els `QTableWidgetItem`
+existents. No es consulten ni es materialitzen notes si no hi ha un alumne
+seleccionat. Netejar els filtres emet un únic estat final, mantenint actius els
+senyals interns que habiliten els editors de dates.
 
 ## DRY, errors i documentació
 
@@ -173,6 +178,80 @@ s'executa amb `python -m ruff check tutopy scripts`; la configuració compartida
 és a `pyproject.toml` i exclou la documentació generada o narrativa de `docs`.
 Les regles `D` (pydocstyle, convenció `google`) fan complir aquesta política
 de docstrings a tot `tutopy/`.
+
+## Proves i cobertura
+
+Per mesurar línies i branques amb el mateix criteri que el CI:
+
+```bash
+.venv/bin/python -m pytest -q --cov=tutopy --cov-branch --cov-report=term-missing
+```
+
+Els escenaris compartits són als `conftest.py` de cada àmbit:
+
+- `tests/services/conftest.py`: base de dades, DAOs i document gestionat temporal.
+- `tests/controllers/conftest.py`: controladors de dades, alumnes i informes amb
+  captura d'errors, missatges i peticions de refresc, sense diàlegs bloquejants.
+  Els d'alumnes i informes comparteixen serveis reals i una base temporal.
+- `tests/ui/conftest.py`: alumne amb dades associades i fixture `related_kind`
+  parametritzada per descriptor, contacte i document.
+
+Les fixtures creen recursos aïllats per prova i només es carreguen quan se
+sol·liciten. Les combinacions específiques d'una prova (acceptar/cancel·lar,
+tipus d'error o fase d'una transferència) utilitzen `pytest.mark.parametrize`
+al mateix test. Es prioritzen garanties observables de persistència,
+cancel·lació i errors, amb assertions sobre el resultat i els efectes laterals.
+
+### Tests d'excepcions sense ambigüitat
+
+Cada bloc `pytest.raises` ha de contenir una única crida: l'operació de la qual
+es vol comprovar l'excepció. Aquest criteri evita l'avís de mantenibilitat de
+SonarCloud «Refactor this exception test to have only one invocation possibly
+throwing an exception» i impedeix que el test passi perquè ha fallat una crida
+de preparació en lloc de l'operació esperada.
+
+Abans d'entrar al bloc, cal construir els serveis i models, resoldre recursos,
+convertir rutes i preparar els arguments. Les crides niuades també compten,
+encara que siguin a la mateixa línia.
+
+Exemple a evitar:
+
+```python
+with pytest.raises(ValueError, match="ruta absoluta"):
+    install_desktop_entry(command, asset_path("tutopy.svg"))
+```
+
+Forma correcta:
+
+```python
+icon_source = asset_path("tutopy.svg")
+with pytest.raises(ValueError, match="ruta absoluta"):
+    install_desktop_entry(command, icon_source)
+```
+
+En proves parametritzades, també s'ha de seleccionar l'operació fora del bloc,
+en lloc de posar-hi un `if/else` amb crides diferents:
+
+```python
+exporter = create_services(db).student_exports
+export = exporter.export_students if batch else exporter.export_student
+selection = [document.student_id] if batch else document.student_id
+
+with pytest.raises(ValidationError, match="carpeta d’exportació") as error:
+    export(selection, destination, "xlsx")
+
+assert isinstance(error.value.__cause__, OSError)
+assert destination.read_text() == "No substituir"
+```
+
+Les comprovacions del resultat, de la causa de l'error i de la conservació de
+fitxers o registres van després del bloc. Cal mantenir el tipus d'excepció
+específic i, quan aporti precisió, `match`; no s'han d'ampliar les excepcions
+acceptades ni desactivar la regla per silenciar l'avís.
+
+Després d'aquestes refactoritzacions, cal executar els tests afectats i Ruff.
+Que Ruff passi no substitueix l'anàlisi de SonarCloud: la desaparició dels
+avisos s'ha de comprovar en una nova anàlisi del commit corregit.
 
 ## Documentació generada
 

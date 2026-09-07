@@ -197,16 +197,24 @@ class BulkImportService:
 
     def _execute_students(self, rows, decisions, conflicts):
         created = updated = skipped = 0
+        # Resolt un sol cop: totes les files es creen/actualitzen amb la data
+        # d'avui, així que evitem repetir la mateixa consulta per cada fila.
+        academic_course_id = self.students.resolve_academic_course_id()
         for row in rows:
             decision = decisions.get(row.row, ImportDecision(row.row, ImportAction.CREATE))
             try:
                 if decision.action == ImportAction.SKIP:
                     skipped += 1
                 elif decision.action == ImportAction.UPDATE:
-                    self._update_student(row, decision, conflicts.get(row.row))
+                    self._update_student(
+                        row, decision, conflicts.get(row.row), academic_course_id
+                    )
                     updated += 1
                 else:
-                    self.students.create(StudentNew(row.name, row.surnames, row.group_name))
+                    self.students.create(
+                        StudentNew(row.name, row.surnames, row.group_name),
+                        academic_course_id,
+                    )
                     created += 1
             except (DomainError, ValueError, OSError) as error:
                 raise ValidationError(
@@ -214,14 +222,19 @@ class BulkImportService:
                 ) from error
         return created, updated, skipped
 
-    def _update_student(self, row, decision, conflict) -> None:
-        target = self.students.get_by_id(decision.student_id or 0)
-        allowed_ids = {item.id for item in conflict.matches} if conflict else set()
-        if target is None or target.id not in allowed_ids:
+    def _update_student(self, row, decision, conflict, academic_course_id) -> None:
+        # `conflict.matches` ja conté els `Student` complets recuperats durant
+        # `analyze()`; reutilitzar-los evita tornar a consultar la base de
+        # dades per cada fila marcada com a actualització.
+        candidates = conflict.matches if conflict else ()
+        target = next(
+            (item for item in candidates if item.id == decision.student_id), None
+        )
+        if target is None:
             raise ValidationError("l’alumne seleccionat no és una coincidència vàlida")
         self.students.update(Student(
             target.id, target.uuid, row.name, row.surnames, row.group_name
-        ))
+        ), academic_course_id)
 
     def _execute_categories(self, rows):
         existing = {

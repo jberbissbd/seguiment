@@ -60,6 +60,8 @@ class TransferConflictsDialog(QDialog):
             QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
         )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("D'acord")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
         set_dialog_button_icons(buttons)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)

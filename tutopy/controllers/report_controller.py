@@ -53,6 +53,7 @@ class ReportController:
         self._batch_export = BackgroundOperationPresenter(
             self.window, self.task_runner, self.progress_dialog
         )
+        self._course_names_cache: dict[int, str] = {}
         view = window.data_tools
         view.category_order_requested.connect(self.configure_category_order)
         view.report_logo_requested.connect(self.configure_report_logo)
@@ -69,9 +70,12 @@ class ReportController:
 
     def refresh(self) -> None:
         """Actualitza la taula de configuracions de trimestres i el logotip mostrats."""
-        course_names = {course.id: course.course for course in self.courses.get_all()}
+        configurations = self.configuration.get_term_configurations()
+        course_names = self._course_names_for(
+            configuration.academic_course_id for configuration in configurations
+        )
         rows = []
-        for configuration in self.configuration.get_term_configurations():
+        for configuration in configurations:
             rows.append((configuration.id, (
                 course_names.get(configuration.academic_course_id, "—"),
                 configuration.group_name,
@@ -81,6 +85,20 @@ class ReportController:
         self.window.data_tools.set_term_configurations(rows)
         logo = self.configuration.get_header_image()
         self.window.data_tools.set_report_logo(logo.name if logo else None)
+
+    def _course_names_for(self, course_ids) -> dict[int, str]:
+        """Retorna el mapa ID→nom de curs, refrescant-lo només si cal.
+
+        Els cursos acadèmics gairebé no canvien, així que es conserva un cau
+        entre refrescos i només es torna a consultar la base de dades quan
+        un ID demanat encara no hi és present.
+        """
+        wanted = {course_id for course_id in course_ids if course_id is not None}
+        if not wanted <= self._course_names_cache.keys():
+            self._course_names_cache = {
+                course.id: course.course for course in self.courses.get_all()
+            }
+        return self._course_names_cache
 
     def configure_report_logo(self) -> None:
         """Selecciona i desa una imatge com a logotip dels informes."""
@@ -118,8 +136,7 @@ class ReportController:
         Args:
             configuration_id: Identificador de la configuració a editar.
         """
-        configuration = next((item for item in self.configuration.get_term_configurations()
-                              if item.id == configuration_id), None)
+        configuration = self.configuration.get_term_configuration_by_id(configuration_id)
         if configuration is None:
             self.error_handler("No s’ha trobat la configuració de trimestres.")
             return

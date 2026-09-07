@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox
 
 from tutopy.application import create_services
@@ -46,7 +48,7 @@ def test_student_dialog_valida_i_retorna_valors(qtbot):
     dialog.surnames_input.setText(" Garcia ")
     dialog.group_input.setCurrentText("2n B")
 
-    dialog._validate_and_accept()
+    dialog._accept_valid()
 
     assert dialog.result() == QDialog.DialogCode.Accepted
     assert dialog.values() == {
@@ -64,7 +66,7 @@ def test_student_dialog_no_accepta_camps_obligatoris_buits(qtbot):
     dialog.buttons.button(QDialogButtonBox.StandardButton.Save).click()
 
     assert dialog.result() != QDialog.DialogCode.Accepted
-    assert not dialog.validation_label.isHidden()
+    assert not dialog.error_label.isHidden()
 
 
 def test_controller_crea_i_selecciona_alumne(qtbot, tmp_path, monkeypatch):
@@ -115,7 +117,7 @@ def test_controller_elimina_amb_confirmacio(qtbot, tmp_path):
         controller.delete(student.id)
 
         assert services.students.get_all() == []
-        assert window.student_list.list_widget.count() == 0
+        assert window.student_list.list_widget.model().rowCount() == 0
         assert errors == []
     finally:
         database.close()
@@ -159,7 +161,10 @@ def test_controller_aplica_edicio_massiva_en_segon_pla(
                 }]
 
             def effective_date(self):
-                return "2026-09-01"
+                # L'alumne s'ha creat avui, així que el canvi de grup ha de
+                # ser posterior (o del mateix dia) perquè no violi la
+                # restricció `end_date >= start_date` de l'historial.
+                return (date.today() + timedelta(days=1)).isoformat()
 
         messages = []
         monkeypatch.setattr(

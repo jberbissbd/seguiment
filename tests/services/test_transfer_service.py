@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from threading import Thread
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -38,8 +39,11 @@ def instances(tmp_path):
 def _complete_student(services, tmp_path, name="Laia"):
     student = services.students.create(StudentNew(name, "Martí", "4t A"))
     category = services.categories.create(CategoryNew("Acadèmic"))
+    # L'alumne es crea "avui": la nota ha de caure en el mateix curs
+    # acadèmic (setembre-agost) perquè no generi un segon registre
+    # d'historial de grup en retrocedir-hi automàticament.
     services.notes.create(NoteNew(
-        student.id, category.id, "2026-02-01", 0, "Bona evolució"
+        student.id, category.id, date.today().isoformat(), 0, "Bona evolució"
     ))
     services.contacts.create(ContactNew(
         student.id, "Marta", "Mare", "600000000", "marta@example.cat"

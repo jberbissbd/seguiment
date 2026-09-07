@@ -1,5 +1,6 @@
 from dataclasses import replace
 from pathlib import Path
+import shutil
 
 import pytest
 
@@ -10,6 +11,126 @@ from tutopy.services.exceptions import (
     FileCleanupError,
     ValidationError,
 )
+
+
+def test_importacio_invalida_neteja_copia_i_conserva_original(managed_document):
+    """La validació fallida després de copiar no deixa fitxers orfes."""
+    service, document, source = managed_document
+    with pytest.raises(ValidationError):
+        service.import_file(document.student_id, " ", "", str(source), "2026-02-01")
+    assert list(service.storage_dir.iterdir()) == [Path(document.file_path)]
+    assert service.get_all() == [document]
+    assert source.read_text() == "Document original"
+
+
+@pytest.mark.parametrize("failure", ["storage", "source"])
+def test_importacio_rebutja_magatzem_o_origen_absents(managed_document, failure):
+    """Els requisits absents no creen registres de documents."""
+    service, document, source = managed_document
+    if failure == "storage":
+        service.storage_dir = None
+    else:
+        source.unlink()
+    with pytest.raises(ValidationError, match="directori|no existeix"):
+        service.import_file(document.student_id, "Informe", "", str(source), "2026-02-01")
+    assert service.get_all() == [document]
+
+
+@pytest.mark.parametrize("destination", ["", "same"])
+def test_exportacio_rebutja_destinacio_buida_o_original(managed_document, destination):
+    """Exportar sobre l'original o sense ruta no altera el document gestionat."""
+    service, document, _source = managed_document
+    target = document.file_path if destination == "same" else destination
+    with pytest.raises(ValidationError, match="destinació|aquesta ubicació"):
+        service.export_file(document.id, target)
+    assert Path(document.file_path).read_text() == "Document original"
+
+
+def test_exportacio_tradueix_error_de_copia(managed_document, tmp_path, monkeypatch):
+    """Un error del sistema de fitxers es converteix en un error de domini."""
+    service, document, _source = managed_document
+
+    def denied(*args):
+        raise PermissionError("destinació protegida")
+
+    monkeypatch.setattr(shutil, "copy2", denied)
+    with pytest.raises(ValidationError, match="exportar") as error:
+        service.export_file(document.id, str(tmp_path / "copia.txt"))
+    assert isinstance(error.value.__cause__, PermissionError)
+    assert Path(document.file_path).read_text() == "Document original"
+
+
+def test_error_preparant_eliminacio_conserva_registre_i_fitxer(managed_document, monkeypatch):
+    """La impossibilitat de moure a quarantena impedeix esborrar les metadades."""
+    service, document, _source = managed_document
+
+    def denied(*args):
+        raise PermissionError("fitxer protegit")
+
+    monkeypatch.setattr(Path, "replace", denied)
+    with pytest.raises(ValidationError, match="preparar el fitxer"):
+        service.delete(document.id)
+    assert service.get_by_id(document.id) == document
+    assert Path(document.file_path).read_text() == "Document original"
+
+
+def test_error_restituint_quarantena_conserva_copia_i_error_original(
+    managed_document, monkeypatch, caplog,
+):
+    """Una restauració fallida registra el problema i preserva el fitxer recuperable."""
+    service, document, _source = managed_document
+    original_replace = Path.replace
+
+    def fail_restore(path, destination):
+        if path.name.endswith(".deleting"):
+            raise PermissionError("restauració bloquejada")
+        return original_replace(path, destination)
+
+    def fail_delete(_document_id):
+        raise RuntimeError("base de dades no disponible")
+
+    monkeypatch.setattr(Path, "replace", fail_restore)
+    monkeypatch.setattr(service.document_dao, "delete", fail_delete)
+    with pytest.raises(RuntimeError, match="base de dades no disponible"):
+        service.delete(document.id)
+    assert service.get_by_id(document.id) == document
+    backups = list(service.storage_dir.glob("*.deleting"))
+    assert len(backups) == 1
+    assert backups[0].read_text() == "Document original"
+    assert "No s'ha pogut restaurar" in caplog.text
+
+
+def test_eliminar_metadades_externes_no_esborra_fitxer(managed_document):
+    """L'eliminació d'un registre no toca fitxers que són fora del magatzem."""
+    service, document, source = managed_document
+    external = service.create(StudentDocumentNew(
+        document.student_id, "Extern", "", "extern.txt", source.name, str(source), "2026-02-01",
+    ))
+    service.delete(external.id)
+    assert source.read_text() == "Document original"
+    assert service.get_all() == [document]
+
+
+def test_consulta_per_lots_rebutja_alumne_inexistent(managed_document):
+    """Una selecció amb alumnes inexistents no retorna un lot parcial."""
+    service, document, _source = managed_document
+    with pytest.raises(EntityNotFoundError, match="99999"):
+        service.get_by_students([document.student_id, 99999])
+
+
+@pytest.mark.parametrize("failure", ["date", "courses"])
+def test_metadades_requereixen_data_i_cataleg_de_cursos(managed_document, failure):
+    """No es desa cap document amb data absent o sense poder determinar el curs."""
+    service, document, _source = managed_document
+    if failure == "courses":
+        service.academic_course_dao = None
+    data = StudentDocumentNew(
+        document.student_id, "Informe", "", "nou.txt", "nou.txt", "",
+        "" if failure == "date" else "2026-02-01",
+    )
+    with pytest.raises(ValidationError, match="data|curs acadèmic"):
+        service.create(data)
+    assert service.get_all() == [document]
 
 
 def test_document_service_crud(document_dao, student_dao, db):

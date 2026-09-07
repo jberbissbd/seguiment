@@ -3,18 +3,15 @@
 from collections.abc import Sequence
 
 from PySide6.QtCore import QDate
-from PySide6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel,
-    QPlainTextEdit, QVBoxLayout, QWidget,
-)
+from PySide6.QtWidgets import QComboBox, QFormLayout, QPlainTextEdit, QWidget
 
 from tutopy.models.messaging import Category, Note
-from tutopy.ui.resources import set_dialog_button_icons
+from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
 
 from tutopy.ui.widgets.date_input import DateInput
 
 
-class NoteDialog(QDialog):
+class NoteDialog(BaseFormDialog):
     """Recull una nota de seguiment sense accedir als serveis."""
 
     def __init__(
@@ -29,13 +26,11 @@ class NoteDialog(QDialog):
             student_id: Identificador de l'alumne al qual pertany la nota nova.
             categories: Categories disponibles per classificar la nota.
         """
-        super().__init__(parent)
+        super().__init__(parent, "Editar nota" if note else "Nova nota")
         self.student_id = note.student_id if note else student_id
-        self.setWindowTitle("Editar nota" if note else "Nova nota")
         self.setModal(True)
         self.setMinimumWidth(520)
 
-        layout = QVBoxLayout(self)
         form = QFormLayout()
         self.category_input = QComboBox()
         for category in categories:
@@ -53,22 +48,8 @@ class NoteDialog(QDialog):
         form.addRow("Categoria:", self.category_input)
         form.addRow("Data (DD/MM/AAAA):", self.date_input)
         form.addRow("Contingut:", self.content_input)
-        layout.addLayout(form)
-
-        self.validation_label = QLabel()
-        self.validation_label.setObjectName("errorText")
-        self.validation_label.hide()
-        layout.addWidget(self.validation_label)
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save
-            | QDialogButtonBox.StandardButton.Cancel
-        )
-        self.buttons.button(QDialogButtonBox.StandardButton.Save).setText("Desar")
-        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel·lar")
-        set_dialog_button_icons(self.buttons)
-        self.buttons.accepted.connect(self._validate_and_accept)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
+        self.layout.addLayout(form)
+        self._add_footer("")
 
         if note:
             self._select_data(self.category_input, note.category_id)
@@ -85,20 +66,18 @@ class NoteDialog(QDialog):
             "content": self.content_input.toPlainText().strip(),
         }
 
-    def _validate_and_accept(self) -> None:
+    def _accept_valid(self) -> None:
         values = self.values()
         if values["student_id"] is None:
-            self.validation_label.setText("No hi ha cap alumne seleccionat.")
+            self._show_error("No hi ha cap alumne seleccionat.")
         elif values["category_id"] is None:
-            self.validation_label.setText("Cal seleccionar una categoria.")
+            self._show_error("Cal seleccionar una categoria.")
         elif not self.date_input.date().isValid():
-            self.validation_label.setText("La data ha de tenir el format DD/MM/AAAA.")
+            self._show_error("La data ha de tenir el format DD/MM/AAAA.")
         elif not values["content"]:
-            self.validation_label.setText("El contingut no pot estar buit.")
+            self._show_error("El contingut no pot estar buit.")
         else:
             self.accept()
-            return
-        self.validation_label.show()
 
     @staticmethod
     def _select_data(combo: QComboBox, value) -> None:

@@ -12,6 +12,23 @@ class StudentGroupHistoryDAO:
         """Inicialitza el DAO amb la connexió compartida."""
         self.conn = conn
 
+    def create_many(self, items: list[StudentGroupHistoryNew]) -> None:
+        """Insereix diversos registres d'històric en una sola operació.
+
+        Pensat per a càrregues massives (p. ex. importacions) on cada
+        registre creat no cal reutilitzar-lo immediatament.
+        """
+        if not items:
+            return
+        self.conn.executemany(
+            """INSERT INTO student_group_history
+               (student_id, group_name, academic_course_id, start_date, end_date)
+               VALUES (?, ?, ?, ?, ?)""",
+            [(item.student_id, item.group_name, item.academic_course_id,
+              item.start_date, item.end_date) for item in items],
+        )
+        self.conn.commit()
+
     def create(self, data: StudentGroupHistoryNew) -> StudentGroupHistory:
         """Crea un nou registre d'històric de grup."""
         cur = self.conn.execute(

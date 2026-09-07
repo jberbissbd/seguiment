@@ -1,6 +1,5 @@
 """Controlador del CRUD d'alumnes, incloent l'edició massiva en segon pla."""
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QMessageBox, QProgressDialog
 
 from tutopy.models.messaging import Student, StudentNew
@@ -185,8 +184,4 @@ class StudentController:
         self.error_handler(str(error))
 
     def _select_in_list(self, student_id: int) -> None:
-        for row in range(self.window.student_list.list_widget.count()):
-            item = self.window.student_list.list_widget.item(row)
-            if item.data(Qt.ItemDataRole.UserRole) == student_id:
-                self.window.student_list.list_widget.setCurrentItem(item)
-                return
+        self.window.student_list.select_student(student_id)

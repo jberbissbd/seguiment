@@ -65,7 +65,7 @@ def test_note_dialog_retorna_valors_valids(qtbot):
         dialog.date_input.setDate(QDate(2026, 1, 15))
         dialog.content_input.setPlainText("  Seguiment positiu  ")
 
-        dialog._validate_and_accept()
+        dialog._accept_valid()
 
         assert dialog.result() == QDialog.DialogCode.Accepted
         assert dialog.values() == {
@@ -177,11 +177,11 @@ def test_accio_contextual_crea_la_nota_per_l_alumne_de_la_fila(
             "course_id": 0,
             "content": "Nota des de la fila",
         })
-        second_item = window.student_list.list_widget.item(1)
-        second_widget = window.student_list.list_widget.itemWidget(second_item)
-        second_widget.set_selected(True)
-
-        qtbot.mouseClick(second_widget.note_button, Qt.MouseButton.LeftButton)
+        window.show()
+        window.student_list.select_student(second.id)
+        qtbot.mouseClick(
+            window.student_list.list_widget.selected_note_button, Qt.MouseButton.LeftButton
+        )
 
         note = services.notes.get_all()[0]
         assert note.student_id == second.id
@@ -278,5 +278,56 @@ def test_note_controller_mostra_errors_de_servei(qtbot, tmp_path):
         assert errors == [
             "filtre incorrecte", "nota inexistent", "no es pot eliminar",
         ]
+    finally:
+        database.close()
+
+
+def test_netejar_filtres_emet_un_sol_estat_final(qtbot):
+    """Netejar no consulta estats intermedis ni deixa un debounce pendent."""
+    tab = NotesTab()
+    qtbot.addWidget(tab)
+    tab.category_filter.addItem("Totes", None)
+    tab.category_filter.addItem("Categoria", 1)
+    tab.course_filter.addItem("Tots", None)
+    tab.course_filter.addItem("Curs", 1)
+    tab.set_student_context(7)
+    tab.category_filter.setCurrentIndex(1)
+    tab.course_filter.setCurrentIndex(1)
+    tab.date_from_enabled.setChecked(True)
+    tab.date_to_enabled.setChecked(True)
+    tab.content_filter.setText("nota")
+    emissions = []
+    tab.filters_changed.connect(emissions.append)
+    tab.clear_filters()
+    qtbot.wait(250)
+    assert emissions == [dict(student_id=7, category_id=None, course_id=None,
+                              content=None, date_from=None, date_to=None)]
+    assert not tab.date_from.isEnabled()
+    assert not tab.date_to.isEnabled()
+
+
+def test_sense_alumne_no_consulta_notes(qtbot, tmp_path, monkeypatch):
+    """L'arrencada no materialitza notes i seleccionar un alumne sí que les carrega."""
+    database, services, student, category, window, controller, errors = (
+        build_note_controller(qtbot, tmp_path)
+    )
+    try:
+        services.notes.create(NoteNew(student.id, category.id, "2026-01-15", 0, "Nota"))
+        calls = []
+        get_records = services.notes.get_records
+        def tracked(filters):
+            calls.append(filters)
+            return get_records(filters)
+        monkeypatch.setattr(services.notes, "get_records", tracked)
+        controller.current_student_id = None
+        controller.view.set_student_context(None)
+        controller.start()
+        controller.view.clear_filters()
+        assert calls == []
+        assert controller.view.table.rowCount() == 0
+        controller.set_student_context(student.id)
+        assert len(calls) == 1
+        assert controller.view.table.rowCount() == 1
+        assert errors == []
     finally:
         database.close()

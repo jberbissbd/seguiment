@@ -3,6 +3,7 @@
 from typing import Optional
 from tutopy.models.messaging import Note, NoteNew, NoteRecord
 from ._batch import grouped_by_student
+from ._like import like_pattern
 
 
 class NoteDAO:
@@ -48,6 +49,23 @@ class NoteDAO:
             "FROM notes ORDER BY date DESC, id DESC"
         ).fetchall()
         return [Note(**row) for row in rows]
+
+    def create_many(self, items: list[NoteNew]) -> None:
+        """Insereix diverses notes en una sola operació, sense retornar-les.
+
+        Pensat per a càrregues massives (p. ex. importacions) on cada nota
+        creada no cal reutilitzar-la immediatament, evitant una crida SQL
+        independent per registre.
+        """
+        if not items:
+            return
+        self.conn.executemany(
+            "INSERT INTO notes (student_id, category_id, date, course_id, content) "
+            "VALUES (?, ?, ?, ?, ?)",
+            [(item.student_id, item.category_id, item.date, item.course_id, item.content)
+             for item in items],
+        )
+        self.conn.commit()
 
     def create(self, data: NoteNew) -> Note:
         """Crea una nova nota de seguiment."""
@@ -121,8 +139,8 @@ class NoteDAO:
                 conditions.append(condition)
                 params.append(filters[key])
         if filters.get("content"):
-            conditions.append("LOWER(n.content) LIKE ?")
-            params.append(f"%{filters['content'].lower()}%")
+            conditions.append("LOWER(n.content) LIKE ? ESCAPE '\\'")
+            params.append(like_pattern(filters["content"].lower()))
         where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
         query = """
             SELECT n.id AS note_id, n.date,

@@ -41,6 +41,20 @@ class AnnotationDAO:
         ).fetchone()
         return StudentAnnotation(**row) if row else None
 
+    def create_many(self, items: list[StudentAnnotationNew]) -> None:
+        """Insereix diversos descriptors en una sola operació, sense retornar-los.
+
+        Pensat per a càrregues massives (p. ex. importacions) on cada
+        descriptor creat no cal reutilitzar-lo immediatament.
+        """
+        if not items:
+            return
+        self.conn.executemany(
+            "INSERT INTO student_annotations (student_id, content) VALUES (?, ?)",
+            [(item.student_id, item.content) for item in items],
+        )
+        self.conn.commit()
+
     def create(self, data: StudentAnnotationNew) -> StudentAnnotation:
         """Crea un nou descriptor per a un alumne."""
         cur = self.conn.execute(

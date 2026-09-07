@@ -49,6 +49,7 @@ class StudentRelatedController:
         self.document_opener = document_opener or self._open_local_file
         self.export_destination = export_destination or self._choose_export_destination
         self.student_id = None
+        self._course_names_cache: dict[int, str] = {}
         self._connect()
 
     def _connect(self):
@@ -97,12 +98,29 @@ class StudentRelatedController:
             for item in documents
         ])
         history = self.students.get_group_history(self.student_id)
-        courses = {course.id: course.course for course in self.courses.get_all()}
+        course_names = self._course_names_for(
+            item.academic_course_id for item in history
+        )
         self.window.student_detail.history_tab.set_history([
-            (item.group_name, courses.get(item.academic_course_id, "—"),
+            (item.group_name, course_names.get(item.academic_course_id, "—"),
              item.start_date, item.end_date or "Actual")
             for item in history
         ])
+
+    def _course_names_for(self, course_ids) -> dict[int, str]:
+        """Retorna el mapa ID→nom de curs, refrescant-lo només si cal.
+
+        Els cursos acadèmics gairebé no canvien (només se'n crea un de nou
+        quan apareix una data que encara no en tenia cap associat), així que
+        es conserva un cau entre seleccions d'alumne i només es torna a
+        consultar la base de dades quan un ID demanat no hi és present.
+        """
+        wanted = {course_id for course_id in course_ids if course_id is not None}
+        if not wanted <= self._course_names_cache.keys():
+            self._course_names_cache = {
+                course.id: course.course for course in self.courses.get_all()
+            }
+        return self._course_names_cache
 
     def create_annotation(self):
         """Obre el diàleg de creació d'un descriptor per a l'alumne actiu."""
@@ -117,7 +135,11 @@ class StudentRelatedController:
 
     def edit_annotation(self, entity_id):
         """Obre el diàleg d'edició d'un descriptor i desa els canvis si s'accepten."""
-        annotation = self.annotations.get_by_id(entity_id)
+        try:
+            annotation = self.annotations.get_by_id(entity_id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
         dialog = self.annotation_dialog(parent=self.window, annotation=annotation)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._run(lambda: self.annotations.update(StudentAnnotation(
@@ -141,7 +163,11 @@ class StudentRelatedController:
 
     def edit_contact(self, entity_id):
         """Obre el diàleg d'edició d'un contacte i desa els canvis si s'accepten."""
-        contact = self.contacts.get_by_id(entity_id)
+        try:
+            contact = self.contacts.get_by_id(entity_id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
         dialog = self.contact_dialog(parent=self.window, contact=contact)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._run(lambda: self.contacts.update(Contact(
@@ -168,7 +194,11 @@ class StudentRelatedController:
 
     def edit_document(self, entity_id):
         """Obre el diàleg d'edició d'un document i desa els canvis si s'accepten."""
-        document = self.documents.get_by_id(entity_id)
+        try:
+            document = self.documents.get_by_id(entity_id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
         dialog = self.document_dialog(parent=self.window, document=document)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             values = dialog.values()

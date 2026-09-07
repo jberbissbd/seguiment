@@ -1,6 +1,9 @@
+"""Connexions, repositoris i documents temporals compartits entre serveis."""
+
 import pytest
-from pathlib import Path
 from tutopy.database.database import Database
+from tutopy.models.messaging import StudentNew
+from tutopy.services.document_service import DocumentService
 from tutopy.database.daos.note_dao import NoteDAO
 from tutopy.database.daos.academic_course_dao import AcademicCourseDAO
 from tutopy.database.daos.category_dao import CategoryDAO
@@ -68,3 +71,16 @@ def group_history_dao(db):
 def annotation_dao(db):
     """Retorna una instància de AnnotationDAO."""
     return AnnotationDAO(db.conn)
+
+
+@pytest.fixture
+def managed_document(db, tmp_path):
+    """Prepara un document real al magatzem per verificar la gestió d'errors."""
+    student = db.students.create(StudentNew("Laia", "Serra", "4A"))
+    source = tmp_path / "original.txt"
+    source.write_text("Document original", encoding="utf-8")
+    service = DocumentService(
+        db.documents, db.students, db.academic_courses, storage_dir=tmp_path / "managed",
+    )
+    document = service.import_file(student.id, "Informe", "", str(source), "2026-02-01")
+    return service, document, source
