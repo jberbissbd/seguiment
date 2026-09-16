@@ -18,7 +18,7 @@ from tutopy.services.exceptions import (
 )
 from tutopy.services._student_requirement import RequiresStudentMixin
 from tutopy.services.validation_service import ValidationService
-from tutopy.services.utils import AcademicCourseDeterminator
+from tutopy.services.utils import AcademicCourseDeterminator, safe_filename
 
 
 LOGGER = logging.getLogger(__name__)
@@ -138,6 +138,27 @@ class DocumentService(RequiresStudentMixin):
         if managed.parent != storage or not managed.is_file():
             raise ValidationError("El fitxer del document no existeix o no és accessible.")
         return managed
+
+    @staticmethod
+    def suggested_filename(document: StudentDocument) -> str:
+        """Proposa el nom d'exportació d'un document: `nom_AAAA_MM_DD` amb extensió.
+
+        El nom visible que ha posat l'usuari mana sobre el del fitxer d'origen,
+        i s'hi afegeix la data del document amb guions baixos perquè les còpies
+        exportades quedin ordenades cronològicament. L'extensió es pren del
+        fitxer gestionat, que és el que realment es copia.
+
+        Args:
+            document: Document del qual es vol proposar el nom de la còpia.
+
+        Returns:
+            El nom de fitxer suggerit, sense cap directori.
+        """
+        stem = safe_filename(document.name, "document")
+        suffix = Path(document.uuid_filename or document.original_filename).suffix
+        if document.date:
+            stem = f"{stem}_{document.date.replace('-', '_')}"
+        return f"{stem}{suffix}"
 
     def export_file(self, document_id: int, destination_path: str) -> Path:
         """Copia un document gestionat a una ubicació escollida per l'usuari."""

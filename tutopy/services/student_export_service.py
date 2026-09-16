@@ -1,7 +1,6 @@
 """Exportació d'informes i documents d'alumnes a carpetes locals, individual o en lot."""
 
 from pathlib import Path
-import re
 from datetime import date
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -11,6 +10,7 @@ from tutopy.database.daos.student_dao import StudentDAO
 from tutopy.services.document_service import DocumentService
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 from tutopy.services.report_file_service import ReportFileService
+from tutopy.services.utils import safe_filename
 from tutopy.services.validation_service import ValidationService
 from tutopy.models.reporting import BatchExportFailure, BatchExportResult
 
@@ -253,13 +253,15 @@ class StudentExportService:
                 raise ValidationError("Un document no té un curs acadèmic vàlid.")
             course_dir = root / self._safe_name(course.course, "Curs")
             course_dir.mkdir(parents=True, exist_ok=True)
-            extension = Path(document.original_filename).suffix.lower()
-            stem = self._safe_name(document.description or document.name, "Document")
-            key = (course.id, stem.casefold(), extension)
+            # El mateix criteri que en exportar un document individual, perquè
+            # el fitxer s'anomeni igual tant si s'exporta sol com en lot.
+            proposed = Path(self.documents.suggested_filename(document))
+            key = (course.id, proposed.name.casefold())
             used_names[key] = used_names.get(key, 0) + 1
             suffix = f"_{used_names[key]}" if used_names[key] > 1 else ""
             self.documents.export_document(
-                document, str(course_dir / f"{stem}{suffix}{extension}")
+                document,
+                str(course_dir / f"{proposed.stem}{suffix}{proposed.suffix}"),
             )
 
     @staticmethod
@@ -273,5 +275,4 @@ class StudentExportService:
 
     @staticmethod
     def _safe_name(value: str, fallback: str) -> str:
-        value = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", value).strip(" ._")
-        return value[:120] or fallback
+        return safe_filename(value, fallback)

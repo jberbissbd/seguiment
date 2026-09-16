@@ -67,7 +67,7 @@ def test_document_dialog_selecciona_fitxer_i_dedueix_nom(qtbot, monkeypatch, tmp
     qtbot.addWidget(dialog)
     dialog._browse()
     assert dialog.values()["source_path"] == str(source)
-    assert dialog.values()["name"] == "informe.pdf"
+    assert dialog.values()["name"] == "informe"
     assert dialog.date_input.date().isValid()
     assert dialog.values()["date"]
     dialog._accept_valid()

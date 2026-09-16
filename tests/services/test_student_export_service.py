@@ -89,8 +89,30 @@ def test_exporta_informe_i_documents_en_carpetes_per_curs(db, tmp_path):
 
     assert root == tmp_path / "exportacio" / "Martí, Laia"
     assert (root / "informe.xlsx").is_file()
-    assert (root / "2025-2026" / "Valoració.pdf").read_bytes() == b"PDF"
-    assert (root / "2024-2025" / "Valoració.txt").read_text(encoding="utf-8") == "Text"
+    assert (root / "2025-2026" / "Informe_2026_02_03.pdf").read_bytes() == b"PDF"
+    assert (root / "2024-2025" / "Acta_2024_10_10.txt").read_text(
+        encoding="utf-8"
+    ) == "Text"
+
+
+def test_nom_del_document_es_igual_en_exportacio_individual_i_en_lot(
+    db, managed_document, tmp_path,
+):
+    """Un mateix document rep el mateix nom tant si s'exporta sol com dins un lot."""
+    document_service, document, _source = managed_document
+    services = create_services(db)
+    services.documents.storage_dir = document_service.storage_dir
+    individual = tmp_path / "solt" / services.documents.suggested_filename(document)
+
+    services.documents.export_document(document, str(individual))
+    services.student_exports.export_students(
+        [document.student_id], tmp_path / "lots", "xlsx", include_documents=True,
+    )
+
+    in_batch = list((tmp_path / "lots").rglob("*.txt"))
+    assert individual.name == "Informe_2026_02_01.txt"
+    assert [item.name for item in in_batch] == [individual.name]
+    assert in_batch[0].read_bytes() == individual.read_bytes()
 
 
 def test_exporta_diversos_alumnes_i_separa_homonims(db, tmp_path):
