@@ -231,10 +231,12 @@ class StudentRelatedController:
         """Copia el fitxer del document a una destinació triada per l'usuari."""
         try:
             document = self.documents.get_by_id(entity_id)
-            destination = self.export_destination(document.original_filename)
+            destination = self.export_destination(
+                self.documents.suggested_filename(document)
+            )
             if not destination:
                 return
-            self.documents.export_file(entity_id, destination)
+            self.documents.export_document(document, destination)
         except DomainError as error:
             self.error_handler(str(error))
             return

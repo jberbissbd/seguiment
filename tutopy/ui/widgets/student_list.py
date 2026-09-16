@@ -138,6 +138,17 @@ class StudentList(QFrame):
         if index.isValid():
             self.list_widget.setCurrentIndex(index)
 
+    def reselect_student(self, student_id: int) -> None:
+        """Selecciona l'alumne i torna a notificar-ho encara que ja fos l'actiu.
+
+        Qt no emet `currentChanged` si l'índex no varia, de manera que les
+        vistes del detall es quedarien amb les dades anteriors després de
+        modificar l'alumne que ja estava seleccionat.
+        """
+        self.select_student(student_id)
+        if self.current_student_id() == student_id:
+            self.student_selected.emit(student_id)
+
     def _request_note(self, student_id: int) -> None:
         self.select_student(student_id)
         self.note_create_requested.emit(student_id)

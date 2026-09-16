@@ -213,6 +213,41 @@ def test_document_service_valida_obertura_i_exporta_fitxer(
     assert destination.read_text(encoding="utf-8") == "Informe"
 
 
+def test_nom_suggerit_combina_nom_de_lusuari_i_data(managed_document):
+    """El nom proposat descarta el del fitxer d'origen i hi afegeix la data ISO."""
+    service, document, source = managed_document
+
+    assert source.name == "original.txt"
+    assert service.suggested_filename(document) == "Informe_2026_02_01.txt"
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("Autorització 1r/2n trimestre", "Autorització 1r_2n trimestre_2026_02_01.txt"),
+        ("///", "document_2026_02_01.txt"),
+    ],
+)
+def test_nom_suggerit_neutralitza_caracters_reservats(managed_document, name, expected):
+    """Un nom amb separadors de ruta no pot escapar del directori triat."""
+    service, document, _source = managed_document
+
+    assert service.suggested_filename(replace(document, name=name)) == expected
+
+
+def test_exportacio_copia_el_fitxer_gestionat_i_no_el_dorigen(managed_document, tmp_path):
+    """S'exporta el contingut del magatzem intern, encara que l'origen hagi canviat."""
+    service, document, source = managed_document
+    source.write_text("Versió modificada després d'importar", encoding="utf-8")
+    destination = tmp_path / "exportats" / service.suggested_filename(document)
+
+    exported = service.export_document(document, str(destination))
+
+    assert exported == destination
+    assert destination.read_text(encoding="utf-8") == "Document original"
+    assert destination.name == "Informe_2026_02_01.txt"
+
+
 def test_document_service_rebutja_fitxer_extern_al_magatzem(
     document_dao, student_dao, db, tmp_path
 ):

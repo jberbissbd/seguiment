@@ -113,7 +113,9 @@ class StudentController:
             self.error_handler(str(error))
             return
         self.refresh()
-        self._select_in_list(student_id)
+        # Cal reemetre la selecció perquè el detall (i, amb ell, l'historial de
+        # grups) torni a llegir l'alumne encara que ja fos el seleccionat.
+        self.window.student_list.reselect_student(student_id)
         self.window.show_status("Alumne actualitzat correctament")
 
     def delete(self, student_id: int) -> None:

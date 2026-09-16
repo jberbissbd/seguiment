@@ -1,6 +1,25 @@
 """Utilitats pures compartides pels serveis de Tutopy."""
 
+import re
+
 from tutopy.services.directories import get_executable_dir
+
+
+_INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]+')
+
+
+def safe_filename(value: str, fallback: str) -> str:
+    """Retorna un component de nom de fitxer vàlid a qualsevol sistema de fitxers.
+
+    Args:
+        value: Text d'origen, normalment introduït per l'usuari.
+        fallback: Nom a utilitzar si el text no deixa cap caràcter aprofitable.
+
+    Returns:
+        El text sense caràcters reservats, retallat a 120 caràcters.
+    """
+    value = _INVALID_FILENAME_CHARS.sub("_", value).strip(" ._")
+    return value[:120] or fallback
 
 
 def sanitize_xml_text(value) -> str:

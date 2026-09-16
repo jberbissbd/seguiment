@@ -64,7 +64,9 @@ class DocumentDialog(BaseFormDialog):
         if path:
             self.path_input.setText(path)
             if not self.name_input.text().strip():
-                self.name_input.setText(Path(path).name)
+                # Només el nom base: l'extensió la posa el magatzem intern i
+                # tornar-la a incloure embrutaria el nom de les exportacions.
+                self.name_input.setText(Path(path).stem)
 
     def _is_valid(self):
         values = self.values()

@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox
 
 from tutopy.application import create_services
 from tutopy.controllers.student_controller import StudentController
+from tutopy.controllers.student_related_controller import StudentRelatedController
 from tutopy.database.database import Database
 from tutopy.models.messaging import StudentNew
 from tutopy.ui.dialogs.student_dialog import StudentDialog
@@ -102,6 +103,44 @@ def test_controller_edita_alumne_i_grup(qtbot, tmp_path, monkeypatch):
         assert updated.surnames == "Serra"
         assert updated.group_name == "4t B"
         assert services.students.get_current_group(student.id) == "4t B"
+        assert window.student_detail.group_value.text() == "4t B"
+        assert errors == []
+    finally:
+        database.close()
+
+
+def history_groups(window):
+    """Retorna els grups que mostra la pestanya d'historial del detall."""
+    table = window.student_detail.history_tab.table
+    return [table.item(row, 0).text() for row in range(table.rowCount())]
+
+
+def test_canvi_de_grup_apareix_a_l_historial_de_l_alumne_ja_seleccionat(
+    qtbot, tmp_path, monkeypatch
+):
+    """L'historial reflecteix el grup nou sense haver de fer cap altra acció."""
+    database, services, window, controller, errors = build_controller(qtbot, tmp_path)
+    try:
+        related = StudentRelatedController(
+            window, services.students, services.annotations, services.contacts,
+            services.documents, services.academic_courses,
+            confirm_delete=lambda _name: True, error_handler=errors.append,
+        )
+        assert related is not None
+        student = services.students.create(StudentNew("Jordi", "Garcia", "3r A"))
+        controller.refresh()
+        window.student_list.select_student(student.id)
+        assert history_groups(window) == ["3r A"]
+        monkeypatch.setattr(AcceptedDialog, "values_to_return", {
+            "name": "Jordi", "surnames": "Garcia", "group_name": "4t B"
+        })
+
+        controller.edit(student.id)
+
+        assert [
+            item.group_name for item in services.students.get_group_history(student.id)
+        ] == ["3r A", "4t B"]
+        assert history_groups(window) == ["3r A", "4t B"]
         assert window.student_detail.group_value.text() == "4t B"
         assert errors == []
     finally:

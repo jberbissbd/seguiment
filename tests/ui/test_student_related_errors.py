@@ -156,12 +156,16 @@ def test_exportacio_utilitza_destinacio_o_respecta_cancel_lacio(
 ):
     """El diàleg de fitxer cancel·lat no copia ni publica un missatge d'èxit."""
     destination = tmp_path / "copia.txt"
+    proposals = []
     monkeypatch.setattr(
         QFileDialog,
         "getSaveFileName",
-        lambda *args: ("" if cancelled else str(destination), ""),
+        lambda _parent, _caption, filename: proposals.append(filename) or (
+            "" if cancelled else str(destination), ""
+        ),
     )
     student_related_env.controller.export_document(student_related_env.document.id)
+    assert proposals == ["Informe_2026_02_01.txt"]
     assert destination.exists() is not cancelled
     if not cancelled:
         assert destination.read_text() == "Informe original"
