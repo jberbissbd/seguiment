@@ -1,3 +1,8 @@
+import os
+import stat
+import subprocess
+import sys
+import tarfile
 from pathlib import Path
 
 try:
@@ -10,6 +15,19 @@ from scripts.project_version import read_project_version
 
 
 ROOT = Path(__file__).parents[1]
+
+
+def _run_stage_release_artifact(tmp_path, source_name, output_name):
+    source = tmp_path / source_name
+    source.write_bytes(b"binari fictici")
+    source.chmod(source.stat().st_mode & ~stat.S_IXUSR & ~stat.S_IXGRP & ~stat.S_IXOTH)
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts/stage_release_artifact.py")],
+        cwd=tmp_path,
+        env={**os.environ, "SOURCE_FILE": source_name, "OUTPUT_FILE": output_name},
+        check=True,
+    )
+    return tmp_path / "release" / output_name
 
 
 def test_release_tag_ha_de_coincidir_amb_pyproject(capsys):
@@ -137,6 +155,23 @@ def test_ci_instal_la_dependencies_bloquejades_i_verifica_l_entorn():
     assert "python -m pip install --no-deps -e ." in workflow
     assert "python -m pip check" in workflow
     assert 'pip install -e ".[dev]"' not in workflow
+
+
+def test_stage_release_comprimeix_binaris_unix_amb_bit_execucio(tmp_path):
+    destination = _run_stage_release_artifact(
+        tmp_path, "Tutopy", "Tutopy-Linux-x86_64.tar.gz"
+    )
+    assert destination.is_file()
+    with tarfile.open(destination) as archive:
+        member = archive.getmember("Tutopy")
+        assert member.mode & stat.S_IXUSR
+
+
+def test_stage_release_copia_l_executable_windows_sense_modificar(tmp_path):
+    destination = _run_stage_release_artifact(
+        tmp_path, "Tutopy.exe", "Tutopy-Windows-x86_64.exe"
+    )
+    assert destination.read_bytes() == b"binari fictici"
 
 
 def test_configuracio_sonar_separa_fonts_tests_i_importa_cobertura():

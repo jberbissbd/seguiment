@@ -52,6 +52,16 @@ Referències: [identitat d'escriptori a Qt](https://doc.qt.io/qt-6/qguiapplicati
 [opcions de PyInstaller](https://pyinstaller.org/en/stable/usage.html),
 [format del camp Exec](https://specifications.freedesktop.org/desktop-entry/latest/exec-variables.html).
 
+## Empaquetat dels binaris Unix
+
+GitHub Releases no conserva el bit d'execució en fitxers solts: un usuari que
+descarrega un binari Linux o macOS directament hauria d'executar `chmod +x`
+abans de poder-lo obrir. Per evitar-ho, `scripts/stage_release_artifact.py`
+comprimeix aquests binaris en un `.tar.gz` (format que sí conserva els
+permisos Unix) abans de publicar-los; l'executable `Tutopy` ja surt marcat
+com a executable en descomprimir l'arxiu. L'executable Windows es publica
+sense modificar, ja que `.exe` no té aquest concepte de permisos.
+
 ## Pendent abans d'una distribució pública signada
 
 - Afegir icones `.ico`, `.icns` i `.png` al fitxer `tutopy.spec`.
