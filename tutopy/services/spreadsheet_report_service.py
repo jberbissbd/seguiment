@@ -112,8 +112,13 @@ class SpreadsheetReportService:
 
         sheet = workbook.create_sheet(self._sheet_title(course_name))
         group_by_note_id = self._group_for_notes(notes, histories, student.group_name)
-        rows = [(note, group_by_note_id[note.id]) for note in notes]
-        groups = list(dict.fromkeys(group for _note, group in rows if group))
+        term_by_note_id = (
+            self._term_for_notes(notes, course_id, group_by_note_id, term_configurations)
+            if include_terms else None
+        )
+        groups = list(dict.fromkeys(
+            group_by_note_id[note.id] for note in notes if group_by_note_id[note.id]
+        ))
         last_column = len(categories) + (2 if include_terms else 1)
         sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_column)
         title = sheet.cell(1, 1)
@@ -141,48 +146,103 @@ class SpreadsheetReportService:
             cell.fill = PatternFill("solid", fgColor="2B73B7")
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
+        term_column = 1 if include_terms else None
+        group_column = 2 if include_terms else 1
         category_columns = {
             category.id: index
-            for index, category in enumerate(categories, 3 if include_terms else 2)
+            for index, category in enumerate(categories, group_column + 1)
         }
-        for row_number, (note, group) in enumerate(rows, 4):
-            group_column = self._write_term(
-                sheet, row_number, course_id, group, note.date, term_configurations
-            ) \
-                if include_terms else 1
-            group_cell = sheet.cell(row_number, group_column)
-            self._set_text(group_cell, group)
-            group_cell.alignment = Alignment(vertical="top")
-            category_column = category_columns.get(note.category_id)
-            if category_column is not None:
-                display_date = date.fromisoformat(note.date).strftime("%d/%m/%Y")
-                cell = sheet.cell(row_number, category_column)
-                self._set_text(cell, f"{display_date} - {note.content}")
-                cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+        last_row = self._write_segments(
+            sheet, notes, group_by_note_id, term_by_note_id,
+            term_column, group_column, category_columns,
+        )
+        self._merge_consecutive_values(sheet, group_column, 4, last_row)
         if include_terms:
-            self._merge_consecutive_terms(sheet, 4, 3 + len(rows))
+            self._merge_consecutive_values(sheet, term_column, 4, last_row)
         self._format_sheet(sheet, last_column)
 
-    def _write_term(
-        self, sheet, row_number, course_id, group, note_date, term_configurations
+    def _write_segments(
+        self, sheet, notes, group_by_note_id, term_by_note_id,
+        term_column, group_column, category_columns,
     ) -> int:
+        """Escriu cada tram de grup/trimestre constant i en retorna l'última fila.
+
+        Dins d'un tram, cada categoria s'omple des de la primera fila del
+        tram amb les seves pròpies notes, ordenades per data i sense deixar
+        buits inicials: el nombre de notes d'una categoria dins del tram no
+        té per què coincidir amb el d'una altra.
+        """
         from openpyxl.styles import Alignment
 
-        configuration = term_configurations.get((course_id, group)) if group else None
-        if configuration is None:
-            term = ""
-        elif note_date < configuration.second_term_start:
-            term = "1r"
-        elif note_date < configuration.third_term_start:
-            term = "2n"
-        else:
-            term = "3r"
-        cell = sheet.cell(row_number, 1)
-        self._set_text(cell, term)
-        # `_merge_consecutive_terms` sobreescriu aquest valor amb alineació
-        # centrada per a les cel·les que encapçalen un grup fusionat.
-        cell.alignment = Alignment(vertical="top")
-        return 2
+        row = 4
+        for segment_group, segment_term, segment_notes in self._segment_notes(
+            notes, group_by_note_id, term_by_note_id
+        ):
+            notes_by_category = defaultdict(list)
+            for note in segment_notes:
+                notes_by_category[note.category_id].append(note)
+            segment_length = max((len(entries) for entries in notes_by_category.values()), default=1)
+
+            for offset in range(segment_length):
+                current_row = row + offset
+                group_cell = sheet.cell(current_row, group_column)
+                self._set_text(group_cell, segment_group)
+                group_cell.alignment = Alignment(vertical="top")
+                if term_column is not None:
+                    term_cell = sheet.cell(current_row, term_column)
+                    self._set_text(term_cell, segment_term)
+                    term_cell.alignment = Alignment(vertical="top")
+
+            for category_id, category_notes in notes_by_category.items():
+                column = category_columns.get(category_id)
+                if column is None:
+                    continue
+                for offset, note in enumerate(category_notes):
+                    display_date = date.fromisoformat(note.date).strftime("%d/%m/%Y")
+                    cell = sheet.cell(row + offset, column)
+                    self._set_text(cell, f"{display_date} - {note.content}")
+                    cell.alignment = Alignment(wrap_text=True, vertical="top")
+            row += segment_length
+        return row - 1
+
+    @staticmethod
+    def _segment_notes(notes, group_by_note_id, term_by_note_id):
+        """Parteix les notes (ja ordenades per data) en trams de grup/trimestre constant.
+
+        Cada canvi de grup o de trimestre comença un tram nou, de manera que
+        dins d'un mateix tram el valor de totes dues columnes és constant i
+        vàlid per a qualsevol nota que s'hi col·loqui, independentment de la
+        categoria a què pertanyi.
+        """
+        segments = []
+        current_key = None
+        for note in notes:
+            term = term_by_note_id[note.id] if term_by_note_id is not None else ""
+            key = (group_by_note_id[note.id], term)
+            if key != current_key:
+                segments.append((key[0], key[1], []))
+                current_key = key
+            segments[-1][2].append(note)
+        return segments
+
+    @staticmethod
+    def _term_for_notes(notes, course_id, group_by_note_id, term_configurations) -> dict[int, str]:
+        """Calcula el trimestre de cada nota a partir de la seva data i grup."""
+        result: dict[int, str] = {}
+        for note in notes:
+            group = group_by_note_id[note.id]
+            configuration = term_configurations.get((course_id, group)) if group else None
+            if configuration is None:
+                term = ""
+            elif note.date < configuration.second_term_start:
+                term = "1r"
+            elif note.date < configuration.third_term_start:
+                term = "2n"
+            else:
+                term = "3r"
+            result[note.id] = term
+        return result
 
     @staticmethod
     def _course_names(by_course, names) -> dict[int, str]:
@@ -245,19 +305,19 @@ class SpreadsheetReportService:
         cell.data_type = "s"
 
     @staticmethod
-    def _merge_consecutive_terms(sheet, first_row: int, last_row: int) -> None:
+    def _merge_consecutive_values(sheet, column: int, first_row: int, last_row: int) -> None:
         from openpyxl.styles import Alignment
 
         start = first_row
         while start <= last_row:
-            value = sheet.cell(start, 1).value
+            value = sheet.cell(start, column).value
             end = start
-            while end + 1 <= last_row and sheet.cell(end + 1, 1).value == value:
+            while end + 1 <= last_row and sheet.cell(end + 1, column).value == value:
                 end += 1
             if value and end > start:
-                sheet.merge_cells(start_row=start, start_column=1,
-                                  end_row=end, end_column=1)
-                sheet.cell(start, 1).alignment = Alignment(
+                sheet.merge_cells(start_row=start, start_column=column,
+                                  end_row=end, end_column=column)
+                sheet.cell(start, column).alignment = Alignment(
                     horizontal="center", vertical="center"
                 )
             start = end + 1

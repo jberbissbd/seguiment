@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/test_packaging.py -q)"
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/test_packaging.py -q)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/services/test_spreadsheet_report_service.py -q)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest -q)",
+      "Bash(python -m ruff check tutopy/services/spreadsheet_report_service.py scripts/stage_release_artifact.py tests/services/test_spreadsheet_report_service.py tests/test_packaging.py .github/workflows/release.yml)",
+      "Bash(python -m ruff check tutopy scripts)"
     ]
   }
 }

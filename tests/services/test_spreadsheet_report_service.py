@@ -67,7 +67,14 @@ def test_exporta_full_per_curs_amb_categories_i_grup_historic(db, tmp_path):
     assert sheet["B6"].value == "4t B"
     assert sheet["E6"].value == "10/02/2026 - Incidència resolta"
     assert sheet["C7"].value == "15/04/2026 - Objectius assolits"
-    assert "A5:A6" in {str(area) for area in sheet.merged_cells.ranges}
+    merged = {str(area) for area in sheet.merged_cells.ranges}
+    # El trimestre "2n" es manté a files 5 i 6 encara que el grup canviï
+    # entre elles, així que es fusiona igualment.
+    assert "A5:A6" in merged
+    # El grup es manté constant entre trams consecutius (només canvia el
+    # trimestre), així que les cel·les de la columna Grup es fusionen.
+    assert "B4:B5" in merged
+    assert "B6:B7" in merged
     assert sheet.freeze_panes == "A4"
 
 
@@ -81,7 +88,64 @@ def test_exportacio_sense_trimestres_no_crea_la_columna(db, tmp_path):
     assert [sheet.cell(3, column).value for column in range(1, 5)] == [
         "Grup", "Acadèmic", "Família", "Conducta"
     ]
+    # Sense trimestre, el tram només es talla per canvi de grup: la nota
+    # d'"Acadèmic" i la de "Família" del mateix tram comparteixen fila en
+    # lloc de deixar-se cel·les buides per l'ordenació global per data.
+    assert sheet["A4"].value == "4t A"
+    assert sheet["B4"].value == "15/01/2026 - Bona evolució"
+    assert sheet["C4"].value == "15/09/2025 - Entrevista inicial"
+    assert sheet["D4"].value is None
+    assert sheet["A5"].value == "4t B"
+    assert sheet["B5"].value == "15/04/2026 - Objectius assolits"
+    assert sheet["C5"].value is None
+    assert sheet["D5"].value == "10/02/2026 - Incidència resolta"
     assert not any(str(area).startswith("A4:A") for area in sheet.merged_cells.ranges)
+
+
+def test_canvi_de_trimestre_sense_canvi_de_grup_no_deixa_buits_inicials(db, tmp_path):
+    """Reprodueix l'exemple reportat: un canvi de trimestre sense canvi de
+    grup ha d'obrir un tram nou perquè cada categoria hi pugui començar de
+    nou sense deixar la primera cel·la buida, i el grup s'ha de fusionar
+    entre trams perquè es manté constant."""
+    services = create_services(db)
+    student = db.students.create(StudentNew("Marc", "Soler", "1r D"))
+    contacts = services.categories.create(CategoryNew("Contactes families"))
+    transfer = services.categories.create(CategoryNew("Informació de traspàs"))
+    services.report_configuration.set_category_order([contacts.id, transfer.id])
+    course = db.academic_courses.get_or_create("2026-2027")
+    db.student_group_history.create(StudentGroupHistoryNew(
+        student.id, "1r D", "2026-09-01", None, course.id
+    ))
+    services.report_configuration.save_term_configuration(TermConfigurationNew(
+        course.id, "1r D", "2026-12-01", "2027-04-01"
+    ))
+    for category, note_date, content in (
+        (transfer, "2026-09-01", "És Bon estudiant"),
+        (contacts, "2026-10-02", "Reunió presencial"),
+        (contacts, "2026-11-02", "Trucada telefònica"),
+        (contacts, "2026-12-05", "Els pares s'interesen per les notes"),
+    ):
+        services.notes.create(NoteNew(student.id, category.id, note_date, 0, content))
+
+    path = services.spreadsheet_reports.export_student(
+        student.id, tmp_path / "informe.xlsx", include_terms=True
+    )
+    sheet = load_workbook(path).active
+
+    assert sheet["A4"].value == "1r"
+    assert sheet["B4"].value == "1r D"
+    assert sheet["C4"].value == "02/10/2026 - Reunió presencial"
+    assert sheet["D4"].value == "01/09/2026 - És Bon estudiant"
+    assert sheet["C5"].value == "02/11/2026 - Trucada telefònica"
+    assert sheet["D5"].value is None
+    assert sheet["A6"].value == "2n"
+    assert sheet["C6"].value == "05/12/2026 - Els pares s'interesen per les notes"
+    assert sheet["D6"].value is None
+    assert sheet.max_row == 6
+
+    merged = {str(area) for area in sheet.merged_cells.ranges}
+    assert "A4:A5" in merged
+    assert "B4:B6" in merged
 
 
 def test_crea_un_full_per_curs_en_ordre_ascendent(db, tmp_path):
