@@ -46,15 +46,15 @@ jobs:
             artifact: tutopy-windows-x86_64
           - os: ubuntu-22.04
             source: dist/Tutopy
-            filename: Tutopy-Linux-x86_64
+            filename: Tutopy-Linux-x86_64.tar.gz
             artifact: tutopy-linux-x86_64
           - os: macos-15-intel
-            source: dist/Tutopy
-            filename: Tutopy-macOS-x86_64
+            source: dist/Tutopy.app
+            filename: Tutopy-macOS-x86_64.tar.gz
             artifact: tutopy-macos-x86_64
           - os: macos-15
-            source: dist/Tutopy
-            filename: Tutopy-macOS-arm64
+            source: dist/Tutopy.app
+            filename: Tutopy-macOS-arm64.tar.gz
             artifact: tutopy-macos-arm64
     runs-on: ${{ matrix.os }}
     steps:

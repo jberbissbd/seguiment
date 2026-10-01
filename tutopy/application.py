@@ -27,8 +27,10 @@ from tutopy.services.report_file_service import ReportFileService
 from tutopy.services.report_batch_loader import ReportBatchLoader
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.directories import get_app_data_dir
+from tutopy.services.preferences_service import PreferencesService
 from tutopy.services.statistics_service import StatisticsService
 from tutopy.services.transfer_service import TransferService
+from tutopy.services.update_check_service import UpdateCheckService
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +54,8 @@ class ServiceContainer:
     student_exports: StudentExportService
     statistics: StatisticsService
     transfers: TransferService
+    preferences: PreferencesService
+    update_check: UpdateCheckService
 
 
 def create_services(
@@ -156,6 +160,8 @@ def create_services(
             database.documents, database.student_group_history, documents,
             database.transaction,
         ),
+        preferences=PreferencesService(database.settings),
+        update_check=UpdateCheckService(),
     )
     if configure_worker_services:
         @contextmanager

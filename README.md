@@ -85,9 +85,9 @@ A l'apartat **Assets** de la versió, tria el fitxer corresponent al teu sistema
 | Sistema | Fitxer |
 | --- | --- |
 | Windows de 64 bits | `Tutopy-Windows-x86_64.exe` |
-| Linux de 64 bits | `Tutopy-Linux-x86_64` |
-| macOS amb processador Intel | `Tutopy-macOS-x86_64` |
-| macOS amb Apple Silicon (M1 o posterior) | `Tutopy-macOS-arm64` |
+| Linux de 64 bits | `Tutopy-Linux-x86_64.tar.gz` |
+| macOS amb processador Intel | `Tutopy-macOS-x86_64.tar.gz` |
+| macOS amb Apple Silicon (M1 o posterior) | `Tutopy-macOS-arm64.tar.gz` |
 
 El fitxer `SHA256SUMS.txt` permet verificar que les descàrregues no s'han
 alterat.
@@ -109,13 +109,14 @@ pots revisar l'avís i seleccionar l'opció per executar-lo.
 
 ### Linux
 
-1. Descarrega `Tutopy-Linux-x86_64`.
-2. Obre un terminal a la carpeta de la descàrrega.
-3. Dona-li permís d'execució i inicia'l:
+1. Descarrega `Tutopy-Linux-x86_64.tar.gz`.
+2. Descomprimeix-lo: el fitxer conté l'executable `Tutopy`, ja marcat com a
+   executable.
+3. Inicia'l:
 
 ```bash
-chmod +x Tutopy-Linux-x86_64
-./Tutopy-Linux-x86_64
+tar xzf Tutopy-Linux-x86_64.tar.gz
+./Tutopy
 ```
 
 També el pots moure a una carpeta permanent abans d'executar-lo.
@@ -124,7 +125,7 @@ Per tenir Tutopy al menú d'aplicacions i amb la seva icona al dock o a la barra
 de tasques, situa primer l'executable a la carpeta on el conservaràs i executa:
 
 ```bash
-./Tutopy-Linux-x86_64 --install-desktop
+./Tutopy --install-desktop
 ```
 
 Després, obre **Tutopy** des del menú d'aplicacions. Aquesta ordre instal·la un
@@ -138,29 +139,22 @@ a l'escriptori; segons l'entorn, caldrà habilitar-hi «Permetre executar».
 
 ### macOS
 
-Tria l'executable que correspon al processador del Mac:
+Tria l'arxiu que correspon al processador del Mac:
 
-- `Tutopy-macOS-arm64` per a Apple Silicon (M1, M2, M3, M4 o posterior);
-- `Tutopy-macOS-x86_64` per a processadors Intel.
+- `Tutopy-macOS-arm64.tar.gz` per a Apple Silicon (M1, M2, M3, M4 o posterior);
+- `Tutopy-macOS-x86_64.tar.gz` per a processadors Intel.
 
 Pots consultar-lo des del menú d'Apple, a **Quant a aquest Mac**.
 
-1. Descarrega l'executable corresponent.
-2. Obre el Terminal a la carpeta de la descàrrega.
-3. Dona-li permís d'execució i inicia'l:
+1. Descarrega l'arxiu corresponent.
+2. Descomprimeix-lo (doble clic, o des del Terminal): el fitxer conté
+   l'aplicació `Tutopy.app`.
+3. Obre `Tutopy.app` amb doble clic, com qualsevol altra aplicació.
 
-```bash
-chmod +x Tutopy-macOS-arm64
-./Tutopy-macOS-arm64
-```
-
-Si tens un Mac Intel, substitueix `Tutopy-macOS-arm64` per
-`Tutopy-macOS-x86_64` a les dues ordres.
-
-macOS pot bloquejar la primera execució perquè el binari encara no està signat
-ni notaritzat. Si l'has obtingut des de la pàgina oficial, pots autoritzar-lo a
-**Configuració del Sistema → Privacitat i seguretat** després del primer intent
-d'obertura.
+macOS pot bloquejar la primera execució perquè l'aplicació encara no està
+signada ni notaritzada. Si l'has obtinguda des de la pàgina oficial, pots
+autoritzar-la a **Configuració del Sistema → Privacitat i seguretat** després
+del primer intent d'obertura.
 
 ## Dades i actualitzacions
 
@@ -180,6 +174,13 @@ Les dades de treball romanen a l'ordinador. Tutopy no necessita enviar-les a
 cap servei web. Els paquets `.tpy` són adequats per transferir informació entre
 instal·lacions perquè es creen xifrats i se'n comprova la integritat durant la
 importació.
+
+En iniciar-se, Tutopy fa una única petició anònima i sense autenticació a la
+pàgina pública de versions de GitHub per comprovar si n'hi ha una de més
+recent; si n'hi ha, mostra un avís amb un enllaç a la pàgina de descàrrega
+(mai es descarrega ni se substitueix l'executable automàticament). No s'hi
+envia cap dada de l'alumnat ni cap identificador. Aquesta comprovació es pot
+desactivar des de **Configuració → Preferències**.
 
 ## Desenvolupament
 

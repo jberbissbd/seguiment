@@ -17,6 +17,7 @@ from .daos import (
     DataManagementDAO,
     ReportConfigurationDAO,
     StatisticsDAO,
+    SettingsDAO,
 )
 
 
@@ -111,7 +112,7 @@ class Database:
     ``.notes``, ``.contacts``, ``.annotations``, ``.documents``).
     """
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
 
     def __init__(self, path: str = None):
         """Prepara el gestor amb la ruta indicada, sense obrir encara la connexió."""
@@ -128,6 +129,7 @@ class Database:
         self.data_management: DataManagementDAO = None
         self.report_configuration: ReportConfigurationDAO = None
         self.statistics: StatisticsDAO = None
+        self.settings: SettingsDAO = None
 
     def connect(self):
         """Obre la connexió, aplica les migracions pendents i inicialitza les DAOs.
@@ -177,6 +179,7 @@ class Database:
         self.data_management = DataManagementDAO(self.conn)
         self.report_configuration = ReportConfigurationDAO(self.conn)
         self.statistics = StatisticsDAO(self.conn)
+        self.settings = SettingsDAO(self.conn)
 
     def _migrate_schema(self) -> None:
         """Aplica, en ordre, les migracions pendents de l'esquema."""
@@ -188,6 +191,8 @@ class Database:
             )
         if current_version < 1:
             self._create_schema_v1()
+        if current_version < 2:
+            self._create_schema_v2()
 
     def _create_schema_v1(self) -> None:
         """Crea atòmicament la versió inicial de l'esquema."""
@@ -305,5 +310,17 @@ class Database:
                 ON term_configurations(academic_course_id, group_name);
             CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_name);
             PRAGMA user_version = 1;
+            COMMIT;
+        """)
+
+    def _create_schema_v2(self) -> None:
+        """Afegeix la taula de preferències generals de l'aplicació."""
+        self.conn.executescript("""
+            BEGIN IMMEDIATE;
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            PRAGMA user_version = 2;
             COMMIT;
         """)

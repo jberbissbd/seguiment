@@ -11,6 +11,7 @@ from .student_group_history_dao import StudentGroupHistoryDAO
 from .data_management_dao import DataManagementDAO
 from .report_configuration_dao import ReportConfigurationDAO
 from .statistics_dao import StatisticsDAO
+from .settings_dao import SettingsDAO
 
 __all__ = [
     "AcademicCourseDAO",
@@ -24,4 +25,5 @@ __all__ = [
     "DataManagementDAO",
     "ReportConfigurationDAO",
     "StatisticsDAO",
+    "SettingsDAO",
 ]

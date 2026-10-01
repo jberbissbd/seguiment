@@ -10,9 +10,9 @@ from collections.abc import Iterable, Sequence
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QAbstractItemView, QFrame, QHeaderView, QHBoxLayout, QLabel, QLayout,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
-    QSizePolicy,
+    QAbstractItemView, QCheckBox, QFrame, QHeaderView, QHBoxLayout, QLabel,
+    QLayout, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QWidget, QSizePolicy,
 )
 
 from tutopy.ui.resources import set_button_icon
@@ -37,6 +37,7 @@ class DataToolsView(QWidget):
     term_create_requested = Signal()
     term_edit_requested = Signal(int)
     term_delete_requested = Signal(int)
+    update_check_toggled = Signal(bool)
 
     def __init__(self, parent=None):
         """Construeix els panells d'importació, transferència, informes i esborrat."""
@@ -176,6 +177,21 @@ class DataToolsView(QWidget):
         term_layout.addWidget(self.term_table)
         report_layout.addWidget(term_panel)
 
+        preferences_panel = QFrame()
+        preferences_panel.setObjectName("panel")
+        self.preferences_panel = preferences_panel
+        preferences_layout = QVBoxLayout(preferences_panel)
+        preferences_layout.addWidget(self._title("Preferències"))
+        self.update_check_checkbox = QCheckBox(
+            "Comprova si hi ha versions noves en iniciar l’aplicació"
+        )
+        preferences_layout.addWidget(self.update_check_checkbox)
+        preferences_layout.addWidget(self._description(
+            "En iniciar, Tutopy consulta de manera anònima la pàgina pública "
+            "de versions de GitHub per veure si n’hi ha una de més recent. "
+            "No s’hi envia cap dada de l’alumnat ni cap identificador."
+        ))
+
         danger_panel = QFrame()
         danger_panel.setObjectName("panel")
         danger_layout = QVBoxLayout(danger_panel)
@@ -219,6 +235,7 @@ class DataToolsView(QWidget):
         self.term_edit_button.clicked.connect(self._request_term_edit)
         self.term_delete_button.clicked.connect(self._request_term_delete)
         self.term_table.itemSelectionChanged.connect(self._term_selection_changed)
+        self.update_check_checkbox.toggled.connect(self.update_check_toggled)
 
     def set_term_configurations(self, rows: Iterable[tuple[int, Sequence]]) -> None:
         """Actualitza in situ la taula de trimestres.
@@ -253,6 +270,12 @@ class DataToolsView(QWidget):
         """
         self.report_logo_label.setText(f"Logotip: {filename}" if filename else "Logotip: cap")
         self.report_logo_remove_button.setEnabled(bool(filename))
+
+    def set_update_check_enabled(self, enabled: bool) -> None:
+        """Marca o desmarca la casella sense reemetre `update_check_toggled`."""
+        self.update_check_checkbox.blockSignals(True)
+        self.update_check_checkbox.setChecked(enabled)
+        self.update_check_checkbox.blockSignals(False)
 
     def current_term_configuration_id(self):
         """Retorna l'ID de la configuració de trimestres seleccionada, o `None`."""

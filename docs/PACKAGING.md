@@ -52,6 +52,26 @@ Referències: [identitat d'escriptori a Qt](https://doc.qt.io/qt-6/qguiapplicati
 [opcions de PyInstaller](https://pyinstaller.org/en/stable/usage.html),
 [format del camp Exec](https://specifications.freedesktop.org/desktop-entry/latest/exec-variables.html).
 
+## Bundle `.app` a macOS
+
+Sense un bundle `.app`, el Finder obre un executable Mach-O despullat dins
+d'una finestra de Terminal en lloc d'arrencar-lo com una aplicació de
+finestra. Per això `tutopy.spec` afegeix un pas `BUNDLE()` (només quan
+`sys.platform == "darwin"`) que envolta l'`EXE()` en `dist/Tutopy.app`; el
+workflow `release.yml` empaqueta aquest bundle en lloc del binari solt que
+encara s'usa a Linux.
+
+## Empaquetat dels binaris Unix
+
+GitHub Releases no conserva el bit d'execució en fitxers solts: un usuari que
+descarrega un binari Linux, o un bundle `Tutopy.app` de macOS, directament
+hauria d'executar `chmod +x` abans de poder-lo obrir. Per evitar-ho,
+`scripts/stage_release_artifact.py` comprimeix aquests artefactes en un
+`.tar.gz` (format que sí conserva els permisos Unix) abans de publicar-los;
+ja surten marcats com a executables en descomprimir l'arxiu. L'executable
+Windows es publica sense modificar, ja que `.exe` no té aquest concepte de
+permisos.
+
 ## Pendent abans d'una distribució pública signada
 
 - Afegir icones `.ico`, `.icns` i `.png` al fitxer `tutopy.spec`.
