@@ -20,6 +20,7 @@ from tutopy.controllers.student_related_controller import StudentRelatedControll
 from tutopy.controllers.data_management_controller import DataManagementController
 from tutopy.controllers.report_controller import ReportController
 from tutopy.controllers.statistics_controller import StatisticsController
+from tutopy.controllers.update_controller import UpdateController
 from tutopy.database.database import Database
 from tutopy.services.directories import get_db_path
 from tutopy.services.desktop_integration import DESKTOP_ID, install_desktop_entry
@@ -39,6 +40,7 @@ class ControllerContainer:
     data_management: DataManagementController
     reports: ReportController
     statistics: StatisticsController
+    updates: UpdateController
 
     def start(self) -> None:
         """Carrega només els controladors que tenen estat inicial visible.
@@ -55,6 +57,7 @@ class ControllerContainer:
             self.notes,
             self.categories,
             self.reports,
+            self.updates,
         ):
             controller.start()
 
@@ -121,6 +124,11 @@ def create_controllers(
         services.academic_courses,
         services.categories,
     )
+    update_controller = UpdateController(
+        window,
+        services.update_check,
+        services.preferences,
+    )
     return ControllerContainer(
         main=main_controller,
         students=student_controller,
@@ -130,6 +138,7 @@ def create_controllers(
         data_management=data_controller,
         reports=report_controller,
         statistics=statistics_controller,
+        updates=update_controller,
     )
 
 

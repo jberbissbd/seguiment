@@ -175,6 +175,13 @@ cap servei web. Els paquets `.tpy` són adequats per transferir informació entr
 instal·lacions perquè es creen xifrats i se'n comprova la integritat durant la
 importació.
 
+En iniciar-se, Tutopy fa una única petició anònima i sense autenticació a la
+pàgina pública de versions de GitHub per comprovar si n'hi ha una de més
+recent; si n'hi ha, mostra un avís amb un enllaç a la pàgina de descàrrega
+(mai es descarrega ni se substitueix l'executable automàticament). No s'hi
+envia cap dada de l'alumnat ni cap identificador. Aquesta comprovació es pot
+desactivar des de **Configuració → Preferències**.
+
 ## Desenvolupament
 
 El projecte requereix Python 3.10 o superior. Per preparar un entorn de

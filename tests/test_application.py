@@ -14,6 +14,8 @@ from tutopy.services.word_report_service import WordReportService
 from tutopy.services.report_file_service import ReportFileService
 from tutopy.services.student_export_service import StudentExportService
 from tutopy.services.statistics_service import StatisticsService
+from tutopy.services.preferences_service import PreferencesService
+from tutopy.services.update_check_service import UpdateCheckService
 from tutopy.main import ControllerContainer, create_controllers
 from tutopy.ui.main_window import MainWindow
 
@@ -38,6 +40,8 @@ def test_create_services_compon_la_capa_de_negoci(tmp_path):
         assert isinstance(services.report_files, ReportFileService)
         assert isinstance(services.student_exports, StudentExportService)
         assert isinstance(services.statistics, StatisticsService)
+        assert isinstance(services.preferences, PreferencesService)
+        assert isinstance(services.update_check, UpdateCheckService)
         assert not hasattr(services, "database")
     finally:
         database.close()
@@ -69,16 +73,22 @@ def test_controller_container_inicia_nomes_controladors_visibles():
         notes=controller("notes"), categories=controller("categories"),
         student_related=controller("related"),
         data_management=controller("data"), reports=controller("reports"),
-        statistics=controller("statistics"),
+        statistics=controller("statistics"), updates=controller("updates"),
     )
 
     container.start()
 
-    assert calls == ["main", "students", "notes", "categories", "reports"]
+    assert calls == ["main", "students", "notes", "categories", "reports", "updates"]
 
 
 @pytest.mark.ui
-def test_create_controllers_compon_i_inicia_la_ui(tmp_path, qtbot):
+def test_create_controllers_compon_i_inicia_la_ui(tmp_path, qtbot, monkeypatch):
+    def no_network(*_args, **_kwargs):
+        raise OSError("sense xarxa als tests")
+
+    monkeypatch.setattr(
+        "tutopy.services.update_check_service.urllib.request.urlopen", no_network
+    )
     database = Database(str(tmp_path / "controllers.db")).connect()
     try:
         services = create_services(database)

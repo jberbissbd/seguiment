@@ -5,7 +5,18 @@
       "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/services/test_spreadsheet_report_service.py -q)",
       "Bash(QT_QPA_PLATFORM=offscreen python -m pytest -q)",
       "Bash(python -m ruff check tutopy/services/spreadsheet_report_service.py scripts/stage_release_artifact.py tests/services/test_spreadsheet_report_service.py tests/test_packaging.py .github/workflows/release.yml)",
-      "Bash(python -m ruff check tutopy scripts)"
+      "Bash(python -m ruff check tutopy scripts)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/services/test_preferences_service.py tests/services/test_update_check_service.py -q)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/controllers/test_update_controller.py -q)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -c ' *)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/controllers/test_update_controller.py::test_mostra_un_avis_quan_hi_ha_una_versio_mes_recent -q -s)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest /tmp/test_bg.py -q -s)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/controllers/test_report_controller.py::test_controlador_exporta_diversos_alumnes -q -s)",
+      "Bash(time QT_QPA_PLATFORM=offscreen python -m pytest /tmp/test_bg2.py -q -s)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest /tmp/test_bg.py -q)",
+      "Bash(time QT_QPA_PLATFORM=offscreen python -m pytest /tmp/test_bg3.py -q)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/ui/test_update_available_dialog.py tests/ui/test_data_management.py -q)",
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/architecture -q)"
     ]
   }
 }

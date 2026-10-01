@@ -24,3 +24,31 @@ def test_finestra_inclou_gestio_de_dades(qtbot):
     assert window.data_tools_scroll.widget() is window.data_tools
     assert window.data_tools.report_panel.parentWidget() is not window.data_tools
     assert window.configuration_scroll.widget().isAncestorOf(window.data_tools.report_panel)
+    assert window.data_tools.preferences_panel.parentWidget() is not window.data_tools
+    assert window.configuration_scroll.widget().isAncestorOf(
+        window.data_tools.preferences_panel
+    )
+
+
+def test_casella_de_comprovacio_de_versio_emet_senyal(qtbot):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    received = []
+    window.data_tools.update_check_toggled.connect(received.append)
+
+    window.data_tools.update_check_checkbox.setChecked(True)
+
+    assert received == [True]
+
+
+def test_set_update_check_enabled_no_reemet_el_senyal(qtbot):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    window.data_tools.set_update_check_enabled(True)
+    received = []
+    window.data_tools.update_check_toggled.connect(received.append)
+
+    window.data_tools.set_update_check_enabled(False)
+
+    assert received == []
+    assert window.data_tools.update_check_checkbox.isChecked() is False
