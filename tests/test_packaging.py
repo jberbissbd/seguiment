@@ -21,13 +21,17 @@ def _run_stage_release_artifact(tmp_path, source_name, output_name):
     source = tmp_path / source_name
     source.write_bytes(b"binari fictici")
     source.chmod(source.stat().st_mode & ~stat.S_IXUSR & ~stat.S_IXGRP & ~stat.S_IXOTH)
+    _run_stage_release_script(tmp_path, source_name, output_name)
+    return tmp_path / "release" / output_name
+
+
+def _run_stage_release_script(tmp_path, source_name, output_name):
     subprocess.run(
         [sys.executable, str(ROOT / "scripts/stage_release_artifact.py")],
         cwd=tmp_path,
         env={**os.environ, "SOURCE_FILE": source_name, "OUTPUT_FILE": output_name},
         check=True,
     )
-    return tmp_path / "release" / output_name
 
 
 def test_release_tag_ha_de_coincidir_amb_pyproject(capsys):
@@ -69,6 +73,18 @@ def test_spec_es_onefile_i_no_inclou_base_de_dades():
     assert 'name="Tutopy"' in spec
     assert "seguiment.db" not in spec
     assert "console=False" in spec
+
+
+def test_spec_genera_un_bundle_app_a_macos():
+    spec = (ROOT / "tutopy.spec").read_text(encoding="utf-8")
+    assert 'sys.platform == "darwin"' in spec
+    assert "BUNDLE(" in spec
+    assert 'name="Tutopy.app"' in spec
+
+
+def test_release_workflow_empaqueta_el_bundle_app_a_macos():
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert "source: dist/Tutopy.app" in workflow
 
 
 def test_spec_inclou_icona_i_recursos_visuals():
@@ -172,6 +188,24 @@ def test_stage_release_copia_l_executable_windows_sense_modificar(tmp_path):
         tmp_path, "Tutopy.exe", "Tutopy-Windows-x86_64.exe"
     )
     assert destination.read_bytes() == b"binari fictici"
+
+
+def test_stage_release_comprimeix_el_bundle_app_de_macos(tmp_path):
+    bundle = tmp_path / "Tutopy.app"
+    binary = bundle / "Contents/MacOS/Tutopy"
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b"binari fictici")
+    binary.chmod(binary.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    _run_stage_release_script(tmp_path, "Tutopy.app", "Tutopy-macOS-arm64.tar.gz")
+
+    destination = tmp_path / "release" / "Tutopy-macOS-arm64.tar.gz"
+    assert destination.is_file()
+    with tarfile.open(destination) as archive:
+        names = archive.getnames()
+        assert "Tutopy.app" in names
+        member = archive.getmember("Tutopy.app/Contents/MacOS/Tutopy")
+        assert member.mode & stat.S_IXUSR
 
 
 def test_configuracio_sonar_separa_fonts_tests_i_importa_cobertura():

@@ -49,11 +49,11 @@ jobs:
             filename: Tutopy-Linux-x86_64.tar.gz
             artifact: tutopy-linux-x86_64
           - os: macos-15-intel
-            source: dist/Tutopy
+            source: dist/Tutopy.app
             filename: Tutopy-macOS-x86_64.tar.gz
             artifact: tutopy-macos-x86_64
           - os: macos-15
-            source: dist/Tutopy
+            source: dist/Tutopy.app
             filename: Tutopy-macOS-arm64.tar.gz
             artifact: tutopy-macos-arm64
     runs-on: ${{ matrix.os }}

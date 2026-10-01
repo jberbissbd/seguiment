@@ -47,3 +47,13 @@ exe = EXE(
     entitlements_file=None,
     icon=icon_path,
 )
+
+# Sense bundle `.app`, el Finder obre l'executable Mach-O despullat dins
+# d'una finestra de Terminal en lloc d'arrencar-lo com una app de finestra.
+if sys.platform == "darwin":
+    app = BUNDLE(
+        exe,
+        name="Tutopy.app",
+        icon=icon_path,
+        bundle_identifier="io.github.jberbissbd.Tutopy",
+    )

@@ -148,17 +148,13 @@ Pots consultar-lo des del menú d'Apple, a **Quant a aquest Mac**.
 
 1. Descarrega l'arxiu corresponent.
 2. Descomprimeix-lo (doble clic, o des del Terminal): el fitxer conté
-   l'executable `Tutopy`, ja marcat com a executable.
-3. Inicia'l des del Terminal, a la carpeta on l'has descomprimit:
+   l'aplicació `Tutopy.app`.
+3. Obre `Tutopy.app` amb doble clic, com qualsevol altra aplicació.
 
-```bash
-./Tutopy
-```
-
-macOS pot bloquejar la primera execució perquè el binari encara no està signat
-ni notaritzat. Si l'has obtingut des de la pàgina oficial, pots autoritzar-lo a
-**Configuració del Sistema → Privacitat i seguretat** després del primer intent
-d'obertura.
+macOS pot bloquejar la primera execució perquè l'aplicació encara no està
+signada ni notaritzada. Si l'has obtinguda des de la pàgina oficial, pots
+autoritzar-la a **Configuració del Sistema → Privacitat i seguretat** després
+del primer intent d'obertura.
 
 ## Dades i actualitzacions
 
