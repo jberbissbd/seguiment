@@ -144,7 +144,9 @@ class SpreadsheetReportService:
             self._set_text(cell, header)
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill("solid", fgColor="2B73B7")
-            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
 
         term_column = 1 if include_terms else None
         group_column = 2 if include_terms else 1

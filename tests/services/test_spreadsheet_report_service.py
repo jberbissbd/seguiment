@@ -60,6 +60,11 @@ def test_exporta_full_per_curs_amb_categories_i_grup_historic(db, tmp_path):
     assert [sheet.cell(3, column).value for column in range(1, 6)] == [
         "Trimestre", "Grup", "Acadèmic", "Família", "Conducta"
     ]
+    # Amb el text ajustat, Excel adapta automàticament l'alçada de la fila
+    # de capçaleres a noms de categoria llargs.
+    assert all(
+        sheet.cell(3, column).alignment.wrap_text for column in range(1, 6)
+    )
     assert sheet["A4"].value == "1r"
     assert sheet["B4"].value == "4t A"
     assert sheet["D4"].value == "15/09/2025 - Entrevista inicial"

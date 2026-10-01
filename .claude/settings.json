@@ -16,7 +16,8 @@
       "Bash(QT_QPA_PLATFORM=offscreen python -m pytest /tmp/test_bg.py -q)",
       "Bash(time QT_QPA_PLATFORM=offscreen python -m pytest /tmp/test_bg3.py -q)",
       "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/ui/test_update_available_dialog.py tests/ui/test_data_management.py -q)",
-      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/architecture -q)"
+      "Bash(QT_QPA_PLATFORM=offscreen python -m pytest tests/architecture -q)",
+      "Bash(python -m ruff check tutopy/services/spreadsheet_report_service.py)"
     ]
   }
 }
