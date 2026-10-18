@@ -29,6 +29,7 @@ Pipfile.lock
 /tutopy/services/__pycache__
 .pytest_cache
 tutopy.egg-info
+tutopy/_frozen_version.py
 tests/__pycache__
 tests/models/__pycache__/
 tests/entities/__pycache__/

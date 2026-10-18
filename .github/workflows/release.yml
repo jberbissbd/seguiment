@@ -66,6 +66,8 @@ jobs:
           cache-dependency-path: requirements-build.lock
       - name: Install build dependencies
         run: python -m pip install --require-hashes -r requirements-build.lock
+      - name: Embed version for packaged build
+        run: python -c "from scripts.project_version import read_project_version as v; open('tutopy/_frozen_version.py', 'w').write(f'__version__ = {v()!r}\n')"
       - name: Build one-file executable
         run: pyinstaller --clean --noconfirm tutopy.spec
       - name: Stage release artifact
