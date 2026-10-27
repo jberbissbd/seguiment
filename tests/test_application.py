@@ -72,7 +72,8 @@ def test_controller_container_inicia_nomes_controladors_visibles():
         main=controller("main"), students=controller("students"),
         notes=controller("notes"), categories=controller("categories"),
         student_related=controller("related"),
-        data_management=controller("data"), reports=controller("reports"),
+        data_management=controller("data"), classroom_layout=controller("classroom"),
+        reports=controller("reports"),
         statistics=controller("statistics"), updates=controller("updates"),
     )
 

@@ -22,6 +22,7 @@ from tutopy.ui.widgets.student_list import StudentList
 from tutopy.ui.widgets.crud_views import CrudListView
 from tutopy.ui.widgets.data_tools import DataToolsView
 from tutopy.ui.widgets.statistics_view import StatisticsView
+from tutopy.ui.widgets.classroom_layout_view import ClassroomLayoutView
 from tutopy.ui.resources import application_icon
 
 
@@ -56,8 +57,12 @@ class MainWindow(QMainWindow):
         self.category_view = CrudListView("Nova categoria")
         self.data_tools = DataToolsView()
         self.statistics_view = StatisticsView()
+        self.classroom_layout_view = ClassroomLayoutView()
         self._pages = {
             "students": self._create_students_page(),
+            "classroom": self._create_management_page(
+                "Distribució d'aula", self.classroom_layout_view
+            ),
             "statistics": self._create_statistics_page(),
             "configuration": self._create_configuration_page(),
             "data": self._create_management_page("Gestió de dades", self.data_tools),

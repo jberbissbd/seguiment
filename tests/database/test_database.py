@@ -11,6 +11,7 @@ from tutopy.models.messaging import (
     StudentDocument, StudentDocumentNew,
     StudentPhoto,
 )
+from tutopy.models.classroom_layout import CellType, ClassroomLayoutNew, LayoutCell
 from tutopy.database.database import Database
 
 
@@ -96,6 +97,18 @@ class TestCreationDatabaseTables:
     def test_creacio_taula_student_photos(self, db):
         """Comprova que s'ha creat la taula student_photos"""
         nom_taula = 'student_photos'
+        instruccio = f"SELECT count(name) FROM sqlite_master WHERE type='table' AND name='{nom_taula}'"
+        assert db.conn.execute(instruccio).fetchone()[0] == 1
+
+    def test_creacio_taula_classroom_layouts(self, db):
+        """Comprova que s'ha creat la taula classroom_layouts"""
+        nom_taula = 'classroom_layouts'
+        instruccio = f"SELECT count(name) FROM sqlite_master WHERE type='table' AND name='{nom_taula}'"
+        assert db.conn.execute(instruccio).fetchone()[0] == 1
+
+    def test_creacio_taula_classroom_layout_cells(self, db):
+        """Comprova que s'ha creat la taula classroom_layout_cells"""
+        nom_taula = 'classroom_layout_cells'
         instruccio = f"SELECT count(name) FROM sqlite_master WHERE type='table' AND name='{nom_taula}'"
         assert db.conn.execute(instruccio).fetchone()[0] == 1
 
@@ -723,6 +736,121 @@ class TestPhotoOperations:
         db.photos.set(StudentPhoto(alumne.id, "foto.png", "a.png", "/path/foto.png"))
         db.students.delete(alumne.id)
         assert db.photos.get_by_student(alumne.id) is None
+
+
+class TestClassroomLayoutOperations:
+    """Tests per operacions amb les distribucions de taules d'aula"""
+
+    def test_create_i_get_by_id(self, db):
+        """Verifica la creació d'una distribució"""
+        layout = db.classroom_layouts.create(
+            ClassroomLayoutNew("4t A", "1r trimestre", 3, 4), "2026-01-10",
+        )
+        assert layout.id is not None
+        assert layout.group_name == "4t A"
+        assert layout.rows == 3 and layout.columns == 4
+        assert layout.teacher_mode == "strip"
+        assert layout.is_active is False
+        assert db.classroom_layouts.get_by_id(layout.id) == layout
+
+    def test_get_by_group(self, db):
+        """Verifica que get_by_group només retorna les distribucions del grup"""
+        db.classroom_layouts.create(ClassroomLayoutNew("4t A", "A1", 3, 4), "2026-01-10")
+        db.classroom_layouts.create(ClassroomLayoutNew("4t B", "B1", 3, 4), "2026-01-10")
+        results = db.classroom_layouts.get_by_group("4t A")
+        assert len(results) == 1
+        assert results[0].name == "A1"
+
+    def test_update_actualitza_metadades(self, db):
+        """Verifica l'actualització de les metadades d'una distribució"""
+        layout = db.classroom_layouts.create(
+            ClassroomLayoutNew("4t A", "A1", 3, 4), "2026-01-10",
+        )
+        from dataclasses import replace
+        updated = replace(layout, name="A1 revisada", rows=5, columns=5)
+        db.classroom_layouts.update(updated, "2026-02-01")
+        reloaded = db.classroom_layouts.get_by_id(layout.id)
+        assert reloaded.name == "A1 revisada"
+        assert reloaded.rows == 5 and reloaded.columns == 5
+        assert reloaded.updated_at == "2026-02-01"
+
+    def test_delete(self, db):
+        """Verifica l'eliminació d'una distribució"""
+        layout = db.classroom_layouts.create(
+            ClassroomLayoutNew("4t A", "A1", 3, 4), "2026-01-10",
+        )
+        db.classroom_layouts.delete(layout.id)
+        assert db.classroom_layouts.get_by_id(layout.id) is None
+
+    def test_set_active_desmarca_l_anterior(self, db):
+        """Verifica que set_active només deixa una distribució activa per grup"""
+        first = db.classroom_layouts.create(ClassroomLayoutNew("4t A", "A1", 3, 4), "2026-01-10")
+        second = db.classroom_layouts.create(ClassroomLayoutNew("4t A", "A2", 3, 4), "2026-01-10")
+        db.classroom_layouts.set_active(first.id, "4t A")
+        db.classroom_layouts.set_active(second.id, "4t A")
+        assert db.classroom_layouts.get_active("4t A").id == second.id
+        assert db.classroom_layouts.get_by_id(first.id).is_active is False
+
+    def test_replace_cells_substitueix_totes_les_cel_les(self, db):
+        """Verifica que replace_cells esborra i torna a inserir les cel·les"""
+        layout = db.classroom_layouts.create(
+            ClassroomLayoutNew("4t A", "A1", 2, 2), "2026-01-10",
+        )
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        db.classroom_layouts.replace_cells(layout.id, [
+            LayoutCell(0, 0, CellType.SEAT, None, alumne.id),
+            LayoutCell(0, 1, CellType.AISLE),
+        ])
+        cells = db.classroom_layouts.get_cells(layout.id)
+        assert len(cells) == 2
+        by_position = {(cell.row, cell.column): cell for cell in cells}
+        assert by_position[(0, 0)].student_id == alumne.id
+        assert by_position[(0, 1)].cell_type == CellType.AISLE
+
+        db.classroom_layouts.replace_cells(layout.id, [
+            LayoutCell(1, 1, CellType.TEACHER),
+        ])
+        cells = db.classroom_layouts.get_cells(layout.id)
+        assert len(cells) == 1
+        assert cells[0].row == 1 and cells[0].column == 1
+
+    def test_delete_cascades_cel_les(self, db):
+        """Verifica que l'eliminació d'una distribució esborra les seves cel·les"""
+        layout = db.classroom_layouts.create(
+            ClassroomLayoutNew("4t A", "A1", 2, 2), "2026-01-10",
+        )
+        db.classroom_layouts.replace_cells(layout.id, [LayoutCell(0, 0, CellType.SEAT)])
+        db.classroom_layouts.delete(layout.id)
+        assert db.conn.execute(
+            "SELECT count(*) FROM classroom_layout_cells WHERE layout_id = ?", (layout.id,),
+        ).fetchone()[0] == 0
+
+    def test_cella_oblida_l_alumne_en_eliminar_lo(self, db):
+        """Verifica que eliminar un alumne buida la seva cel·la (SET NULL)"""
+        layout = db.classroom_layouts.create(
+            ClassroomLayoutNew("4t A", "A1", 2, 2), "2026-01-10",
+        )
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        db.classroom_layouts.replace_cells(
+            layout.id, [LayoutCell(0, 0, CellType.SEAT, None, alumne.id)],
+        )
+        db.students.delete(alumne.id)
+        cells = db.classroom_layouts.get_cells(layout.id)
+        assert cells[0].student_id is None
+
+    def test_index_actiu_unic_rebutja_dues_actives_pel_mateix_grup(self, db):
+        """Verifica que l'índex únic impedeix dues distribucions actives pel mateix grup"""
+        import sqlite3
+        first = db.classroom_layouts.create(ClassroomLayoutNew("4t A", "A1", 3, 4), "2026-01-10")
+        second = db.classroom_layouts.create(ClassroomLayoutNew("4t A", "A2", 3, 4), "2026-01-10")
+        db.conn.execute(
+            "UPDATE classroom_layouts SET is_active = 1 WHERE id = ?", (first.id,),
+        )
+        db.conn.commit()
+        with pytest.raises(sqlite3.IntegrityError):
+            db.conn.execute(
+                "UPDATE classroom_layouts SET is_active = 1 WHERE id = ?", (second.id,),
+            )
 
 
 class TestEdgeCases:

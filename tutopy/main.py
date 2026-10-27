@@ -19,6 +19,7 @@ from tutopy.controllers.note_controller import NoteController
 from tutopy.controllers.catalog_controller import CategoryController
 from tutopy.controllers.student_related_controller import StudentRelatedController
 from tutopy.controllers.data_management_controller import DataManagementController
+from tutopy.controllers.classroom_layout_controller import ClassroomLayoutController
 from tutopy.controllers.report_controller import ReportController
 from tutopy.controllers.statistics_controller import StatisticsController
 from tutopy.controllers.update_controller import UpdateController
@@ -39,6 +40,7 @@ class ControllerContainer:
     categories: CategoryController
     student_related: StudentRelatedController
     data_management: DataManagementController
+    classroom_layout: ClassroomLayoutController
     reports: ReportController
     statistics: StatisticsController
     updates: UpdateController
@@ -120,6 +122,9 @@ def create_controllers(
         services.pdf_photo_import,
         on_changed=refresh_after_data_change,
     )
+    classroom_layout_controller = ClassroomLayoutController(
+        window, services.classroom_layouts, services.students, services.photos,
+    )
     statistics_controller = StatisticsController(
         window,
         services.statistics,
@@ -139,6 +144,7 @@ def create_controllers(
         categories=category_controller,
         student_related=related_controller,
         data_management=data_controller,
+        classroom_layout=classroom_layout_controller,
         reports=report_controller,
         statistics=statistics_controller,
         updates=update_controller,

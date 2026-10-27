@@ -6,7 +6,8 @@ class DataManagementDAO:
 
     TABLES = (
         "notes", "contacts", "student_annotations", "student_documents",
-        "student_photos", "student_group_history", "term_configurations",
+        "student_photos", "classroom_layout_cells", "classroom_layouts",
+        "student_group_history", "term_configurations",
         "category_export_order", "students", "categories", "academic_courses",
     )
 
