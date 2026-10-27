@@ -364,6 +364,27 @@ class StudentDocumentNew:
 
 
 @dataclass(frozen=True, slots=True)
+class StudentPhoto:
+    """Foto de perfil d'un alumne (com a màxim una per alumne).
+
+    Attributes:
+        student_id: Referència a l'alumne; és la clau primària, ja que la
+            relació és d'un a un.
+        uuid_filename: Nom del fitxer al disc (UUID, evita col·lisions).
+        original_filename: Nom original del fitxer tal com es va pujar.
+        file_path: Ruta on es guarda el fitxer gestionat.
+    """
+    student_id: int
+    uuid_filename: str
+    original_filename: str
+    file_path: str
+
+    def __post_init__(self):
+        """Valida els tipus dels camps just després de la inicialització."""
+        _validate(self)
+
+
+@dataclass(frozen=True, slots=True)
 class StudentGroupHistory:
     """Històric de grups d'un alumne.
     

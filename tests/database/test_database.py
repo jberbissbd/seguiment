@@ -8,7 +8,8 @@ from tutopy.models.messaging import (
     Note, NoteNew, NoteRecord, 
     ContactNew, Contact, 
     StudentAnnotation, StudentAnnotationNew,
-    StudentDocument, StudentDocumentNew
+    StudentDocument, StudentDocumentNew,
+    StudentPhoto,
 )
 from tutopy.database.database import Database
 
@@ -89,6 +90,12 @@ class TestCreationDatabaseTables:
     def test_creacio_taula_student_documents(self, db):
         """Comprova que s'ha creat la taula student_documents"""
         nom_taula = 'student_documents'
+        instruccio = f"SELECT count(name) FROM sqlite_master WHERE type='table' AND name='{nom_taula}'"
+        assert db.conn.execute(instruccio).fetchone()[0] == 1
+
+    def test_creacio_taula_student_photos(self, db):
+        """Comprova que s'ha creat la taula student_photos"""
+        nom_taula = 'student_photos'
         instruccio = f"SELECT count(name) FROM sqlite_master WHERE type='table' AND name='{nom_taula}'"
         assert db.conn.execute(instruccio).fetchone()[0] == 1
 
@@ -665,6 +672,57 @@ class TestDocumentOperations:
         
         # Verificar que el document també s'ha eliminat
         assert db.documents.get_by_id(doc.id) is None
+
+
+class TestPhotoOperations:
+    """Tests per operacions amb la foto de perfil dels alumnes"""
+
+    def test_get_by_student_sense_foto(self, db):
+        """Verifica que get_by_student retorna None si l'alumne no té foto"""
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        assert db.photos.get_by_student(alumne.id) is None
+
+    def test_set_crea_la_foto(self, db):
+        """Verifica que set() crea la foto d'un alumne"""
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        photo = db.photos.set(StudentPhoto(
+            student_id=alumne.id, uuid_filename="foto.png",
+            original_filename="original.png", file_path="/path/foto.png",
+        ))
+        assert photo.student_id == alumne.id
+        retrieved = db.photos.get_by_student(alumne.id)
+        assert retrieved.file_path == "/path/foto.png"
+
+    def test_set_substitueix_la_foto_existent(self, db):
+        """Verifica que set() sobre un alumne amb foto la substitueix (upsert)"""
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        db.photos.set(StudentPhoto(alumne.id, "vella.png", "a.png", "/path/vella.png"))
+        db.photos.set(StudentPhoto(alumne.id, "nova.png", "b.png", "/path/nova.png"))
+        assert len(db.photos.get_all()) == 1
+        assert db.photos.get_by_student(alumne.id).file_path == "/path/nova.png"
+
+    def test_delete(self, db):
+        """Verifica l'eliminació de la foto d'un alumne"""
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        db.photos.set(StudentPhoto(alumne.id, "foto.png", "a.png", "/path/foto.png"))
+        db.photos.delete(alumne.id)
+        assert db.photos.get_by_student(alumne.id) is None
+
+    def test_get_by_students_inclou_alumnes_sense_foto(self, db):
+        """Verifica que get_by_students retorna None per als alumnes sense foto"""
+        amb_foto = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        sense_foto = db.students.create(StudentNew("Laia", "Serra", "4t A"))
+        db.photos.set(StudentPhoto(amb_foto.id, "foto.png", "a.png", "/path/foto.png"))
+        result = db.photos.get_by_students([amb_foto.id, sense_foto.id])
+        assert result[amb_foto.id].file_path == "/path/foto.png"
+        assert result[sense_foto.id] is None
+
+    def test_delete_photo_cascades(self, db):
+        """Verifica que l'eliminació d'un alumne elimina la seva foto (CASCADE)"""
+        alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
+        db.photos.set(StudentPhoto(alumne.id, "foto.png", "a.png", "/path/foto.png"))
+        db.students.delete(alumne.id)
+        assert db.photos.get_by_student(alumne.id) is None
 
 
 class TestEdgeCases:

@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 
 from PySide6.QtCore import QAbstractListModel, QModelIndex, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QListView, QStyle, QStyledItemDelegate, QStyleOptionViewItem, QToolButton,
 )
@@ -11,19 +11,24 @@ from PySide6.QtWidgets import (
 from tutopy.models.messaging import Student
 from tutopy.ui.resources import icon
 from tutopy.ui.styles import TEXT_PRIMARY, TEXT_SECONDARY
-from tutopy.ui.widgets.avatar import avatar_colors, initials
+from tutopy.ui.widgets.avatar import avatar_colors, circular_pixmap, initials
+
+AVATAR_SIZE = 36
 
 
 class StudentListModel(QAbstractListModel):
     """Desa els alumnes i permet localitzar-los per identificador."""
 
     StudentRole = Qt.ItemDataRole.UserRole + 1
+    PhotoRole = Qt.ItemDataRole.UserRole + 2
 
     def __init__(self, parent=None):
         """Inicialitza un model buit."""
         super().__init__(parent)
         self._students: tuple[Student, ...] = ()
         self._rows: dict[int, int] = {}
+        self._photos: dict[int, str | None] = {}
+        self._pixmap_cache: dict[int, tuple[str, QPixmap]] = {}
 
     def rowCount(self, parent=None) -> int:
         """Retorna el nombre d'alumnes del nivell arrel."""
@@ -41,6 +46,8 @@ class StudentListModel(QAbstractListModel):
             return student.id
         if role == self.StudentRole:
             return student
+        if role == self.PhotoRole:
+            return self._photos.get(student.id)
         return None
 
     def set_students(self, students: Sequence[Student]) -> None:
@@ -58,6 +65,42 @@ class StudentListModel(QAbstractListModel):
         self._students = students
         self._rows = {student.id: row for row, student in enumerate(students)}
         self.endResetModel()
+
+    def set_photos(self, photos: dict[int, str | None]) -> None:
+        """Actualitza les rutes de foto conegudes i repinta només les files canviades.
+
+        Args:
+            photos: Ruta (o `None`) per identificador d'alumne; només cal
+                incloure les files visibles.
+        """
+        changed_ids = [
+            student_id for student_id, path in photos.items()
+            if self._photos.get(student_id) != path
+        ]
+        self._photos.update(photos)
+        for student_id in changed_ids:
+            self._pixmap_cache.pop(student_id, None)
+            row = self._rows.get(student_id)
+            if row is not None:
+                index = self.index(row)
+                self.dataChanged.emit(index, index, [self.PhotoRole])
+
+    def photo_pixmap(self, student_id: int) -> QPixmap | None:
+        """Retorna el pixmap circular ja decodificat de la foto d'un alumne.
+
+        Memoritza el resultat per evitar tornar a decodificar la imatge a
+        cada repintat de la fila durant l'scroll.
+        """
+        path = self._photos.get(student_id)
+        if not path:
+            return None
+        cached = self._pixmap_cache.get(student_id)
+        if cached is not None and cached[0] == path:
+            return cached[1]
+        pixmap = circular_pixmap(path, AVATAR_SIZE)
+        if pixmap is not None:
+            self._pixmap_cache[student_id] = (path, pixmap)
+        return pixmap
 
     def student_index(self, student_id: int | None) -> QModelIndex:
         """Retorna l'índex de l'alumne, o un índex invàlid si no hi és."""
@@ -84,16 +127,29 @@ class StudentDelegate(QStyledItemDelegate):
         painter.save()
         painter.setClipRect(option.rect)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        avatar = QRect(option.rect.left() + 8, option.rect.center().y() - 18, 36, 36)
-        background, foreground = avatar_colors(student.id)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(background))
-        painter.drawEllipse(avatar)
+        avatar = QRect(
+            option.rect.left() + 8, option.rect.center().y() - AVATAR_SIZE // 2,
+            AVATAR_SIZE, AVATAR_SIZE,
+        )
+        pixmap = index.model().photo_pixmap(student.id)
+        if pixmap is not None:
+            painter.drawPixmap(avatar, pixmap)
+        else:
+            background, foreground = avatar_colors(student.id)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(background))
+            painter.drawEllipse(avatar)
+            font = QFont(option.font)
+            font.setBold(True)
+            painter.setFont(font)
+            painter.setPen(QColor(foreground))
+            painter.drawText(
+                avatar, Qt.AlignmentFlag.AlignCenter,
+                initials(student.name, student.surnames),
+            )
         font = QFont(option.font)
         font.setBold(True)
         painter.setFont(font)
-        painter.setPen(QColor(foreground))
-        painter.drawText(avatar, Qt.AlignmentFlag.AlignCenter, initials(student.name, student.surnames))
         text_rect = option.rect.adjusted(54, 6, -50, -6)
         text_rect.setHeight(text_rect.height() // 2)
         painter.setPen(QColor(TEXT_PRIMARY))

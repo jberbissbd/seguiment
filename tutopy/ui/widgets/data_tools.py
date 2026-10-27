@@ -27,6 +27,7 @@ class DataToolsView(QWidget):
 
     template_requested = Signal()
     import_requested = Signal()
+    photo_import_requested = Signal()
     clear_requested = Signal()
     transfer_student_requested = Signal()
     transfer_all_requested = Signal()
@@ -58,11 +59,15 @@ class DataToolsView(QWidget):
         self.template_button = QPushButton("Descarregar plantilla XLSX")
         self.template_button.setObjectName("secondaryButton")
         self.import_button = QPushButton("Importar full de càlcul")
+        self.photo_import_button = QPushButton("Importar fotos des de PDF")
         set_button_icon(self.template_button, "template")
         set_button_icon(self.import_button, "import")
+        set_button_icon(self.photo_import_button, "import")
         self.import_button.setObjectName("primaryButton")
+        self.photo_import_button.setObjectName("secondaryButton")
         import_layout.addWidget(self.template_button)
         import_layout.addWidget(self.import_button)
+        import_layout.addWidget(self.photo_import_button)
 
         transfer_panel = QFrame()
         transfer_panel.setObjectName("panel")
@@ -205,7 +210,8 @@ class DataToolsView(QWidget):
         danger_layout.addWidget(self.clear_button)
 
         action_buttons = (
-            self.template_button, self.import_button, self.category_order_button,
+            self.template_button, self.import_button, self.photo_import_button,
+            self.category_order_button,
             self.report_logo_button, self.report_logo_remove_button,
             self.term_create_button, self.term_edit_button, self.term_delete_button,
             self.clear_button,
@@ -224,6 +230,7 @@ class DataToolsView(QWidget):
         layout.addStretch()
         self.template_button.clicked.connect(self.template_requested)
         self.import_button.clicked.connect(self.import_requested)
+        self.photo_import_button.clicked.connect(self.photo_import_requested)
         self.clear_button.clicked.connect(self.clear_requested)
         self.transfer_student_button.clicked.connect(self.transfer_student_requested)
         self.transfer_all_button.clicked.connect(self.transfer_all_requested)

@@ -15,9 +15,11 @@ from tutopy.services.annotation_service import AnnotationService
 from tutopy.services.category_service import CategoryService
 from tutopy.services.contact_service import ContactService
 from tutopy.services.document_service import DocumentService
+from tutopy.services.photo_service import PhotoService
 from tutopy.services.note_service import NoteService
 from tutopy.services.student_service import StudentService
 from tutopy.services.bulk_import_service import BulkImportService
+from tutopy.services.pdf_photo_import_service import PdfPhotoImportService
 from tutopy.services.data_management_service import DataManagementService
 from tutopy.services.report_configuration_service import ReportConfigurationService
 from tutopy.services.spreadsheet_report_service import SpreadsheetReportService
@@ -44,7 +46,9 @@ class ServiceContainer:
     annotations: AnnotationService
     contacts: ContactService
     documents: DocumentService
+    photos: PhotoService
     bulk_import: BulkImportService
+    pdf_photo_import: PdfPhotoImportService
     data_management: DataManagementService
     report_configuration: ReportConfigurationService
     spreadsheet_reports: SpreadsheetReportService
@@ -120,6 +124,9 @@ def create_services(
         database.documents, database.students, database.academic_courses,
         storage_dir=storage_dir,
     )
+    photos = PhotoService(
+        database.photos, database.students, storage_dir=app_data_dir / "photos",
+    )
     container = ServiceContainer(
         students=students,
         notes=NoteService(
@@ -135,12 +142,15 @@ def create_services(
         annotations=AnnotationService(database.annotations, database.students),
         contacts=ContactService(database.contacts, database.students),
         documents=documents,
+        photos=photos,
         bulk_import=BulkImportService(
             students, categories, database.transaction,
         ),
+        pdf_photo_import=PdfPhotoImportService(students),
         data_management=DataManagementService(
             database.data_management, database.documents,
             database.transaction, storage_dir,
+            photo_dao=database.photos, photos_storage_dir=app_data_dir / "photos",
         ),
         report_configuration=report_configuration,
         spreadsheet_reports=spreadsheet_reports,

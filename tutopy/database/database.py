@@ -13,6 +13,7 @@ from .daos import (
     ContactDAO,
     AnnotationDAO,
     DocumentDAO,
+    PhotoDAO,
     StudentGroupHistoryDAO,
     DataManagementDAO,
     ReportConfigurationDAO,
@@ -112,7 +113,7 @@ class Database:
     ``.notes``, ``.contacts``, ``.annotations``, ``.documents``).
     """
 
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
 
     def __init__(self, path: str = None):
         """Prepara el gestor amb la ruta indicada, sense obrir encara la connexió."""
@@ -125,6 +126,7 @@ class Database:
         self.contacts: ContactDAO = None
         self.annotations: AnnotationDAO = None
         self.documents: DocumentDAO = None
+        self.photos: PhotoDAO = None
         self.student_group_history: StudentGroupHistoryDAO = None
         self.data_management: DataManagementDAO = None
         self.report_configuration: ReportConfigurationDAO = None
@@ -175,6 +177,7 @@ class Database:
         self.contacts = ContactDAO(self.conn)
         self.annotations = AnnotationDAO(self.conn)
         self.documents = DocumentDAO(self.conn)
+        self.photos = PhotoDAO(self.conn)
         self.student_group_history = StudentGroupHistoryDAO(self.conn)
         self.data_management = DataManagementDAO(self.conn)
         self.report_configuration = ReportConfigurationDAO(self.conn)
@@ -193,6 +196,8 @@ class Database:
             self._create_schema_v1()
         if current_version < 2:
             self._create_schema_v2()
+        if current_version < 3:
+            self._create_schema_v3()
 
     def _create_schema_v1(self) -> None:
         """Crea atòmicament la versió inicial de l'esquema."""
@@ -322,5 +327,20 @@ class Database:
                 value TEXT NOT NULL
             );
             PRAGMA user_version = 2;
+            COMMIT;
+        """)
+
+    def _create_schema_v3(self) -> None:
+        """Afegeix la taula de la foto de perfil (una per alumne, opcional)."""
+        self.conn.executescript("""
+            BEGIN IMMEDIATE;
+            CREATE TABLE IF NOT EXISTS student_photos (
+                student_id INTEGER PRIMARY KEY,
+                uuid_filename TEXT NOT NULL,
+                original_filename TEXT NOT NULL DEFAULT '',
+                file_path TEXT NOT NULL,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+            );
+            PRAGMA user_version = 3;
             COMMIT;
         """)

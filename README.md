@@ -210,6 +210,26 @@ i mantenibilitat es documenten a
 El format d'intercanvi entre instàncies i les seves garanties es descriu a
 [docs/TRANSFER.md](docs/TRANSFER.md).
 
+### Dades de desenvolupament aïllades
+
+Per provar canvis sense cap risc d'alterar la instal·lació real d'aquesta
+mateixa màquina, es pot executar l'aplicació amb una base de dades
+completament separada definint `TUTOPY_DATA_DIR`:
+
+```bash
+TUTOPY_DATA_DIR=/ruta/dev-data .venv/bin/python scripts/seed_dev_data.py
+TUTOPY_DATA_DIR=/ruta/dev-data .venv/bin/python -m tutopy.main
+```
+
+El primer pas crea alumnes, grups, categories i notes fictícies; el segon
+executa l'aplicació sobre aquestes mateixes dades. Sense `TUTOPY_DATA_DIR`,
+l'aplicació sempre fa servir les dades reals existents, intactes.
+
+**No obris alhora la instal·lació real i la còpia de desenvolupament**: dues
+instàncies de l'aplicació obertes a la vegada poden provocar un error de
+registre amb el portal de l'escriptori (i, de manera intermitent, un
+tancament inesperat). Tanca'n una abans d'obrir l'altra.
+
 ### Documentació generada
 
 El lloc de documentació (guies + referència d'API generada a partir dels

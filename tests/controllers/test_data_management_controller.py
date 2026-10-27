@@ -399,3 +399,106 @@ def test_transferencia_valida_confirmacio_i_mostra_motiu_error(
     monkeypatch.setattr(QInputDialog, "getText", lambda *args: next(passwords))
     controller.export_all_students()
     assert "Permís denegat" in window.errors[0]
+
+
+def _pdf_photo_preview(entries=(), missing=(), temp_dir="/tmp/fake-pdf-photos"):
+    return SimpleNamespace(entries=entries, missing_photos=missing, temp_dir=temp_dir)
+
+
+def _pdf_photo_entry(num, image_path="/tmp/fake.jpg", matched_student_id=None):
+    caption = SimpleNamespace(num=num, full_name=f"Alumne {num}")
+    return SimpleNamespace(
+        caption=caption, image_path=image_path, matched_student_id=matched_student_id
+    )
+
+
+def test_import_fotos_sense_servei_mostra_error(data_management_env, monkeypatch):
+    """Sense el servei de PDF configurat, no s'obre cap selector de fitxer."""
+    window, _, _, controller, changed, messages = data_management_env
+
+    def unexpected(*args):
+        pytest.fail("No s'ha d'obrir un selector sense servei de fotos")
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", unexpected)
+    controller.import_photos_from_pdf()
+    assert window.errors == ["La importació de fotos no està disponible."]
+    assert changed == messages == []
+
+
+def test_import_fotos_cancel_la_seleccio_no_fa_res(data_management_env, monkeypatch):
+    """Cancel·lar el selector de fitxer no crida el servei d'anàlisi."""
+    window, _, _, controller, changed, messages = data_management_env
+    controller.pdf_photo_import = Mock()
+    controller.photos = Mock()
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("", ""))
+    controller.import_photos_from_pdf()
+    controller.pdf_photo_import.parse.assert_not_called()
+    assert changed == messages == []
+
+
+def test_import_fotos_sense_entrades_mostra_error_i_neteja(data_management_env, monkeypatch):
+    """Un PDF sense cap fotografia aparellada avisa i neteja el directori temporal."""
+    window, _, _, controller, changed, messages = data_management_env
+    preview = _pdf_photo_preview()
+    controller.pdf_photo_import = Mock(parse=Mock(return_value=preview))
+    controller.photos = Mock()
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("orla.pdf", ""))
+    controller.import_photos_from_pdf()
+    assert window.errors == ["No s’ha trobat cap fotografia al PDF."]
+    controller.pdf_photo_import.cleanup.assert_called_once_with(preview)
+    assert changed == messages == []
+
+
+def test_import_fotos_dialeg_cancel_lat_no_aplica_res(data_management_env, monkeypatch):
+    """Cancel·lar el diàleg de revisió no desa cap foto, però sí neteja."""
+    window, _, _, controller, changed, messages = data_management_env
+    preview = _pdf_photo_preview(entries=(_pdf_photo_entry(1),))
+    controller.pdf_photo_import = Mock(parse=Mock(return_value=preview))
+    controller.photos = Mock()
+    controller.student_service = SimpleNamespace(get_all=lambda: [])
+    controller.pdf_photo_dialog = lambda *args: SimpleNamespace(
+        exec=lambda: QDialog.DialogCode.Rejected
+    )
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("orla.pdf", ""))
+    controller.import_photos_from_pdf()
+    controller.photos.set_photo.assert_not_called()
+    controller.pdf_photo_import.cleanup.assert_called_once_with(preview)
+    assert changed == messages == []
+
+
+def test_import_fotos_aplica_assignacions_i_resumeix(data_management_env, monkeypatch):
+    """Les files assignades es desen, les omeses es compten i els errors es recullen."""
+    window, _, _, controller, changed, messages = data_management_env
+    entries = (
+        _pdf_photo_entry(1, matched_student_id=11),
+        _pdf_photo_entry(2, matched_student_id=None),
+        _pdf_photo_entry(3, matched_student_id=13),
+    )
+    preview = _pdf_photo_preview(
+        entries=entries, missing=(SimpleNamespace(full_name="Sense Foto"),)
+    )
+    controller.pdf_photo_import = Mock(parse=Mock(return_value=preview))
+
+    def set_photo(student_id, image_path):
+        if student_id == 13:
+            raise ValidationError("fitxer no vàlid")
+
+    controller.photos = Mock(set_photo=Mock(side_effect=set_photo))
+    controller.student_service = SimpleNamespace(get_all=lambda: [])
+    assignments = {1: 11, 2: None, 3: 13}
+    controller.pdf_photo_dialog = lambda *args: SimpleNamespace(
+        exec=lambda: QDialog.DialogCode.Accepted,
+        assignments=lambda: assignments,
+    )
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("orla.pdf", ""))
+    controller.import_photos_from_pdf()
+
+    controller.photos.set_photo.assert_any_call(11, "/tmp/fake.jpg")
+    controller.photos.set_photo.assert_any_call(13, "/tmp/fake.jpg")
+    assert controller.photos.set_photo.call_count == 2
+    controller.pdf_photo_import.cleanup.assert_called_once_with(preview)
+    assert changed == [True]
+    assert "Fotos assignades: 1" in messages[0]
+    assert "Files omeses: 1" in messages[0]
+    assert "Alumnes sense fotografia al PDF: 1" in messages[0]
+    assert "fitxer no vàlid" in messages[0]

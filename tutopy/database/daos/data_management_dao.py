@@ -6,8 +6,8 @@ class DataManagementDAO:
 
     TABLES = (
         "notes", "contacts", "student_annotations", "student_documents",
-        "student_group_history", "term_configurations", "category_export_order",
-        "students", "categories", "academic_courses",
+        "student_photos", "student_group_history", "term_configurations",
+        "category_export_order", "students", "categories", "academic_courses",
     )
 
     def __init__(self, conn):
