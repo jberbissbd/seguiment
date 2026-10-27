@@ -7,10 +7,11 @@ from PySide6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout, QWidget
 from tutopy.models.classroom_layout import CellType
 from tutopy.models.messaging import Student
 from tutopy.ui.widgets import classroom_layout_mime as mime
-from tutopy.ui.widgets.avatar import avatar_stylesheet, circular_pixmap, initials
+from tutopy.ui.widgets.avatar import avatar_colors, circular_pixmap
 
-CELL_SIZE = 64
-AVATAR_SIZE = 44
+CELL_WIDTH = 92
+CELL_HEIGHT = 80
+PHOTO_SIZE = 36
 
 CELL_TYPE_LABELS = {
     CellType.EMPTY: "",
@@ -21,6 +22,11 @@ CELL_TYPE_LABELS = {
 
 class ClassroomCellWidget(QFrame):
     """Una cel·la de la graella: seient (buit o amb alumne), passadís, buit o professor.
+
+    Els seients ocupats mostren el nom i els cognoms de l'alumne (i la seva
+    foto, si `show_photos` ho demana) — mai només les inicials, perquè
+    qualsevol que consulti la distribució (no només qui l'ha creada) pugui
+    identificar l'alumne sense haver de passar-hi el cursor per sobre.
 
     No conté cap lògica de negoci: només emet senyals quan l'usuari hi
     interactua; el controlador decideix com interpretar-les.
@@ -41,16 +47,22 @@ class ClassroomCellWidget(QFrame):
         self.row = row
         self.column = column
         self.setObjectName("classroomCell")
-        self.setFixedSize(CELL_SIZE, CELL_SIZE)
+        self.setFixedSize(CELL_WIDTH, CELL_HEIGHT)
         self.setAcceptDrops(True)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_menu)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(2, 2, 2, 2)
-        self.avatar_label = QLabel()
-        self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.avatar_label)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(2)
+        self.photo_label = QLabel()
+        self.photo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.photo_label.setFixedHeight(PHOTO_SIZE)
+        layout.addWidget(self.photo_label)
+        self.name_label = QLabel()
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_label.setWordWrap(True)
+        layout.addWidget(self.name_label, 1)
 
         self._cell_type = CellType.SEAT
         self._student: Student | None = None
@@ -66,25 +78,35 @@ class ClassroomCellWidget(QFrame):
             cell_type: Tipus de la cel·la.
             student: Alumne assignat, o `None` si la cel·la és buida.
             photo_path: Ruta de la foto de l'alumne, si en té.
-            show_photos: Si cal mostrar la foto en lloc de les inicials.
+            show_photos: Si cal mostrar també la foto, a sobre del nom.
         """
         self._cell_type = cell_type
         self._student = student
         self.setProperty("cellType", cell_type.value)
-        self.avatar_label.setPixmap(QPixmap())
-        self.avatar_label.setStyleSheet("")
+        self.photo_label.setPixmap(QPixmap())
+        self.photo_label.setVisible(False)
+        self.name_label.setStyleSheet("")
+        self.name_label.setText("")
+        self.setStyleSheet("")
         self.setToolTip("")
         if cell_type == CellType.SEAT and student is not None:
-            pixmap = circular_pixmap(photo_path, AVATAR_SIZE) if show_photos and photo_path else None
+            pixmap = circular_pixmap(photo_path, PHOTO_SIZE) if show_photos and photo_path else None
             if pixmap is not None:
-                self.avatar_label.setText("")
-                self.avatar_label.setPixmap(pixmap)
-            else:
-                self.avatar_label.setText(initials(student.name, student.surnames))
-                self.avatar_label.setStyleSheet(avatar_stylesheet(student.id, 18))
+                self.photo_label.setPixmap(pixmap)
+                self.photo_label.setVisible(True)
+            background, foreground = avatar_colors(student.id)
+            self.setStyleSheet(
+                f"QFrame#classroomCell {{ background-color: {background}; "
+                "border-radius: 6px; border: none; }"
+            )
+            self.name_label.setStyleSheet(
+                f"color: {foreground}; font-size: 10px; font-weight: 600; "
+                "background: transparent; border: none;"
+            )
+            self.name_label.setText(f"{student.name}\n{student.surnames}")
             self.setToolTip(student.full_name)
         else:
-            self.avatar_label.setText(CELL_TYPE_LABELS.get(cell_type, ""))
+            self.name_label.setText(CELL_TYPE_LABELS.get(cell_type, ""))
         self.style().unpolish(self)
         self.style().polish(self)
 

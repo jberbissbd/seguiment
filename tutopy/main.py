@@ -124,6 +124,7 @@ def create_controllers(
     )
     classroom_layout_controller = ClassroomLayoutController(
         window, services.classroom_layouts, services.students, services.photos,
+        services.preferences,
     )
     statistics_controller = StatisticsController(
         window,

@@ -172,6 +172,7 @@ class MainWindow(QMainWindow):
         category_panel.setMinimumHeight(240)
         content_layout.addWidget(category_panel)
         content_layout.addWidget(self.data_tools.report_panel)
+        content_layout.addWidget(self.classroom_layout_view.preferences_panel)
         content_layout.addWidget(self.data_tools.preferences_panel)
 
         scroll = QScrollArea()

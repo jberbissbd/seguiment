@@ -83,6 +83,44 @@ class ClassroomLayoutService:
             self.layout_dao.replace_cells(layout.id, list(grid.cells.values()))
         return self.layout_dao.get_by_id(layout.id)
 
+    def get_shape(self, layout_id: int) -> LayoutGrid:
+        """Retorna la forma (cel·les, sense alumnes) d'una distribució existent.
+
+        Útil per aplicar la disposició "Duplicar una existent" com a
+        plantilla sense crear encara cap registre nou (a diferència de
+        `duplicate`, que sí que en desa una còpia immediatament).
+        """
+        layout = self._require_layout(layout_id)
+        cells = self.layout_dao.get_cells(layout_id)
+        grid = LayoutGrid(layout.rows, layout.columns)
+        for cell in cells:
+            grid.cells[(cell.row, cell.column)] = dataclasses.replace(cell, student_id=None)
+        return grid
+
+    def duplicate(self, layout_id: int, new_name: str) -> ClassroomLayout:
+        """Crea una còpia de la forma d'una distribució, sense els alumnes assignats.
+
+        Útil com a punt de partida per retocar-la sense alterar l'original.
+        """
+        source = self._require_layout(layout_id)
+        new_name = self.validation_service.required_text(
+            new_name, "El nom de la distribució no pot estar buit."
+        )
+        source_cells = self.layout_dao.get_cells(layout_id)
+        with self.transaction_factory():
+            new_layout = self.layout_dao.create(
+                ClassroomLayoutNew(
+                    source.group_name, new_name, source.rows, source.columns,
+                    source.teacher_mode, source.teacher_position, source.show_photos,
+                ),
+                self._today(),
+            )
+            copied_cells = [
+                dataclasses.replace(cell, student_id=None) for cell in source_cells
+            ]
+            self.layout_dao.replace_cells(new_layout.id, copied_cells)
+        return self.layout_dao.get_by_id(new_layout.id)
+
     def set_active(self, layout_id: int) -> None:
         """Marca una distribució com l'activa del seu grup."""
         layout = self._require_layout(layout_id)

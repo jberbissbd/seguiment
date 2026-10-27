@@ -138,3 +138,122 @@ def test_place_teacher_canvia_el_mode_i_desplaca_alumnes(env):
     assert env.controller.teacher_mode == "grid"
     assert any(student.id == env.student_a.id for student in env.controller.pending)
     assert env.controller.grid.cells[(0, 0)].cell_type.value == "teacher"
+
+
+def _stub_message_box(monkeypatch, choice_text):
+    """Simula la resposta a un `QMessageBox` de tres botons triant-ne un pel text."""
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
+
+    def clicked_button(self):
+        if choice_text is None:
+            return None
+        return next(
+            (button for button in self.buttons() if button.text() == choice_text), None,
+        )
+    monkeypatch.setattr(QMessageBox, "clickedButton", clicked_button)
+
+
+def _template_dialog_factory(disposition, parameters, teacher_mode="strip",
+                              teacher_position="center", leftover_criterion="back",
+                              fill_order="rows", fill_random=False):
+    return lambda student_count, other_layouts, defaults, parent: SimpleNamespace(
+        exec=lambda: QDialog.DialogCode.Accepted,
+        values=lambda: {
+            "disposition": disposition, "parameters": parameters,
+            "teacher_mode": teacher_mode, "teacher_position": teacher_position,
+            "leftover_criterion": leftover_criterion, "fill_order": fill_order,
+            "fill_random": fill_random,
+        },
+    )
+
+
+def test_apply_template_sense_distribucio_mostra_error(env):
+    env.window.sidebar.section_changed.emit("classroom")
+    env.controller.apply_template()
+    assert env.window.errors == ["Selecciona o crea primer una distribució."]
+
+
+def test_apply_template_fresh_omple_alfabeticament(env):
+    env.window.sidebar.section_changed.emit("classroom")
+    env.controller.new_layout()
+    env.controller.template_dialog_factory = _template_dialog_factory(
+        "free", {"rows": 1, "columns": 2},
+    )
+    env.controller.apply_template()
+    assert env.controller.grid.rows == 1 and env.controller.grid.columns == 2
+    assert len(env.controller.pending) == 0
+    # alfabètic per cognoms: Bosch abans que Camps
+    assert env.controller.grid.find(env.student_a.id) == (0, 0)
+    assert env.controller.grid.find(env.student_b.id) == (0, 1)
+
+
+def test_apply_template_cancel_lar_dialeg_no_canvia_res(env):
+    env.window.sidebar.section_changed.emit("classroom")
+    env.controller.new_layout()
+
+    def cancelling_factory(student_count, other_layouts, defaults, parent):
+        return SimpleNamespace(exec=lambda: QDialog.DialogCode.Rejected, values=lambda: {})
+    env.controller.template_dialog_factory = cancelling_factory
+    original_grid = env.controller.grid
+    env.controller.apply_template()
+    assert env.controller.grid is original_grid
+
+
+def test_apply_template_amb_assignacions_demana_confirmacio(env, monkeypatch):
+    env.window.sidebar.section_changed.emit("classroom")
+    env.controller.new_layout()
+    env.controller.move_student(env.student_a.id, "pending", 0, 0)
+    env.controller.move_student(env.student_b.id, "pending", 0, 1)
+
+    _stub_message_box(monkeypatch, None)  # "Cancel·lar"
+    env.controller.template_dialog_factory = _template_dialog_factory(
+        "free", {"rows": 1, "columns": 2},
+    )
+    original_grid = env.controller.grid
+    env.controller.apply_template()
+    assert env.controller.grid is original_grid
+
+
+def test_apply_template_buidar_torna_tothom_a_pendents(env, monkeypatch):
+    env.window.sidebar.section_changed.emit("classroom")
+    env.controller.new_layout()
+    env.controller.move_student(env.student_a.id, "pending", 0, 0)
+    env.controller.move_student(env.student_b.id, "pending", 0, 1)
+
+    _stub_message_box(monkeypatch, "Buidar")
+    env.controller.template_dialog_factory = _template_dialog_factory(
+        "free", {"rows": 2, "columns": 2},
+    )
+    env.controller.apply_template()
+    assert env.controller.grid.assigned() == {}
+    pending_ids = {student.id for student in env.controller.pending}
+    assert pending_ids == {env.student_a.id, env.student_b.id}
+
+
+def test_apply_template_mantenir_ordre_preserva_la_posicio_relativa(env, monkeypatch):
+    env.window.sidebar.section_changed.emit("classroom")
+    env.controller.new_layout()
+    # B abans que A a la graella (encara que alfabèticament A vagi primer)
+    env.controller.move_student(env.student_b.id, "pending", 0, 0)
+    env.controller.move_student(env.student_a.id, "pending", 0, 1)
+
+    _stub_message_box(monkeypatch, "Mantenir l'ordre")
+    env.controller.template_dialog_factory = _template_dialog_factory(
+        "free", {"rows": 1, "columns": 2},
+    )
+    env.controller.apply_template()
+    # l'ordre de lectura anterior (B, A) es conserva a les noves posicions
+    assert env.controller.grid.find(env.student_b.id) == (0, 0)
+    assert env.controller.grid.find(env.student_a.id) == (0, 1)
+
+
+def test_apply_template_patro_invalid_mostra_error(env):
+    env.window.sidebar.section_changed.emit("classroom")
+    env.controller.new_layout()
+    env.controller.template_dialog_factory = _template_dialog_factory(
+        "columns", {"pattern": "invalid", "aisle_width": 1},
+    )
+    original_grid = env.controller.grid
+    env.controller.apply_template()
+    assert env.controller.grid is original_grid
+    assert env.window.errors

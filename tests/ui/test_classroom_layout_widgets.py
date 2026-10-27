@@ -104,7 +104,7 @@ def test_grid_widget_inverteix_la_fila_perque_el_professor_quedi_a_baix(qtbot):
     assert back_row == 0
 
 
-def test_grid_widget_rebuild_mostra_alumnes_assignats(qtbot):
+def test_grid_widget_rebuild_mostra_nom_i_cognoms_no_inicials(qtbot):
     grid_widget = ClassroomLayoutGridWidget()
     qtbot.addWidget(grid_widget)
     grid = LayoutGrid(2, 2)
@@ -112,10 +112,11 @@ def test_grid_widget_rebuild_mostra_alumnes_assignats(qtbot):
     grid.assign(1, 0, 0)
     grid_widget.rebuild(grid, {1: student}, False, {})
     cell = grid_widget._cells[(0, 0)]
-    assert cell.avatar_label.text() == "MS"
+    assert cell.name_label.text() == "Maria\nSerra"
+    assert cell.photo_label.isHidden() is True
 
 
-def test_grid_widget_rebuild_mostra_foto_quan_show_photos(qtbot, tmp_path):
+def test_grid_widget_rebuild_mostra_foto_i_nom_quan_show_photos(qtbot, tmp_path):
     grid_widget = ClassroomLayoutGridWidget()
     qtbot.addWidget(grid_widget)
     grid = LayoutGrid(1, 1)
@@ -124,5 +125,6 @@ def test_grid_widget_rebuild_mostra_foto_quan_show_photos(qtbot, tmp_path):
     photo_path = str(_write_jpg(tmp_path))
     grid_widget.rebuild(grid, {1: student}, True, {1: photo_path})
     cell = grid_widget._cells[(0, 0)]
-    assert cell.avatar_label.text() == ""
-    assert not cell.avatar_label.pixmap().isNull()
+    assert cell.name_label.text() == "Maria\nSerra"
+    assert cell.photo_label.isHidden() is False
+    assert not cell.photo_label.pixmap().isNull()

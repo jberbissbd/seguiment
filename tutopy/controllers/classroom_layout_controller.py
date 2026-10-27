@@ -11,12 +11,23 @@ import dataclasses
 from PySide6.QtWidgets import QDialog, QMessageBox
 
 from tutopy.models.classroom_layout import CellType, ClassroomLayoutNew
+from tutopy.models.classroom_layout_fill import (
+    LeftoverCriterion, OrderBy, assign_in_order, order_seats, select_seats, shuffled,
+)
+from tutopy.models.classroom_layout_generators import (
+    generate_columns, generate_exam, generate_free_grid, generate_islands,
+    generate_u_shape,
+)
 from tutopy.models.messaging import Student
 from tutopy.services.exceptions import DomainError
 from tutopy.services.classroom_layout_service import ClassroomLayoutService
 from tutopy.services.photo_service import PhotoService
+from tutopy.services.preferences_service import PreferencesService
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.classroom_layout_dialog import ClassroomLayoutDialog
+from tutopy.ui.dialogs.classroom_layout_template_dialog import (
+    COLUMNS, DUPLICATE, EXAM, FREE, ISLANDS, U_SHAPE, ClassroomLayoutTemplateDialog,
+)
 from tutopy.ui.widgets import classroom_layout_mime as mime
 from tutopy.ui.main_window import MainWindow
 
@@ -28,13 +39,17 @@ class ClassroomLayoutController:
 
     def __init__(self, window: MainWindow, service: ClassroomLayoutService,
         students: StudentService, photos: PhotoService = None,
-        dialog_factory=ClassroomLayoutDialog, error_handler=None):
+        preferences: PreferencesService = None,
+        dialog_factory=ClassroomLayoutDialog,
+        template_dialog_factory=ClassroomLayoutTemplateDialog, error_handler=None):
         """Desa les dependències i connecta les accions de la vista."""
         self.window = window
         self.service = service
         self.students = students
         self.photos = photos
+        self.preferences = preferences
         self.dialog_factory = dialog_factory
+        self.template_dialog_factory = template_dialog_factory
         self.error_handler = error_handler or window.show_error
         self._started = False
         window.sidebar.section_changed.connect(self._section_changed)
@@ -48,12 +63,16 @@ class ClassroomLayoutController:
         self.dirty = False
         self._students_by_id: dict[int, Student] = {}
         self._connect_signals()
+        if self.preferences is not None:
+            self._sync_preferences_panel()
+            self._connect_preferences_signals()
 
     def _connect_signals(self) -> None:
         view = self.window.classroom_layout_view
         view.group_changed.connect(self.select_group)
         view.layout_selected.connect(self.select_layout)
         view.new_layout_requested.connect(self.new_layout)
+        view.template_requested.connect(self.apply_template)
         view.rows_columns_changed.connect(self.resize)
         view.teacher_mode_changed.connect(self.change_teacher_mode)
         view.teacher_position_changed.connect(self.change_teacher_position)
@@ -139,6 +158,162 @@ class ClassroomLayoutController:
             return
         self._refresh_layouts_list()
         self.select_layout(layout.id)
+
+    def apply_template(self) -> None:
+        """Obre el diàleg de plantilla i, si s'accepta, regenera la graella actual."""
+        if self.grid is None:
+            self.error_handler("Selecciona o crea primer una distribució.")
+            return
+        other_layouts = [
+            layout for layout in self.service.get_layouts(self.group_name)
+            if layout.id != self.layout.id
+        ]
+        student_count = len(self.grid.assigned()) + len(self.pending)
+        dialog = self.template_dialog_factory(
+            student_count, other_layouts, self._template_defaults(), self.window,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        values = dialog.values()
+        try:
+            new_grid = self._build_template_grid(values)
+        except (DomainError, ValueError) as error:
+            self.error_handler(str(error))
+            return
+
+        had_assignments = bool(self.grid.assigned())
+        mode = "fresh"
+        if had_assignments:
+            mode = self._confirm_apply_template()
+            if mode is None:
+                return
+
+        assigned_cells = sorted(
+            self.grid.assigned().items(), key=lambda item: (item[1].row, item[1].column),
+        )
+        assigned_ids_in_order = [student_id for student_id, _cell in assigned_cells]
+        all_ids = set(assigned_ids_in_order) | {student.id for student in self.pending}
+        kept_ids = assigned_ids_in_order if mode == "keep" else []
+
+        self.grid = new_grid
+        self.teacher_mode = values["teacher_mode"]
+        self.teacher_position = values["teacher_position"]
+
+        if mode == "clear":
+            self.pending = [
+                student for student in (self._student_by_id(sid) for sid in all_ids)
+                if student is not None
+            ]
+        else:
+            self._fill_template(all_ids, kept_ids, values)
+
+        self._mark_dirty()
+        self._refresh_all()
+
+    def _build_template_grid(self, values: dict):
+        disposition = values["disposition"]
+        parameters = values["parameters"]
+        student_count = len(self.grid.assigned()) + len(self.pending)
+        if disposition == FREE:
+            return generate_free_grid(parameters["rows"], parameters["columns"])
+        if disposition == COLUMNS:
+            return generate_columns(
+                parameters["pattern"], student_count, aisle_width=parameters["aisle_width"],
+            )
+        if disposition == ISLANDS:
+            return generate_islands(
+                parameters["island_size"], parameters["islands_per_row"], student_count,
+            )
+        if disposition == U_SHAPE:
+            return generate_u_shape(parameters["seats_per_side"], student_count)
+        if disposition == EXAM:
+            return generate_exam(parameters["rows"], parameters["columns"])
+        if disposition == DUPLICATE:
+            return self.service.get_shape(parameters["source_layout_id"])
+        return None
+
+    def _fill_template(self, all_ids: set, kept_ids: list, values: dict) -> None:
+        """Omple la graella nova: primer `kept_ids` (en el seu ordre), després la resta."""
+        remaining_ids = [student_id for student_id in all_ids if student_id not in kept_ids]
+        remaining_ids = sorted(
+            remaining_ids,
+            key=lambda student_id: self._student_by_id(student_id).filing_name
+            if self._student_by_id(student_id) else "",
+        )
+        if values["fill_random"]:
+            remaining_ids = shuffled(remaining_ids)
+        ordered_ids = kept_ids + remaining_ids
+
+        leftover = LeftoverCriterion(values["leftover_criterion"])
+        order_by = OrderBy(values["fill_order"])
+        seats = select_seats(self.grid, len(ordered_ids), leftover)
+        ordered_seats = order_seats(seats, self.grid, order_by)
+        assign_in_order(self.grid, ordered_seats, ordered_ids)
+
+        placed_ids = set(self.grid.assigned())
+        self.pending = [
+            student for student in (
+                self._student_by_id(sid) for sid in ordered_ids if sid not in placed_ids
+            )
+            if student is not None
+        ]
+
+    def _confirm_apply_template(self) -> str | None:
+        """Pregunta què fer amb els alumnes ja col·locats en aplicar una altra plantilla.
+
+        Returns:
+            `"keep"` (mantenir l'ordre), `"clear"` (buidar), o `None` si
+            l'usuari cancel·la.
+        """
+        box = QMessageBox(self.window)
+        box.setWindowTitle("Ja hi ha alumnes col·locats")
+        box.setText(
+            "Ja hi ha alumnes col·locats en aquesta distribució. Vols mantenir-ne "
+            "l'ordre a la nova disposició, buidar-la, o cancel·lar?"
+        )
+        keep_button = box.addButton("Mantenir l'ordre", QMessageBox.ButtonRole.AcceptRole)
+        clear_button = box.addButton("Buidar", QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton("Cancel·lar", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(keep_button)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is keep_button:
+            return "keep"
+        if clicked is clear_button:
+            return "clear"
+        return None
+
+    def _template_defaults(self) -> dict:
+        if self.preferences is None:
+            return {}
+        return {
+            "column_pattern": self.preferences.default_column_pattern(),
+            "teacher_mode": self.preferences.default_teacher_mode(),
+            "teacher_position": self.preferences.default_teacher_position(),
+            "leftover_criterion": self.preferences.default_leftover_criterion(),
+            "fill_order": self.preferences.default_fill_order(),
+            "fill_random": self.preferences.default_fill_random(),
+        }
+
+    def _sync_preferences_panel(self) -> None:
+        panel = self.window.classroom_layout_view.preferences_panel
+        defaults = self._template_defaults()
+        panel.set_values(
+            defaults["column_pattern"], defaults["teacher_mode"],
+            defaults["teacher_position"], defaults["leftover_criterion"],
+            defaults["fill_order"], defaults["fill_random"],
+        )
+
+    def _connect_preferences_signals(self) -> None:
+        panel = self.window.classroom_layout_view.preferences_panel
+        panel.column_pattern_changed.connect(self.preferences.set_default_column_pattern)
+        panel.teacher_mode_changed.connect(self.preferences.set_default_teacher_mode)
+        panel.teacher_position_changed.connect(self.preferences.set_default_teacher_position)
+        panel.leftover_criterion_changed.connect(
+            self.preferences.set_default_leftover_criterion
+        )
+        panel.fill_order_changed.connect(self.preferences.set_default_fill_order)
+        panel.fill_random_changed.connect(self.preferences.set_default_fill_random)
 
     def move_student(self, student_id: int, origin: str, row: int, column: int) -> None:
         """Assigna un alumne a `(row, column)`, intercanviant-lo o traient-lo de pendents."""

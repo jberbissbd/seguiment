@@ -13,10 +13,13 @@ from PySide6.QtWidgets import (
 
 from tutopy.ui.resources import set_button_icon
 from tutopy.ui.widgets.classroom_layout_grid_widget import ClassroomLayoutGridWidget
+from tutopy.ui.widgets.classroom_layout_labels import (
+    TEACHER_MODE_LABELS, TEACHER_POSITION_LABELS,
+)
 from tutopy.ui.widgets.classroom_layout_pending_list import PendingStudentsList
-
-TEACHER_MODE_LABELS = {"strip": "Franja", "grid": "Dins la graella"}
-TEACHER_POSITION_LABELS = {"left": "Esquerra", "center": "Centre", "right": "Dreta"}
+from tutopy.ui.widgets.classroom_layout_preferences_panel import (
+    ClassroomLayoutPreferencesPanel,
+)
 
 
 class ClassroomLayoutView(QWidget):
@@ -25,6 +28,7 @@ class ClassroomLayoutView(QWidget):
     group_changed = Signal(str)
     layout_selected = Signal(int)
     new_layout_requested = Signal()
+    template_requested = Signal()
     rows_columns_changed = Signal(int, int)
     teacher_mode_changed = Signal(str)
     teacher_position_changed = Signal(str)
@@ -33,8 +37,14 @@ class ClassroomLayoutView(QWidget):
     set_active_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None):
-        """Construeix la barra d'eines, la llista de pendents i la graella."""
+        """Construeix la barra d'eines, la llista de pendents i la graella.
+
+        `preferences_panel` es construeix aquí però **no** es munta en
+        aquest layout: com `DataToolsView.report_panel`/`preferences_panel`,
+        és `MainWindow` qui el munta a la pàgina de "Configuració".
+        """
         super().__init__(parent)
+        self.preferences_panel = ClassroomLayoutPreferencesPanel()
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
@@ -89,6 +99,12 @@ class ClassroomLayoutView(QWidget):
         self.new_layout_button.clicked.connect(self.new_layout_requested)
         row.addWidget(self.new_layout_button)
 
+        self.template_button = QPushButton("Plantilla…")
+        set_button_icon(self.template_button, "template")
+        self.template_button.setObjectName("secondaryButton")
+        self.template_button.clicked.connect(self.template_requested)
+        row.addWidget(self.template_button)
+
         self.set_active_button = QPushButton("Marcar com a activa")
         set_button_icon(self.set_active_button, "select")
         self.set_active_button.setObjectName("secondaryButton")
@@ -101,7 +117,10 @@ class ClassroomLayoutView(QWidget):
         self.save_button.clicked.connect(self.save_requested)
         row.addWidget(self.save_button)
 
-        for button in (self.new_layout_button, self.set_active_button, self.save_button):
+        for button in (
+            self.new_layout_button, self.template_button,
+            self.set_active_button, self.save_button,
+        ):
             button.setMinimumHeight(32)
             button.setMinimumWidth(button.sizeHint().width())
             button.setSizePolicy(

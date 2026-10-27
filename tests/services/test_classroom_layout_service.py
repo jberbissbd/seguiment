@@ -110,3 +110,23 @@ def test_delete_elimina_la_distribucio(service, db):
     layout = service.create_layout(ClassroomLayoutNew("4t A", "A1", 3, 4))
     service.delete(layout.id)
     assert db.classroom_layouts.get_by_id(layout.id) is None
+
+
+def test_duplicate_copia_la_forma_sense_els_alumnes(service, db):
+    layout = service.create_layout(ClassroomLayoutNew("4t A", "A1", 2, 2))
+    student = db.students.create(StudentNew("Laia", "Serra", "4t A"))
+    _, grid, _ = service.load(layout.id)
+    grid.assign(student.id, 0, 0)
+    grid.set_cell_type(1, 1, CellType.AISLE)
+    service.save(layout, grid)
+
+    copy = service.duplicate(layout.id, "A1 (còpia)")
+    assert copy.id != layout.id
+    assert copy.name == "A1 (còpia)"
+    assert copy.group_name == layout.group_name
+    assert copy.rows == layout.rows and copy.columns == layout.columns
+
+    copy_cells = db.classroom_layouts.get_cells(copy.id)
+    assert all(cell.student_id is None for cell in copy_cells)
+    by_position = {(cell.row, cell.column): cell for cell in copy_cells}
+    assert by_position[(1, 1)].cell_type == CellType.AISLE
