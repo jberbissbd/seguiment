@@ -34,6 +34,14 @@ class OrderBy(str, Enum):
 
     ROWS = "rows"
     BLOCKS = "blocks"
+    COLUMNS = "columns"
+
+
+class Direction(str, Enum):
+    """Columna per on comença `OrderBy.COLUMNS`, des del punt de vista del professor."""
+
+    LEFT = "left"
+    RIGHT = "right"
 
 
 def select_seats(
@@ -121,14 +129,27 @@ def _select_spread_by_blocks(all_seats, count):
 
 def order_seats(
     seats: list[tuple[int, int]], grid: LayoutGrid, by: OrderBy = OrderBy.ROWS,
+    direction: Direction = Direction.LEFT,
 ) -> list[tuple[int, int]]:
-    """Ordena `seats` per files `(row, column)` o per blocs `(block, row, column)`."""
+    """Ordena `seats` per files, per blocs, o per columnes dins de cada bloc.
+
+    `direction` només afecta `OrderBy.COLUMNS`: `LEFT` comença per la
+    columna 0 (l'esquerra del professor, la convenció ja existent al
+    model); `RIGHT` comença per la columna més alta.
+    """
+    def block_of(position: tuple[int, int]) -> int:
+        block = grid.cells[position].block
+        return block if block is not None else -1
+
     if by == OrderBy.BLOCKS:
-        return sorted(seats, key=lambda position: (
-            grid.cells[position].block
-            if grid.cells[position].block is not None else -1,
-            position[0], position[1],
-        ))
+        return sorted(
+            seats, key=lambda position: (block_of(position), position[0], position[1]),
+        )
+    if by == OrderBy.COLUMNS:
+        sign = 1 if direction == Direction.LEFT else -1
+        return sorted(
+            seats, key=lambda position: (block_of(position), sign * position[1], position[0]),
+        )
     return sorted(seats, key=lambda position: (position[0], position[1]))
 
 

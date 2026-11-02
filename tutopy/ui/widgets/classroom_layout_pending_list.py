@@ -38,7 +38,7 @@ class PendingStudentsList(QListWidget):
         self.clear()
         photo_paths = photo_paths or {}
         for student in students:
-            item = QListWidgetItem(student.full_name)
+            item = QListWidgetItem(student.filing_name)
             item.setData(Qt.ItemDataRole.UserRole, student.id)
             pixmap = (
                 circular_pixmap(photo_paths.get(student.id), AVATAR_SIZE)

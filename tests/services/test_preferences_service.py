@@ -26,6 +26,7 @@ def test_preferencies_de_distribucio_tenen_valors_per_defecte(db):
     assert preferences.default_leftover_criterion() == "back"
     assert preferences.default_fill_order() == "rows"
     assert preferences.default_fill_random() is False
+    assert preferences.default_fill_direction() == "left"
 
 
 def test_preferencies_de_distribucio_es_poden_desar(db):
@@ -37,6 +38,7 @@ def test_preferencies_de_distribucio_es_poden_desar(db):
     preferences.set_default_leftover_criterion("front")
     preferences.set_default_fill_order("blocks")
     preferences.set_default_fill_random(True)
+    preferences.set_default_fill_direction("right")
 
     assert preferences.default_column_pattern() == "3-3"
     assert preferences.default_teacher_mode() == "grid"
@@ -44,3 +46,4 @@ def test_preferencies_de_distribucio_es_poden_desar(db):
     assert preferences.default_leftover_criterion() == "front"
     assert preferences.default_fill_order() == "blocks"
     assert preferences.default_fill_random() is True
+    assert preferences.default_fill_direction() == "right"

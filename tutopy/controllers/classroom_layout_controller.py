@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 
 from tutopy.models.classroom_layout import CellType, ClassroomLayoutNew
 from tutopy.models.classroom_layout_fill import (
-    LeftoverCriterion, OrderBy, assign_in_order, order_seats, select_seats, shuffled,
+    Direction, LeftoverCriterion, OrderBy, assign_in_order, order_seats, select_seats, shuffled,
 )
 from tutopy.models.classroom_layout_generators import (
     generate_columns, generate_exam, generate_free_grid, generate_islands,
@@ -73,6 +73,7 @@ class ClassroomLayoutController:
         view.layout_selected.connect(self.select_layout)
         view.new_layout_requested.connect(self.new_layout)
         view.template_requested.connect(self.apply_template)
+        view.clear_requested.connect(self.clear_layout)
         view.rows_columns_changed.connect(self.resize)
         view.teacher_mode_changed.connect(self.change_teacher_mode)
         view.teacher_position_changed.connect(self.change_teacher_position)
@@ -144,23 +145,64 @@ class ClassroomLayoutController:
         self._refresh_all()
 
     def new_layout(self) -> None:
-        """Obre el diàleg de nova distribució i la selecciona si es crea."""
+        """Obre el diàleg de nova distribució: mateixes opcions que "Plantilla".
+
+        A diferència d'aplicar una plantilla sobre una distribució ja
+        existent, aquí no hi ha res a conservar: la graella es construeix i
+        s'omple directament amb les opcions triades, amb tots els alumnes
+        del grup.
+        """
         if not self.group_name:
             self.error_handler("Selecciona primer un grup.")
             return
-        dialog = self.dialog_factory(self.group_name, self.window)
+        if not self._confirm_discard():
+            return
+        other_layouts = self.service.get_layouts(self.group_name)
+        group_students = [
+            student for student in self._students_by_id.values()
+            if student.group_name == self.group_name
+        ]
+        dialog = self.dialog_factory(
+            self.group_name, len(group_students), other_layouts,
+            self._template_defaults(), self.window,
+        )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
+        values = dialog.values()
         try:
-            layout = self.service.create_layout(ClassroomLayoutNew(**dialog.values()))
+            grid = self._build_template_grid(values, len(group_students))
+        except (DomainError, ValueError) as error:
+            self.error_handler(str(error))
+            return
+        try:
+            layout = self.service.create_layout(ClassroomLayoutNew(
+                group_name=values["group_name"], name=values["name"],
+                rows=grid.rows, columns=grid.columns,
+                teacher_mode=values["teacher_mode"],
+                teacher_position=values["teacher_position"],
+            ))
         except DomainError as error:
             self.error_handler(str(error))
             return
+
+        self.layout, self.grid, self.pending = layout, grid, group_students
+        self.teacher_mode = values["teacher_mode"]
+        self.teacher_position = values["teacher_position"]
+        all_ids = {student.id for student in group_students}
+        self._fill_template(all_ids, values)
+        self._mark_dirty()
         self._refresh_layouts_list()
-        self.select_layout(layout.id)
+        self._refresh_all()
 
     def apply_template(self) -> None:
-        """Obre el diàleg de plantilla i, si s'accepta, regenera la graella actual."""
+        """Obre el diàleg de plantilla i aplica la disposició i l'ompliment triats.
+
+        Substitueix sempre la forma i l'ocupació de la graella actual amb
+        tots els alumnes del grup (assignats i pendents), ordenats segons
+        les opcions triades: no demana si cal "mantenir l'ordre" ni oferir
+        "buidar" aquí — per buidar la graella sense canviar de plantilla hi
+        ha el botó "Buidar" de la barra d'eines.
+        """
         if self.grid is None:
             self.error_handler("Selecciona o crea primer una distribució.")
             return
@@ -176,49 +218,46 @@ class ClassroomLayoutController:
             return
         values = dialog.values()
         try:
-            new_grid = self._build_template_grid(values)
+            new_grid = self._build_template_grid(values, student_count)
         except (DomainError, ValueError) as error:
             self.error_handler(str(error))
             return
 
-        had_assignments = bool(self.grid.assigned())
-        mode = "fresh"
-        if had_assignments:
-            mode = self._confirm_apply_template()
-            if mode is None:
-                return
-
-        assigned_cells = sorted(
-            self.grid.assigned().items(), key=lambda item: (item[1].row, item[1].column),
-        )
-        assigned_ids_in_order = [student_id for student_id, _cell in assigned_cells]
-        all_ids = set(assigned_ids_in_order) | {student.id for student in self.pending}
-        kept_ids = assigned_ids_in_order if mode == "keep" else []
-
+        all_ids = set(self.grid.assigned()) | {student.id for student in self.pending}
         self.grid = new_grid
         self.teacher_mode = values["teacher_mode"]
         self.teacher_position = values["teacher_position"]
-
-        if mode == "clear":
-            self.pending = [
-                student for student in (self._student_by_id(sid) for sid in all_ids)
-                if student is not None
-            ]
-        else:
-            self._fill_template(all_ids, kept_ids, values)
-
+        self._fill_template(all_ids, values)
         self._mark_dirty()
         self._refresh_all()
 
-    def _build_template_grid(self, values: dict):
+    def clear_layout(self) -> None:
+        """Buida la graella actual: tots els alumnes assignats tornen a pendents."""
+        if self.grid is None:
+            self.error_handler("Selecciona o crea primer una distribució.")
+            return
+        assigned_ids = list(self.grid.assigned())
+        if not assigned_ids:
+            return
+        for student_id in assigned_ids:
+            self.grid.remove(student_id)
+        freed_students = [
+            student for student in (self._student_by_id(sid) for sid in assigned_ids)
+            if student is not None
+        ]
+        self.pending = self.pending + freed_students
+        self._mark_dirty()
+        self._refresh_all()
+
+    def _build_template_grid(self, values: dict, student_count: int):
         disposition = values["disposition"]
         parameters = values["parameters"]
-        student_count = len(self.grid.assigned()) + len(self.pending)
         if disposition == FREE:
             return generate_free_grid(parameters["rows"], parameters["columns"])
         if disposition == COLUMNS:
             return generate_columns(
                 parameters["pattern"], student_count, aisle_width=parameters["aisle_width"],
+                block_rows=parameters.get("block_rows"),
             )
         if disposition == ISLANDS:
             return generate_islands(
@@ -232,22 +271,21 @@ class ClassroomLayoutController:
             return self.service.get_shape(parameters["source_layout_id"])
         return None
 
-    def _fill_template(self, all_ids: set, kept_ids: list, values: dict) -> None:
-        """Omple la graella nova: primer `kept_ids` (en el seu ordre), després la resta."""
-        remaining_ids = [student_id for student_id in all_ids if student_id not in kept_ids]
-        remaining_ids = sorted(
-            remaining_ids,
+    def _fill_template(self, all_ids: set, values: dict) -> None:
+        """Omple `self.grid` (ja construïda) amb els alumnes de `all_ids`."""
+        ordered_ids = sorted(
+            all_ids,
             key=lambda student_id: self._student_by_id(student_id).filing_name
             if self._student_by_id(student_id) else "",
         )
         if values["fill_random"]:
-            remaining_ids = shuffled(remaining_ids)
-        ordered_ids = kept_ids + remaining_ids
+            ordered_ids = shuffled(ordered_ids)
 
         leftover = LeftoverCriterion(values["leftover_criterion"])
         order_by = OrderBy(values["fill_order"])
+        direction = Direction(values.get("fill_direction", "left"))
         seats = select_seats(self.grid, len(ordered_ids), leftover)
-        ordered_seats = order_seats(seats, self.grid, order_by)
+        ordered_seats = order_seats(seats, self.grid, order_by, direction)
         assign_in_order(self.grid, ordered_seats, ordered_ids)
 
         placed_ids = set(self.grid.assigned())
@@ -257,31 +295,6 @@ class ClassroomLayoutController:
             )
             if student is not None
         ]
-
-    def _confirm_apply_template(self) -> str | None:
-        """Pregunta què fer amb els alumnes ja col·locats en aplicar una altra plantilla.
-
-        Returns:
-            `"keep"` (mantenir l'ordre), `"clear"` (buidar), o `None` si
-            l'usuari cancel·la.
-        """
-        box = QMessageBox(self.window)
-        box.setWindowTitle("Ja hi ha alumnes col·locats")
-        box.setText(
-            "Ja hi ha alumnes col·locats en aquesta distribució. Vols mantenir-ne "
-            "l'ordre a la nova disposició, buidar-la, o cancel·lar?"
-        )
-        keep_button = box.addButton("Mantenir l'ordre", QMessageBox.ButtonRole.AcceptRole)
-        clear_button = box.addButton("Buidar", QMessageBox.ButtonRole.DestructiveRole)
-        box.addButton("Cancel·lar", QMessageBox.ButtonRole.RejectRole)
-        box.setDefaultButton(keep_button)
-        box.exec()
-        clicked = box.clickedButton()
-        if clicked is keep_button:
-            return "keep"
-        if clicked is clear_button:
-            return "clear"
-        return None
 
     def _template_defaults(self) -> dict:
         if self.preferences is None:
@@ -293,6 +306,7 @@ class ClassroomLayoutController:
             "leftover_criterion": self.preferences.default_leftover_criterion(),
             "fill_order": self.preferences.default_fill_order(),
             "fill_random": self.preferences.default_fill_random(),
+            "fill_direction": self.preferences.default_fill_direction(),
         }
 
     def _sync_preferences_panel(self) -> None:
@@ -301,7 +315,7 @@ class ClassroomLayoutController:
         panel.set_values(
             defaults["column_pattern"], defaults["teacher_mode"],
             defaults["teacher_position"], defaults["leftover_criterion"],
-            defaults["fill_order"], defaults["fill_random"],
+            defaults["fill_order"], defaults["fill_random"], defaults["fill_direction"],
         )
 
     def _connect_preferences_signals(self) -> None:
@@ -314,6 +328,7 @@ class ClassroomLayoutController:
         )
         panel.fill_order_changed.connect(self.preferences.set_default_fill_order)
         panel.fill_random_changed.connect(self.preferences.set_default_fill_random)
+        panel.fill_direction_changed.connect(self.preferences.set_default_fill_direction)
 
     def move_student(self, student_id: int, origin: str, row: int, column: int) -> None:
         """Assigna un alumne a `(row, column)`, intercanviant-lo o traient-lo de pendents."""
@@ -474,6 +489,7 @@ class ClassroomLayoutController:
 
     def _refresh_pending(self) -> None:
         view = self.window.classroom_layout_view
+        self.pending.sort(key=lambda student: student.filing_name)
         photo_paths = self._photo_paths([student.id for student in self.pending])
         view.pending_list.set_students(self.pending, self.show_photos, photo_paths)
 

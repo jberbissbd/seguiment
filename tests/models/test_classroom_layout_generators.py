@@ -2,8 +2,8 @@ import pytest
 
 from tutopy.models.classroom_layout import CellType
 from tutopy.models.classroom_layout_generators import (
-    generate_columns, generate_exam, generate_free_grid, generate_islands,
-    generate_u_shape,
+    _evenly_spread_indices, generate_columns, generate_exam, generate_free_grid,
+    generate_islands, generate_u_shape,
 )
 
 
@@ -17,10 +17,91 @@ def test_generate_free_grid_tot_son_seients():
 
 
 def test_generate_columns_exemple_del_document():
-    """26 alumnes amb patró 2-3-2 donen 7 seients/fila, 4 files, 9 columnes."""
+    """26 alumnes amb patró 2-3-2 donen 7 seients/fila, 4 files, 9 columnes, sense sobrants."""
     grid = generate_columns("2-3-2", 26)
     assert (grid.rows, grid.columns) == (4, 9)
-    assert len(_seats(grid)) == 28
+    assert len(_seats(grid)) == 26
+
+
+def test_generate_columns_alcada_variable_quan_les_files_son_automatiques():
+    """7 alumnes amb patró "2-2" (4 seients/fila): cap seient sobrant, una columna més curta."""
+    grid = generate_columns("2-2", 7)
+    assert grid.rows == 2
+    assert len(_seats(grid)) == 7
+    # la columna més curta no té seient a la fila del fons (fila 1), però sí al davant
+    short_columns = [
+        column for column in range(grid.columns)
+        if grid.cells[(1, column)].cell_type == CellType.EMPTY
+    ]
+    assert len(short_columns) == 1
+    assert grid.cells[(0, short_columns[0])].cell_type == CellType.SEAT
+
+
+def test_generate_columns_alcada_uniforme_quan_encaixen_exactament():
+    """8 alumnes amb patró "2-2" (4 seients/fila) omplen exactament 2 files senceres."""
+    grid = generate_columns("2-2", 8)
+    assert grid.rows == 2
+    assert len(_seats(grid)) == 8
+
+
+def test_generate_columns_amb_rows_manual_mante_el_rectangle_complet():
+    """Amb `rows` fixat a mà, es manté el rectangle complet (sense alçada variable)."""
+    grid = generate_columns("2-2", 7, rows=3)
+    assert grid.rows == 3
+    assert len(_seats(grid)) == 12
+
+
+def test_generate_columns_block_rows_fixa_lalcada_dun_bloc():
+    """3 blocs de 2 seients: el primer amb 4 files fixes, la resta automàtic."""
+    grid = generate_columns("2-2-2", 30, block_rows=[4, None, None])
+    # bloc 0: 2 columnes x 4 files = 8 seients, sempre
+    block_0_seats = [cell for cell in _seats(grid) if cell.block == 0]
+    assert len(block_0_seats) == 8
+    assert {cell.row for cell in block_0_seats} == {0, 1, 2, 3}
+    # la resta (30 - 8 = 22 alumnes) es reparteix entre els blocs 1 i 2 (4 columnes)
+    assert len(_seats(grid)) == 30
+
+
+def test_generate_columns_block_rows_tots_els_blocs_fixats():
+    """Exemple de l'usuari: 3 blocs de 2 seients, el primer de 4 files i la resta de 5."""
+    grid = generate_columns("2-2-2", 100, block_rows=[4, 5, 5])
+    assert len(_seats(grid)) == 2 * 4 + 2 * 5 + 2 * 5
+    block_0_rows = {cell.row for cell in _seats(grid) if cell.block == 0}
+    block_1_rows = {cell.row for cell in _seats(grid) if cell.block == 1}
+    block_2_rows = {cell.row for cell in _seats(grid) if cell.block == 2}
+    assert block_0_rows == {0, 1, 2, 3}
+    assert block_1_rows == block_2_rows == {0, 1, 2, 3, 4}
+    assert grid.rows == 5
+
+
+def test_generate_columns_block_rows_longitud_incorrecta_rebutjada():
+    with pytest.raises(ValueError, match="alçada"):
+        generate_columns("2-2", 10, block_rows=[3])
+
+
+def test_generate_columns_block_rows_valor_fora_de_rang_rebutjat():
+    with pytest.raises(ValueError, match="alçada"):
+        generate_columns("2-2", 10, block_rows=[0, None])
+
+
+def test_generate_columns_block_rows_amb_rows_manual_s_ignora():
+    """Si `rows` és manual, es manté el rectangle complet i `block_rows` no té efecte."""
+    grid = generate_columns("2-2", 10, rows=3, block_rows=[1, None])
+    assert grid.rows == 3
+    assert len(_seats(grid)) == 12
+
+
+@pytest.mark.parametrize(("total", "count"), [(7, 5), (7, 2), (4, 1), (9, 0), (9, 9)])
+def test_evenly_spread_indices_reparteix_el_nombre_exacte(total, count):
+    indices = _evenly_spread_indices(total, count)
+    assert len(indices) == count
+    assert indices <= set(range(total))
+
+
+def test_evenly_spread_indices_evita_agrupar_els_indexs():
+    """Amb 2 de 7, els índexs triats no haurien de quedar junts."""
+    indices = sorted(_evenly_spread_indices(7, 2))
+    assert indices[1] - indices[0] > 1
 
 
 def test_generate_columns_crea_passadissos_entre_blocs():

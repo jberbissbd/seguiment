@@ -3,7 +3,10 @@ from PySide6.QtGui import QColor, QPixmap
 from tutopy.models.classroom_layout import CellType, LayoutGrid
 from tutopy.models.messaging import Student
 from tutopy.ui.widgets import classroom_layout_mime as mime
-from tutopy.ui.widgets.classroom_layout_cell_widget import ClassroomCellWidget
+from tutopy.ui.widgets.classroom_layout_cell_widget import (
+    AISLE_WIDTH, CELL_WIDTH, NAME_FONT_MIN_SIZE, NAME_FONT_SIZE, SEAT_BACKGROUND,
+    TEACHER_BACKGROUND, ClassroomCellWidget, _fitting_font_size,
+)
 from tutopy.ui.widgets.classroom_layout_grid_widget import ClassroomLayoutGridWidget
 from tutopy.ui.widgets.classroom_layout_pending_list import PendingStudentsList
 
@@ -57,6 +60,68 @@ def test_cell_widget_return_to_pending_nomes_amb_alumne(qtbot):
     assert cell._student is student
 
 
+def test_cell_widget_tots_els_seients_tenen_el_mateix_color(qtbot):
+    student_1 = Student(1, "uuid1", "Anna", "Bosch", "4t A")
+    student_2 = Student(25, "uuid25", "Zoe", "Vila", "4t A")
+    cell_1 = ClassroomCellWidget(0, 0)
+    cell_2 = ClassroomCellWidget(0, 1)
+    qtbot.addWidget(cell_1)
+    qtbot.addWidget(cell_2)
+    cell_1.update_cell(CellType.SEAT, student_1, None, False)
+    cell_2.update_cell(CellType.SEAT, student_2, None, False)
+    assert cell_1.styleSheet() == cell_2.styleSheet()
+    assert SEAT_BACKGROUND in cell_1.styleSheet()
+
+
+def test_cell_widget_taula_del_professor_te_marc(qtbot):
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    cell.update_cell(CellType.TEACHER, None, None, False)
+    assert "border:" in cell.styleSheet()
+    assert TEACHER_BACKGROUND in cell.styleSheet()
+
+
+def test_cell_widget_passadis_ocupa_la_meitat_damplada(qtbot):
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    cell.update_cell(CellType.AISLE, None, None, False)
+    assert cell.width() == AISLE_WIDTH == CELL_WIDTH // 2
+
+
+def test_cell_widget_seient_recupera_lamplada_normal_en_deixar_de_ser_passadis(qtbot):
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    cell.update_cell(CellType.AISLE, None, None, False)
+    cell.update_cell(CellType.SEAT, None, None, False)
+    assert cell.width() == CELL_WIDTH
+
+
+def test_fitting_font_size_amb_prou_espai_retorna_la_mida_normal(qtbot):
+    assert _fitting_font_size("Pere", 84, 70) == NAME_FONT_SIZE
+
+
+def test_fitting_font_size_redueix_quan_no_hi_cap(qtbot):
+    size = _fitting_font_size("Bouhbouh El Bakkali Issaoui, Marwa", 84, 20)
+    assert NAME_FONT_MIN_SIZE <= size < NAME_FONT_SIZE
+
+
+def test_fitting_font_size_mai_per_sota_del_minim(qtbot):
+    size = _fitting_font_size("Un nom i cognoms extremadament llargs per forçar l'últim recurs", 50, 5)
+    assert size == NAME_FONT_MIN_SIZE
+
+
+def test_cell_widget_mostra_el_text_sencer_cognoms_coma_nom(qtbot):
+    """El text mai es trunca ni s'elideix: com a últim recurs, es redueix la mida."""
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    student = Student(
+        1, "uuid", "Gabriel Antonio", "Bouhbouh El Bakkali Issaoui", "1r A",
+    )
+    cell.update_cell(CellType.SEAT, student, None, False)
+    assert cell.name_label.text() == "Bouhbouh El Bakkali Issaoui, Gabriel Antonio"
+    assert "…" not in cell.name_label.text()
+
+
 def test_pending_list_drop_des_d_una_cel_la_emet_move_requested(qtbot):
     pending_list = PendingStudentsList()
     qtbot.addWidget(pending_list)
@@ -83,7 +148,7 @@ def test_pending_list_set_students_mostra_fotos_quan_cal(qtbot, tmp_path):
     photo_path = str(_write_jpg(tmp_path))
     pending_list.set_students([student], True, {1: photo_path})
     item = pending_list.item(0)
-    assert item.text() == "Maria Serra"
+    assert item.text() == "Serra, Maria"
     assert not item.icon().isNull()
 
 
@@ -112,7 +177,7 @@ def test_grid_widget_rebuild_mostra_nom_i_cognoms_no_inicials(qtbot):
     grid.assign(1, 0, 0)
     grid_widget.rebuild(grid, {1: student}, False, {})
     cell = grid_widget._cells[(0, 0)]
-    assert cell.name_label.text() == "Maria\nSerra"
+    assert cell.name_label.text() == "Serra, Maria"
     assert cell.photo_label.isHidden() is True
 
 
@@ -125,6 +190,6 @@ def test_grid_widget_rebuild_mostra_foto_i_nom_quan_show_photos(qtbot, tmp_path)
     photo_path = str(_write_jpg(tmp_path))
     grid_widget.rebuild(grid, {1: student}, True, {1: photo_path})
     cell = grid_widget._cells[(0, 0)]
-    assert cell.name_label.text() == "Maria\nSerra"
+    assert cell.name_label.text() == "Serra, Maria"
     assert cell.photo_label.isHidden() is False
     assert not cell.photo_label.pixmap().isNull()

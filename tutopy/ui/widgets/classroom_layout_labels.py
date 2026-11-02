@@ -5,7 +5,7 @@ perquè la vista, el diàleg de plantilla i el panell de preferències el
 puguin importar tots tres sense crear cap dependència circular.
 """
 
-from tutopy.models.classroom_layout_fill import LeftoverCriterion, OrderBy
+from tutopy.models.classroom_layout_fill import Direction, LeftoverCriterion, OrderBy
 
 TEACHER_MODE_LABELS = {"strip": "Franja", "grid": "Dins la graella"}
 TEACHER_POSITION_LABELS = {"left": "Esquerra", "center": "Centre", "right": "Dreta"}
@@ -16,4 +16,8 @@ LEFTOVER_LABELS = {
     LeftoverCriterion.FRONT: "Al davant",
     LeftoverCriterion.REMOVE: "Eliminar",
 }
-FILL_ORDER_LABELS = {OrderBy.ROWS: "Per files", OrderBy.BLOCKS: "Per blocs"}
+FILL_ORDER_LABELS = {
+    OrderBy.ROWS: "Per files", OrderBy.BLOCKS: "Per blocs",
+    OrderBy.COLUMNS: "Per columnes dins del bloc",
+}
+FILL_DIRECTION_LABELS = {Direction.LEFT: "Des de l'esquerra", Direction.RIGHT: "Des de la dreta"}

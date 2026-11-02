@@ -8,10 +8,11 @@ empenyi l'estat ja preparat.
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton,
-    QSizePolicy, QSpinBox, QSplitter, QVBoxLayout, QWidget,
+    QScrollArea, QSizePolicy, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from tutopy.ui.resources import set_button_icon
+from tutopy.ui.widgets.classroom_layout_cell_widget import TEACHER_BACKGROUND, TEACHER_TEXT
 from tutopy.ui.widgets.classroom_layout_grid_widget import ClassroomLayoutGridWidget
 from tutopy.ui.widgets.classroom_layout_labels import (
     TEACHER_MODE_LABELS, TEACHER_POSITION_LABELS,
@@ -20,6 +21,7 @@ from tutopy.ui.widgets.classroom_layout_pending_list import PendingStudentsList
 from tutopy.ui.widgets.classroom_layout_preferences_panel import (
     ClassroomLayoutPreferencesPanel,
 )
+from tutopy.ui.widgets.collapsible_splitter import CollapsibleSplitter
 
 
 class ClassroomLayoutView(QWidget):
@@ -29,6 +31,7 @@ class ClassroomLayoutView(QWidget):
     layout_selected = Signal(int)
     new_layout_requested = Signal()
     template_requested = Signal()
+    clear_requested = Signal()
     rows_columns_changed = Signal(int, int)
     teacher_mode_changed = Signal(str)
     teacher_position_changed = Signal(str)
@@ -50,7 +53,7 @@ class ClassroomLayoutView(QWidget):
         layout.setSpacing(12)
         layout.addWidget(self._build_toolbar())
 
-        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter = CollapsibleSplitter(Qt.Orientation.Horizontal)
         self.pending_list = PendingStudentsList()
         self.pending_list.setMinimumWidth(200)
         self.grid_widget = ClassroomLayoutGridWidget()
@@ -60,13 +63,29 @@ class ClassroomLayoutView(QWidget):
         self._teacher_strip_row = QHBoxLayout()
         self.teacher_strip = QLabel("Taula del professor")
         self.teacher_strip.setObjectName("teacherStrip")
+        self.teacher_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.teacher_strip.setStyleSheet(
+            f"QLabel#teacherStrip {{ background-color: {TEACHER_BACKGROUND}; "
+            f"color: {TEACHER_TEXT}; border: 2px solid {TEACHER_BACKGROUND}; "
+            "border-radius: 6px; padding: 8px 20px; font-weight: 700; }"
+        )
         self._teacher_strip_row.addWidget(self.teacher_strip)
         grid_layout.addLayout(self._teacher_strip_row)
         grid_layout.addStretch()
+
+        grid_scroll = QScrollArea()
+        grid_scroll.setWidgetResizable(True)
+        grid_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        grid_scroll.setWidget(grid_container)
+
         splitter.addWidget(self.pending_list)
-        splitter.addWidget(grid_container)
+        splitter.addWidget(grid_scroll)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 3)
+        # Una graella amb moltes columnes no ha d'estrènyer els pendents fins
+        # a fer-los desaparèixer: que faci scroll ella mateixa (grid_scroll). Per
+        # amagar-los expressament hi ha el botó del mateix mànec (CollapsibleSplitter);
+        # childrenCollapsible s'ha de deixar a True perquè aquest botó funcioni.
         layout.addWidget(splitter, 1)
 
     def _build_toolbar(self) -> QFrame:
@@ -105,6 +124,12 @@ class ClassroomLayoutView(QWidget):
         self.template_button.clicked.connect(self.template_requested)
         row.addWidget(self.template_button)
 
+        self.clear_button = QPushButton("Buidar")
+        set_button_icon(self.clear_button, "clear")
+        self.clear_button.setObjectName("secondaryButton")
+        self.clear_button.clicked.connect(self.clear_requested)
+        row.addWidget(self.clear_button)
+
         self.set_active_button = QPushButton("Marcar com a activa")
         set_button_icon(self.set_active_button, "select")
         self.set_active_button.setObjectName("secondaryButton")
@@ -118,7 +143,7 @@ class ClassroomLayoutView(QWidget):
         row.addWidget(self.save_button)
 
         for button in (
-            self.new_layout_button, self.template_button,
+            self.new_layout_button, self.template_button, self.clear_button,
             self.set_active_button, self.save_button,
         ):
             button.setMinimumHeight(32)

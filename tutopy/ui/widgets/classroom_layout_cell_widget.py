@@ -1,23 +1,74 @@
 """Cel·la individual del pla de distribució d'aula."""
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QDrag, QPixmap
+from PySide6.QtGui import QDrag, QFont, QFontMetrics, QPixmap
 from PySide6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout, QWidget
 
 from tutopy.models.classroom_layout import CellType
 from tutopy.models.messaging import Student
+from tutopy.ui.styles import PRIMARY_COLOR, TEXT_PRIMARY
 from tutopy.ui.widgets import classroom_layout_mime as mime
-from tutopy.ui.widgets.avatar import avatar_colors, circular_pixmap
+from tutopy.ui.widgets.avatar import circular_pixmap
 
 CELL_WIDTH = 92
 CELL_HEIGHT = 80
+# Un passadís no necessita l'amplada d'una taula: mig seient ja el
+# representa prou bé i aprofita millor l'espai de la graella.
+AISLE_WIDTH = CELL_WIDTH // 2
 PHOTO_SIZE = 36
+CELL_MARGIN = 4
+LAYOUT_SPACING = 2
+NAME_FONT_SIZE = 10
+NAME_FONT_MIN_SIZE = 7
+NAME_CONTENT_WIDTH = CELL_WIDTH - 2 * CELL_MARGIN
+NAME_CONTENT_HEIGHT = CELL_HEIGHT - 2 * CELL_MARGIN
+NAME_CONTENT_HEIGHT_WITH_PHOTO = NAME_CONTENT_HEIGHT - LAYOUT_SPACING - PHOTO_SIZE
+
+# Un sol color per a tots els alumnes: amb grups grans, una paleta de
+# poques opcions acaba repetint color entre alumnes diferents (confon més
+# del que ajuda); el nom ja identifica qui seu a cada seient.
+SEAT_BACKGROUND = "#EAF2FB"
+SEAT_BORDER = PRIMARY_COLOR
+SEAT_TEXT = TEXT_PRIMARY
+TEACHER_BACKGROUND = PRIMARY_COLOR
+TEACHER_TEXT = "#FFFFFF"
 
 CELL_TYPE_LABELS = {
     CellType.EMPTY: "",
     CellType.AISLE: "···",
     CellType.TEACHER: "Professor",
 }
+
+
+def _name_font(pixel_size: int = NAME_FONT_SIZE) -> QFont:
+    """Font amb què es mesura i es dibuixa el nom, igual per a tothom.
+
+    Es construeix explícitament (en lloc de llegir-la del `QLabel` en
+    viu) perquè els càlculs de mida siguin fiables fins i tot abans que
+    l'estil CSS s'hagi aplicat del tot al widget.
+    """
+    font = QFont()
+    font.setPixelSize(pixel_size)
+    font.setWeight(QFont.Weight.DemiBold)
+    return font
+
+
+def _fitting_font_size(text: str, max_width: int, max_height: int) -> int:
+    """Retorna la mida de lletra més gran (fins a `NAME_FONT_SIZE`) amb què `text` hi cap.
+
+    `text` es mostra sencer, amb ajust de línia per amplada; si amb
+    `NAME_FONT_SIZE` no hi càpiguen totes les línies necessàries en
+    `max_height`, es va reduint la mida (mai per sota de
+    `NAME_FONT_MIN_SIZE`) en lloc d'escurçar el text.
+    """
+    for size in range(NAME_FONT_SIZE, NAME_FONT_MIN_SIZE - 1, -1):
+        metrics = QFontMetrics(_name_font(size))
+        bounds = metrics.boundingRect(
+            0, 0, max_width, 10_000, int(Qt.TextFlag.TextWordWrap), text,
+        )
+        if bounds.height() <= max_height:
+            return size
+    return NAME_FONT_MIN_SIZE
 
 
 class ClassroomCellWidget(QFrame):
@@ -47,7 +98,7 @@ class ClassroomCellWidget(QFrame):
         self.row = row
         self.column = column
         self.setObjectName("classroomCell")
-        self.setFixedSize(CELL_WIDTH, CELL_HEIGHT)
+        self.setFixedHeight(CELL_HEIGHT)
         self.setAcceptDrops(True)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_menu)
@@ -82,6 +133,7 @@ class ClassroomCellWidget(QFrame):
         """
         self._cell_type = cell_type
         self._student = student
+        self.setFixedWidth(AISLE_WIDTH if cell_type == CellType.AISLE else CELL_WIDTH)
         self.setProperty("cellType", cell_type.value)
         self.photo_label.setPixmap(QPixmap())
         self.photo_label.setVisible(False)
@@ -94,17 +146,32 @@ class ClassroomCellWidget(QFrame):
             if pixmap is not None:
                 self.photo_label.setPixmap(pixmap)
                 self.photo_label.setVisible(True)
-            background, foreground = avatar_colors(student.id)
             self.setStyleSheet(
-                f"QFrame#classroomCell {{ background-color: {background}; "
-                "border-radius: 6px; border: none; }"
+                f"QFrame#classroomCell {{ background-color: {SEAT_BACKGROUND}; "
+                f"border: 1px solid {SEAT_BORDER}; border-radius: 6px; }}"
+            )
+            available_height = (
+                NAME_CONTENT_HEIGHT_WITH_PHOTO if pixmap is not None else NAME_CONTENT_HEIGHT
+            )
+            font_size = _fitting_font_size(
+                student.filing_name, NAME_CONTENT_WIDTH, available_height,
             )
             self.name_label.setStyleSheet(
-                f"color: {foreground}; font-size: 10px; font-weight: 600; "
+                f"color: {SEAT_TEXT}; font-size: {font_size}px; font-weight: 600; "
                 "background: transparent; border: none;"
             )
-            self.name_label.setText(f"{student.name}\n{student.surnames}")
-            self.setToolTip(student.full_name)
+            self.name_label.setText(student.filing_name)
+            self.setToolTip(student.filing_name)
+        elif cell_type == CellType.TEACHER:
+            self.setStyleSheet(
+                f"QFrame#classroomCell {{ background-color: {TEACHER_BACKGROUND}; "
+                f"border: 2px solid {TEACHER_BACKGROUND}; border-radius: 6px; }}"
+            )
+            self.name_label.setStyleSheet(
+                f"color: {TEACHER_TEXT}; font-size: 10px; font-weight: 700; "
+                "background: transparent; border: none;"
+            )
+            self.name_label.setText(CELL_TYPE_LABELS[CellType.TEACHER])
         else:
             self.name_label.setText(CELL_TYPE_LABELS.get(cell_type, ""))
         self.style().unpolish(self)

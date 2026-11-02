@@ -23,29 +23,42 @@ def generate_free_grid(rows: int, columns: int) -> LayoutGrid:
 
 def generate_columns(
     pattern: str, student_count: int, rows: int | None = None, aisle_width: int = 1,
+    block_rows: list[int | None] | None = None,
 ) -> LayoutGrid:
     """Genera una graella d'agrupacions en columnes.
 
+    Si `rows` no s'indica, les columnes no tenen perquè acabar totes amb
+    la mateixa alçada. Per defecte, totes es calculen automàticament
+    perquè el nombre de seients quadri amb `student_count`: algunes es
+    queden sense seient al fons, repartides de manera uniforme entre els
+    blocs (no totes seguides a un de sol). `block_rows` permet fixar
+    l'alçada d'un o més blocs concrets (p. ex. un bloc central més alt
+    que els laterals); els blocs no fixats es reparteixen entre ells els
+    alumnes que no caben als blocs fixats, amb el mateix criteri
+    automàtic. Amb `rows` fixat a mà, es manté el rectangle complet de
+    sempre i `block_rows` s'ignora.
+
     Args:
         pattern: Mida de cada bloc de columnes, p. ex. `"2-3-2"`.
-        student_count: Nombre d'alumnes a allotjar; determina les files si
-            no se n'indica un nombre fix.
-        rows: Nombre de files, o `None` per calcular-les automàticament a
-            partir de `student_count`.
+        student_count: Nombre d'alumnes a allotjar.
+        rows: Nombre de files de tota la graella, o `None` per calcular-
+            les automàticament (vegeu `block_rows`).
         aisle_width: Amplada (en columnes) del passadís entre blocs.
+        block_rows: Alçada (files) de cada bloc, en el mateix ordre que
+            `pattern`; cada element és `None` (automàtic per a aquell
+            bloc) o un enter amb l'alçada fixa. `None` perquè tots els
+            blocs siguin automàtics.
 
     Raises:
-        ValueError: Si el patró no és vàlid o la graella resultant supera
-            el límit de columnes.
+        ValueError: Si el patró, `block_rows` o la mida resultant no són
+            vàlids.
     """
     if not _COLUMN_PATTERN_RE.match(pattern):
         raise ValueError('El patró de columnes ha de tenir el format "2-3-2".')
     blocks = [int(value) for value in pattern.split("-")]
     if any(block < 1 or block > MAX_BLOCK_SIZE for block in blocks):
         raise ValueError(f"Cada bloc ha de tenir entre 1 i {MAX_BLOCK_SIZE} seients.")
-    seats_per_row = sum(blocks)
-    if rows is None:
-        rows = max(1, math.ceil(student_count / seats_per_row)) if student_count else 1
+    block_rows = _validate_block_rows(block_rows, len(blocks))
 
     column_map: list[tuple[CellType, int | None]] = []
     for block_index, size in enumerate(blocks):
@@ -56,11 +69,85 @@ def generate_columns(
     if columns > MAX_GRID_SIZE:
         raise ValueError(f"La disposició supera el límit de {MAX_GRID_SIZE} columnes.")
 
-    grid = LayoutGrid(rows, columns)
-    for row in range(rows):
+    column_heights = _column_heights(blocks, block_rows, student_count, rows, column_map)
+    grid_rows = max([*column_heights.values(), 1])
+
+    grid = LayoutGrid(grid_rows, columns)
+    for row in range(grid_rows):
         for column, (cell_type, block) in enumerate(column_map):
+            if cell_type == CellType.SEAT and row >= column_heights[column]:
+                cell_type = CellType.EMPTY
             grid.cells[(row, column)] = LayoutCell(row, column, cell_type, block)
     return grid
+
+
+def _validate_block_rows(
+    block_rows: list[int | None] | None, block_count: int,
+) -> list[int | None]:
+    if block_rows is None:
+        return [None] * block_count
+    if len(block_rows) != block_count:
+        raise ValueError("Cal indicar l'alçada (o automàtic) de cada bloc del patró.")
+    for value in block_rows:
+        if value is not None and not (1 <= value <= MAX_GRID_SIZE):
+            raise ValueError(f"L'alçada d'un bloc ha de ser entre 1 i {MAX_GRID_SIZE}.")
+    return block_rows
+
+
+def _column_heights(
+    blocks: list[int], block_rows: list[int | None], student_count: int,
+    rows: int | None, column_map: list[tuple[CellType, int | None]],
+) -> dict[int, int]:
+    """Retorna, per a cada columna de seient, quantes files té ocupades."""
+    seat_columns_by_block: dict[int, list[int]] = {}
+    for index, (cell_type, block) in enumerate(column_map):
+        if cell_type == CellType.SEAT:
+            seat_columns_by_block.setdefault(block, []).append(index)
+
+    if rows is not None:
+        return {
+            column: rows for columns in seat_columns_by_block.values() for column in columns
+        }
+    if not student_count:
+        student_count = sum(blocks)
+
+    heights: dict[int, int] = {}
+    auto_columns: list[int] = []
+    remaining_students = student_count
+    for block_index, fixed_height in enumerate(block_rows):
+        columns = seat_columns_by_block[block_index]
+        if fixed_height is None:
+            auto_columns.extend(columns)
+            continue
+        for column in columns:
+            heights[column] = fixed_height
+        remaining_students -= len(columns) * fixed_height
+    heights.update(_auto_column_heights(auto_columns, max(0, remaining_students)))
+    return heights
+
+
+def _auto_column_heights(seat_columns: list[int], seat_count: int) -> dict[int, int]:
+    """Reparteix `seat_count` seients entre `seat_columns`: algunes en reben una fila menys."""
+    if not seat_columns:
+        return {}
+    full_rows, remainder = divmod(seat_count, len(seat_columns))
+    tall_positions = _evenly_spread_indices(len(seat_columns), remainder)
+    return {
+        column: full_rows + (1 if position in tall_positions else 0)
+        for position, column in enumerate(seat_columns)
+    }
+
+
+def _evenly_spread_indices(total: int, count: int) -> set[int]:
+    """Retorna `count` índexs de `range(total)`, repartits tan uniformement com sigui possible."""
+    indices: set[int] = set()
+    accumulator = 0
+    for index in range(total):
+        accumulator += count
+        if accumulator >= total:
+            accumulator -= total
+            indices.add(index)
+    return indices
 
 
 def generate_islands(

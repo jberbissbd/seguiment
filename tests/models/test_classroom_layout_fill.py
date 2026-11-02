@@ -1,6 +1,6 @@
 from tutopy.models.classroom_layout import CellType, LayoutGrid
 from tutopy.models.classroom_layout_fill import (
-    LeftoverCriterion, OrderBy, assign_in_order, order_seats, select_seats, shuffled,
+    Direction, LeftoverCriterion, OrderBy, assign_in_order, order_seats, select_seats, shuffled,
 )
 from tutopy.models.classroom_layout_generators import generate_columns
 
@@ -64,6 +64,28 @@ def test_order_seats_per_blocs():
     grid = generate_columns("2-2", 4, rows=1)
     seats = [(0, 3), (0, 0), (0, 1), (0, 4)]
     ordered = order_seats(seats, grid, OrderBy.BLOCKS)
+    blocks = [grid.cells[position].block for position in ordered]
+    assert blocks == sorted(blocks)
+
+
+def test_order_seats_per_columnes_dins_del_bloc_des_de_lesquerra():
+    grid = LayoutGrid(2, 3)
+    seats = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)]
+    ordered = order_seats(seats, grid, OrderBy.COLUMNS, Direction.LEFT)
+    assert ordered == [(0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2)]
+
+
+def test_order_seats_per_columnes_dins_del_bloc_des_de_la_dreta():
+    grid = LayoutGrid(2, 3)
+    seats = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)]
+    ordered = order_seats(seats, grid, OrderBy.COLUMNS, Direction.RIGHT)
+    assert ordered == [(0, 2), (1, 2), (0, 1), (1, 1), (0, 0), (1, 0)]
+
+
+def test_order_seats_per_columnes_respecta_els_blocs():
+    grid = generate_columns("2-2", 4, rows=2)
+    seats = [(cell.row, cell.column) for cell in grid.seats()]
+    ordered = order_seats(seats, grid, OrderBy.COLUMNS, Direction.LEFT)
     blocks = [grid.cells[position].block for position in ordered]
     assert blocks == sorted(blocks)
 

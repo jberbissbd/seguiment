@@ -8,12 +8,14 @@ CLASSROOM_TEACHER_POSITION_KEY = "classroom_default_teacher_position"
 CLASSROOM_LEFTOVER_CRITERION_KEY = "classroom_default_leftover_criterion"
 CLASSROOM_FILL_ORDER_KEY = "classroom_default_fill_order"
 CLASSROOM_FILL_RANDOM_KEY = "classroom_default_fill_random"
+CLASSROOM_FILL_DIRECTION_KEY = "classroom_default_fill_direction"
 
 CLASSROOM_COLUMN_PATTERN_DEFAULT = "2-2-2"
 CLASSROOM_TEACHER_MODE_DEFAULT = "strip"
 CLASSROOM_TEACHER_POSITION_DEFAULT = "center"
 CLASSROOM_LEFTOVER_CRITERION_DEFAULT = "back"
 CLASSROOM_FILL_ORDER_DEFAULT = "rows"
+CLASSROOM_FILL_DIRECTION_DEFAULT = "left"
 
 
 class PreferencesService:
@@ -81,6 +83,14 @@ class PreferencesService:
     def set_default_fill_random(self, random: bool) -> None:
         """Desa si l'ompliment per defecte ha de ser aleatori."""
         self.settings_dao.set(CLASSROOM_FILL_RANDOM_KEY, "1" if random else "0")
+
+    def default_fill_direction(self) -> str:
+        """Retorna la direcció per defecte de `OrderBy.COLUMNS` (`"left"`/`"right"`)."""
+        return self._get(CLASSROOM_FILL_DIRECTION_KEY, CLASSROOM_FILL_DIRECTION_DEFAULT)
+
+    def set_default_fill_direction(self, direction: str) -> None:
+        """Desa la direcció per defecte de `OrderBy.COLUMNS`."""
+        self.settings_dao.set(CLASSROOM_FILL_DIRECTION_KEY, direction)
 
     def _get(self, key: str, default: str) -> str:
         value = self.settings_dao.get(key)

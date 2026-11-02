@@ -6,7 +6,8 @@ from PySide6.QtWidgets import (
 )
 
 from tutopy.ui.widgets.classroom_layout_labels import (
-    FILL_ORDER_LABELS, LEFTOVER_LABELS, TEACHER_MODE_LABELS, TEACHER_POSITION_LABELS,
+    FILL_DIRECTION_LABELS, FILL_ORDER_LABELS, LEFTOVER_LABELS, TEACHER_MODE_LABELS,
+    TEACHER_POSITION_LABELS,
 )
 
 
@@ -24,6 +25,7 @@ class ClassroomLayoutPreferencesPanel(QFrame):
     leftover_criterion_changed = Signal(str)
     fill_order_changed = Signal(str)
     fill_random_changed = Signal(bool)
+    fill_direction_changed = Signal(str)
 
     def __init__(self, parent=None):
         """Construeix els camps de preferències de distribució d'aula."""
@@ -76,6 +78,16 @@ class ClassroomLayoutPreferencesPanel(QFrame):
         )
         form.addRow("Ordenar ompliment per defecte:", self.fill_order_input)
 
+        self.fill_direction_input = QComboBox()
+        for value, label in FILL_DIRECTION_LABELS.items():
+            self.fill_direction_input.addItem(label, value.value)
+        self.fill_direction_input.currentIndexChanged.connect(
+            lambda _index: self.fill_direction_changed.emit(
+                self.fill_direction_input.currentData()
+            )
+        )
+        form.addRow("Direcció per columnes per defecte:", self.fill_direction_input)
+
         self.fill_random_input = QCheckBox("Ompliment aleatori per defecte (alfabètic si no)")
         self.fill_random_input.toggled.connect(self.fill_random_changed)
         form.addRow("", self.fill_random_input)
@@ -85,6 +97,7 @@ class ClassroomLayoutPreferencesPanel(QFrame):
     def set_values(
         self, column_pattern: str, teacher_mode: str, teacher_position: str,
         leftover_criterion: str, fill_order: str, fill_random: bool,
+        fill_direction: str,
     ) -> None:
         """Mostra els valors actuals sense reemetre cap senyal de canvi."""
         self.column_pattern_input.blockSignals(True)
@@ -95,6 +108,7 @@ class ClassroomLayoutPreferencesPanel(QFrame):
             (self.teacher_position_input, teacher_position),
             (self.leftover_input, leftover_criterion),
             (self.fill_order_input, fill_order),
+            (self.fill_direction_input, fill_direction),
         ):
             combo.blockSignals(True)
             combo.setCurrentIndex(combo.findData(value))

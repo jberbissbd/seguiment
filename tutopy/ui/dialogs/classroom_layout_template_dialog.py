@@ -2,19 +2,21 @@
 
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
-    QScrollArea, QSpinBox, QStackedWidget, QVBoxLayout, QWidget,
+    QSpinBox, QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from tutopy.models.classroom_layout import ClassroomLayout
+from tutopy.models.classroom_layout_fill import LeftoverCriterion, select_seats
 from tutopy.models.classroom_layout_generators import (
-    generate_columns, generate_exam, generate_free_grid, generate_islands,
+    MAX_GRID_SIZE, generate_columns, generate_exam, generate_free_grid, generate_islands,
     generate_u_shape,
 )
 from tutopy.ui.dialogs._base_form_dialog import BaseFormDialog
-from tutopy.ui.widgets.classroom_layout_grid_widget import ClassroomLayoutGridWidget
 from tutopy.ui.widgets.classroom_layout_labels import (
-    FILL_ORDER_LABELS, LEFTOVER_LABELS, TEACHER_MODE_LABELS, TEACHER_POSITION_LABELS,
+    FILL_DIRECTION_LABELS, FILL_ORDER_LABELS, LEFTOVER_LABELS, TEACHER_MODE_LABELS,
+    TEACHER_POSITION_LABELS,
 )
+from tutopy.ui.widgets.classroom_layout_schematic_widget import ClassroomLayoutSchematicWidget
 
 FREE = "free"
 COLUMNS = "columns"
@@ -59,6 +61,7 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
 
         body = QHBoxLayout()
         form_column = QVBoxLayout()
+        self._build_leading_fields(form_column)
 
         self.disposition_input = QComboBox()
         for key, label in DISPOSITION_LABELS.items():
@@ -89,11 +92,21 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
         self.fill_order_input = QComboBox()
         for value, label in FILL_ORDER_LABELS.items():
             self.fill_order_input.addItem(label, value.value)
+        self.fill_direction_input = QComboBox()
+        for value, label in FILL_DIRECTION_LABELS.items():
+            self.fill_direction_input.addItem(label, value.value)
+        self.fill_direction_input.setEnabled(False)
+        self.fill_order_input.currentIndexChanged.connect(
+            lambda _index: self.fill_direction_input.setEnabled(
+                self.fill_order_input.currentData() == "columns"
+            )
+        )
         self.fill_random_input = QCheckBox("Ompliment aleatori (alfabètic si no)")
         common_form.addRow("Taula del professor:", self.teacher_mode_input)
         common_form.addRow("Posició:", self.teacher_position_input)
         common_form.addRow("Seients sobrants:", self.leftover_input)
         common_form.addRow("Ordenar ompliment:", self.fill_order_input)
+        common_form.addRow("Direcció (per columnes):", self.fill_direction_input)
         common_form.addRow("", self.fill_random_input)
         form_column.addLayout(common_form)
         form_column.addStretch()
@@ -102,13 +115,13 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
 
         preview_column = QVBoxLayout()
         preview_column.addWidget(QLabel("Previsualització:"))
-        self.preview = ClassroomLayoutGridWidget()
-        self.preview.setEnabled(False)
-        preview_scroll = QScrollArea()
-        preview_scroll.setWidgetResizable(True)
-        preview_scroll.setMaximumSize(PREVIEW_MAX_SIZE, PREVIEW_MAX_SIZE)
-        preview_scroll.setWidget(self.preview)
-        preview_column.addWidget(preview_scroll)
+        self.preview = ClassroomLayoutSchematicWidget()
+        self.preview.setMaximumSize(PREVIEW_MAX_SIZE, PREVIEW_MAX_SIZE)
+        preview_column.addWidget(self.preview)
+        self.preview_summary = QLabel("")
+        self.preview_summary.setObjectName("mutedText")
+        self.preview_summary.setWordWrap(True)
+        preview_column.addWidget(self.preview_summary)
         self.preview_error = QLabel("")
         self.preview_error.setObjectName("errorText")
         self.preview_error.setWordWrap(True)
@@ -121,6 +134,9 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
         self._apply_defaults(defaults)
         self._connect_preview_updates()
         self._on_disposition_changed()
+
+    def _build_leading_fields(self, form_column: QVBoxLayout) -> None:
+        """Punt d'extensió per subclasses (p. ex. el camp de nom a "Nova distribució")."""
 
     def _build_free_page(self) -> QWidget:
         page = QWidget()
@@ -140,11 +156,44 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
         form = QFormLayout(page)
         self.column_pattern_input = QLineEdit()
         self.column_pattern_input.setPlaceholderText('p. ex. "2-3-2"')
+        self.column_pattern_input.textChanged.connect(self._rebuild_block_height_inputs)
         self.aisle_width_input = QSpinBox()
         self.aisle_width_input.setRange(1, 4)
         form.addRow("Patró de columnes:", self.column_pattern_input)
         form.addRow("Amplada del passadís:", self.aisle_width_input)
+
+        self.custom_block_heights_checkbox = QCheckBox("Algun bloc té una alçada diferent")
+        self.block_heights_container = QWidget()
+        self.block_heights_form = QFormLayout(self.block_heights_container)
+        self.block_heights_form.setContentsMargins(0, 0, 0, 0)
+        self.block_heights_container.setVisible(False)
+        self.custom_block_heights_checkbox.toggled.connect(
+            self.block_heights_container.setVisible
+        )
+        self.block_height_inputs: list[QSpinBox] = []
+        form.addRow("", self.custom_block_heights_checkbox)
+        form.addRow(self.block_heights_container)
+        self._rebuild_block_height_inputs()
         return page
+
+    def _rebuild_block_height_inputs(self, *_args) -> None:
+        """Recrea un `QSpinBox` d'alçada per cada bloc del patró actual."""
+        while self.block_heights_form.rowCount():
+            self.block_heights_form.removeRow(0)
+        self.block_height_inputs = []
+        try:
+            block_sizes = [
+                int(value) for value in self.column_pattern_input.text().strip().split("-")
+            ]
+        except ValueError:
+            return
+        for index, size in enumerate(block_sizes, start=1):
+            spin_box = QSpinBox()
+            spin_box.setRange(0, MAX_GRID_SIZE)
+            spin_box.setSpecialValueText("Automàtic")
+            spin_box.valueChanged.connect(self._update_preview)
+            self.block_height_inputs.append(spin_box)
+            self.block_heights_form.addRow(f"Bloc {index} ({size} columnes), files:", spin_box)
 
     def _build_islands_page(self) -> QWidget:
         page = QWidget()
@@ -211,6 +260,8 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
         self.column_pattern_input.textChanged.connect(self._update_preview)
         self.u_shape_auto_input.toggled.connect(self._update_preview)
         self.duplicate_source_input.currentIndexChanged.connect(self._update_preview)
+        self.leftover_input.currentIndexChanged.connect(self._update_preview)
+        self.custom_block_heights_checkbox.toggled.connect(self._update_preview)
 
     def _apply_defaults(self, defaults: dict) -> None:
         self.column_pattern_input.setText(defaults.get("column_pattern", "2-2-2"))
@@ -227,6 +278,10 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
         self.fill_order_input.setCurrentIndex(
             self.fill_order_input.findData(defaults.get("fill_order", "rows"))
         )
+        self.fill_direction_input.setCurrentIndex(
+            self.fill_direction_input.findData(defaults.get("fill_direction", "left"))
+        )
+        self.fill_direction_input.setEnabled(self.fill_order_input.currentData() == "columns")
         self.fill_random_input.setChecked(bool(defaults.get("fill_random", False)))
 
     def _on_disposition_changed(self, *_args) -> None:
@@ -244,6 +299,7 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
             return generate_columns(
                 self.column_pattern_input.text().strip(), self.student_count,
                 aisle_width=self.aisle_width_input.value(),
+                block_rows=self._current_block_rows(),
             )
         if key == ISLANDS:
             return generate_islands(
@@ -257,16 +313,42 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
             return generate_exam(self.exam_rows_input.value(), self.exam_columns_input.value())
         return None  # DUPLICATE: la previsualització no mostra la distribució d'origen
 
+    def _current_block_rows(self) -> list[int | None] | None:
+        """Alçada fixa de cada bloc (o `None` si cap és fixa), segons el `QSpinBox` de cada bloc."""
+        if not self.custom_block_heights_checkbox.isChecked():
+            return None
+        return [spin_box.value() or None for spin_box in self.block_height_inputs]
+
     def _update_preview(self, *_args) -> None:
         self.preview_error.setText("")
+        self.preview_summary.setText("")
         try:
             grid = self._current_grid()
         except ValueError as error:
             self.preview_error.setText(str(error))
+            self.preview.set_grid(None)
             return
         if grid is None:
+            self.preview.set_grid(None)
             return
-        self.preview.rebuild(grid, {}, False, {})
+
+        all_seats = {(cell.row, cell.column) for cell in grid.seats()}
+        criterion = LeftoverCriterion(self.leftover_input.currentData())
+        selected_seats = set(select_seats(grid, self.student_count, criterion))
+        leftover_seats = frozenset(all_seats - selected_seats)
+        self.preview.set_grid(grid, leftover_seats)
+        self.preview_summary.setText(self._preview_summary_text(len(all_seats)))
+
+    def _preview_summary_text(self, total_seats: int) -> str:
+        summary = f"{self.student_count} alumnes · {total_seats} seients"
+        if total_seats >= self.student_count:
+            extra = total_seats - self.student_count
+            if extra:
+                summary += f" · {extra} sobrant{'s' if extra != 1 else ''}"
+        else:
+            missing = self.student_count - total_seats
+            summary += f" · {missing} sense seient"
+        return summary
 
     def _is_valid(self) -> bool:
         key = self.disposition_input.currentData()
@@ -275,6 +357,7 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
                 generate_columns(
                     self.column_pattern_input.text().strip(), self.student_count,
                     aisle_width=self.aisle_width_input.value(),
+                    block_rows=self._current_block_rows(),
                 )
             except ValueError:
                 return False
@@ -288,6 +371,7 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
             parameters = {
                 "pattern": self.column_pattern_input.text().strip(),
                 "aisle_width": self.aisle_width_input.value(),
+                "block_rows": self._current_block_rows(),
             }
         elif key == FREE:
             parameters = {
@@ -320,5 +404,6 @@ class ClassroomLayoutTemplateDialog(BaseFormDialog):
             "teacher_position": self.teacher_position_input.currentData(),
             "leftover_criterion": self.leftover_input.currentData(),
             "fill_order": self.fill_order_input.currentData(),
+            "fill_direction": self.fill_direction_input.currentData(),
             "fill_random": self.fill_random_input.isChecked(),
         }
