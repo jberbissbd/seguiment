@@ -124,4 +124,6 @@ def test_shuffled_conserva_el_mateix_conjunt():
 def test_shuffled_es_determinista_amb_la_mateixa_llavor():
     """Shuffled és determinista amb la mateixa llavor."""
     ids = list(range(1, 11))
-    assert shuffled(ids, seed=7) == shuffled(ids, seed=7)
+    first_result = shuffled(ids, seed=7)
+    second_result = shuffled(ids, seed=7)
+    assert first_result == second_result
