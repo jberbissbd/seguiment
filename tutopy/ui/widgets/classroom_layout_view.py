@@ -32,6 +32,7 @@ class ClassroomLayoutView(QWidget):
     new_layout_requested = Signal()
     template_requested = Signal()
     clear_requested = Signal()
+    export_requested = Signal()
     rows_columns_changed = Signal(int, int)
     teacher_mode_changed = Signal(str)
     teacher_position_changed = Signal(str)
@@ -136,6 +137,12 @@ class ClassroomLayoutView(QWidget):
         self.set_active_button.clicked.connect(self.set_active_requested)
         row.addWidget(self.set_active_button)
 
+        self.export_button = QPushButton("Exportar…")
+        set_button_icon(self.export_button, "export")
+        self.export_button.setObjectName("secondaryButton")
+        self.export_button.clicked.connect(self.export_requested)
+        row.addWidget(self.export_button)
+
         self.save_button = QPushButton("Desar")
         set_button_icon(self.save_button, "save")
         self.save_button.setObjectName("primaryButton")
@@ -144,7 +151,7 @@ class ClassroomLayoutView(QWidget):
 
         for button in (
             self.new_layout_button, self.template_button, self.clear_button,
-            self.set_active_button, self.save_button,
+            self.set_active_button, self.export_button, self.save_button,
         ):
             button.setMinimumHeight(32)
             button.setMinimumWidth(button.sizeHint().width())

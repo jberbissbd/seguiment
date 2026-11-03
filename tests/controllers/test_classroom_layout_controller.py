@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from PySide6.QtWidgets import QDialog, QMessageBox
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from tutopy.application import create_services
 from tutopy.controllers.classroom_layout_controller import ClassroomLayoutController
@@ -303,3 +303,44 @@ def test_apply_template_patro_invalid_mostra_error(env):
     env.controller.apply_template()
     assert env.controller.grid is original_grid
     assert env.window.errors
+
+
+def test_export_layout_sense_distribucio_mostra_error(env):
+    env.window.sidebar.section_changed.emit("classroom")
+    env.controller.export_layout()
+    assert env.window.errors == ["Selecciona o crea primer una distribució."]
+
+
+def test_export_layout_sense_servei_mostra_error(env):
+    env.window.sidebar.section_changed.emit("classroom")
+    _blank_layout(env)
+    env.controller.export_layout()
+    assert env.window.errors == ["L’exportació no està disponible."]
+
+
+def test_export_layout_genera_el_pdf(env, monkeypatch, tmp_path):
+    env.window.sidebar.section_changed.emit("classroom")
+    _blank_layout(env)
+    env.controller.move_student(env.student_a.id, "pending", 0, 0)
+    env.controller.reports = env.services.classroom_layout_reports
+    destination = tmp_path / "pla.pdf"
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName", lambda *args: (str(destination), "")
+    )
+
+    env.controller.export_layout()
+
+    assert env.window.errors == []
+    assert destination.read_bytes().startswith(b"%PDF-")
+
+
+def test_export_layout_dialeg_cancel_lat_no_fa_res(env, monkeypatch, tmp_path):
+    env.window.sidebar.section_changed.emit("classroom")
+    _blank_layout(env)
+    env.controller.reports = env.services.classroom_layout_reports
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *args: ("", ""))
+
+    env.controller.export_layout()
+
+    assert env.window.errors == []
+    assert not (tmp_path / "pla.pdf").exists()

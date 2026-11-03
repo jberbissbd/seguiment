@@ -8,7 +8,7 @@ actualitza només les cel·les afectades, no reconstrueix tota la graella
 
 import dataclasses
 
-from PySide6.QtWidgets import QDialog, QMessageBox
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from tutopy.models.classroom_layout import CellType, ClassroomLayoutNew
 from tutopy.models.classroom_layout_fill import (
@@ -20,10 +20,12 @@ from tutopy.models.classroom_layout_generators import (
 )
 from tutopy.models.messaging import Student
 from tutopy.services.exceptions import DomainError
+from tutopy.services.classroom_layout_report_service import ClassroomLayoutReportService
 from tutopy.services.classroom_layout_service import ClassroomLayoutService
 from tutopy.services.photo_service import PhotoService
 from tutopy.services.preferences_service import PreferencesService
 from tutopy.services.student_service import StudentService
+from tutopy.services.utils import safe_filename
 from tutopy.ui.dialogs.classroom_layout_dialog import ClassroomLayoutDialog
 from tutopy.ui.dialogs.classroom_layout_template_dialog import (
     COLUMNS, DUPLICATE, EXAM, FREE, ISLANDS, U_SHAPE, ClassroomLayoutTemplateDialog,
@@ -40,6 +42,7 @@ class ClassroomLayoutController:
     def __init__(self, window: MainWindow, service: ClassroomLayoutService,
         students: StudentService, photos: PhotoService = None,
         preferences: PreferencesService = None,
+        reports: ClassroomLayoutReportService = None,
         dialog_factory=ClassroomLayoutDialog,
         template_dialog_factory=ClassroomLayoutTemplateDialog, error_handler=None):
         """Desa les dependències i connecta les accions de la vista."""
@@ -48,6 +51,7 @@ class ClassroomLayoutController:
         self.students = students
         self.photos = photos
         self.preferences = preferences
+        self.reports = reports
         self.dialog_factory = dialog_factory
         self.template_dialog_factory = template_dialog_factory
         self.error_handler = error_handler or window.show_error
@@ -80,6 +84,7 @@ class ClassroomLayoutController:
         view.show_photos_toggled.connect(self.toggle_show_photos)
         view.save_requested.connect(self.save)
         view.set_active_requested.connect(self.set_active)
+        view.export_requested.connect(self.export_layout)
         grid = view.grid_widget
         grid.move_requested.connect(self.move_student)
         grid.type_change_requested.connect(self.change_cell_type)
@@ -444,6 +449,34 @@ class ClassroomLayoutController:
         self.dirty = False
         self.window.classroom_layout_view.set_dirty(False)
         self.window.show_status("Distribució desada")
+
+    def export_layout(self) -> None:
+        """Exporta la distribució actual a PDF, amb el mateix aspecte que la pantalla.
+
+        Exporta l'estat en memòria (`self.grid`), no l'últim desat: si hi ha
+        canvis sense desar, el PDF ha de reflectir el que es veu a la
+        pantalla en aquest moment.
+        """
+        if self.layout is None or self.grid is None:
+            self.error_handler("Selecciona o crea primer una distribució.")
+            return
+        if self.reports is None:
+            self.error_handler("L’exportació no està disponible.")
+            return
+        default_name = f"{safe_filename(self.layout.name, 'distribucio')}.pdf"
+        filename, _ = QFileDialog.getSaveFileName(
+            self.window, "Exportar distribució", default_name, "Document PDF (*.pdf)",
+        )
+        if not filename:
+            return
+        try:
+            path = self.reports.export_pdf(
+                self.layout, self.grid, self._students_by_id, filename,
+            )
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self.window.show_status(f"Distribució exportada a {path}", 5000)
 
     def set_active(self) -> None:
         """Marca la distribució actual com l'activa del seu grup."""

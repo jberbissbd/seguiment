@@ -16,6 +16,7 @@ from tutopy.services.category_service import CategoryService
 from tutopy.services.contact_service import ContactService
 from tutopy.services.document_service import DocumentService
 from tutopy.services.photo_service import PhotoService
+from tutopy.services.classroom_layout_report_service import ClassroomLayoutReportService
 from tutopy.services.classroom_layout_service import ClassroomLayoutService
 from tutopy.services.note_service import NoteService
 from tutopy.services.student_service import StudentService
@@ -49,6 +50,7 @@ class ServiceContainer:
     documents: DocumentService
     photos: PhotoService
     classroom_layouts: ClassroomLayoutService
+    classroom_layout_reports: ClassroomLayoutReportService
     bulk_import: BulkImportService
     pdf_photo_import: PdfPhotoImportService
     data_management: DataManagementService
@@ -132,6 +134,7 @@ def create_services(
     classroom_layouts = ClassroomLayoutService(
         database.classroom_layouts, database.students, database.transaction,
     )
+    classroom_layout_reports = ClassroomLayoutReportService()
     container = ServiceContainer(
         students=students,
         notes=NoteService(
@@ -149,6 +152,7 @@ def create_services(
         documents=documents,
         photos=photos,
         classroom_layouts=classroom_layouts,
+        classroom_layout_reports=classroom_layout_reports,
         bulk_import=BulkImportService(
             students, categories, database.transaction,
         ),
