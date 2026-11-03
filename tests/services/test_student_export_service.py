@@ -1,3 +1,5 @@
+"""Tests del servei d'exportació de l'agregat d'un alumne."""
+
 from datetime import date
 from pathlib import Path
 
@@ -65,6 +67,7 @@ def test_exportacio_individual_rebutja_destinacio_buida(db, managed_document):
 
 
 def test_exporta_informe_i_documents_en_carpetes_per_curs(db, tmp_path):
+    """Exporta informe i documents en carpetes per curs."""
     services = create_services(db)
     services.documents.storage_dir = tmp_path / "managed"
     student = services.students.create(StudentNew("Laia", "Martí", "4t A"))
@@ -116,6 +119,7 @@ def test_nom_del_document_es_igual_en_exportacio_individual_i_en_lot(
 
 
 def test_exporta_diversos_alumnes_i_separa_homonims(db, tmp_path):
+    """Exporta diversos alumnes i separa homonims."""
     services = create_services(db)
     category = services.categories.create(CategoryNew("Acadèmic"))
     first = services.students.create(StudentNew("Alex", "Garcia", "2n A"))
@@ -137,6 +141,7 @@ def test_exporta_diversos_alumnes_i_separa_homonims(db, tmp_path):
 
 
 def test_exportacio_multiple_continua_si_un_alumne_no_te_notes(db, tmp_path):
+    """Exportació múltiple continua si un alumne no té notes."""
     services = create_services(db)
     category = services.categories.create(CategoryNew("Acadèmic"))
     valid = services.students.create(StudentNew("Laia", "Martí", "4t A"))
@@ -157,6 +162,7 @@ def test_exportacio_multiple_continua_si_un_alumne_no_te_notes(db, tmp_path):
 def test_exportacio_multiple_rebutja_seleccions_invalides(
     db, tmp_path, student_ids
 ):
+    """Exportació múltiple rebutja seleccions invalides."""
     service = create_services(db).student_exports
 
     with pytest.raises(ValidationError, match="seleccionar|selecció"):
@@ -164,6 +170,7 @@ def test_exportacio_multiple_rebutja_seleccions_invalides(
 
 
 def test_exportacio_rebutja_format_i_destinacio_invalids(db, tmp_path):
+    """Exportació rebutja format i destinació invàlids."""
     services = create_services(db)
 
     with pytest.raises(ValidationError, match="format"):
@@ -175,6 +182,7 @@ def test_exportacio_rebutja_format_i_destinacio_invalids(db, tmp_path):
 
 
 def test_exportacio_multiple_informa_alumne_inexistent(db, tmp_path):
+    """Exportació múltiple informa alumne inexistent."""
     result = create_services(db).student_exports.export_students(
         [999], tmp_path / "lots", "xlsx"
     )
@@ -185,6 +193,7 @@ def test_exportacio_multiple_informa_alumne_inexistent(db, tmp_path):
 
 
 def test_noms_de_carpeta_son_segurs_i_disponibles(tmp_path):
+    """Noms de carpeta son segurs i disponibles."""
     from tutopy.services.student_export_service import StudentExportService
 
     assert StudentExportService._safe_name('  <A/B>:*  ', "Alumne") == "A_B"
@@ -196,6 +205,7 @@ def test_noms_de_carpeta_son_segurs_i_disponibles(tmp_path):
 
 
 def test_exportacio_preparada_es_pot_cancel_lar_entre_alumnes(db, tmp_path):
+    """Exportació preparada es pot cancel·lar entre alumnes."""
     services = create_services(db)
     category = services.categories.create(CategoryNew("Seguiment"))
     student_ids = []

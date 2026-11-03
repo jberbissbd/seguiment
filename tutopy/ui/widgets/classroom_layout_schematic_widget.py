@@ -55,7 +55,8 @@ class ClassroomLayoutSchematicWidget(QWidget):
         self._leftover_seats = leftover_seats
         self.update()
 
-    def paintEvent(self, event) -> None:  # noqa: D102 (Qt override, no cal docstring)
+    def paintEvent(self, event) -> None:
+        """Dibuixa l'esquema de l'aula sobre el widget."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         if self._grid is not None and self._grid.rows and self._grid.columns:

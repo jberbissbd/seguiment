@@ -1,3 +1,5 @@
+"""Tests de la interfície de notes de seguiment."""
+
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QDialog
 
@@ -12,20 +14,28 @@ from tutopy.ui.tabs.notes_tab import NotesTab
 
 
 class AcceptedNoteDialog:
+    """Simula el diàleg de nota sempre acceptat."""
+
     values_to_return = {}
 
     def __init__(self, **kwargs):
+        """Desa els arguments rebuts del controlador."""
         self.kwargs = kwargs
 
     def exec(self):
+        """Simula l'acceptació del diàleg."""
         return QDialog.DialogCode.Accepted
 
     def values(self):
+        """Retorna els valors configurats per la prova."""
         return dict(self.values_to_return)
 
 
 class RejectedNoteDialog(AcceptedNoteDialog):
+    """Simula el diàleg de nota sempre rebutjat."""
+
     def exec(self):
+        """Simula el rebuig del diàleg."""
         return QDialog.DialogCode.Rejected
 
 
@@ -53,6 +63,7 @@ def build_note_controller(qtbot, tmp_path, confirm_delete=lambda: True):
 
 
 def test_note_dialog_retorna_valors_valids(qtbot):
+    """Note dialog retorna valors vàlids."""
     database = Database(":memory:").connect()
     try:
         services = create_services(database)
@@ -80,6 +91,7 @@ def test_note_dialog_retorna_valors_valids(qtbot):
 
 
 def test_note_dialog_accepta_la_data_escrita_directament(qtbot):
+    """Note dialog accepta la data escrita directament."""
     database = Database(":memory:").connect()
     try:
         services = create_services(database)
@@ -100,6 +112,7 @@ def test_note_dialog_accepta_la_data_escrita_directament(qtbot):
 
 
 def test_notes_tab_construeix_filtres_combinables(qtbot):
+    """Notes tab construeix filtres combinables."""
     database = Database(":memory:").connect()
     try:
         services = create_services(database)
@@ -127,6 +140,7 @@ def test_notes_tab_construeix_filtres_combinables(qtbot):
 
 
 def test_note_controller_crud(qtbot, tmp_path, monkeypatch):
+    """Note controller crud."""
     database, services, student, category, window, controller, errors = (
         build_note_controller(qtbot, tmp_path)
     )
@@ -164,6 +178,7 @@ def test_note_controller_crud(qtbot, tmp_path, monkeypatch):
 def test_accio_contextual_crea_la_nota_per_l_alumne_de_la_fila(
     qtbot, tmp_path, monkeypatch
 ):
+    """Accio contextual crea la nota per l'alumne de la fila."""
     database, services, first, category, window, controller, errors = (
         build_note_controller(qtbot, tmp_path)
     )
@@ -193,6 +208,7 @@ def test_accio_contextual_crea_la_nota_per_l_alumne_de_la_fila(
 
 
 def test_note_controller_aplica_filtres_de_la_vista(qtbot, tmp_path):
+    """Note controller aplica filtres de la vista."""
     database, services, student, category, window, controller, errors = (
         build_note_controller(qtbot, tmp_path)
     )
@@ -227,6 +243,7 @@ def test_note_controller_aplica_filtres_de_la_vista(qtbot, tmp_path):
 def test_note_controller_valida_context_categoria_i_cancel_lacions(
     qtbot, tmp_path
 ):
+    """Note controller vàlida context categoria i cancel·lacions."""
     database, services, student, category, _window, controller, errors = (
         build_note_controller(qtbot, tmp_path, confirm_delete=lambda: False)
     )
@@ -256,6 +273,7 @@ def test_note_controller_valida_context_categoria_i_cancel_lacions(
 
 
 def test_note_controller_mostra_errors_de_servei(qtbot, tmp_path):
+    """Note controller mostra errors de servei."""
     database, services, student, category, _window, controller, errors = (
         build_note_controller(qtbot, tmp_path)
     )

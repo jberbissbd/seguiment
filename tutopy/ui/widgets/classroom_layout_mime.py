@@ -26,7 +26,7 @@ def decode(mime_data: QMimeData) -> tuple[int, str] | None:
         text = bytes(mime_data.data(MIME_TYPE)).decode("utf-8")
         student_id_text, origin = text.split(":", 1)
         return int(student_id_text), origin
-    except (ValueError, UnicodeDecodeError):
+    except ValueError:
         return None
 
 

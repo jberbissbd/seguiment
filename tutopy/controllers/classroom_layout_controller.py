@@ -413,7 +413,7 @@ class ClassroomLayoutController:
             return
         self.teacher_mode = mode
         if mode == "strip":
-            for (row, column), cell in list(self.grid.cells.items()):
+            for (row, column), cell in self.grid.cells.items():
                 if cell.cell_type == CellType.TEACHER:
                     self.grid.set_cell_type(row, column, CellType.SEAT)
         self._mark_dirty()

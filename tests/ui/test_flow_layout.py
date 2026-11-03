@@ -1,3 +1,5 @@
+"""Tests del layout de flux."""
+
 from PySide6.QtCore import QRect
 from PySide6.QtWidgets import QLabel, QWidget
 
@@ -5,6 +7,7 @@ from tutopy.ui.widgets.flow_layout import FlowLayout
 
 
 def test_flow_layout_distribueix_elements_i_calcula_alcada(qtbot):
+    """Flow layout distribueix elements i calcula alcada."""
     parent = QWidget()
     qtbot.addWidget(parent)
     layout = FlowLayout(parent, margin=4, spacing=6)
@@ -29,6 +32,7 @@ def test_flow_layout_distribueix_elements_i_calcula_alcada(qtbot):
 
 
 def test_flow_layout_extreu_i_elimina_widgets(qtbot):
+    """Flow layout extreu i elimina widgets."""
     parent = QWidget()
     qtbot.addWidget(parent)
     layout = FlowLayout(parent)

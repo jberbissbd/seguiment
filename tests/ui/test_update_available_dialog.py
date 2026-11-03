@@ -1,3 +1,5 @@
+"""Tests del diàleg d'avís de nova versió disponible."""
+
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog, QDialogButtonBox
 
@@ -13,6 +15,7 @@ def _open_button(dialog):
 
 
 def test_boto_obre_la_pagina_de_descarrega(qtbot, monkeypatch):
+    """Boto obre la pàgina de descarrega."""
     opened = []
     monkeypatch.setattr(
         QDesktopServices, "openUrl", lambda url: opened.append(url.toString())
@@ -26,6 +29,7 @@ def test_boto_obre_la_pagina_de_descarrega(qtbot, monkeypatch):
 
 
 def test_tancar_accepta_el_dialeg_sense_obrir_cap_url(qtbot, monkeypatch):
+    """Tancar accepta el diàleg sense obrir cap url."""
     opened = []
     monkeypatch.setattr(
         QDesktopServices, "openUrl", lambda url: opened.append(url.toString())

@@ -1,3 +1,5 @@
+"""Tests del controlador de distribució d'aula."""
+
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -10,6 +12,8 @@ from tutopy.database.database import Database
 from tutopy.models.classroom_layout import ClassroomLayoutNew
 from tutopy.models.messaging import StudentNew
 from tutopy.ui.main_window import MainWindow
+
+NO_LAYOUT_SELECTED_ERROR = "Selecciona o crea primer una distribució."
 
 NEW_LAYOUT_VALUES = {
     "name": "Nova", "disposition": "free", "parameters": {"rows": 3, "columns": 3},
@@ -28,6 +32,7 @@ def _new_layout_dialog_factory(group_name, student_count, other_layouts, default
 
 @pytest.fixture
 def env(qtbot, tmp_path):
+    """Construeix la finestra, els serveis i el controlador de distribució d'aula."""
     database = Database(str(tmp_path / "classroom.db")).connect()
     services = create_services(database)
     window = MainWindow()
@@ -63,11 +68,13 @@ def _blank_layout(env, rows=3, columns=3):
 
 
 def test_section_changed_carrega_grups_i_primer_grup(env):
+    """Section changed càrrega grups i primer grup."""
     env.window.sidebar.section_changed.emit("classroom")
     assert env.controller.group_name == "1r A"
 
 
 def test_section_changed_nomes_carrega_un_cop(env, monkeypatch):
+    """Section changed només càrrega un cop."""
     env.window.sidebar.section_changed.emit("classroom")
     calls = []
     monkeypatch.setattr(env.controller, "select_group", lambda *a: calls.append(a))
@@ -76,6 +83,7 @@ def test_section_changed_nomes_carrega_un_cop(env, monkeypatch):
 
 
 def test_new_layout_el_selecciona(env):
+    """New layout el selecciona."""
     env.window.sidebar.section_changed.emit("classroom")
     env.controller.new_layout()
     assert env.controller.layout is not None
@@ -95,11 +103,13 @@ def test_new_layout_omple_directament_amb_les_opcions_triades(env):
 
 
 def test_new_layout_sense_grup_mostra_error(env):
+    """New layout sense grup mostra error."""
     env.controller.new_layout()
     assert env.window.errors == ["Selecciona primer un grup."]
 
 
 def test_move_student_des_de_pendents_intercanvia_i_desplaca(env):
+    """Move student des de pendents intercanvia i desplaca."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.move_student(env.student_a.id, "pending", 0, 0)
@@ -113,6 +123,7 @@ def test_move_student_des_de_pendents_intercanvia_i_desplaca(env):
 
 
 def test_return_to_pending(env):
+    """Return to pending."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.move_student(env.student_a.id, "pending", 0, 0)
@@ -122,6 +133,7 @@ def test_return_to_pending(env):
 
 
 def test_save_neteja_el_dirty_i_persisteix(env):
+    """Save neteja el dirty i persisteix."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.move_student(env.student_a.id, "pending", 0, 0)
@@ -134,6 +146,7 @@ def test_save_neteja_el_dirty_i_persisteix(env):
 
 
 def test_set_active_marca_la_distribucio(env):
+    """Set active marca la distribució."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.set_active()
@@ -142,6 +155,7 @@ def test_set_active_marca_la_distribucio(env):
 
 
 def test_canvi_de_grup_amb_canvis_sense_desar_demana_confirmacio(env, monkeypatch):
+    """Canvi de grup amb canvis sense desar demana confirmació."""
     env.services.students.create(StudentNew("Clara", "Diaz", "1r B"))
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
@@ -161,15 +175,18 @@ def test_canvi_de_grup_amb_canvis_sense_desar_demana_confirmacio(env, monkeypatc
 
 
 def test_resize_torna_a_pendents_els_desplacats(env):
+    """Resize torna a pendents els desplacats."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.move_student(env.student_a.id, "pending", 2, 2)
     env.controller.resize(2, 2)
-    assert env.controller.grid.rows == 2 and env.controller.grid.columns == 2
+    assert env.controller.grid.rows == 2
+    assert env.controller.grid.columns == 2
     assert any(student.id == env.student_a.id for student in env.controller.pending)
 
 
 def test_place_teacher_canvia_el_mode_i_desplaca_alumnes(env):
+    """Place teacher canvia el mode i desplaca alumnes."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.move_student(env.student_a.id, "pending", 0, 0)
@@ -194,19 +211,22 @@ def _template_dialog_factory(disposition, parameters, teacher_mode="strip",
 
 
 def test_apply_template_sense_distribucio_mostra_error(env):
+    """Apply template sense distribució mostra error."""
     env.window.sidebar.section_changed.emit("classroom")
     env.controller.apply_template()
-    assert env.window.errors == ["Selecciona o crea primer una distribució."]
+    assert env.window.errors == [NO_LAYOUT_SELECTED_ERROR]
 
 
 def test_apply_template_fresh_omple_alfabeticament(env):
+    """Apply template fresh omple alfabèticament."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.template_dialog_factory = _template_dialog_factory(
         "free", {"rows": 1, "columns": 2},
     )
     env.controller.apply_template()
-    assert env.controller.grid.rows == 1 and env.controller.grid.columns == 2
+    assert env.controller.grid.rows == 1
+    assert env.controller.grid.columns == 2
     assert len(env.controller.pending) == 0
     # alfabètic per cognoms: Bosch abans que Camps
     assert env.controller.grid.find(env.student_a.id) == (0, 0)
@@ -214,6 +234,7 @@ def test_apply_template_fresh_omple_alfabeticament(env):
 
 
 def test_apply_template_cancel_lar_dialeg_no_canvia_res(env):
+    """Apply template cancel·lar diàleg no canvia res."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
 
@@ -247,6 +268,7 @@ def test_apply_template_amb_assignacions_no_demana_res_i_laplica_directament(env
 
 
 def test_clear_layout_buida_tots_els_assignats(env):
+    """Clear layout buida tots els assignats."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.move_student(env.student_a.id, "pending", 0, 0)
@@ -260,12 +282,14 @@ def test_clear_layout_buida_tots_els_assignats(env):
 
 
 def test_clear_layout_sense_distribucio_mostra_error(env):
+    """Clear layout sense distribució mostra error."""
     env.window.sidebar.section_changed.emit("classroom")
     env.controller.clear_layout()
-    assert env.window.errors == ["Selecciona o crea primer una distribució."]
+    assert env.window.errors == [NO_LAYOUT_SELECTED_ERROR]
 
 
 def test_apply_template_omple_per_columnes_amb_direccio(env):
+    """Apply template omple per columnes amb direcció."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.template_dialog_factory = _template_dialog_factory(
@@ -279,6 +303,7 @@ def test_apply_template_omple_per_columnes_amb_direccio(env):
 
 
 def test_pendents_es_mantenen_ordenats_per_cognom_despres_de_moviments(env):
+    """Pendents es mantenen ordenats per cognom despres de moviments."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.move_student(env.student_a.id, "pending", 0, 0)
@@ -294,6 +319,7 @@ def test_pendents_es_mantenen_ordenats_per_cognom_despres_de_moviments(env):
 
 
 def test_apply_template_patro_invalid_mostra_error(env):
+    """Apply template patró invàlid mostra error."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.template_dialog_factory = _template_dialog_factory(
@@ -306,12 +332,14 @@ def test_apply_template_patro_invalid_mostra_error(env):
 
 
 def test_export_layout_sense_distribucio_mostra_error(env):
+    """Export layout sense distribució mostra error."""
     env.window.sidebar.section_changed.emit("classroom")
     env.controller.export_layout()
-    assert env.window.errors == ["Selecciona o crea primer una distribució."]
+    assert env.window.errors == [NO_LAYOUT_SELECTED_ERROR]
 
 
 def test_export_layout_sense_servei_mostra_error(env):
+    """Export layout sense servei mostra error."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.export_layout()
@@ -319,6 +347,7 @@ def test_export_layout_sense_servei_mostra_error(env):
 
 
 def test_export_layout_genera_el_pdf(env, monkeypatch, tmp_path):
+    """Export layout genera el pdf."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.move_student(env.student_a.id, "pending", 0, 0)
@@ -335,6 +364,7 @@ def test_export_layout_genera_el_pdf(env, monkeypatch, tmp_path):
 
 
 def test_export_layout_dialeg_cancel_lat_no_fa_res(env, monkeypatch, tmp_path):
+    """Export layout diàleg cancel·lat no fa res."""
     env.window.sidebar.section_changed.emit("classroom")
     _blank_layout(env)
     env.controller.reports = env.services.classroom_layout_reports

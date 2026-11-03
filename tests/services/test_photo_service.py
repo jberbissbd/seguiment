@@ -1,3 +1,5 @@
+"""Tests del servei de fotografies de l'alumnat."""
+
 from pathlib import Path
 
 import pytest

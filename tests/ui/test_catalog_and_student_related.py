@@ -1,3 +1,5 @@
+"""Tests de les pestanyes de categories i de dades relacionades de l'alumne."""
+
 from PySide6.QtWidgets import QDialog
 
 from tutopy.application import create_services
@@ -9,63 +11,80 @@ from tutopy.ui.main_window import MainWindow
 
 
 class AcceptedAnnotationDialog:
+    """Simula el diàleg de descriptor sempre acceptat."""
+
     value_to_return = "Descriptor"
 
     def __init__(self, **kwargs):
-        pass
+        """Ignora els arguments rebuts del controlador."""
 
     def exec(self):
+        """Simula l'acceptació del diàleg."""
         return QDialog.DialogCode.Accepted
 
     def value(self):
+        """Retorna el valor configurat per la prova."""
         return self.value_to_return
 
 
 class AcceptedContactDialog:
+    """Simula el diàleg de contacte sempre acceptat."""
+
     values_to_return = {
         "name": "Marta", "description": "Mare",
         "phone": "600000000", "email": "marta@example.cat",
     }
 
     def __init__(self, **kwargs):
-        pass
+        """Ignora els arguments rebuts del controlador."""
 
     def exec(self):
+        """Simula l'acceptació del diàleg."""
         return QDialog.DialogCode.Accepted
 
     def values(self):
+        """Retorna els valors configurats per la prova."""
         return dict(self.values_to_return)
 
 
 class AcceptedDocumentDialog:
+    """Simula el diàleg de document sempre acceptat."""
+
     values_to_return = {}
 
     def __init__(self, **kwargs):
-        pass
+        """Ignora els arguments rebuts del controlador."""
 
     def exec(self):
+        """Simula l'acceptació del diàleg."""
         return QDialog.DialogCode.Accepted
 
     def values(self):
+        """Retorna els valors configurats per la prova."""
         return dict(self.values_to_return)
 
 
 class AcceptedTextDialog:
+    """Simula un diàleg de text simple, retornant els valors indicats en ordre."""
+
     values = []
 
     def __init__(self, **kwargs):
-        pass
+        """Ignora els arguments rebuts del controlador."""
 
     def exec(self):
+        """Simula l'acceptació del diàleg."""
         return QDialog.DialogCode.Accepted
 
     def value(self):
+        """Retorna i consumeix el proper valor configurat per la prova."""
         return self.values.pop(0)
 
 
 def test_controlador_de_dades_relacionades_crea_i_mostra_elements(
     qtbot, tmp_path, monkeypatch
 ):
+    """Controlador de dades relacionades crea i mostra elements."""
     database = Database(str(tmp_path / "student-related.db")).connect()
     try:
         services = create_services(database)
@@ -125,6 +144,7 @@ def test_controlador_de_dades_relacionades_crea_i_mostra_elements(
 
 
 def test_controlador_de_categories_fa_crud(qtbot, tmp_path, monkeypatch):
+    """Controlador de categories fa crud."""
     database = Database(str(tmp_path / "catalogs.db")).connect()
     try:
         services = create_services(database)
@@ -150,6 +170,7 @@ def test_controlador_de_categories_fa_crud(qtbot, tmp_path, monkeypatch):
 
 
 def test_historial_repara_i_mostra_el_grup_inicial(qtbot, tmp_path):
+    """Historial repara i mostra el grup inicial."""
     database = Database(str(tmp_path / "history-repair.db")).connect()
     try:
         services = create_services(database)
@@ -173,6 +194,7 @@ def test_historial_repara_i_mostra_el_grup_inicial(qtbot, tmp_path):
 
 
 def test_colors_dels_descriptors_son_globals_i_estables(qtbot, tmp_path):
+    """Colors dels descriptors son globals i estables."""
     database = Database(str(tmp_path / "descriptor-colors.db")).connect()
     try:
         services = create_services(database)

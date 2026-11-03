@@ -1,3 +1,5 @@
+"""Tests de la importació de fotografies des d'un PDF orla."""
+
 from pathlib import Path
 
 import pymupdf
@@ -54,6 +56,7 @@ def _build_orla_pdf(path: Path) -> None:
 
 @pytest.fixture
 def orla_pdf(tmp_path) -> Path:
+    """Genera un PDF orla de prova amb fotografies i etiquetes d'alumnes."""
     path = tmp_path / "orla.pdf"
     _build_orla_pdf(path)
     return path

@@ -1,3 +1,5 @@
+"""Tests del controlador de gestió de dades (plantilles, importació, transferències)."""
+
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -138,6 +140,7 @@ def test_conflictes_transferencia_respecten_la_decisio(
 
 
 def test_exporta_plantilla_i_admet_cancel_lacio(data_management_env, monkeypatch):
+    """Exporta plantilla i admet cancel·lació."""
     window, importer, _, controller, _, _ = data_management_env
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *args: ("", ""))
     controller.export_template()
@@ -150,6 +153,7 @@ def test_exporta_plantilla_i_admet_cancel_lacio(data_management_env, monkeypatch
 
 
 def test_exportacio_mostra_error_de_domini(data_management_env, monkeypatch):
+    """Exportació mostra error de domini."""
     window, importer, _, controller, _, _ = data_management_env
     importer.error = ValidationError("no es pot desar")
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *args: ("fitxer.xlsx", ""))
@@ -158,6 +162,7 @@ def test_exportacio_mostra_error_de_domini(data_management_env, monkeypatch):
 
 
 def test_importacio_cancel_lada_o_amb_incidencies_no_executa(data_management_env, monkeypatch):
+    """Importació cancel·lada o amb incidències no executa."""
     window, importer, _, controller, _, _ = data_management_env
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("", ""))
     controller.import_spreadsheet()
@@ -171,6 +176,7 @@ def test_importacio_cancel_lada_o_amb_incidencies_no_executa(data_management_env
 
 
 def test_importacio_sense_conflictes_refresca_i_resumeix(data_management_env, monkeypatch):
+    """Importació sense conflictes refresca i resumeix."""
     _, importer, _, controller, changed, messages = data_management_env
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("dades.xlsx", ""))
     controller.import_spreadsheet()
@@ -181,6 +187,7 @@ def test_importacio_sense_conflictes_refresca_i_resumeix(data_management_env, mo
 
 
 def test_importacio_amb_conflictes_aplica_decisions(data_management_env, monkeypatch):
+    """Importació amb conflictes aplica decisions."""
     _, importer, _, controller, changed, _ = data_management_env
     importer.preview = SimpleNamespace(issues=(), conflicts=(object(),))
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("dades.xlsx", ""))
@@ -197,6 +204,7 @@ def test_importacio_amb_conflictes_aplica_decisions(data_management_env, monkeyp
 
 
 def test_importacio_amb_conflictes_es_pot_cancel_lar(data_management_env, monkeypatch):
+    """Importació amb conflictes es pot cancel·lar."""
     _, importer, _, controller, changed, _ = data_management_env
     importer.preview = SimpleNamespace(issues=(), conflicts=(object(),))
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("dades.xlsx", ""))
@@ -212,6 +220,7 @@ def test_importacio_amb_conflictes_es_pot_cancel_lar(data_management_env, monkey
 
 
 def test_importacio_mostra_errors(data_management_env, monkeypatch):
+    """Importació mostra errors."""
     window, importer, _, controller, _, _ = data_management_env
     importer.error = ValidationError("full incorrecte")
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("dades.xlsx", ""))
@@ -220,6 +229,7 @@ def test_importacio_mostra_errors(data_management_env, monkeypatch):
 
 
 def test_esborrat_cancel_lacio_error_i_exit(data_management_env, monkeypatch):
+    """Esborrat cancel·lació error i exit."""
     window, _, data, controller, changed, messages = data_management_env
 
     class Dialog:
@@ -245,6 +255,7 @@ def test_esborrat_cancel_lacio_error_i_exit(data_management_env, monkeypatch):
 def test_transferencia_exporta_i_importa_paquets(
     data_management_env, monkeypatch, tmp_path, qtbot
 ):
+    """Transferència exporta i importa paquets."""
     window, _, _, controller, changed, messages = data_management_env
 
     class TransferStub:
@@ -312,6 +323,7 @@ def test_transferencia_exporta_i_importa_paquets(
 
 
 def test_transferencia_individual_exigeix_seleccio(data_management_env):
+    """Transferència individual exigeix selecció."""
     window, _, _, controller, _, _ = data_management_env
     controller.transfer_service = object()
 
@@ -323,6 +335,7 @@ def test_transferencia_individual_exigeix_seleccio(data_management_env):
 def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
     data_management_env, monkeypatch, tmp_path, qtbot
 ):
+    """Transferència exporta els alumnes marcats del mateix widget."""
     window, _, _, controller, _, _ = data_management_env
 
     class TransferStub:
@@ -375,6 +388,7 @@ def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
 def test_transferencia_valida_confirmacio_i_mostra_motiu_error(
     data_management_env, monkeypatch, tmp_path
 ):
+    """Transferència vàlida confirmació i mostra motiu error."""
     window, _, _, controller, _, _ = data_management_env
 
     class TransferStub:

@@ -1,6 +1,7 @@
+"""Tests de la resolució de directoris de dades de l'aplicació."""
+
 import os
 from pathlib import Path
-import pytest
 from tutopy.services.directories import (
     _is_writable,
     get_project_root,

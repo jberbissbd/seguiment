@@ -1,3 +1,5 @@
+"""Tests del punt d'entrada i la composició de l'aplicació."""
+
 import subprocess
 import sys
 from types import SimpleNamespace
@@ -21,6 +23,7 @@ from tutopy.ui.main_window import MainWindow
 
 
 def test_create_services_requereix_database_connectada(tmp_path):
+    """Create services requereix database connectada."""
     database = Database(str(tmp_path / "test.db"))
     with pytest.raises(RuntimeError, match="connectada"):
         create_services(database)
@@ -28,6 +31,7 @@ def test_create_services_requereix_database_connectada(tmp_path):
 
 @pytest.mark.integration
 def test_create_services_compon_la_capa_de_negoci(tmp_path):
+    """Create services compon la capa de negoci."""
     database = Database(str(tmp_path / "test.db")).connect()
     try:
         services = create_services(database)
@@ -48,12 +52,14 @@ def test_create_services_compon_la_capa_de_negoci(tmp_path):
 
 
 def test_main_es_importable_sense_executar_la_ui():
+    """Main és importable sense executar la ui."""
     from tutopy.main import main
 
     assert callable(main)
 
 
 def test_application_no_carrega_backends_de_documents_a_l_arrencada():
+    """Application no càrrega backends de documents a l'arrencada."""
     code = (
         "import sys; import tutopy.application; "
         "assert not ({'openpyxl', 'docx', 'odf', 'reportlab'} & sys.modules.keys())"
@@ -63,6 +69,7 @@ def test_application_no_carrega_backends_de_documents_a_l_arrencada():
 
 
 def test_controller_container_inicia_nomes_controladors_visibles():
+    """Controller container inicia només controladors visibles."""
     calls = []
 
     def controller(name):
@@ -84,6 +91,7 @@ def test_controller_container_inicia_nomes_controladors_visibles():
 
 @pytest.mark.ui
 def test_create_controllers_compon_i_inicia_la_ui(tmp_path, qtbot, monkeypatch):
+    """Create controllers compon i inicia la ui."""
     def no_network(*_args, **_kwargs):
         raise OSError("sense xarxa als tests")
 
@@ -108,6 +116,7 @@ def test_create_controllers_compon_i_inicia_la_ui(tmp_path, qtbot, monkeypatch):
 
 
 def test_main_configura_cicle_de_vida_sense_executar_qt(monkeypatch):
+    """Main configura cicle de vida sense executar qt."""
     import tutopy.main as main_module
 
     events = []

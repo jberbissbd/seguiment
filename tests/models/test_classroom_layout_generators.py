@@ -1,3 +1,5 @@
+"""Tests dels generadors de plantilles de distribució d'aula."""
+
 import pytest
 
 from tutopy.models.classroom_layout import CellType
@@ -12,6 +14,7 @@ def _seats(grid):
 
 
 def test_generate_free_grid_tot_son_seients():
+    """Generate free grid tot son seients."""
     grid = generate_free_grid(2, 3)
     assert len(_seats(grid)) == 6
 
@@ -75,11 +78,13 @@ def test_generate_columns_block_rows_tots_els_blocs_fixats():
 
 
 def test_generate_columns_block_rows_longitud_incorrecta_rebutjada():
+    """Generate columns block rows longitud incorrecta rebutjada."""
     with pytest.raises(ValueError, match="alçada"):
         generate_columns("2-2", 10, block_rows=[3])
 
 
 def test_generate_columns_block_rows_valor_fora_de_rang_rebutjat():
+    """Generate columns block rows valor fora de rang rebutjat."""
     with pytest.raises(ValueError, match="alçada"):
         generate_columns("2-2", 10, block_rows=[0, None])
 
@@ -93,6 +98,7 @@ def test_generate_columns_block_rows_amb_rows_manual_s_ignora():
 
 @pytest.mark.parametrize(("total", "count"), [(7, 5), (7, 2), (4, 1), (9, 0), (9, 9)])
 def test_evenly_spread_indices_reparteix_el_nombre_exacte(total, count):
+    """Evenly spread indices reparteix el nombre exacte."""
     indices = _evenly_spread_indices(total, count)
     assert len(indices) == count
     assert indices <= set(range(total))
@@ -105,6 +111,7 @@ def test_evenly_spread_indices_evita_agrupar_els_indexs():
 
 
 def test_generate_columns_crea_passadissos_entre_blocs():
+    """Generate columns crea passadissos entre blocs."""
     grid = generate_columns("2-2", 4, rows=1)
     types = [grid.cells[(0, column)].cell_type for column in range(grid.columns)]
     assert types == [
@@ -113,6 +120,7 @@ def test_generate_columns_crea_passadissos_entre_blocs():
 
 
 def test_generate_columns_assigna_bloc_per_columna():
+    """Generate columns assigna bloc per columna."""
     grid = generate_columns("2-3", 5, rows=1)
     blocks = [grid.cells[(0, column)].block for column in range(grid.columns)]
     assert blocks == [0, 0, None, 1, 1, 1]
@@ -120,26 +128,32 @@ def test_generate_columns_assigna_bloc_per_columna():
 
 @pytest.mark.parametrize("pattern", ["", "2-", "a-b", "2,2", "-2"])
 def test_generate_columns_rebutja_patro_invalid(pattern):
+    """Generate columns rebutja patró invàlid."""
     with pytest.raises(ValueError, match="patró"):
         generate_columns(pattern, 10)
 
 
 def test_generate_columns_rebutja_bloc_massa_gran():
+    """Generate columns rebutja bloc massa gran."""
     with pytest.raises(ValueError, match="1 i 6"):
         generate_columns("7", 10)
 
 
 def test_generate_columns_rebutja_massa_columnes():
+    """Generate columns rebutja massa columnes."""
+    pattern = "-".join(["6"] * 5)
     with pytest.raises(ValueError, match="límit"):
-        generate_columns("-".join(["6"] * 5), 100)
+        generate_columns(pattern, 100)
 
 
 def test_generate_columns_sense_alumnes_dona_una_fila():
+    """Generate columns sense alumnes dona una fila."""
     grid = generate_columns("2-2", 0)
     assert grid.rows == 1
 
 
 def test_generate_islands_estructura_basica():
+    """Generate islands estructura bàsica."""
     grid = generate_islands((2, 2), 2, 8)
     assert len(_seats(grid)) == 8
     # una sola banda (8 seients / (2 illes * 4 seients) = 1 banda)
@@ -148,6 +162,7 @@ def test_generate_islands_estructura_basica():
 
 
 def test_generate_islands_bandes_multiples_amb_passadis_entremig():
+    """Generate islands bandes multiples amb passadis entremig."""
     grid = generate_islands((2, 2), 1, 10)
     # 10 alumnes, 4 seients per banda -> 3 bandes -> 6 files illa + 2 passadís
     assert grid.rows == 8
@@ -161,16 +176,19 @@ def test_generate_islands_bandes_multiples_amb_passadis_entremig():
 
 @pytest.mark.parametrize("island_size, islands_per_row", [((0, 2), 2), ((2, 2), 0)])
 def test_generate_islands_rebutja_mides_invalides(island_size, islands_per_row):
+    """Generate islands rebutja mides invalides."""
     with pytest.raises(ValueError):
         generate_islands(island_size, islands_per_row, 10)
 
 
 def test_generate_u_shape_automatic_mida():
+    """Generate u shape automàtic mida."""
     grid = generate_u_shape(None, 12)
     assert grid.rows == grid.columns
 
 
 def test_generate_u_shape_costats_ocupats_centre_i_davant_lliures():
+    """Generate u shape costats ocupats centre i davant lliures."""
     grid = generate_u_shape(4, 0)
     assert grid.cells[(3, 0)].cell_type == CellType.SEAT  # fons-esquerra
     assert grid.cells[(3, 3)].cell_type == CellType.SEAT  # fons-dreta
@@ -180,11 +198,13 @@ def test_generate_u_shape_costats_ocupats_centre_i_davant_lliures():
 
 
 def test_generate_u_shape_rebutja_mida_massa_petita():
+    """Generate u shape rebutja mida massa petita."""
     with pytest.raises(ValueError):
         generate_u_shape(1, 0)
 
 
 def test_generate_exam_cel_les_alternes_buides():
+    """Generate exam cel les alternes buides."""
     grid = generate_exam(2, 2)
     assert grid.cells[(0, 0)].cell_type == CellType.SEAT
     assert grid.cells[(0, 1)].cell_type == CellType.EMPTY

@@ -1,3 +1,5 @@
+"""Tests de la interfície d'estadístiques."""
+
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy
 
@@ -10,6 +12,7 @@ from tutopy.ui.widgets.statistics_chart import BarChart
 
 
 def test_vista_exposa_filtres_i_actualitzacio_explicita(qtbot):
+    """Vista exposa filtres i actualització explicita."""
     view = StatisticsView()
     qtbot.addWidget(view)
     view.set_filter_options([], ["4t A"], [])
@@ -25,6 +28,7 @@ def test_vista_exposa_filtres_i_actualitzacio_explicita(qtbot):
 
 
 def test_canviar_un_filtre_actualitza_automaticament_una_sola_vegada(qtbot):
+    """Canviar un filtre actualitza automaticament una sola vegada."""
     view = StatisticsView()
     qtbot.addWidget(view)
     view.set_filter_options([], ["4t A", "4t B"], [])
@@ -40,6 +44,7 @@ def test_canviar_un_filtre_actualitza_automaticament_una_sola_vegada(qtbot):
 
 
 def test_vista_mostra_resum_grafics_i_alumnes_amb_zero(qtbot):
+    """Vista mostra resum grafics i alumnes amb zero."""
     view = StatisticsView()
     qtbot.addWidget(view)
     snapshot = StatisticsSnapshot(
@@ -62,6 +67,7 @@ def test_vista_mostra_resum_grafics_i_alumnes_amb_zero(qtbot):
 
 
 def test_nova_seccio_es_navegable_i_te_desplacament_vertical(qtbot):
+    """Nova secció és navegable i té desplaçament vertical."""
     window = MainWindow()
     qtbot.addWidget(window)
     window.show_section("statistics")
@@ -71,6 +77,7 @@ def test_nova_seccio_es_navegable_i_te_desplacament_vertical(qtbot):
 
 
 def test_evolucio_mensual_guanya_amplada_en_lloc_de_comprimir_se(qtbot):
+    """Evolucio mensual guanya amplada en lloc de comprimir-se."""
     view = StatisticsView()
     qtbot.addWidget(view)
     values = tuple(
@@ -83,6 +90,7 @@ def test_evolucio_mensual_guanya_amplada_en_lloc_de_comprimir_se(qtbot):
 
 
 def test_grafic_renderitza_estat_buit_i_limits_de_valors(qtbot):
+    """Gràfic renderitza estat buit i limits de valors."""
     chart = BarChart(show_latest=True, max_items=2)
     qtbot.addWidget(chart)
     chart.resize(420, 240)
@@ -104,6 +112,7 @@ def test_grafic_renderitza_estat_buit_i_limits_de_valors(qtbot):
 
 
 def test_grafic_sense_limit_mostra_tots_els_valors(qtbot):
+    """Gràfic sense limit mostra tots els valors."""
     chart = BarChart(max_items=None)
     qtbot.addWidget(chart)
     chart.set_values(tuple(StatisticValue(str(index), index) for index in range(5)))

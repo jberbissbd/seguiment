@@ -1,3 +1,7 @@
+"""Tests del servei de contactes."""
+
+from dataclasses import replace
+
 import pytest
 
 from tutopy.models.messaging import ContactNew, StudentNew
@@ -6,6 +10,7 @@ from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 
 
 def test_contact_service_crud(contact_dao, student_dao, db):
+    """Contact service crud."""
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
     service = ContactService(contact_dao, student_dao)
 
@@ -22,6 +27,7 @@ def test_contact_service_crud(contact_dao, student_dao, db):
 
 
 def test_contact_service_valida_relacions_i_text(contact_dao, student_dao, db):
+    """Contact service vàlida relacions i text."""
     service = ContactService(contact_dao, student_dao)
     missing_student = ContactNew(999, "Nom", "Relació")
     with pytest.raises(EntityNotFoundError):
@@ -31,4 +37,4 @@ def test_contact_service_valida_relacions_i_text(contact_dao, student_dao, db):
     invalid_contact = ContactNew(student.id, "   ", "Relació")
     with pytest.raises(ValidationError):
         service.create(invalid_contact)
-from dataclasses import replace
+

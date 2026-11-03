@@ -1,3 +1,5 @@
+"""Tests de l'exportació en PDF d'una distribució d'aula."""
+
 import pytest
 
 from tutopy.models.classroom_layout import CellType, ClassroomLayout
@@ -20,10 +22,12 @@ def _layout(**overrides):
 
 @pytest.fixture
 def service():
+    """Construeix el servei d'exportació de distribucions d'aula."""
     return ClassroomLayoutReportService()
 
 
 def test_exporta_pdf_valid(service, tmp_path):
+    """Exporta pdf vàlid."""
     grid = generate_columns("2-2", 4, rows=2)
     students = {}
     for index, cell in enumerate(grid.seats(), start=1):
@@ -38,6 +42,7 @@ def test_exporta_pdf_valid(service, tmp_path):
 
 
 def test_exporta_amb_taula_del_professor_dins_la_graella(service, tmp_path):
+    """Exporta amb taula del professor dins la graella."""
     grid = generate_columns("2-2", 2, rows=2)
     grid.set_cell_type(0, 0, CellType.TEACHER)
     grid.assign(1, 0, 1)
@@ -51,17 +56,21 @@ def test_exporta_amb_taula_del_professor_dins_la_graella(service, tmp_path):
 
 
 def test_normalitza_lextensio_a_pdf(service, tmp_path):
+    """Normalitza l'extensió a pdf."""
     grid = generate_columns("2", 0, rows=1)
     path = service.export_pdf(_layout(), grid, {}, tmp_path / "sense_extensio")
     assert path.suffix == ".pdf"
 
 
 def test_destinacio_sense_nom_de_fitxer_es_rebutjada(service):
+    """Destinacio sense nom de fitxer es rebutjada."""
     grid = generate_columns("2", 0, rows=1)
+    layout = _layout()
     with pytest.raises(ValidationError):
-        service.export_pdf(_layout(), grid, {}, "")
+        service.export_pdf(layout, grid, {}, "")
 
 
 def test_column_weights_els_passadissos_valen_la_meitat(service):
+    """Column weights els passadissos valen la meitat."""
     grid = generate_columns("2-2", 4, rows=1)
     assert service._column_weights(grid) == [1.0, 1.0, 0.5, 1.0, 1.0]

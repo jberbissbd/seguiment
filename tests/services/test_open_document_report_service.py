@@ -1,3 +1,5 @@
+"""Tests de l'exportació d'informes en format OpenDocument."""
+
 from odf import table, text, teletype
 from odf.opendocument import load
 from datetime import date
@@ -19,6 +21,7 @@ def _scenario(db):
 
 
 def test_exporta_odt_amb_contingut_estructurat(db, tmp_path):
+    """Exporta odt amb contingut estructurat."""
     services, student = _scenario(db)
     path = services.open_document_reports.export_student(
         student.id, tmp_path / "informe", "odt"
@@ -38,6 +41,7 @@ def test_exporta_odt_amb_contingut_estructurat(db, tmp_path):
 
 
 def test_exporta_pdf_valid(db, tmp_path):
+    """Exporta pdf vàlid."""
     services, student = _scenario(db)
     path = services.open_document_reports.export_student(
         student.id, tmp_path / "informe", "pdf"
@@ -47,6 +51,7 @@ def test_exporta_pdf_valid(db, tmp_path):
 
 
 def test_rebutja_format_de_document_desconegut(db, tmp_path):
+    """Rebutja format de document desconegut."""
     services, student = _scenario(db)
     with pytest.raises(ValidationError, match="format"):
         services.open_document_reports.export_student(

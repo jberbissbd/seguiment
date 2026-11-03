@@ -1,3 +1,5 @@
+"""Tests del diàleg de plantilla de distribució d'aula."""
+
 from unittest.mock import Mock
 
 from tutopy.models.classroom_layout import ClassroomLayout
@@ -20,6 +22,7 @@ def _other_layout(layout_id=1, name="A1"):
 
 
 def test_disposicio_per_defecte_es_quadricula_lliure(qtbot):
+    """Disposició per defecte és quadrícula lliure."""
     dialog = ClassroomLayoutTemplateDialog(20, [], DEFAULTS)
     qtbot.addWidget(dialog)
     assert dialog.disposition_input.currentData() == FREE
@@ -27,6 +30,7 @@ def test_disposicio_per_defecte_es_quadricula_lliure(qtbot):
 
 
 def test_valors_inicials_vénen_de_les_preferencies(qtbot):
+    """Valors inicials vénen de les preferències."""
     defaults = dict(DEFAULTS, column_pattern="3-3", teacher_mode="grid", fill_random=True)
     dialog = ClassroomLayoutTemplateDialog(20, [], defaults)
     qtbot.addWidget(dialog)
@@ -36,6 +40,7 @@ def test_valors_inicials_vénen_de_les_preferencies(qtbot):
 
 
 def test_direccio_nomes_activa_quan_ompliment_es_per_columnes(qtbot):
+    """Direcció només activa quan l'ompliment és per columnes."""
     dialog = ClassroomLayoutTemplateDialog(20, [], DEFAULTS)
     qtbot.addWidget(dialog)
     assert dialog.fill_direction_input.isEnabled() is False
@@ -49,6 +54,7 @@ def test_direccio_nomes_activa_quan_ompliment_es_per_columnes(qtbot):
 
 
 def test_canviar_a_columnes_actualitza_els_parametres(qtbot):
+    """Canviar a columnes actualitza els parametres."""
     dialog = ClassroomLayoutTemplateDialog(26, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.disposition_input.setCurrentIndex(dialog.disposition_input.findData(COLUMNS))
@@ -60,6 +66,7 @@ def test_canviar_a_columnes_actualitza_els_parametres(qtbot):
 
 
 def test_alcada_per_bloc_amagada_fins_que_es_marca(qtbot):
+    """Alcada per bloc amagada fins que es marca."""
     dialog = ClassroomLayoutTemplateDialog(30, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.disposition_input.setCurrentIndex(dialog.disposition_input.findData(COLUMNS))
@@ -72,6 +79,7 @@ def test_alcada_per_bloc_amagada_fins_que_es_marca(qtbot):
 
 
 def test_alcada_per_bloc_es_recalcula_en_canviar_el_patro(qtbot):
+    """Alcada per bloc es recalcula en canviar el patró."""
     dialog = ClassroomLayoutTemplateDialog(30, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.disposition_input.setCurrentIndex(dialog.disposition_input.findData(COLUMNS))
@@ -96,6 +104,7 @@ def test_alcada_per_bloc_fixa_es_passa_als_parametres(qtbot):
 
 
 def test_patro_invalid_mostra_error_de_previsualitzacio_i_invalida(qtbot):
+    """Patró invàlid mostra error de previsualització i invalida."""
     dialog = ClassroomLayoutTemplateDialog(10, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.disposition_input.setCurrentIndex(dialog.disposition_input.findData(COLUMNS))
@@ -105,6 +114,7 @@ def test_patro_invalid_mostra_error_de_previsualitzacio_i_invalida(qtbot):
 
 
 def test_previsualitzacio_es_recalcula_en_canviar_parametres(qtbot):
+    """Previsualitzacio es recalcula en canviar parametres."""
     dialog = ClassroomLayoutTemplateDialog(20, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.preview.set_grid = Mock()
@@ -113,6 +123,7 @@ def test_previsualitzacio_es_recalcula_en_canviar_parametres(qtbot):
 
 
 def test_previsualitzacio_mostra_el_resum_de_seients(qtbot):
+    """Previsualitzacio mostra el resum de seients."""
     dialog = ClassroomLayoutTemplateDialog(20, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.free_rows_input.setValue(4)
@@ -124,6 +135,7 @@ def test_previsualitzacio_mostra_el_resum_de_seients(qtbot):
 
 
 def test_previsualitzacio_marca_els_seients_sobrants(qtbot):
+    """Previsualitzacio marca els seients sobrants."""
     dialog = ClassroomLayoutTemplateDialog(2, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.free_rows_input.setValue(1)
@@ -133,6 +145,7 @@ def test_previsualitzacio_marca_els_seients_sobrants(qtbot):
 
 
 def test_illes_parametres(qtbot):
+    """Illes parametres."""
     dialog = ClassroomLayoutTemplateDialog(20, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.disposition_input.setCurrentIndex(dialog.disposition_input.findData(ISLANDS))
@@ -144,6 +157,7 @@ def test_illes_parametres(qtbot):
 
 
 def test_u_automatic_per_defecte(qtbot):
+    """U automàtic per defecte."""
     dialog = ClassroomLayoutTemplateDialog(12, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.disposition_input.setCurrentIndex(dialog.disposition_input.findData(U_SHAPE))
@@ -154,6 +168,7 @@ def test_u_automatic_per_defecte(qtbot):
 
 
 def test_examen_parametres(qtbot):
+    """Examen parametres."""
     dialog = ClassroomLayoutTemplateDialog(20, [], DEFAULTS)
     qtbot.addWidget(dialog)
     dialog.disposition_input.setCurrentIndex(dialog.disposition_input.findData(EXAM))
@@ -163,6 +178,7 @@ def test_examen_parametres(qtbot):
 
 
 def test_duplicar_nomes_disponible_amb_altres_distribucions(qtbot):
+    """Duplicar només disponible amb altres distribucions."""
     dialog = ClassroomLayoutTemplateDialog(20, [], DEFAULTS)
     qtbot.addWidget(dialog)
     assert dialog.disposition_input.findData(DUPLICATE) == -1

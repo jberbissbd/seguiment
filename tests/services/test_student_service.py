@@ -1,7 +1,10 @@
+"""Tests del servei d'alumnes."""
+
 import uuid
+from dataclasses import replace
+
 import pytest
-from datetime import datetime
-from tutopy.models.messaging import Student, StudentNew, Contact, ContactNew, StudentDocument, StudentDocumentNew, StudentGroupHistory, StudentGroupHistoryNew
+from tutopy.models.messaging import StudentNew, ContactNew, StudentDocumentNew
 from tutopy.services.student_service import StudentService
 from tutopy.services.exceptions import EntityNotFoundError
 
@@ -53,6 +56,7 @@ class TestStudentService:
 
     def test_homonims_tenen_identitats_diferents(self, student_dao, contact_dao,
         document_dao, group_history_dao, academic_course_dao, db):
+        """Dos alumnes amb el mateix nom i cognoms conserven identificadors i UUID diferents."""
         service = StudentService(
             student_dao, contact_dao, document_dao, group_history_dao,
             academic_course_dao, db.transaction,
@@ -70,6 +74,7 @@ class TestStudentService:
 
     def test_crud_i_cerca_a_traves_del_servei(self, student_dao, contact_dao,
         document_dao, group_history_dao, academic_course_dao, db):
+        """Verifica el cicle CRUD complet d'un alumne i la cerca per nom a través del servei."""
         service = StudentService(
             student_dao, contact_dao, document_dao, group_history_dao,
             academic_course_dao, db.transaction,
@@ -130,14 +135,14 @@ class TestStudentService:
         created_student = db.students.create(student_data)
         
         # Afegir contactes a l'alumne
-        contact1 = db.contacts.create(ContactNew(
+        db.contacts.create(ContactNew(
             student_id=created_student.id,
             name="Joan García",
             description="Pare",
             phone="999111222",
             email="joan@example.com"
         ))
-        contact2 = db.contacts.create(ContactNew(
+        db.contacts.create(ContactNew(
             student_id=created_student.id,
             name="Anna López",
             description="Mare",
@@ -166,7 +171,7 @@ class TestStudentService:
         created_student = db.students.create(student_data)
         
         # Afegir documents a l'alumne
-        doc1 = db.documents.create(StudentDocumentNew(
+        db.documents.create(StudentDocumentNew(
             student_id=created_student.id,
             name="Document 1",
             description="Informe mèdic",
@@ -174,7 +179,7 @@ class TestStudentService:
             original_filename="informe1.pdf",
             file_path="/path/informe1.pdf"
         ))
-        doc2 = db.documents.create(StudentDocumentNew(
+        db.documents.create(StudentDocumentNew(
             student_id=created_student.id,
             name="Document 2",
             description="Autorització",
@@ -381,14 +386,14 @@ class TestStudentGroupHistory:
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
         
         # Canviar de grup durant el curs (ex: de 4t A a 4t B a mitjan curs)
-        history1 = service.change_student_group(
+        service.change_student_group(
             student_id=student.id,
             new_group="4t A",
             academic_course_id=curs.id,
             change_date="2025-09-01"
         )
         
-        history2 = service.change_student_group(
+        service.change_student_group(
             student_id=student.id,
             new_group="4t B",
             academic_course_id=curs.id,
@@ -459,6 +464,7 @@ class TestStudentGroupHistory:
 
     def test_change_group_es_atomic(self, student_dao, contact_dao, document_dao,
         group_history_dao, academic_course_dao, db, monkeypatch):
+        """Si el canvi de grup falla a mig procés, no queda cap canvi parcial persistit."""
         service = StudentService(
             student_dao, contact_dao, document_dao, group_history_dao,
             academic_course_dao, db.transaction,
@@ -477,4 +483,4 @@ class TestStudentGroupHistory:
         assert group_history_dao.get_by_student(student.id) == []
         assert academic_course_dao.get_by_course("2025-2026") is None
         assert student_dao.get_by_id(student.id).group_name == "3r A"
-from dataclasses import replace
+

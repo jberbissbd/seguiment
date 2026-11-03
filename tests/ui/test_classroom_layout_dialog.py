@@ -1,8 +1,11 @@
+"""Tests del diàleg de creació d'una distribució d'aula."""
+
 from tutopy.ui.dialogs.classroom_layout_dialog import ClassroomLayoutDialog
 from tutopy.ui.dialogs.classroom_layout_template_dialog import COLUMNS, FREE
 
 
 def test_values_inclouen_grup_nom_i_opcions_de_plantilla(qtbot):
+    """Values inclouen grup nom i opcions de plantilla."""
     dialog = ClassroomLayoutDialog("1r A", 20, [], {})
     qtbot.addWidget(dialog)
     dialog.name_input.setText("1r trimestre")
@@ -10,10 +13,12 @@ def test_values_inclouen_grup_nom_i_opcions_de_plantilla(qtbot):
     assert values["group_name"] == "1r A"
     assert values["name"] == "1r trimestre"
     assert values["disposition"] == FREE
-    assert "fill_order" in values and "leftover_criterion" in values
+    assert "fill_order" in values
+    assert "leftover_criterion" in values
 
 
 def test_sense_nom_mostra_error_i_no_accepta(qtbot):
+    """Sense nom mostra error i no accepta."""
     dialog = ClassroomLayoutDialog("1r A", 20, [], {})
     qtbot.addWidget(dialog)
     dialog._accept_valid()
@@ -23,6 +28,7 @@ def test_sense_nom_mostra_error_i_no_accepta(qtbot):
 
 
 def test_amb_nom_pero_patro_de_columnes_invalid_tambe_mostra_error(qtbot):
+    """Amb nom pero patró de columnes invàlid tambe mostra error."""
     dialog = ClassroomLayoutDialog("1r A", 20, [], {})
     qtbot.addWidget(dialog)
     dialog.name_input.setText("Nova")
@@ -34,6 +40,7 @@ def test_amb_nom_pero_patro_de_columnes_invalid_tambe_mostra_error(qtbot):
 
 
 def test_amb_nom_i_dades_valides_accepta(qtbot):
+    """Amb nom i dades vàlides accepta."""
     dialog = ClassroomLayoutDialog("1r A", 20, [], {})
     qtbot.addWidget(dialog)
     dialog.name_input.setText("Nova")

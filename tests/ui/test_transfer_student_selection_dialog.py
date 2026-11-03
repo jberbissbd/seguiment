@@ -1,3 +1,5 @@
+"""Tests del diàleg de selecció d'alumnes per transferir."""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
 
@@ -8,6 +10,7 @@ from tutopy.ui.dialogs.transfer_student_selection_dialog import (
 
 
 def test_mostra_nom_i_grup_i_permet_seleccio_multiple(qtbot):
+    """Mostra nom i grup i permet selecció múltiple."""
     students = [
         Student(1, "u1", "Laia", "Martí", "4t A"),
         Student(2, "u2", "Pau", "Puig", ""),
@@ -24,6 +27,7 @@ def test_mostra_nom_i_grup_i_permet_seleccio_multiple(qtbot):
 
 
 def test_filtra_per_grup_i_exigeix_una_seleccio(qtbot):
+    """Filtra per grup i exigeix una selecció."""
     students = [
         Student(1, "u1", "Laia", "Martí", "4t A"),
         Student(2, "u2", "Pau", "Puig", "3r B"),

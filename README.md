@@ -24,7 +24,11 @@ L'aplicació permet:
   ODT o PDF;
 - incorporar un logotip comú als informes DOCX;
 - exportar, juntament amb els informes, els documents de cada alumne ordenats
-  per curs acadèmic.
+  per curs acadèmic;
+- assignar una fotografia a cada alumne, individualment o important-les totes
+  de cop des d'un PDF "orla" de grup;
+- dissenyar la distribució de taules d'una aula amb plantilles i ompliment
+  automàtic, i exportar-la en PDF.
 
 ## Primers passos
 
@@ -62,6 +66,43 @@ combinació de curs acadèmic i grup.
 
 Per exportar un únic informe, selecciona l'alumne i prem **Exportar informe**.
 Per generar-ne diversos, utilitza **Exportar diversos…** a la llista.
+
+### Fotografies de l'alumnat
+
+Prem la foto (o les inicials) al panell de detall d'un alumne per triar-ne una
+d'individual des del disc, o per eliminar-la amb el menú contextual.
+
+Per assignar-les totes de cop, utilitza **Importar fotos des de PDF** a
+**Gestió de dades** i selecciona l'orla de grup exportada des de GICAR
+(Oracle BI Publisher). Tutopy en localitza les fotografies i les etiquetes
+"N. Cognoms, Nom", les aparella per posició dins la graella del PDF —no per
+ordre, perquè una cel·la sense fotografia no desquadri la resta— i et
+proposa l'alumne corresponent quan el nom coincideix de manera única. Abans
+de desar-les pots revisar o corregir cada aparellament, o ometre'l.
+
+### Distribució d'aula
+
+A **Distribució d'aula** pots dissenyar la disposició de les taules d'un
+grup i mantenir-ne varies distribucions alternatives, cadascuna amb la seva
+pròpia taula del professor (en franja o dins la graella) i orientació.
+
+Arrossega cada alumne —des de la llista de pendents o entre seients— per
+col·locar-lo a mà, o prem **Plantilla…** per generar-la automàticament:
+quadrícula lliure, agrupacions en columnes (amb alçades de bloc iguals o
+indicades manualment), grups de treball en illes, en U, examen (seients
+alterns), o duplicar una distribució existent. El diàleg mostra un esquema
+de la disposició resultant abans d'aplicar-la, i permet triar com repartir
+els seients sobrants i en quin ordre —i amb quin criteri, alfabètic o a
+l'atzar— s'hi assignen els alumnes pendents. Els valors que fas servir més
+sovint es poden fixar per defecte a **Configuració → Preferències de
+distribució d'aula**.
+
+La llista de pendents es pot amagar amb el botó del separador, com un
+panell desplegable, per guanyar espai per a la graella.
+
+Prem **Exportar…** per generar un pla en PDF (mida DIN-A4) amb el mateix
+aspecte que veus en pantalla —seients, passadissos i taula del professor
+inclosos— apte per imprimir.
 
 ### Importació i transferència de dades
 

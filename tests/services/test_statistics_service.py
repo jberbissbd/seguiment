@@ -1,3 +1,7 @@
+"""Tests del servei d'estadístiques."""
+
+from dataclasses import replace
+
 import pytest
 
 from tutopy.application import create_services
@@ -7,6 +11,7 @@ from tutopy.services.exceptions import ValidationError
 
 
 def test_resume_agrega_notes_i_conserva_alumnes_sense_notes(db):
+    """Resume agrega notes i conserva alumnes sense notes."""
     services = create_services(db)
     laia = services.students.create(StudentNew("Laia", "Martí", "4t A"))
     services.students.create(StudentNew("Pau", "Puig", "4t A"))
@@ -41,6 +46,7 @@ def test_resume_agrega_notes_i_conserva_alumnes_sense_notes(db):
 
 
 def test_filtres_de_categoria_i_dates_sapliquen_a_tots_els_resultats(db):
+    """Filtres de categoria i dates sapliquen a tots els resultats."""
     services = create_services(db)
     student = services.students.create(StudentNew("Laia", "Martí", "4t A"))
     academic = services.categories.create(CategoryNew("Acadèmic"))
@@ -59,6 +65,7 @@ def test_filtres_de_categoria_i_dates_sapliquen_a_tots_els_resultats(db):
 
 
 def test_rebutja_interval_invertit_i_entitats_inexistents(db):
+    """Rebutja interval invertit i entitats inexistents."""
     services = create_services(db)
     inverted = StatisticsFilters(date_from="2026-05-01", date_to="2026-01-01")
     missing_category = StatisticsFilters(category_id=999)
@@ -70,6 +77,7 @@ def test_rebutja_interval_invertit_i_entitats_inexistents(db):
 
 
 def test_selector_de_cursos_omet_cursos_sense_notes_despres_deditar(db):
+    """Selector de cursos omet cursos sense notes despres deditar."""
     services = create_services(db)
     student = services.students.create(StudentNew("Laia", "Martí", "4t A"))
     category = services.categories.create(CategoryNew("Acadèmic"))
@@ -88,7 +96,8 @@ def test_selector_de_cursos_omet_cursos_sense_notes_despres_deditar(db):
 
 
 def test_nom_del_mes_es_localitzat_en_catala():
+    """Nom del mes és localitzat en català."""
     from tutopy.services.statistics_service import StatisticsService
 
     assert StatisticsService._month_label("2026-09") == "Setembre 2026"
-from dataclasses import replace
+

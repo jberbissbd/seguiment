@@ -1,3 +1,5 @@
+"""Tests del servei de configuració d'informes."""
+
 from pathlib import Path
 
 import pytest
@@ -13,10 +15,12 @@ from tutopy.services.exceptions import EntityNotFoundError, ValidationError
 
 @pytest.fixture
 def reporting(db):
+    """Construeix el servei de configuració d'informes sobre la base de dades de prova."""
     return create_services(db).report_configuration
 
 
 def test_desa_i_actualitza_una_configuracio_per_curs_i_grup(db, reporting):
+    """Desa i actualitza una configuració per curs i grup."""
     course = db.academic_courses.get_or_create("2025-2026")
     created = reporting.save_term_configuration(TermConfigurationNew(
         course.id, "4t A", "2026-01-08", "2026-04-07"
@@ -40,6 +44,7 @@ def test_desa_i_actualitza_una_configuracio_per_curs_i_grup(db, reporting):
     ],
 )
 def test_calcula_trimestre_amb_limits_inclusius(db, reporting, date, expected):
+    """Calcula trimestre amb limits inclusius."""
     course = db.academic_courses.get_or_create("2025-2026")
     reporting.save_term_configuration(TermConfigurationNew(
         course.id, "4t A", "2026-01-08", "2026-04-07"
@@ -48,11 +53,13 @@ def test_calcula_trimestre_amb_limits_inclusius(db, reporting, date, expected):
 
 
 def test_sense_configuracio_no_assigna_trimestre(db, reporting):
+    """Sense configuració no assigna trimestre."""
     course = db.academic_courses.get_or_create("2025-2026")
     assert reporting.term_for_date(course.id, "4t A", "2026-02-01") is None
 
 
 def test_rebutja_dates_invertides_o_fora_del_curs(db, reporting):
+    """Rebutja dates invertides o fora del curs."""
     course = db.academic_courses.get_or_create("2025-2026")
     inverted = TermConfigurationNew(course.id, "4t A", "2026-04-07", "2026-01-08")
     with pytest.raises(ValidationError, match="tercer trimestre"):
@@ -63,12 +70,14 @@ def test_rebutja_dates_invertides_o_fora_del_curs(db, reporting):
 
 
 def test_rebutja_curs_inexistent(db, reporting):
+    """Rebutja curs inexistent."""
     configuration = TermConfigurationNew(999, "4t A", "2026-01-08", "2026-04-07")
     with pytest.raises(EntityNotFoundError):
         reporting.save_term_configuration(configuration)
 
 
 def test_elimina_configuracio(db, reporting):
+    """Elimina configuració."""
     course = db.academic_courses.get_or_create("2025-2026")
     configuration = reporting.save_term_configuration(TermConfigurationNew(
         course.id, "4t A", "2026-01-08", "2026-04-07"
@@ -80,6 +89,7 @@ def test_elimina_configuracio(db, reporting):
 
 
 def test_desa_i_recupera_ordre_de_categories(db, reporting):
+    """Desa i recupera ordre de categories."""
     academic = db.categories.create(CategoryNew("Acadèmic"))
     family = db.categories.create(CategoryNew("Família"))
     conduct = db.categories.create(CategoryNew("Conducta"))
@@ -91,6 +101,7 @@ def test_desa_i_recupera_ordre_de_categories(db, reporting):
 
 
 def test_categories_noves_apareixen_al_final(db, reporting):
+    """Categories noves apareixen al final."""
     academic = db.categories.create(CategoryNew("Acadèmic"))
     family = db.categories.create(CategoryNew("Família"))
     reporting.set_category_order([family.id, academic.id])
@@ -102,6 +113,7 @@ def test_categories_noves_apareixen_al_final(db, reporting):
 
 @pytest.mark.parametrize("order", [[1, 1], [1], [1, "2"]])
 def test_rebutja_ordres_incomplets_duplicats_o_invalids(db, reporting, order):
+    """Rebutja ordres incomplets duplicats o invàlids."""
     db.categories.create(CategoryNew("A"))
     db.categories.create(CategoryNew("B"))
     with pytest.raises(ValidationError):
@@ -109,6 +121,7 @@ def test_rebutja_ordres_incomplets_duplicats_o_invalids(db, reporting, order):
 
 
 def test_logotip_es_global_es_copia_i_es_pot_eliminar(reporting, tmp_path):
+    """Logotip és global, es copia i es pot eliminar."""
     reporting.storage_dir = tmp_path / "reporting"
     source = tmp_path / "logo.png"
     source.write_bytes(
@@ -128,6 +141,7 @@ def test_logotip_es_global_es_copia_i_es_pot_eliminar(reporting, tmp_path):
 def test_neteja_el_fitxer_nou_si_falla_la_persistencia(
     reporting, tmp_path, monkeypatch
 ):
+    """Neteja el fitxer nou si falla la persistència."""
     reporting.storage_dir = tmp_path / "reporting"
     source = tmp_path / "logo.png"
     source.write_bytes(
@@ -151,6 +165,7 @@ def test_neteja_el_fitxer_nou_si_falla_la_persistencia(
 def test_fallada_netejant_el_logotip_antic_no_invalida_la_substitucio(
     reporting, tmp_path, monkeypatch, caplog
 ):
+    """Fallada netejant el logotip antic no invalida la substitució."""
     reporting.storage_dir = tmp_path / "reporting"
     source = tmp_path / "logo.png"
     source.write_bytes(

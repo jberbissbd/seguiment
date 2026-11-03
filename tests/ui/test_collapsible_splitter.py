@@ -1,3 +1,5 @@
+"""Tests del separador plegable amb botó integrat al mànec."""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel
 
@@ -18,6 +20,7 @@ def _build_splitter(qtbot):
 
 
 def test_toggle_first_panel_redueix_i_restaura_lamplada(qtbot):
+    """Toggle first panel redueix i restaura l'amplada."""
     splitter, first = _build_splitter(qtbot)
     assert first.width() > 0
 
@@ -29,8 +32,10 @@ def test_toggle_first_panel_redueix_i_restaura_lamplada(qtbot):
 
 
 def test_el_manec_es_manté_visible_quan_es_plega(qtbot):
-    """Regressió: Qt amaga el mànec d'un panell ocult amb `setVisible(False)`;
-    per això `toggle_first_panel` l'ha de reduir a zero sense amagar-lo."""
+    """Regressió: Qt amaga el mànec d'un panell ocult amb `setVisible(False)`.
+
+    Per això `toggle_first_panel` l'ha de reduir a zero sense amagar-lo.
+    """
     splitter, _first = _build_splitter(qtbot)
     handle = splitter.handle(1)
     assert handle.isHidden() is False
@@ -43,6 +48,7 @@ def test_el_manec_es_manté_visible_quan_es_plega(qtbot):
 
 
 def test_clic_al_boto_del_manec_commuta_el_primer_panell(qtbot):
+    """Clic al boto del manec commuta el primer panell."""
     splitter, first = _build_splitter(qtbot)
     handle = splitter.handle(1)
     toggle_center = handle._toggle_rect().center()
@@ -55,6 +61,7 @@ def test_clic_al_boto_del_manec_commuta_el_primer_panell(qtbot):
 
 
 def test_arrossegar_fora_del_boto_no_commuta_el_panell(qtbot):
+    """Arrossegar fora del boto no commuta el panell."""
     splitter, first = _build_splitter(qtbot)
     handle = splitter.handle(1)
     # un punt lluny del botó central, dins del mànec

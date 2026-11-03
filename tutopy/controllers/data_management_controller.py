@@ -7,6 +7,7 @@ la interfície.
 """
 
 import logging
+from dataclasses import dataclass
 
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QInputDialog, QLineEdit, QMessageBox, QProgressDialog,
@@ -31,6 +32,18 @@ from tutopy.ui.background_task import BackgroundOperationPresenter, BackgroundTa
 LOGGER = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True, slots=True)
+class DataManagementDialogs:
+    """Classes de diàleg injectables per als tests del controlador de dades."""
+
+    conflict: type = ImportConflictsDialog
+    clear: type = ClearDataDialog
+    transfer_conflict: type = TransferConflictsDialog
+    transfer_selection: type = TransferStudentSelectionDialog
+    pdf_photo: type = PdfPhotoImportDialog
+    progress: type = QProgressDialog
+
+
 class DataManagementController:
     """Gestiona plantilles, importació, transferències i esborrat de dades."""
 
@@ -40,13 +53,10 @@ class DataManagementController:
                  photos: PhotoService = None,
                  pdf_photo_import: PdfPhotoImportService = None,
                  on_changed=None,
-                 conflict_dialog=ImportConflictsDialog,
-                 clear_dialog=ClearDataDialog,
-                 transfer_conflict_dialog=TransferConflictsDialog,
-                 transfer_selection_dialog=TransferStudentSelectionDialog,
-                 pdf_photo_dialog=PdfPhotoImportDialog,
-                 task_runner=None, progress_dialog=QProgressDialog):
+                 dialogs: DataManagementDialogs | None = None,
+                 task_runner=None):
         """Desa les dependències i connecta les accions de la vista d'eines de dades."""
+        dialogs = dialogs or DataManagementDialogs()
         self.window = window
         self.importer = importer
         self.data_service = data_service
@@ -55,13 +65,13 @@ class DataManagementController:
         self.photos = photos
         self.pdf_photo_import = pdf_photo_import
         self.on_changed = on_changed or (lambda: None)
-        self.conflict_dialog = conflict_dialog
-        self.clear_dialog = clear_dialog
-        self.transfer_conflict_dialog = transfer_conflict_dialog
-        self.transfer_selection_dialog = transfer_selection_dialog
-        self.pdf_photo_dialog = pdf_photo_dialog
+        self.conflict_dialog = dialogs.conflict
+        self.clear_dialog = dialogs.clear
+        self.transfer_conflict_dialog = dialogs.transfer_conflict
+        self.transfer_selection_dialog = dialogs.transfer_selection
+        self.pdf_photo_dialog = dialogs.pdf_photo
         self.task_runner = task_runner or BackgroundTaskRunner()
-        self.progress_dialog = progress_dialog
+        self.progress_dialog = dialogs.progress
         self._transfer_export = BackgroundOperationPresenter(
             self.window, self.task_runner, self.progress_dialog
         )

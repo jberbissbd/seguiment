@@ -1,3 +1,5 @@
+"""Tests del controlador de comprovació d'actualitzacions."""
+
 import json
 from contextlib import contextmanager
 
@@ -11,6 +13,7 @@ from tutopy.ui.main_window import MainWindow
 
 @pytest.fixture
 def db(tmp_path):
+    """Connecta una base de dades SQLite temporal per a la prova."""
     database = Database(str(tmp_path / "update-controller.db")).connect()
     yield database
     database.close()
@@ -26,6 +29,7 @@ class SynchronousTaskRunner:
     """
 
     def start(self, operation, *, on_progress=None, on_success=None, on_failure=None):
+        """Executa `operation` de seguida i en propaga el resultat o l'error."""
         try:
             result = operation(lambda *_args: None, lambda: False)
         except Exception as error:  # noqa: BLE001 - replica el comportament real
@@ -38,9 +42,12 @@ class SynchronousTaskRunner:
 
 
 class FakeDialog:
+    """Simula el diàleg d'avís de nova versió disponible, sense mostrar-lo."""
+
     created = []
 
     def __init__(self, latest_version, release_url, parent=None):
+        """Desa els arguments rebuts i registra la instància creada."""
         self.latest_version = latest_version
         self.release_url = release_url
         self.parent = parent
@@ -48,6 +55,7 @@ class FakeDialog:
         FakeDialog.created.append(self)
 
     def exec(self):
+        """Marca el diàleg com a mostrat, sense bloquejar."""
         self.executed = True
 
 
@@ -80,6 +88,7 @@ def _controller(db, qtbot, monkeypatch, payload):
 
 
 def test_mostra_un_avis_quan_hi_ha_una_versio_mes_recent(db, qtbot, monkeypatch):
+    """Mostra un avís quan hi ha una versió més recent."""
     _services, _window, controller = _controller(db, qtbot, monkeypatch, {
         "tag_name": "v99.0.0", "html_url": "https://example.test/releases/v99.0.0",
     })
@@ -94,6 +103,7 @@ def test_mostra_un_avis_quan_hi_ha_una_versio_mes_recent(db, qtbot, monkeypatch)
 
 
 def test_no_mostra_res_quan_no_hi_ha_versio_nova(db, qtbot, monkeypatch):
+    """No mostra res quan no hi ha versió nova."""
     _services, _window, controller = _controller(db, qtbot, monkeypatch, {
         "tag_name": "v0.0.1", "html_url": "https://example.test/releases/v0.0.1",
     })
@@ -104,6 +114,7 @@ def test_no_mostra_res_quan_no_hi_ha_versio_nova(db, qtbot, monkeypatch):
 
 
 def test_no_fa_cap_comprovacio_si_la_preferencia_esta_desactivada(db, qtbot, monkeypatch):
+    """No fa cap comprovació si la preferència esta desactivada."""
     calls = []
 
     def urlopen(_request, timeout=None):
@@ -130,6 +141,7 @@ def test_no_fa_cap_comprovacio_si_la_preferencia_esta_desactivada(db, qtbot, mon
 
 
 def test_un_error_de_xarxa_no_mostra_cap_dialeg(db, qtbot, monkeypatch):
+    """Un error de xarxa no mostra cap diàleg."""
     def urlopen(_request, timeout=None):
         raise OSError("sense connexió")
 
@@ -151,6 +163,7 @@ def test_un_error_de_xarxa_no_mostra_cap_dialeg(db, qtbot, monkeypatch):
 
 
 def test_excepcio_inesperada_no_mostra_cap_dialeg_ni_es_propaga(db, qtbot):
+    """Excepcio inesperada no mostra cap diàleg ni es propaga."""
     class FailingUpdateCheck:
         def check_for_update(self):
             raise RuntimeError("error inesperat")
@@ -170,6 +183,7 @@ def test_excepcio_inesperada_no_mostra_cap_dialeg_ni_es_propaga(db, qtbot):
 
 
 def test_marcar_la_casella_desa_la_preferencia(db, qtbot, monkeypatch):
+    """Marcar la casella desa la preferència."""
     services, window, _controller_instance = _controller(db, qtbot, monkeypatch, {
         "tag_name": "v0.0.1", "html_url": "https://example.test/releases/v0.0.1",
     })

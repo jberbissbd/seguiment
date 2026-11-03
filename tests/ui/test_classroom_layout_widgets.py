@@ -1,3 +1,5 @@
+"""Tests dels widgets de cel·la i de llista de pendents de la distribució d'aula."""
+
 from PySide6.QtGui import QColor, QPixmap
 
 from tutopy.models.classroom_layout import CellType, LayoutGrid
@@ -25,6 +27,7 @@ def _write_jpg(tmp_path, name="foto.jpg"):
 
 
 def test_cell_widget_drop_des_de_pendents_emet_move_requested(qtbot):
+    """Cell widget drop des de pendents emet move requested."""
     cell = ClassroomCellWidget(2, 3)
     qtbot.addWidget(cell)
     with qtbot.waitSignal(cell.move_requested) as signal:
@@ -34,6 +37,7 @@ def test_cell_widget_drop_des_de_pendents_emet_move_requested(qtbot):
 
 
 def test_cell_widget_drop_des_d_una_altra_cel_la(qtbot):
+    """Cell widget drop des d'una altra cel·la."""
     cell = ClassroomCellWidget(0, 0)
     qtbot.addWidget(cell)
     with qtbot.waitSignal(cell.move_requested) as signal:
@@ -42,6 +46,7 @@ def test_cell_widget_drop_des_d_una_altra_cel_la(qtbot):
 
 
 def test_cell_widget_drop_sobre_cel_la_no_seient_no_emet_res(qtbot):
+    """Cell widget drop sobre cel·la no seient no emet res."""
     cell = ClassroomCellWidget(0, 0)
     qtbot.addWidget(cell)
     cell.update_cell(CellType.AISLE, None, None, False)
@@ -53,6 +58,7 @@ def test_cell_widget_drop_sobre_cel_la_no_seient_no_emet_res(qtbot):
 
 
 def test_cell_widget_return_to_pending_nomes_amb_alumne(qtbot):
+    """Cell widget return to pending només amb alumne."""
     cell = ClassroomCellWidget(0, 0)
     qtbot.addWidget(cell)
     student = Student(5, "uuid", "Maria", "Serra", "4t A")
@@ -61,6 +67,7 @@ def test_cell_widget_return_to_pending_nomes_amb_alumne(qtbot):
 
 
 def test_cell_widget_tots_els_seients_tenen_el_mateix_color(qtbot):
+    """Cell widget tots els seients tenen el mateix color."""
     student_1 = Student(1, "uuid1", "Anna", "Bosch", "4t A")
     student_2 = Student(25, "uuid25", "Zoe", "Vila", "4t A")
     cell_1 = ClassroomCellWidget(0, 0)
@@ -74,6 +81,7 @@ def test_cell_widget_tots_els_seients_tenen_el_mateix_color(qtbot):
 
 
 def test_cell_widget_taula_del_professor_te_marc(qtbot):
+    """Cell widget taula del professor té marc."""
     cell = ClassroomCellWidget(0, 0)
     qtbot.addWidget(cell)
     cell.update_cell(CellType.TEACHER, None, None, False)
@@ -82,6 +90,7 @@ def test_cell_widget_taula_del_professor_te_marc(qtbot):
 
 
 def test_cell_widget_passadis_ocupa_la_meitat_damplada(qtbot):
+    """Cell widget passadis ocupa la meitat d'amplada."""
     cell = ClassroomCellWidget(0, 0)
     qtbot.addWidget(cell)
     cell.update_cell(CellType.AISLE, None, None, False)
@@ -89,6 +98,7 @@ def test_cell_widget_passadis_ocupa_la_meitat_damplada(qtbot):
 
 
 def test_cell_widget_seient_recupera_lamplada_normal_en_deixar_de_ser_passadis(qtbot):
+    """Cell widget seient recupera l'amplada normal en deixar de ser passadis."""
     cell = ClassroomCellWidget(0, 0)
     qtbot.addWidget(cell)
     cell.update_cell(CellType.AISLE, None, None, False)
@@ -97,15 +107,18 @@ def test_cell_widget_seient_recupera_lamplada_normal_en_deixar_de_ser_passadis(q
 
 
 def test_fitting_font_size_amb_prou_espai_retorna_la_mida_normal(qtbot):
+    """Fitting font size amb prou espai retorna la mida normal."""
     assert _fitting_font_size("Pere", 84, 70) == NAME_FONT_SIZE
 
 
 def test_fitting_font_size_redueix_quan_no_hi_cap(qtbot):
+    """Fitting font size redueix quan no hi cap."""
     size = _fitting_font_size("Bouhbouh El Bakkali Issaoui, Marwa", 84, 20)
     assert NAME_FONT_MIN_SIZE <= size < NAME_FONT_SIZE
 
 
 def test_fitting_font_size_mai_per_sota_del_minim(qtbot):
+    """Fitting font size mai per sota del mínim."""
     size = _fitting_font_size("Un nom i cognoms extremadament llargs per forçar l'últim recurs", 50, 5)
     assert size == NAME_FONT_MIN_SIZE
 
@@ -123,6 +136,7 @@ def test_cell_widget_mostra_el_text_sencer_cognoms_coma_nom(qtbot):
 
 
 def test_pending_list_drop_des_d_una_cel_la_emet_move_requested(qtbot):
+    """Pending list drop des d'una cel·la emet move requested."""
     pending_list = PendingStudentsList()
     qtbot.addWidget(pending_list)
     with qtbot.waitSignal(pending_list.move_requested) as signal:
@@ -132,6 +146,7 @@ def test_pending_list_drop_des_d_una_cel_la_emet_move_requested(qtbot):
 
 
 def test_pending_list_drop_des_de_pendents_no_emet_res(qtbot):
+    """Pending list drop des de pendents no emet res."""
     pending_list = PendingStudentsList()
     qtbot.addWidget(pending_list)
     received = []
@@ -142,6 +157,7 @@ def test_pending_list_drop_des_de_pendents_no_emet_res(qtbot):
 
 
 def test_pending_list_set_students_mostra_fotos_quan_cal(qtbot, tmp_path):
+    """Pending list set students mostra fotos quan cal."""
     pending_list = PendingStudentsList()
     qtbot.addWidget(pending_list)
     student = Student(1, "uuid", "Maria", "Serra", "4t A")
@@ -153,6 +169,7 @@ def test_pending_list_set_students_mostra_fotos_quan_cal(qtbot, tmp_path):
 
 
 def test_grid_widget_inverteix_la_fila_perque_el_professor_quedi_a_baix(qtbot):
+    """Grid widget inverteix la fila perque el professor quedi a baix."""
     grid_widget = ClassroomLayoutGridWidget()
     qtbot.addWidget(grid_widget)
     grid = LayoutGrid(3, 2)
@@ -170,6 +187,7 @@ def test_grid_widget_inverteix_la_fila_perque_el_professor_quedi_a_baix(qtbot):
 
 
 def test_grid_widget_rebuild_mostra_nom_i_cognoms_no_inicials(qtbot):
+    """Grid widget rebuild mostra nom i cognoms no inicials."""
     grid_widget = ClassroomLayoutGridWidget()
     qtbot.addWidget(grid_widget)
     grid = LayoutGrid(2, 2)
@@ -182,6 +200,7 @@ def test_grid_widget_rebuild_mostra_nom_i_cognoms_no_inicials(qtbot):
 
 
 def test_grid_widget_rebuild_mostra_foto_i_nom_quan_show_photos(qtbot, tmp_path):
+    """Grid widget rebuild mostra foto i nom quan show photos."""
     grid_widget = ClassroomLayoutGridWidget()
     qtbot.addWidget(grid_widget)
     grid = LayoutGrid(1, 1)

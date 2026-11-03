@@ -1,3 +1,5 @@
+"""Tests de rendiment de la transferència entre instàncies."""
+
 import pytest
 
 from tutopy.application import create_services
@@ -12,6 +14,7 @@ PASSWORD = "contrasenya-segura"
 def test_exportacio_transferencia_te_un_nombre_constant_de_lectures(
     db, tmp_path, monkeypatch, student_count
 ):
+    """Exportació transferència té un nombre constant de lectures."""
     services = create_services(db)
     student_ids = [
         services.students.create(StudentNew(f"Nom {index}", "Cognom", "1A")).id
@@ -39,6 +42,7 @@ def test_exportacio_transferencia_te_un_nombre_constant_de_lectures(
 def test_deteccio_de_conflictes_uuid_fa_una_lectura_per_lot(
     db, tmp_path, student_count
 ):
+    """Deteccio de conflictes uuid fa una lectura per lot."""
     services = create_services(db)
     students = [
         services.students.create(StudentNew(f"Nom {index}", "Cognom", "1A"))
@@ -73,6 +77,7 @@ def test_deteccio_de_conflictes_uuid_fa_una_lectura_per_lot(
 def test_importacio_transferencia_te_un_nombre_constant_de_lectures(
     tmp_path, student_count
 ):
+    """Importació transferència té un nombre constant de lectures."""
     source_db = Database(str(tmp_path / "source.db")).connect()
     target_db = Database(str(tmp_path / "target.db")).connect()
     try:

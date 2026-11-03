@@ -1,3 +1,5 @@
+"""Tests del model de graella de distribució d'aula."""
+
 from tutopy.models.classroom_layout import CellType, LayoutCell, LayoutGrid
 
 
@@ -6,6 +8,7 @@ def _grid(rows=3, columns=3):
 
 
 def test_assign_col_loca_un_alumne_en_una_cel_la_buida():
+    """Assign col·loca un alumne en una cel·la buida."""
     grid = _grid()
     displaced = grid.assign(1, 0, 0)
     assert displaced is None
@@ -14,6 +17,7 @@ def test_assign_col_loca_un_alumne_en_una_cel_la_buida():
 
 
 def test_assign_mou_l_alumne_de_la_cel_la_anterior():
+    """Assign mou l'alumne de la cel·la anterior."""
     grid = _grid()
     grid.assign(1, 0, 0)
     grid.assign(1, 1, 1)
@@ -22,6 +26,7 @@ def test_assign_mou_l_alumne_de_la_cel_la_anterior():
 
 
 def test_assign_entre_dues_cel_les_propies_retorna_l_ocupant_per_intercanviar():
+    """Assign entre dues cel les propies retorna l'ocupant per intercanviar."""
     grid = _grid()
     grid.assign(1, 0, 0)
     grid.assign(2, 0, 1)
@@ -34,6 +39,7 @@ def test_assign_entre_dues_cel_les_propies_retorna_l_ocupant_per_intercanviar():
 
 
 def test_assign_sobre_cel_la_ocupada_sense_moviment_no_fa_res():
+    """Assign sobre cel·la ocupada sense moviment no fa res."""
     grid = _grid()
     grid.assign(1, 0, 0)
     displaced = grid.assign(1, 0, 0)
@@ -42,6 +48,7 @@ def test_assign_sobre_cel_la_ocupada_sense_moviment_no_fa_res():
 
 
 def test_assign_des_de_pendents_retorna_l_ocupant_desplacat():
+    """Assign des de pendents retorna l'ocupant desplacat."""
     grid = _grid()
     grid.assign(2, 0, 0)
     displaced = grid.assign(1, 0, 0)
@@ -51,20 +58,24 @@ def test_assign_des_de_pendents_retorna_l_ocupant_desplacat():
 
 
 def test_remove_buida_la_cel_la_i_retorna_la_cel_la_anterior():
+    """Remove buida la cel·la i retorna la cel·la anterior."""
     grid = _grid()
     grid.assign(1, 1, 1)
     cell = grid.remove(1)
-    assert cell.row == 1 and cell.column == 1
+    assert cell.row == 1
+    assert cell.column == 1
     assert grid.find(1) is None
     assert grid.cells[(1, 1)].student_id is None
 
 
 def test_remove_alumne_no_assignat_retorna_none():
+    """Remove alumne no assignat retorna none."""
     grid = _grid()
     assert grid.remove(99) is None
 
 
 def test_set_cell_type_buida_una_cel_la_ocupada_i_retorna_l_alumne():
+    """Set cell type buida una cel·la ocupada i retorna l'alumne."""
     grid = _grid()
     grid.assign(1, 0, 0)
     displaced = grid.set_cell_type(0, 0, CellType.AISLE)
@@ -74,22 +85,26 @@ def test_set_cell_type_buida_una_cel_la_ocupada_i_retorna_l_alumne():
 
 
 def test_set_cell_type_sense_alumne_no_retorna_res():
+    """Set cell type sense alumne no retorna res."""
     grid = _grid()
     assert grid.set_cell_type(2, 2, CellType.EMPTY) is None
 
 
 def test_resize_descarta_cel_les_fora_de_les_noves_mides_i_retorna_desplacats():
+    """Resize descarta cel les fora de les noves mides i retorna desplacats."""
     grid = _grid(3, 3)
     grid.assign(1, 2, 2)
     grid.assign(2, 0, 0)
     displaced = grid.resize(2, 2)
     assert displaced == [1]
-    assert grid.rows == 2 and grid.columns == 2
+    assert grid.rows == 2
+    assert grid.columns == 2
     assert (2, 2) not in grid.cells
     assert grid.find(2) == (0, 0)
 
 
 def test_resize_conserva_les_cel_les_dins_dels_nous_limits():
+    """Resize conserva les cel les dins dels nous limits."""
     grid = _grid(3, 3)
     grid.cells[(1, 1)] = LayoutCell(1, 1, CellType.AISLE)
     grid.resize(2, 2)
@@ -97,6 +112,7 @@ def test_resize_conserva_les_cel_les_dins_dels_nous_limits():
 
 
 def test_place_teacher_substitueix_cel_les_i_retorna_alumnes_trepitjats():
+    """Place teacher substitueix cel les i retorna alumnes trepitjats."""
     grid = _grid(3, 4)
     grid.assign(1, 0, 2)
     displaced = grid.place_teacher(0, 2, width=2)
@@ -106,6 +122,7 @@ def test_place_teacher_substitueix_cel_les_i_retorna_alumnes_trepitjats():
 
 
 def test_place_teacher_neteja_la_taula_anterior():
+    """Place teacher neteja la taula anterior."""
     grid = _grid(3, 4)
     grid.place_teacher(0, 0, width=2)
     grid.place_teacher(1, 0, width=2)
@@ -114,6 +131,7 @@ def test_place_teacher_neteja_la_taula_anterior():
 
 
 def test_place_teacher_ignora_columnes_fora_de_la_graella():
+    """Place teacher ignora columnes fora de la graella."""
     grid = _grid(2, 3)
     displaced = grid.place_teacher(0, 2, width=2)
     assert displaced == []
@@ -122,15 +140,18 @@ def test_place_teacher_ignora_columnes_fora_de_la_graella():
 
 
 def test_assigned_retorna_nomes_les_cel_les_amb_alumne():
+    """Assigned retorna només les cel les amb alumne."""
     grid = _grid()
     grid.assign(1, 0, 0)
     grid.set_cell_type(1, 1, CellType.EMPTY)
     assigned = grid.assigned()
     assert set(assigned) == {1}
-    assert assigned[1].row == 0 and assigned[1].column == 0
+    assert assigned[1].row == 0
+    assert assigned[1].column == 0
 
 
 def test_seats_retorna_nomes_les_cel_les_de_tipus_seient():
+    """Seats retorna només les cel les de tipus seient."""
     grid = _grid(2, 2)
     grid.set_cell_type(0, 1, CellType.AISLE)
     seats = grid.seats()

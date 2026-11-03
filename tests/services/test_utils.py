@@ -1,3 +1,5 @@
+"""Tests de les utilitats compartides de la capa de serveis."""
+
 import pytest
 from tutopy.services.utils import get_app_dir, DateConverter, AcademicCourseDeterminator
 

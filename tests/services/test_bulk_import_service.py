@@ -1,3 +1,5 @@
+"""Tests del servei d'importació massiva."""
+
 from openpyxl import load_workbook
 from odf import table, text
 from odf.opendocument import OpenDocumentSpreadsheet
@@ -38,6 +40,7 @@ def _ods_file(path, students=(), categories=()):
 
 
 def test_template_te_els_fulls_i_capcaleres(db, tmp_path):
+    """Template té els fulls i capçaleres."""
     service = create_services(db).bulk_import
     path = service.create_template(tmp_path / "plantilla")
     workbook = load_workbook(path, read_only=True)
@@ -47,6 +50,7 @@ def test_template_te_els_fulls_i_capcaleres(db, tmp_path):
 
 
 def test_analyze_indica_full_fila_i_motiu(db, tmp_path):
+    """Analyze indica full fila i motiu."""
     service = create_services(db).bulk_import
     path = tmp_path / "dades.xlsx"
     _filled_template(service, path, students=[("Anna", "Serra", "1r A"), (None, "Puig", "1r B")])
@@ -57,6 +61,7 @@ def test_analyze_indica_full_fila_i_motiu(db, tmp_path):
 
 
 def test_importa_alumnes_i_reutilitza_categories_exactes(db, tmp_path):
+    """Importa alumnes i reutilitza categories exactes."""
     services = create_services(db)
     services.categories.create(CategoryNew("Acadèmic"))
     path = tmp_path / "dades.xlsx"
@@ -71,6 +76,7 @@ def test_importa_alumnes_i_reutilitza_categories_exactes(db, tmp_path):
 
 
 def test_importacio_aplica_la_mateixa_normalitzacio_de_noms(db, tmp_path):
+    """Importació aplica la mateixa normalització de noms."""
     services = create_services(db)
     path = tmp_path / "noms.xlsx"
     _filled_template(
@@ -87,6 +93,7 @@ def test_importacio_aplica_la_mateixa_normalitzacio_de_noms(db, tmp_path):
 
 
 def test_importa_alumnes_i_categories_des_d_ods(db, tmp_path):
+    """Importa alumnes i categories des d'ods."""
     services = create_services(db)
     path = tmp_path / "dades.ods"
     _ods_file(path, students=[("Anna", "Serra", "1r A")],
@@ -102,6 +109,7 @@ def test_importa_alumnes_i_categories_des_d_ods(db, tmp_path):
 
 
 def test_importacio_rebutja_extensions_i_arxius_no_valids(db, tmp_path):
+    """Importació rebutja extensions i arxius no vàlids."""
     service = create_services(db).bulk_import
     invalid = tmp_path / "dades.ods"
     invalid.write_text("no és un ODS")
@@ -114,6 +122,7 @@ def test_importacio_rebutja_extensions_i_arxius_no_valids(db, tmp_path):
 
 
 def test_coincidencia_similar_requereix_decisio_i_preserva_uuid(db, tmp_path):
+    """Coincidència similar requereix decisió i preserva uuid."""
     services = create_services(db)
     existing = services.students.create(StudentNew("Júlia", "Martínez", "2n A"))
     path = tmp_path / "dades.xlsx"
@@ -131,6 +140,7 @@ def test_coincidencia_similar_requereix_decisio_i_preserva_uuid(db, tmp_path):
 
 
 def test_error_durant_execucio_desfa_tota_la_importacio(db, tmp_path):
+    """Error durant execució desfa tota la importació."""
     services = create_services(db)
     path = tmp_path / "dades.xlsx"
     _filled_template(services.bulk_import, path,
@@ -158,6 +168,7 @@ def test_error_durant_execucio_desfa_tota_la_importacio(db, tmp_path):
 
 
 def test_analisi_rebutja_fitxer_inexistent_i_massa_gran(db, tmp_path):
+    """Analisi rebutja fitxer inexistent i massa gran."""
     service = create_services(db).bulk_import
     with pytest.raises(ValidationError, match="no existeix"):
         service.analyze(tmp_path / "absent.xlsx")
@@ -170,6 +181,7 @@ def test_analisi_rebutja_fitxer_inexistent_i_massa_gran(db, tmp_path):
 
 
 def test_analisi_detecta_fulls_capcaleres_formules_i_tipus_invalids(db, tmp_path):
+    """Analisi detecta fulls capçaleres formules i tipus invàlids."""
     service = create_services(db).bulk_import
     path = tmp_path / "dades.xlsx"
     service.create_template(path)
@@ -188,6 +200,7 @@ def test_analisi_detecta_fulls_capcaleres_formules_i_tipus_invalids(db, tmp_path
 
 
 def test_execucio_exigeix_decisions_i_valida_alumne_objectiu(db, tmp_path):
+    """Execució exigeix decisions i vàlida alumne objectiu."""
     services = create_services(db)
     existing = services.students.create(StudentNew("Júlia", "Martínez", "2n A"))
     path = tmp_path / "dades.xlsx"
@@ -204,6 +217,7 @@ def test_execucio_exigeix_decisions_i_valida_alumne_objectiu(db, tmp_path):
 
 
 def test_execucio_permet_ometre_un_conflicte(db, tmp_path):
+    """Execució permet ometre un conflicte."""
     services = create_services(db)
     services.students.create(StudentNew("Júlia", "Martínez", "2n A"))
     path = tmp_path / "dades.xlsx"

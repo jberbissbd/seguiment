@@ -147,7 +147,7 @@ class LayoutGrid:
             Els identificadors dels alumnes desplaçats per la taula.
         """
         displaced = []
-        for (row_key, column_key), cell in list(self.cells.items()):
+        for (row_key, column_key), cell in self.cells.items():
             if cell.cell_type == CellType.TEACHER:
                 self.cells[(row_key, column_key)] = LayoutCell(
                     row_key, column_key, CellType.SEAT, None, None,

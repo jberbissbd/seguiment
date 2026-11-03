@@ -1,13 +1,17 @@
+"""Tests del servei de preferències."""
+
 from tutopy.services.preferences_service import PreferencesService
 
 
 def test_comprovacio_de_versio_activada_per_defecte(db):
+    """Comprovació de versió activada per defecte."""
     preferences = PreferencesService(db.settings)
 
     assert preferences.is_update_check_enabled() is True
 
 
 def test_desactivar_i_reactivar_la_comprovacio_de_versio(db):
+    """Desactivar i reactivar la comprovació de versió."""
     preferences = PreferencesService(db.settings)
 
     preferences.set_update_check_enabled(False)
@@ -18,6 +22,7 @@ def test_desactivar_i_reactivar_la_comprovacio_de_versio(db):
 
 
 def test_preferencies_de_distribucio_tenen_valors_per_defecte(db):
+    """Preferències de distribució tenen valors per defecte."""
     preferences = PreferencesService(db.settings)
 
     assert preferences.default_column_pattern() == "2-2-2"
@@ -30,6 +35,7 @@ def test_preferencies_de_distribucio_tenen_valors_per_defecte(db):
 
 
 def test_preferencies_de_distribucio_es_poden_desar(db):
+    """Preferències de distribució es poden desar."""
     preferences = PreferencesService(db.settings)
 
     preferences.set_default_column_pattern("3-3")

@@ -1,3 +1,5 @@
+"""Tests del diàleg de revisió de fotos importades des d'un PDF."""
+
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QLabel
 
@@ -24,6 +26,7 @@ def _students():
 
 
 def test_preselecciona_l_alumne_preassignat(qtbot, tmp_path):
+    """Preselecciona l'alumne preassignat."""
     image_path = str(_write_jpg(tmp_path))
     preview = PdfPhotoImportPreview(
         entries=(
@@ -41,6 +44,7 @@ def test_preselecciona_l_alumne_preassignat(qtbot, tmp_path):
 
 
 def test_sense_coincidencia_queda_a_ometre(qtbot, tmp_path):
+    """Sense coincidència queda a ometre."""
     image_path = str(_write_jpg(tmp_path))
     preview = PdfPhotoImportPreview(
         entries=(
@@ -60,6 +64,7 @@ def test_sense_coincidencia_queda_a_ometre(qtbot, tmp_path):
 
 
 def test_assignments_reflecteix_un_canvi_manual(qtbot, tmp_path):
+    """Assignments reflecteix un canvi manual."""
     image_path = str(_write_jpg(tmp_path))
     preview = PdfPhotoImportPreview(
         entries=(
@@ -79,6 +84,7 @@ def test_assignments_reflecteix_un_canvi_manual(qtbot, tmp_path):
 
 
 def test_mostra_avis_dels_alumnes_sense_fotografia(qtbot, tmp_path):
+    """Mostra avís dels alumnes sense fotografia."""
     image_path = str(_write_jpg(tmp_path))
     preview = PdfPhotoImportPreview(
         entries=(

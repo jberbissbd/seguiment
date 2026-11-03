@@ -1,3 +1,5 @@
+"""Tests del controlador d'estadístiques."""
+
 import pytest
 
 from tutopy.application import create_services
@@ -11,12 +13,14 @@ from tutopy.database.database import Database
 
 @pytest.fixture
 def db(tmp_path):
+    """Connecta una base de dades SQLite temporal per a la prova."""
     database = Database(str(tmp_path / "statistics-controller.db")).connect()
     yield database
     database.close()
 
 
 def test_obrir_estadistiques_actualitza_filtres_i_resultats(db, qtbot):
+    """Obrir estadístiques actualitza filtres i resultats."""
     services = create_services(db)
     student = services.students.create(StudentNew("Laia", "Martí", "4t A"))
     category = services.categories.create(CategoryNew("Acadèmic"))
@@ -41,6 +45,7 @@ def test_obrir_estadistiques_actualitza_filtres_i_resultats(db, qtbot):
 
 
 def test_actualitzar_mante_filtres_seleccionats(db, qtbot):
+    """Actualitzar mante filtres seleccionats."""
     services = create_services(db)
     services.students.create(StudentNew("Laia", "Martí", "4t A"))
     window = MainWindow()
@@ -60,6 +65,7 @@ def test_actualitzar_mante_filtres_seleccionats(db, qtbot):
 
 
 def test_selector_no_mostra_cursos_sense_notes(db, qtbot):
+    """Selector no mostra cursos sense notes."""
     services = create_services(db)
     student = services.students.create(StudentNew("Laia", "Martí", "4t A"))
     category = services.categories.create(CategoryNew("Acadèmic"))
@@ -85,6 +91,7 @@ def test_selector_no_mostra_cursos_sense_notes(db, qtbot):
 
 
 def test_canvi_de_filtre_refresca_les_estadistiques(db, qtbot):
+    """Canvi de filtre refresca les estadístiques."""
     services = create_services(db)
     first = services.students.create(StudentNew("Laia", "Martí", "4t A"))
     second = services.students.create(StudentNew("Pau", "Puig", "4t B"))
@@ -111,6 +118,7 @@ def test_canvi_de_filtre_refresca_les_estadistiques(db, qtbot):
 
 
 def test_error_de_domini_es_mostra_sense_substituir_resultats(db, qtbot):
+    """Error de domini es mostra sense substituir resultats."""
     services = create_services(db)
     window = MainWindow()
     qtbot.addWidget(window)
@@ -130,6 +138,7 @@ def test_error_de_domini_es_mostra_sense_substituir_resultats(db, qtbot):
 
 
 def test_context_inclou_grup_i_interval_en_format_local(db, qtbot):
+    """Context inclou grup i interval en format local."""
     services = create_services(db)
     window = MainWindow()
     qtbot.addWidget(window)

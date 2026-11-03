@@ -1,3 +1,5 @@
+"""Tests de l'assignació de fotografia a un alumne des del detall."""
+
 from PySide6.QtGui import QColor, QPixmap
 
 from tutopy.models.messaging import Student
@@ -15,6 +17,7 @@ def _write_png(tmp_path, name="foto.png"):
 
 
 def test_set_photo_mostra_la_imatge_i_torna_a_les_inicials(qtbot, tmp_path):
+    """Set photo mostra la imatge i torna a les inicials."""
     panel = StudentDetailPanel()
     qtbot.addWidget(panel)
     panel.show_student(Student(1, "uuid", "Maria", "Serra", "4t A"))
@@ -33,6 +36,7 @@ def test_set_photo_mostra_la_imatge_i_torna_a_les_inicials(qtbot, tmp_path):
 
 
 def test_set_photo_amb_fitxer_no_imatge_recula_a_inicials(qtbot, tmp_path):
+    """Set photo amb fitxer no imatge recula a inicials."""
     panel = StudentDetailPanel()
     qtbot.addWidget(panel)
     panel.show_student(Student(1, "uuid", "Maria", "Serra", "4t A"))
@@ -46,6 +50,7 @@ def test_set_photo_amb_fitxer_no_imatge_recula_a_inicials(qtbot, tmp_path):
 
 
 def test_clic_a_l_avatar_emet_photo_change_requested(qtbot):
+    """Clic a l'avatar emet photo change requested."""
     panel = StudentDetailPanel()
     qtbot.addWidget(panel)
     panel.show_student(Student(7, "uuid", "Pau", "Font", "3B"))
@@ -56,6 +61,7 @@ def test_clic_a_l_avatar_emet_photo_change_requested(qtbot):
 
 
 def test_clear_oblida_l_alumne_i_la_foto(qtbot, tmp_path):
+    """Clear oblida l'alumne i la foto."""
     panel = StudentDetailPanel()
     qtbot.addWidget(panel)
     panel.show_student(Student(1, "uuid", "Maria", "Serra", "4t A"))
@@ -67,6 +73,7 @@ def test_clear_oblida_l_alumne_i_la_foto(qtbot, tmp_path):
 
 
 def test_student_list_model_set_photos_i_photo_pixmap(tmp_path):
+    """Student list model set photos i photo pixmap."""
     model = StudentListModel()
     student = Student(1, "uuid", "Maria", "Serra", "4t A")
     model.set_students([student])
@@ -87,6 +94,7 @@ def test_student_list_model_set_photos_i_photo_pixmap(tmp_path):
 
 
 def test_student_list_model_photo_pixmap_amb_ruta_invalida(tmp_path):
+    """Student list model photo pixmap amb ruta invalida."""
     model = StudentListModel()
     student = Student(1, "uuid", "Maria", "Serra", "4t A")
     model.set_students([student])

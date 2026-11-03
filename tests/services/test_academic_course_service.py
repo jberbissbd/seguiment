@@ -1,6 +1,8 @@
+"""Tests del servei de cursos acadèmics."""
+
 import pytest
 from tutopy.services.academic_course_service import AcademicCourseService
-from tutopy.models.messaging import AcademicCourse, AcademicCourseNew
+from tutopy.models.messaging import AcademicCourseNew
 from tutopy.services.exceptions import EntityInUseError, ValidationError
 
 
@@ -135,12 +137,14 @@ class TestAcademicCourseService:
 
     @pytest.mark.parametrize("course", ["2026", "2026-2028", "abcd-efgh"])
     def test_create_rebutja_format_invalid(self, academic_course_dao, db, course):
+        """Rebutja crear un curs acadèmic amb un format "AAAA-AAAA" invàlid."""
         service = AcademicCourseService(academic_course_dao)
         invalid_course = AcademicCourseNew(course)
         with pytest.raises(ValidationError):
             service.create(invalid_course)
 
     def test_delete_rebutja_curs_en_us(self, academic_course_dao, db):
+        """Rebutja eliminar un curs acadèmic mentre encara té notes associades."""
         from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew
 
         service = AcademicCourseService(academic_course_dao)

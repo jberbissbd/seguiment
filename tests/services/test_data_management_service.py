@@ -1,3 +1,5 @@
+"""Tests del servei de gestió de dades."""
+
 from tutopy.application import create_services
 from tutopy.models.messaging import CategoryNew, StudentDocumentNew, StudentNew, StudentPhoto
 from tutopy.services.data_management_service import DataManagementService
@@ -5,6 +7,7 @@ from tutopy.models.reporting import TermConfigurationNew
 
 
 def test_delete_all_buida_entitats_i_nomes_fitxers_gestionats(db, tmp_path):
+    """Delete all buida entitats i només fitxers gestionats."""
     services = create_services(db)
     student = services.students.create(StudentNew("Ada", "Lovelace", "4t A"))
     services.categories.create(CategoryNew("Acadèmic"))

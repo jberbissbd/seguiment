@@ -1,7 +1,10 @@
+"""Verifica el pla de consulta de les estadístiques."""
+
 from tutopy.models.messaging import AcademicCourseNew, StudentNew
 
 
 def test_estadistiques_per_alumne_i_curs_utilitzen_index_compost(db):
+    """Estadístiques per alumne i curs utilitzen index compost."""
     course = db.academic_courses.create(AcademicCourseNew("2025-2026"))
     db.students.create(StudentNew("Alba", "Serra", "1A"))
 
