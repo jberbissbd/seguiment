@@ -1,0 +1,214 @@
+"""Tests dels widgets de cel·la i de llista de pendents de la distribució d'aula."""
+
+from PySide6.QtGui import QColor, QPixmap
+
+from tutopy.models.classroom_layout import CellType, LayoutGrid
+from tutopy.models.messaging import Student
+from tutopy.ui.widgets import classroom_layout_mime as mime
+from tutopy.ui.widgets.classroom_layout_cell_widget import (
+    AISLE_WIDTH, CELL_WIDTH, NAME_FONT_MIN_SIZE, NAME_FONT_SIZE, SEAT_BACKGROUND,
+    TEACHER_BACKGROUND, ClassroomCellWidget, _fitting_font_size,
+)
+from tutopy.ui.widgets.classroom_layout_grid_widget import ClassroomLayoutGridWidget
+from tutopy.ui.widgets.classroom_layout_pending_list import PendingStudentsList
+
+# `_handle_drop` es testeja directament amb un QMimeData, sense construir un
+# QDropEvent: cridar `QDropEvent.acceptProposedAction()` fora d'una sessió
+# real d'arrossegament de Qt provoca una violació de segment coneguda de
+# PySide6, no una excepció Python capturable.
+
+
+def _write_jpg(tmp_path, name="foto.jpg"):
+    path = tmp_path / name
+    pixmap = QPixmap(10, 10)
+    pixmap.fill(QColor("green"))
+    pixmap.save(str(path), "JPG")
+    return path
+
+
+def test_cell_widget_drop_des_de_pendents_emet_move_requested(qtbot):
+    """Cell widget drop des de pendents emet move requested."""
+    cell = ClassroomCellWidget(2, 3)
+    qtbot.addWidget(cell)
+    with qtbot.waitSignal(cell.move_requested) as signal:
+        accepted = cell._handle_drop(mime.encode(7, mime.PENDING_ORIGIN))
+    assert accepted is True
+    assert signal.args == [7, "pending", 2, 3]
+
+
+def test_cell_widget_drop_des_d_una_altra_cel_la(qtbot):
+    """Cell widget drop des d'una altra cel·la."""
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    with qtbot.waitSignal(cell.move_requested) as signal:
+        cell._handle_drop(mime.encode(9, mime.cell_origin(1, 2)))
+    assert signal.args == [9, "cell:1:2", 0, 0]
+
+
+def test_cell_widget_drop_sobre_cel_la_no_seient_no_emet_res(qtbot):
+    """Cell widget drop sobre cel·la no seient no emet res."""
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    cell.update_cell(CellType.AISLE, None, None, False)
+    received = []
+    cell.move_requested.connect(lambda *args: received.append(args))
+    accepted = cell._handle_drop(mime.encode(1, mime.PENDING_ORIGIN))
+    assert accepted is False
+    assert received == []
+
+
+def test_cell_widget_return_to_pending_nomes_amb_alumne(qtbot):
+    """Cell widget return to pending només amb alumne."""
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    student = Student(5, "uuid", "Maria", "Serra", "4t A")
+    cell.update_cell(CellType.SEAT, student, None, False)
+    assert cell._student is student
+
+
+def test_cell_widget_tots_els_seients_tenen_el_mateix_color(qtbot):
+    """Cell widget tots els seients tenen el mateix color."""
+    student_1 = Student(1, "uuid1", "Anna", "Bosch", "4t A")
+    student_2 = Student(25, "uuid25", "Zoe", "Vila", "4t A")
+    cell_1 = ClassroomCellWidget(0, 0)
+    cell_2 = ClassroomCellWidget(0, 1)
+    qtbot.addWidget(cell_1)
+    qtbot.addWidget(cell_2)
+    cell_1.update_cell(CellType.SEAT, student_1, None, False)
+    cell_2.update_cell(CellType.SEAT, student_2, None, False)
+    assert cell_1.styleSheet() == cell_2.styleSheet()
+    assert SEAT_BACKGROUND in cell_1.styleSheet()
+
+
+def test_cell_widget_taula_del_professor_te_marc(qtbot):
+    """Cell widget taula del professor té marc."""
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    cell.update_cell(CellType.TEACHER, None, None, False)
+    assert "border:" in cell.styleSheet()
+    assert TEACHER_BACKGROUND in cell.styleSheet()
+
+
+def test_cell_widget_passadis_ocupa_la_meitat_damplada(qtbot):
+    """Cell widget passadis ocupa la meitat d'amplada."""
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    cell.update_cell(CellType.AISLE, None, None, False)
+    assert cell.width() == AISLE_WIDTH == CELL_WIDTH // 2
+
+
+def test_cell_widget_seient_recupera_lamplada_normal_en_deixar_de_ser_passadis(qtbot):
+    """Cell widget seient recupera l'amplada normal en deixar de ser passadis."""
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    cell.update_cell(CellType.AISLE, None, None, False)
+    cell.update_cell(CellType.SEAT, None, None, False)
+    assert cell.width() == CELL_WIDTH
+
+
+def test_fitting_font_size_amb_prou_espai_retorna_la_mida_normal(qtbot):
+    """Fitting font size amb prou espai retorna la mida normal."""
+    assert _fitting_font_size("Pere", 84, 70) == NAME_FONT_SIZE
+
+
+def test_fitting_font_size_redueix_quan_no_hi_cap(qtbot):
+    """Fitting font size redueix quan no hi cap."""
+    size = _fitting_font_size("Bouhbouh El Bakkali Issaoui, Marwa", 84, 20)
+    assert NAME_FONT_MIN_SIZE <= size < NAME_FONT_SIZE
+
+
+def test_fitting_font_size_mai_per_sota_del_minim(qtbot):
+    """Fitting font size mai per sota del mínim."""
+    size = _fitting_font_size("Un nom i cognoms extremadament llargs per forçar l'últim recurs", 50, 5)
+    assert size == NAME_FONT_MIN_SIZE
+
+
+def test_cell_widget_mostra_el_text_sencer_cognoms_coma_nom(qtbot):
+    """El text mai es trunca ni s'elideix: com a últim recurs, es redueix la mida."""
+    cell = ClassroomCellWidget(0, 0)
+    qtbot.addWidget(cell)
+    student = Student(
+        1, "uuid", "Gabriel Antonio", "Bouhbouh El Bakkali Issaoui", "1r A",
+    )
+    cell.update_cell(CellType.SEAT, student, None, False)
+    assert cell.name_label.text() == "Bouhbouh El Bakkali Issaoui, Gabriel Antonio"
+    assert "…" not in cell.name_label.text()
+
+
+def test_pending_list_drop_des_d_una_cel_la_emet_move_requested(qtbot):
+    """Pending list drop des d'una cel·la emet move requested."""
+    pending_list = PendingStudentsList()
+    qtbot.addWidget(pending_list)
+    with qtbot.waitSignal(pending_list.move_requested) as signal:
+        accepted = pending_list._handle_drop(mime.encode(3, mime.cell_origin(0, 1)))
+    assert accepted is True
+    assert signal.args == [3, "cell:0:1"]
+
+
+def test_pending_list_drop_des_de_pendents_no_emet_res(qtbot):
+    """Pending list drop des de pendents no emet res."""
+    pending_list = PendingStudentsList()
+    qtbot.addWidget(pending_list)
+    received = []
+    pending_list.move_requested.connect(lambda *args: received.append(args))
+    accepted = pending_list._handle_drop(mime.encode(3, mime.PENDING_ORIGIN))
+    assert accepted is True  # s'accepta el drop, però no s'emet res (ja era a pendents)
+    assert received == []
+
+
+def test_pending_list_set_students_mostra_fotos_quan_cal(qtbot, tmp_path):
+    """Pending list set students mostra fotos quan cal."""
+    pending_list = PendingStudentsList()
+    qtbot.addWidget(pending_list)
+    student = Student(1, "uuid", "Maria", "Serra", "4t A")
+    photo_path = str(_write_jpg(tmp_path))
+    pending_list.set_students([student], True, {1: photo_path})
+    item = pending_list.item(0)
+    assert item.text() == "Serra, Maria"
+    assert not item.icon().isNull()
+
+
+def test_grid_widget_inverteix_la_fila_perque_el_professor_quedi_a_baix(qtbot):
+    """Grid widget inverteix la fila perque el professor quedi a baix."""
+    grid_widget = ClassroomLayoutGridWidget()
+    qtbot.addWidget(grid_widget)
+    grid = LayoutGrid(3, 2)
+    grid_widget.rebuild(grid, {}, False, {})
+    layout = grid_widget._layout
+    # fila de model 0 (davant) ha d'acabar a la fila de pantalla 2 (la darrera)
+    cell_front = grid_widget._cells[(0, 0)]
+    cell_back = grid_widget._cells[(2, 0)]
+    front_index = layout.indexOf(cell_front)
+    back_index = layout.indexOf(cell_back)
+    front_row, _col, _rs, _cs = layout.getItemPosition(front_index)
+    back_row, _col2, _rs2, _cs2 = layout.getItemPosition(back_index)
+    assert front_row == 2
+    assert back_row == 0
+
+
+def test_grid_widget_rebuild_mostra_nom_i_cognoms_no_inicials(qtbot):
+    """Grid widget rebuild mostra nom i cognoms no inicials."""
+    grid_widget = ClassroomLayoutGridWidget()
+    qtbot.addWidget(grid_widget)
+    grid = LayoutGrid(2, 2)
+    student = Student(1, "uuid", "Maria", "Serra", "4t A")
+    grid.assign(1, 0, 0)
+    grid_widget.rebuild(grid, {1: student}, False, {})
+    cell = grid_widget._cells[(0, 0)]
+    assert cell.name_label.text() == "Serra, Maria"
+    assert cell.photo_label.isHidden() is True
+
+
+def test_grid_widget_rebuild_mostra_foto_i_nom_quan_show_photos(qtbot, tmp_path):
+    """Grid widget rebuild mostra foto i nom quan show photos."""
+    grid_widget = ClassroomLayoutGridWidget()
+    qtbot.addWidget(grid_widget)
+    grid = LayoutGrid(1, 1)
+    student = Student(1, "uuid", "Maria", "Serra", "4t A")
+    grid.assign(1, 0, 0)
+    photo_path = str(_write_jpg(tmp_path))
+    grid_widget.rebuild(grid, {1: student}, True, {1: photo_path})
+    cell = grid_widget._cells[(0, 0)]
+    assert cell.name_label.text() == "Serra, Maria"
+    assert cell.photo_label.isHidden() is False
+    assert not cell.photo_label.pixmap().isNull()

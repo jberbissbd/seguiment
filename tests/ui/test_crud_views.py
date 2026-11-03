@@ -1,7 +1,10 @@
+"""Tests de les vistes CRUD genèriques."""
+
 from tutopy.ui.widgets.crud_views import CrudListView, CrudTableView
 
 
 def test_crud_list_view_selecciona_edita_i_elimina(qtbot):
+    """Crud list view selecciona edita i elimina."""
     view = CrudListView(create_text="Nou alumne")
     qtbot.addWidget(view)
     created = []
@@ -33,6 +36,7 @@ def test_crud_list_view_selecciona_edita_i_elimina(qtbot):
 
 
 def test_crud_list_view_conserva_seleccio_en_refer_items(qtbot):
+    """Crud list view conserva selecció en refer items."""
     view = CrudListView()
     qtbot.addWidget(view)
     view.set_items([(1, "Primer"), (2, "Segon")])
@@ -45,6 +49,7 @@ def test_crud_list_view_conserva_seleccio_en_refer_items(qtbot):
 
 
 def test_crud_list_view_no_emet_sense_seleccio(qtbot):
+    """Crud list view no emet sense selecció."""
     view = CrudListView()
     qtbot.addWidget(view)
     edited = []
@@ -60,6 +65,7 @@ def test_crud_list_view_no_emet_sense_seleccio(qtbot):
 
 
 def test_crud_table_view_selecciona_edita_i_elimina(qtbot):
+    """Crud table view selecciona edita i elimina."""
     view = CrudTableView(headers=("Nom", "Grup"), create_text="Nou alumne")
     qtbot.addWidget(view)
     created = []
@@ -90,6 +96,7 @@ def test_crud_table_view_selecciona_edita_i_elimina(qtbot):
 
 
 def test_crud_table_view_conserva_seleccio_en_refer_files(qtbot):
+    """Crud table view conserva selecció en refer files."""
     view = CrudTableView(headers=("Nom",))
     qtbot.addWidget(view)
     view.set_rows([(1, ("Anna",)), (2, ("Biel",))])
@@ -102,6 +109,7 @@ def test_crud_table_view_conserva_seleccio_en_refer_files(qtbot):
 
 
 def test_crud_table_view_no_emet_sense_seleccio(qtbot):
+    """Crud table view no emet sense selecció."""
     view = CrudTableView(headers=("Nom",))
     qtbot.addWidget(view)
     edited = []

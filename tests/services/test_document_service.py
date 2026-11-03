@@ -1,3 +1,5 @@
+"""Tests del servei de documents."""
+
 from dataclasses import replace
 from pathlib import Path
 import shutil
@@ -134,6 +136,7 @@ def test_metadades_requereixen_data_i_cataleg_de_cursos(managed_document, failur
 
 
 def test_document_service_crud(document_dao, student_dao, db):
+    """Document service crud."""
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
     service = DocumentService(document_dao, student_dao, db.academic_courses)
     document = service.create(StudentDocumentNew(
@@ -155,6 +158,7 @@ def test_document_service_crud(document_dao, student_dao, db):
 
 
 def test_document_service_valida_relacions_i_nom(document_dao, student_dao, db):
+    """Document service vàlida relacions i nom."""
     service = DocumentService(document_dao, student_dao, db.academic_courses)
     with pytest.raises(EntityNotFoundError):
         service.get_by_student(999)
@@ -170,6 +174,7 @@ def test_document_service_valida_relacions_i_nom(document_dao, student_dao, db):
 def test_document_service_importa_i_elimina_fitxer_gestionat(
     document_dao, student_dao, db, tmp_path
 ):
+    """Document service importa i elimina fitxer gestionat."""
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
     source = tmp_path / "informe.pdf"
     source.write_bytes(b"contingut")
@@ -196,6 +201,7 @@ def test_document_service_importa_i_elimina_fitxer_gestionat(
 def test_document_service_valida_obertura_i_exporta_fitxer(
     document_dao, student_dao, db, tmp_path
 ):
+    """Document service vàlida obertura i exporta fitxer."""
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
     source = tmp_path / "informe.txt"
     source.write_text("Informe", encoding="utf-8")
@@ -251,6 +257,7 @@ def test_exportacio_copia_el_fitxer_gestionat_i_no_el_dorigen(managed_document, 
 def test_document_service_rebutja_fitxer_extern_al_magatzem(
     document_dao, student_dao, db, tmp_path
 ):
+    """Document service rebutja fitxer extern al magatzem."""
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
     external = tmp_path / "extern.txt"
     external.write_text("Extern", encoding="utf-8")
@@ -270,6 +277,7 @@ def test_document_service_rebutja_fitxer_extern_al_magatzem(
 def test_document_service_avisa_si_no_pot_netejar_el_fitxer_eliminat(
     document_dao, student_dao, db, tmp_path, monkeypatch
 ):
+    """Document service avisa si no pot netejar el fitxer eliminat."""
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
     source = tmp_path / "informe.txt"
     source.write_text("Informe", encoding="utf-8")
@@ -299,6 +307,7 @@ def test_document_service_avisa_si_no_pot_netejar_el_fitxer_eliminat(
 def test_document_service_restaura_el_fitxer_si_falla_la_base_de_dades(
     document_dao, student_dao, db, tmp_path, monkeypatch
 ):
+    """Document service restaura el fitxer si falla la base de dades."""
     student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
     source = tmp_path / "informe.txt"
     source.write_text("Informe", encoding="utf-8")

@@ -1,3 +1,5 @@
+"""Tests de l'exportació d'informes en format DOCX."""
+
 from docx import Document
 from datetime import date
 from docx.enum.style import WD_STYLE_TYPE
@@ -30,6 +32,7 @@ def _scenario(db, tmp_path):
 
 
 def test_exporta_cursos_categories_ordenades_i_taules(db, tmp_path):
+    """Exporta cursos categories ordenades i taules."""
     services, student, destination = _scenario(db, tmp_path)
     path = services.word_reports.export_student(student.id, destination)
     assert path.suffix == ".docx"
@@ -61,6 +64,7 @@ def test_exporta_cursos_categories_ordenades_i_taules(db, tmp_path):
 
 
 def test_configura_bloc_inicial_a4_marges_i_taules_a_amplada_completa(db, tmp_path):
+    """Configura bloc inicial a4 marges i taules a amplada completa."""
     services, student, destination = _scenario(db, tmp_path)
     document = Document(services.word_reports.export_student(student.id, destination))
     section = document.sections[0]
@@ -90,6 +94,7 @@ def test_configura_bloc_inicial_a4_marges_i_taules_a_amplada_completa(db, tmp_pa
 
 
 def test_permet_afegir_una_imatge_al_bloc_inicial(db, tmp_path):
+    """Permet afegir una imatge al bloc inicial."""
     services, student, destination = _scenario(db, tmp_path)
     logo = tmp_path / "logo.png"
     logo.write_bytes(
@@ -104,6 +109,7 @@ def test_permet_afegir_una_imatge_al_bloc_inicial(db, tmp_path):
 
 
 def test_rebutja_una_imatge_de_capcalera_inexistent(db, tmp_path):
+    """Rebutja una imatge de capcalera inexistent."""
     services, _student, _destination = _scenario(db, tmp_path)
     services.report_configuration.storage_dir = tmp_path / "reporting"
     with pytest.raises(ValidationError, match="imatge de capçalera"):
@@ -111,6 +117,7 @@ def test_rebutja_una_imatge_de_capcalera_inexistent(db, tmp_path):
 
 
 def test_rebutja_alumne_inexistent_o_sense_notes(db, tmp_path):
+    """Rebutja alumne inexistent o sense notes."""
     services = create_services(db)
     with pytest.raises(EntityNotFoundError):
         services.word_reports.export_student(999, tmp_path / "x.docx")
@@ -120,6 +127,7 @@ def test_rebutja_alumne_inexistent_o_sense_notes(db, tmp_path):
 
 
 def test_elimina_controls_xml_no_valids(db, tmp_path):
+    """Elimina controls xml no vàlids."""
     services = create_services(db)
     student = services.students.create(StudentNew("Júlia", "Nuñez", "4t A"))
     category = services.categories.create(CategoryNew("Acadèmic"))

@@ -1,3 +1,5 @@
+"""Tests de la càrrega d'icones de la interfície."""
+
 from PySide6.QtWidgets import QAbstractButton, QDialogButtonBox
 
 from tutopy.ui.dialogs.contact_dialog import ContactDialog
@@ -7,6 +9,7 @@ from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
 
 
 def test_recursos_vectorials_existeixen():
+    """Recursos vectorials existeixen."""
     for filename in (
         "tutopy.svg", "notes.svg", "descriptors.svg", "contacts.svg",
         "documents.svg", "history.svg",
@@ -18,11 +21,13 @@ def test_recursos_vectorials_existeixen():
 
 
 def test_icona_de_creacio_contrasta_amb_els_botons_primaris():
+    """Icona de creació contrasta amb els botons primaris."""
     content = asset_path(ACTION_ICONS["add"]).read_text(encoding="utf-8")
     assert 'stroke="#FFFFFF"' in content
 
 
 def test_pestanyes_tenen_icones(qtbot):
+    """Pestanyes tenen icones."""
     panel = StudentDetailPanel()
     qtbot.addWidget(panel)
     assert panel.tabs.count() == len(panel.TAB_NAMES)
@@ -31,6 +36,7 @@ def test_pestanyes_tenen_icones(qtbot):
 
 
 def test_finestra_te_icona(qtbot):
+    """Finestra té icona."""
     window = MainWindow()
     qtbot.addWidget(window)
     assert not application_icon().isNull()
@@ -38,6 +44,7 @@ def test_finestra_te_icona(qtbot):
 
 
 def test_seccions_laterals_tenen_icones(qtbot):
+    """Seccions laterals tenen icones."""
     window = MainWindow()
     qtbot.addWidget(window)
     assert all(not button.icon().isNull()
@@ -45,6 +52,7 @@ def test_seccions_laterals_tenen_icones(qtbot):
 
 
 def test_accions_de_la_finestra_principal_tenen_icones(qtbot):
+    """Accions de la finestra principal tenen icones."""
     window = MainWindow()
     qtbot.addWidget(window)
     action_buttons = [
@@ -56,6 +64,7 @@ def test_accions_de_la_finestra_principal_tenen_icones(qtbot):
 
 
 def test_botons_estandard_dels_dialegs_tenen_icones(qtbot):
+    """Botons estandard dels dialegs tenen icones."""
     dialog = ContactDialog()
     qtbot.addWidget(dialog)
     assert not dialog.buttons.button(

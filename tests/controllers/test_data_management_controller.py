@@ -1,3 +1,5 @@
+"""Tests del controlador de gestió de dades (plantilles, importació, transferències)."""
+
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -138,6 +140,7 @@ def test_conflictes_transferencia_respecten_la_decisio(
 
 
 def test_exporta_plantilla_i_admet_cancel_lacio(data_management_env, monkeypatch):
+    """Exporta plantilla i admet cancel·lació."""
     window, importer, _, controller, _, _ = data_management_env
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *args: ("", ""))
     controller.export_template()
@@ -150,6 +153,7 @@ def test_exporta_plantilla_i_admet_cancel_lacio(data_management_env, monkeypatch
 
 
 def test_exportacio_mostra_error_de_domini(data_management_env, monkeypatch):
+    """Exportació mostra error de domini."""
     window, importer, _, controller, _, _ = data_management_env
     importer.error = ValidationError("no es pot desar")
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *args: ("fitxer.xlsx", ""))
@@ -158,6 +162,7 @@ def test_exportacio_mostra_error_de_domini(data_management_env, monkeypatch):
 
 
 def test_importacio_cancel_lada_o_amb_incidencies_no_executa(data_management_env, monkeypatch):
+    """Importació cancel·lada o amb incidències no executa."""
     window, importer, _, controller, _, _ = data_management_env
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("", ""))
     controller.import_spreadsheet()
@@ -171,6 +176,7 @@ def test_importacio_cancel_lada_o_amb_incidencies_no_executa(data_management_env
 
 
 def test_importacio_sense_conflictes_refresca_i_resumeix(data_management_env, monkeypatch):
+    """Importació sense conflictes refresca i resumeix."""
     _, importer, _, controller, changed, messages = data_management_env
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("dades.xlsx", ""))
     controller.import_spreadsheet()
@@ -181,6 +187,7 @@ def test_importacio_sense_conflictes_refresca_i_resumeix(data_management_env, mo
 
 
 def test_importacio_amb_conflictes_aplica_decisions(data_management_env, monkeypatch):
+    """Importació amb conflictes aplica decisions."""
     _, importer, _, controller, changed, _ = data_management_env
     importer.preview = SimpleNamespace(issues=(), conflicts=(object(),))
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("dades.xlsx", ""))
@@ -197,6 +204,7 @@ def test_importacio_amb_conflictes_aplica_decisions(data_management_env, monkeyp
 
 
 def test_importacio_amb_conflictes_es_pot_cancel_lar(data_management_env, monkeypatch):
+    """Importació amb conflictes es pot cancel·lar."""
     _, importer, _, controller, changed, _ = data_management_env
     importer.preview = SimpleNamespace(issues=(), conflicts=(object(),))
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("dades.xlsx", ""))
@@ -212,6 +220,7 @@ def test_importacio_amb_conflictes_es_pot_cancel_lar(data_management_env, monkey
 
 
 def test_importacio_mostra_errors(data_management_env, monkeypatch):
+    """Importació mostra errors."""
     window, importer, _, controller, _, _ = data_management_env
     importer.error = ValidationError("full incorrecte")
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("dades.xlsx", ""))
@@ -220,6 +229,7 @@ def test_importacio_mostra_errors(data_management_env, monkeypatch):
 
 
 def test_esborrat_cancel_lacio_error_i_exit(data_management_env, monkeypatch):
+    """Esborrat cancel·lació error i exit."""
     window, _, data, controller, changed, messages = data_management_env
 
     class Dialog:
@@ -245,6 +255,7 @@ def test_esborrat_cancel_lacio_error_i_exit(data_management_env, monkeypatch):
 def test_transferencia_exporta_i_importa_paquets(
     data_management_env, monkeypatch, tmp_path, qtbot
 ):
+    """Transferència exporta i importa paquets."""
     window, _, _, controller, changed, messages = data_management_env
 
     class TransferStub:
@@ -312,6 +323,7 @@ def test_transferencia_exporta_i_importa_paquets(
 
 
 def test_transferencia_individual_exigeix_seleccio(data_management_env):
+    """Transferència individual exigeix selecció."""
     window, _, _, controller, _, _ = data_management_env
     controller.transfer_service = object()
 
@@ -323,6 +335,7 @@ def test_transferencia_individual_exigeix_seleccio(data_management_env):
 def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
     data_management_env, monkeypatch, tmp_path, qtbot
 ):
+    """Transferència exporta els alumnes marcats del mateix widget."""
     window, _, _, controller, _, _ = data_management_env
 
     class TransferStub:
@@ -375,6 +388,7 @@ def test_transferencia_exporta_els_alumnes_marcats_del_mateix_widget(
 def test_transferencia_valida_confirmacio_i_mostra_motiu_error(
     data_management_env, monkeypatch, tmp_path
 ):
+    """Transferència vàlida confirmació i mostra motiu error."""
     window, _, _, controller, _, _ = data_management_env
 
     class TransferStub:
@@ -399,3 +413,106 @@ def test_transferencia_valida_confirmacio_i_mostra_motiu_error(
     monkeypatch.setattr(QInputDialog, "getText", lambda *args: next(passwords))
     controller.export_all_students()
     assert "Permís denegat" in window.errors[0]
+
+
+def _pdf_photo_preview(entries=(), missing=(), temp_dir="/tmp/fake-pdf-photos"):
+    return SimpleNamespace(entries=entries, missing_photos=missing, temp_dir=temp_dir)
+
+
+def _pdf_photo_entry(num, image_path="/tmp/fake.jpg", matched_student_id=None):
+    caption = SimpleNamespace(num=num, full_name=f"Alumne {num}")
+    return SimpleNamespace(
+        caption=caption, image_path=image_path, matched_student_id=matched_student_id
+    )
+
+
+def test_import_fotos_sense_servei_mostra_error(data_management_env, monkeypatch):
+    """Sense el servei de PDF configurat, no s'obre cap selector de fitxer."""
+    window, _, _, controller, changed, messages = data_management_env
+
+    def unexpected(*args):
+        pytest.fail("No s'ha d'obrir un selector sense servei de fotos")
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", unexpected)
+    controller.import_photos_from_pdf()
+    assert window.errors == ["La importació de fotos no està disponible."]
+    assert changed == messages == []
+
+
+def test_import_fotos_cancel_la_seleccio_no_fa_res(data_management_env, monkeypatch):
+    """Cancel·lar el selector de fitxer no crida el servei d'anàlisi."""
+    window, _, _, controller, changed, messages = data_management_env
+    controller.pdf_photo_import = Mock()
+    controller.photos = Mock()
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("", ""))
+    controller.import_photos_from_pdf()
+    controller.pdf_photo_import.parse.assert_not_called()
+    assert changed == messages == []
+
+
+def test_import_fotos_sense_entrades_mostra_error_i_neteja(data_management_env, monkeypatch):
+    """Un PDF sense cap fotografia aparellada avisa i neteja el directori temporal."""
+    window, _, _, controller, changed, messages = data_management_env
+    preview = _pdf_photo_preview()
+    controller.pdf_photo_import = Mock(parse=Mock(return_value=preview))
+    controller.photos = Mock()
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("orla.pdf", ""))
+    controller.import_photos_from_pdf()
+    assert window.errors == ["No s’ha trobat cap fotografia al PDF."]
+    controller.pdf_photo_import.cleanup.assert_called_once_with(preview)
+    assert changed == messages == []
+
+
+def test_import_fotos_dialeg_cancel_lat_no_aplica_res(data_management_env, monkeypatch):
+    """Cancel·lar el diàleg de revisió no desa cap foto, però sí neteja."""
+    window, _, _, controller, changed, messages = data_management_env
+    preview = _pdf_photo_preview(entries=(_pdf_photo_entry(1),))
+    controller.pdf_photo_import = Mock(parse=Mock(return_value=preview))
+    controller.photos = Mock()
+    controller.student_service = SimpleNamespace(get_all=lambda: [])
+    controller.pdf_photo_dialog = lambda *args: SimpleNamespace(
+        exec=lambda: QDialog.DialogCode.Rejected
+    )
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("orla.pdf", ""))
+    controller.import_photos_from_pdf()
+    controller.photos.set_photo.assert_not_called()
+    controller.pdf_photo_import.cleanup.assert_called_once_with(preview)
+    assert changed == messages == []
+
+
+def test_import_fotos_aplica_assignacions_i_resumeix(data_management_env, monkeypatch):
+    """Les files assignades es desen, les omeses es compten i els errors es recullen."""
+    window, _, _, controller, changed, messages = data_management_env
+    entries = (
+        _pdf_photo_entry(1, matched_student_id=11),
+        _pdf_photo_entry(2, matched_student_id=None),
+        _pdf_photo_entry(3, matched_student_id=13),
+    )
+    preview = _pdf_photo_preview(
+        entries=entries, missing=(SimpleNamespace(full_name="Sense Foto"),)
+    )
+    controller.pdf_photo_import = Mock(parse=Mock(return_value=preview))
+
+    def set_photo(student_id, image_path):
+        if student_id == 13:
+            raise ValidationError("fitxer no vàlid")
+
+    controller.photos = Mock(set_photo=Mock(side_effect=set_photo))
+    controller.student_service = SimpleNamespace(get_all=lambda: [])
+    assignments = {1: 11, 2: None, 3: 13}
+    controller.pdf_photo_dialog = lambda *args: SimpleNamespace(
+        exec=lambda: QDialog.DialogCode.Accepted,
+        assignments=lambda: assignments,
+    )
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("orla.pdf", ""))
+    controller.import_photos_from_pdf()
+
+    controller.photos.set_photo.assert_any_call(11, "/tmp/fake.jpg")
+    controller.photos.set_photo.assert_any_call(13, "/tmp/fake.jpg")
+    assert controller.photos.set_photo.call_count == 2
+    controller.pdf_photo_import.cleanup.assert_called_once_with(preview)
+    assert changed == [True]
+    assert "Fotos assignades: 1" in messages[0]
+    assert "Files omeses: 1" in messages[0]
+    assert "Alumnes sense fotografia al PDF: 1" in messages[0]
+    assert "fitxer no vàlid" in messages[0]

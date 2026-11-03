@@ -1,3 +1,5 @@
+"""Tests dels diàlegs genèrics de l'aplicació."""
+
 from types import SimpleNamespace
 
 from PySide6.QtWidgets import QDialog, QFileDialog
@@ -14,6 +16,7 @@ from tutopy.ui.dialogs.text_value_dialog import TextValueDialog
 
 
 def test_annotation_dialog_valida_i_normalitza(qtbot):
+    """Annotation dialog vàlida i normalitza."""
     dialog = AnnotationDialog()
     qtbot.addWidget(dialog)
     dialog.content_input.setPlainText("   ")
@@ -27,6 +30,7 @@ def test_annotation_dialog_valida_i_normalitza(qtbot):
 
 
 def test_annotation_dialog_carrega_valor_existent(qtbot):
+    """Annotation dialog càrrega valor existent."""
     dialog = AnnotationDialog(annotation=SimpleNamespace(content="Descriptor"))
     qtbot.addWidget(dialog)
     assert dialog.windowTitle() == "Editar descriptor"
@@ -34,6 +38,7 @@ def test_annotation_dialog_carrega_valor_existent(qtbot):
 
 
 def test_contact_dialog_valida_i_retorna_tots_els_camps(qtbot):
+    """Contact dialog vàlida i retorna tots els camps."""
     dialog = ContactDialog()
     qtbot.addWidget(dialog)
     dialog._accept_valid()
@@ -51,6 +56,7 @@ def test_contact_dialog_valida_i_retorna_tots_els_camps(qtbot):
 
 
 def test_contact_dialog_carrega_contacte(qtbot):
+    """Contact dialog càrrega contacte."""
     contact = SimpleNamespace(name="Joan", description="Pare", phone="123", email="a@b.cat")
     dialog = ContactDialog(contact=contact)
     qtbot.addWidget(dialog)
@@ -59,6 +65,7 @@ def test_contact_dialog_carrega_contacte(qtbot):
 
 
 def test_document_dialog_selecciona_fitxer_i_dedueix_nom(qtbot, monkeypatch, tmp_path):
+    """Document dialog selecciona fitxer i dedueix nom."""
     source = tmp_path / "informe.pdf"
     source.write_bytes(b"pdf")
     monkeypatch.setattr(QFileDialog, "getOpenFileName",
@@ -75,6 +82,7 @@ def test_document_dialog_selecciona_fitxer_i_dedueix_nom(qtbot, monkeypatch, tmp
 
 
 def test_document_dialog_no_modifica_res_si_es_cancella(qtbot, monkeypatch):
+    """Document dialog no modifica res si es cancella."""
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: ("", ""))
     dialog = DocumentDialog()
     qtbot.addWidget(dialog)
@@ -85,6 +93,7 @@ def test_document_dialog_no_modifica_res_si_es_cancella(qtbot, monkeypatch):
 
 
 def test_document_existent_no_requereix_nou_fitxer(qtbot):
+    """Document existent no requereix nou fitxer."""
     document = SimpleNamespace(
         name="Informe", description="Final", original_filename="a.pdf",
         date="2026-02-01",
@@ -97,6 +106,7 @@ def test_document_existent_no_requereix_nou_fitxer(qtbot):
 
 
 def test_text_value_dialog_valida_i_normalitza(qtbot):
+    """Text value dialog vàlida i normalitza."""
     dialog = TextValueDialog("Categoria", "Nom:", "  Inicial  ")
     qtbot.addWidget(dialog)
     assert dialog.value() == "Inicial"
@@ -110,6 +120,7 @@ def test_text_value_dialog_valida_i_normalitza(qtbot):
 
 
 def test_conflictes_permeten_les_tres_decisions(qtbot):
+    """Conflictes permeten les tres decisions."""
     existing = Student(7, "uuid", "Júlia", "Martínez", "2n A")
     conflict = StudentConflict(
         StudentImportRow(4, "Julia", "Martines", "2n B"), (existing,)

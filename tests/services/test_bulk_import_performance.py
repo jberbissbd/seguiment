@@ -1,3 +1,5 @@
+"""Tests de rendiment de la importació massiva."""
+
 from difflib import SequenceMatcher
 
 import pytest
@@ -13,6 +15,7 @@ def _student(identifier: int, full_name: str) -> Student:
 
 @pytest.mark.parametrize("threshold", [0.5, 0.86, 0.95, 1.1, 0.0])
 def test_index_de_noms_conserva_les_mateixes_coincidencies(threshold):
+    """Index de noms conserva les mateixes coincidencies."""
     names = (
         "julia martinez",
         "julia martines",
@@ -24,7 +27,7 @@ def test_index_de_noms_conserva_les_mateixes_coincidencies(threshold):
     )
     students = tuple(_student(index, name) for index, name in enumerate(names, 1))
     service = BulkImportService(None, None, None, similarity_threshold=threshold)
-    normalized = tuple(zip(students, names))
+    normalized = tuple(zip(students, names, strict=True))
     index = service._name_index(normalized)
 
     expected = tuple(
@@ -39,6 +42,7 @@ def test_index_de_noms_conserva_les_mateixes_coincidencies(threshold):
 def test_index_descarta_longituds_impossibles_abans_de_sequence_matcher(
     monkeypatch,
 ):
+    """Index descarta longituds impossibles abans de sequence matcher."""
     service = BulkImportService(None, None, None)
     similar = _student(1, "Julia Martines")
     distant = [

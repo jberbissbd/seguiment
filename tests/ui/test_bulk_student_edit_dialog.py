@@ -1,3 +1,5 @@
+"""Tests del diàleg d'edició massiva d'alumnes."""
+
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import QDialog
 
@@ -13,6 +15,7 @@ def _students():
 
 
 def test_dialog_aplica_grup_a_files_seleccionades_i_retorna_canvis(qtbot):
+    """Dialog aplica grup a files seleccionades i retorna canvis."""
     dialog = BulkStudentEditDialog(_students(), ("1A", "1B", "2A"))
     qtbot.addWidget(dialog)
     dialog.table.selectRow(0)
@@ -32,6 +35,7 @@ def test_dialog_aplica_grup_a_files_seleccionades_i_retorna_canvis(qtbot):
 
 
 def test_dialog_no_accepta_un_lot_sense_canvis(qtbot):
+    """Dialog no accepta un lot sense canvis."""
     dialog = BulkStudentEditDialog(_students())
     qtbot.addWidget(dialog)
 

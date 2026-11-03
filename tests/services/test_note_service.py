@@ -1,8 +1,10 @@
-import uuid
+"""Tests del servei de notes de seguiment."""
+
+from dataclasses import replace
+
 import pytest
 from tutopy.models.messaging import (
-    NoteNew, CategoryNew, AcademicCourseNew, StudentNew, Note,
-    StudentGroupHistoryNew,
+    NoteNew, CategoryNew, AcademicCourseNew, StudentNew, StudentGroupHistoryNew,
 )
 from tutopy.services.note_service import NoteService
 from tutopy.services.exceptions import EntityNotFoundError, ValidationError
@@ -16,7 +18,6 @@ class TestNoteService:
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
-        uuid_alumne = str(uuid.uuid4())
         alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear el servei
@@ -45,6 +46,7 @@ class TestNoteService:
     def test_create_note_ignora_curs_manual_i_utilitza_el_de_la_data(
         self, note_dao, academic_course_dao, category_dao, student_dao, db
     ):
+        """El curs indicat manualment s'ignora i es resol sempre a partir de la data."""
         category = db.categories.create(CategoryNew("Acadèmic"))
         wrong_course = db.academic_courses.create(AcademicCourseNew("2024-2025"))
         student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
@@ -63,7 +65,6 @@ class TestNoteService:
         """Testa que una nota amb course_id=0 i data de setembre resol el curs automàticament."""
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Conducta"))
-        uuid_alumne = str(uuid.uuid4())
         alumne = db.students.create(StudentNew("Anna", "Martínez", "3r B"))
         
         # Crear el servei
@@ -89,6 +90,7 @@ class TestNoteService:
     def test_data_de_la_nota_sincronitza_el_curs_de_l_historic(
         self, note_dao, academic_course_dao, category_dao, student_dao, db
     ):
+        """El curs resolt coincideix amb el grup vigent segons l'històric a la data de la nota."""
         category = db.categories.create(CategoryNew("Acadèmic"))
         student = db.students.create(StudentNew("Anna", "Martí", "3r B"))
         old_course = db.academic_courses.get_or_create("2025-2026")
@@ -114,6 +116,7 @@ class TestNoteService:
     def test_historic_distingeix_la_combinacio_de_curs_i_grup(
         self, note_dao, academic_course_dao, category_dao, student_dao, db
     ):
+        """Dues entrades d'històric amb el mateix grup però cursos diferents no es confonen."""
         category = db.categories.create(CategoryNew("Acadèmic"))
         student = db.students.create(StudentNew("Anna", "Martí", "3r B"))
         course = db.academic_courses.get_or_create("2026-2027")
@@ -138,7 +141,6 @@ class TestNoteService:
         """Testa que una nota amb course_id=0 i data de gener resol el curs anterior."""
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Incidència"))
-        uuid_alumne = str(uuid.uuid4())
         alumne = db.students.create(StudentNew("Pere", "López", "2n A"))
         
         # Crear el servei
@@ -166,18 +168,17 @@ class TestNoteService:
         # Crear dependencies
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
-        uuid_alumne = str(uuid.uuid4())
         alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear algunes notes per aquest alumne
-        note1 = db.notes.create(NoteNew(
+        db.notes.create(NoteNew(
             student_id=alumne.id,
             category_id=categoria.id,
             date="2026-01-01",
             course_id=curs.id,
             content="Nota 1"
         ))
-        note2 = db.notes.create(NoteNew(
+        db.notes.create(NoteNew(
             student_id=alumne.id,
             category_id=categoria.id,
             date="2026-01-02",
@@ -186,7 +187,6 @@ class TestNoteService:
         ))
         
         # Crear una nota per un altre alumne (per verificar que no es retorni)
-        uuid_altre = str(uuid.uuid4())
         altre = db.students.create(StudentNew("Anna", "Martínez", "4t A"))
         db.notes.create(NoteNew(
             student_id=altre.id,
@@ -211,7 +211,6 @@ class TestNoteService:
     def test_get_notes_by_student_empty(self, note_dao, academic_course_dao, category_dao, student_dao, db):
         """Testa l'obtenció de notes per un alumne sense notes."""
         # Crear un alumne sense notes
-        uuid_alumne = str(uuid.uuid4())
         alumne = db.students.create(StudentNew("Maria", "Sánchez", "1r A"))
         
         # Crear el servei
@@ -225,6 +224,7 @@ class TestNoteService:
 
     def test_crud_complet(self, note_dao, academic_course_dao, category_dao,
         student_dao, db):
+        """Verifica el cicle complet de creació, lectura, actualització i eliminació d'una nota."""
         category = db.categories.create(CategoryNew("Acadèmic"))
         student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         service = NoteService(
@@ -250,6 +250,7 @@ class TestNoteService:
 
     def test_rebutja_alumne_inexistent(self, note_dao, academic_course_dao,
         category_dao, student_dao, db):
+        """Rebutja crear una nota per a un identificador d'alumne que no existeix."""
         category = db.categories.create(CategoryNew("Acadèmic"))
         service = NoteService(
             note_dao, academic_course_dao, category_dao, student_dao, db.transaction
@@ -261,6 +262,7 @@ class TestNoteService:
 
     def test_filtres_combinables(self, note_dao, academic_course_dao,
         category_dao, student_dao, db):
+        """Combina filtres d'alumne, categoria, curs i contingut amb lògica AND."""
         academic = db.categories.create(CategoryNew("Acadèmic"))
         behaviour = db.categories.create(CategoryNew("Conducta"))
         student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
@@ -292,6 +294,7 @@ class TestNoteService:
 
     def test_filtre_rebutja_interval_invertit(self, note_dao,
         academic_course_dao, category_dao, student_dao, db):
+        """Rebutja un filtre de dates amb la data final anterior a la inicial."""
         service = NoteService(
             note_dao, academic_course_dao, category_dao, student_dao, db.transaction
         )
@@ -301,6 +304,7 @@ class TestNoteService:
 
     def test_create_es_atomic_si_falla_despres_de_crear_el_curs(self, note_dao,
         academic_course_dao, category_dao, student_dao, db, monkeypatch):
+        """Si la creació falla després de resoldre el curs, no en queda cap rastre persistit."""
         category = db.categories.create(CategoryNew("Acadèmic"))
         student = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         service = NoteService(
@@ -318,4 +322,4 @@ class TestNoteService:
 
         assert academic_course_dao.get_by_course("2026-2027") is None
         assert note_dao.get_all() == []
-from dataclasses import replace
+

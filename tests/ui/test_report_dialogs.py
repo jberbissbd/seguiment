@@ -1,3 +1,5 @@
+"""Tests dels diàlegs d'exportació d'informes."""
+
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QDialog, QFrame, QHeaderView, QLabel
 
@@ -10,6 +12,7 @@ from tutopy.ui.widgets.student_detail_panel import StudentDetailPanel
 
 
 def test_dialog_configuracio_retorna_nomes_curs_grup_i_inicis(qtbot):
+    """Dialog configuració retorna només curs grup i inicis."""
     course = AcademicCourse(3, "2025-2026")
     dialog = TermConfigurationDialog([course], ["4t A"])
     qtbot.addWidget(dialog)
@@ -27,6 +30,7 @@ def test_dialog_configuracio_retorna_nomes_curs_grup_i_inicis(qtbot):
 
 
 def test_dialog_configuracio_carrega_valors_existents(qtbot):
+    """Dialog configuració càrrega valors existents."""
     configuration = TermConfiguration(1, 3, "4t B", "2026-01-09", "2026-04-08")
     dialog = TermConfigurationDialog(
         [AcademicCourse(3, "2025-2026")], ["4t A", "4t B"], configuration
@@ -37,6 +41,7 @@ def test_dialog_configuracio_carrega_valors_existents(qtbot):
 
 
 def test_dialog_exportacio_permet_reordenar_i_ometre_opcio_trimestres(qtbot):
+    """Dialog exportació permet reordenar i ometre opció trimestres."""
     dialog = ReportExportDialog(
         [Category(1, "Acadèmic"), Category(2, "Família")],
         show_term_option=False,
@@ -58,6 +63,7 @@ def test_dialog_exportacio_permet_reordenar_i_ometre_opcio_trimestres(qtbot):
 
 
 def test_vista_de_dades_emet_ids_de_configuracio(qtbot):
+    """Vista de dades emet ids de configuració."""
     view = DataToolsView()
     qtbot.addWidget(view)
     view.set_term_configurations([(7, ("2025-2026", "4t A", "08/01/2026", "07/04/2026"))])
@@ -82,6 +88,7 @@ def test_vista_de_dades_emet_ids_de_configuracio(qtbot):
 
 
 def test_vista_de_dades_separa_visualment_les_configuracions(qtbot):
+    """Vista de dades separa visualment les configuracions."""
     view = DataToolsView()
     qtbot.addWidget(view)
     groups = view.report_panel.findChildren(QFrame, "settingsGroup")
@@ -106,6 +113,7 @@ def test_vista_de_dades_separa_visualment_les_configuracions(qtbot):
 
 
 def test_capcalera_emet_exportacio_per_alumne_seleccionat(qtbot):
+    """Capcalera emet exportació per alumne seleccionat."""
     panel = StudentDetailPanel()
     qtbot.addWidget(panel)
     panel.current_student_id = 12

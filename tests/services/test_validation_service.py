@@ -1,4 +1,5 @@
-import uuid
+"""Tests del servei de validació de dades."""
+
 from types import SimpleNamespace
 
 import pytest
@@ -25,6 +26,7 @@ class TestValidationService:
         student_data = service.validate_student(student_data)
 
     def test_validate_student_normalitza_text(self, category_dao, db):
+        """Normalitza espais sobrants en el nom, cognoms i grup de l'alumne."""
         service = ValidationService(category_dao)
         student_data = StudentNew(
             name="  Àlex\t Maria  ",
@@ -161,6 +163,7 @@ class TestValidationService:
             service.validate_note(note)
 
     def test_validate_note_rebutja_identificadors_no_positius(self, category_dao, db):
+        """Rebutja una nota amb un identificador d'alumne zero o negatiu."""
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         service = ValidationService(category_dao)
         note = NoteNew(
@@ -191,9 +194,7 @@ class TestValidationService:
         categoria = db.categories.create(CategoryNew("Acadèmic"))
         
         # Crear un curs i un alumne per poder crear una nota
-        from tutopy.models.messaging import AcademicCourseNew
         curs = db.academic_courses.create(AcademicCourseNew("2025-2026"))
-        uuid_alumne = str(uuid.uuid4())
         alumne = db.students.create(StudentNew("Jordi", "Garcia", "4t A"))
         
         # Crear una nota que usa aquesta categoria
@@ -213,14 +214,19 @@ class TestValidationService:
 
 
 class TestCommonValidation:
+    """Tests de les validacions genèriques (text obligatori, curs acadèmic)."""
+
     def test_required_text_rebutja_espais(self):
+        """Rebutja un camp obligatori format només per espais."""
         with pytest.raises(ValidationError):
             ValidationService.required_text("   ", "Camp obligatori")
 
     @pytest.mark.parametrize("value", ["2026", "2026-2028", "abcd-efgh"])
     def test_academic_course_rebutja_formats_invalids(self, value):
+        """Rebutja un curs acadèmic que no segueix el format "AAAA-AAAA" consecutiu."""
         with pytest.raises(ValidationError):
             ValidationService.academic_course(value)
 
     def test_academic_course_accepta_anys_consecutius(self):
+        """Accepta un curs acadèmic amb anys consecutius i normalitza els espais exteriors."""
         assert ValidationService.academic_course(" 2026-2027 ") == "2026-2027"

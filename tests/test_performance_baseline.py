@@ -1,9 +1,12 @@
+"""Tests de l'script de línia base de rendiment."""
+
 import pytest
 
 from scripts.performance_baseline import run_baseline
 
 
 def test_baseline_mesura_operacions_representatives():
+    """Baseline mesura operacions representatives."""
     result = run_baseline(student_count=10, note_count=30, repetitions=2)
 
     assert result["dataset"] == {"students": 10, "notes": 30}
@@ -26,6 +29,7 @@ def test_baseline_mesura_operacions_representatives():
     [(0, 1, 1), (1, -1, 1), (1, 1, 0)],
 )
 def test_baseline_rebutja_dimensions_invalides(students, notes, repetitions):
+    """Baseline rebutja dimensions invalides."""
     with pytest.raises(ValueError):
         run_baseline(
             student_count=students,

@@ -1,0 +1,559 @@
+"""Controlador de la distribució de taules d'aula.
+
+És l'únic punt que modifica el `LayoutGrid` en memòria; els widgets només
+emeten senyals i mai el toquen directament. Cada acció de l'usuari
+actualitza només les cel·les afectades, no reconstrueix tota la graella
+(l'excepció és un canvi de mides, que sí que l'obliga).
+"""
+
+import dataclasses
+
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
+
+from tutopy.models.classroom_layout import CellType, ClassroomLayoutNew
+from tutopy.models.classroom_layout_fill import (
+    Direction, LeftoverCriterion, OrderBy, assign_in_order, order_seats, select_seats, shuffled,
+)
+from tutopy.models.classroom_layout_generators import (
+    generate_columns, generate_exam, generate_free_grid, generate_islands,
+    generate_u_shape,
+)
+from tutopy.models.messaging import Student
+from tutopy.services.exceptions import DomainError
+from tutopy.services.classroom_layout_report_service import ClassroomLayoutReportService
+from tutopy.services.classroom_layout_service import ClassroomLayoutService
+from tutopy.services.photo_service import PhotoService
+from tutopy.services.preferences_service import PreferencesService
+from tutopy.services.student_service import StudentService
+from tutopy.services.utils import safe_filename
+from tutopy.ui.dialogs.classroom_layout_dialog import ClassroomLayoutDialog
+from tutopy.ui.dialogs.classroom_layout_template_dialog import (
+    COLUMNS, DUPLICATE, EXAM, FREE, ISLANDS, U_SHAPE, ClassroomLayoutTemplateDialog,
+)
+from tutopy.ui.widgets import classroom_layout_mime as mime
+from tutopy.ui.main_window import MainWindow
+
+TEACHER_WIDTH = 2
+
+
+class ClassroomLayoutController:
+    """Gestiona la distribució de taules d'aula entre la vista i els serveis."""
+
+    def __init__(self, window: MainWindow, service: ClassroomLayoutService,
+        students: StudentService, photos: PhotoService = None,
+        preferences: PreferencesService = None,
+        reports: ClassroomLayoutReportService = None,
+        dialog_factory=ClassroomLayoutDialog,
+        template_dialog_factory=ClassroomLayoutTemplateDialog, error_handler=None):
+        """Desa les dependències i connecta les accions de la vista."""
+        self.window = window
+        self.service = service
+        self.students = students
+        self.photos = photos
+        self.preferences = preferences
+        self.reports = reports
+        self.dialog_factory = dialog_factory
+        self.template_dialog_factory = template_dialog_factory
+        self.error_handler = error_handler or window.show_error
+        self._started = False
+        window.sidebar.section_changed.connect(self._section_changed)
+        self.group_name: str | None = None
+        self.layout = None
+        self.grid = None
+        self.pending = []
+        self.teacher_mode = "strip"
+        self.teacher_position = "center"
+        self.show_photos = False
+        self.dirty = False
+        self._students_by_id: dict[int, Student] = {}
+        self._connect_signals()
+        if self.preferences is not None:
+            self._sync_preferences_panel()
+            self._connect_preferences_signals()
+
+    def _connect_signals(self) -> None:
+        view = self.window.classroom_layout_view
+        view.group_changed.connect(self.select_group)
+        view.layout_selected.connect(self.select_layout)
+        view.new_layout_requested.connect(self.new_layout)
+        view.template_requested.connect(self.apply_template)
+        view.clear_requested.connect(self.clear_layout)
+        view.rows_columns_changed.connect(self.resize)
+        view.teacher_mode_changed.connect(self.change_teacher_mode)
+        view.teacher_position_changed.connect(self.change_teacher_position)
+        view.show_photos_toggled.connect(self.toggle_show_photos)
+        view.save_requested.connect(self.save)
+        view.set_active_requested.connect(self.set_active)
+        view.export_requested.connect(self.export_layout)
+        grid = view.grid_widget
+        grid.move_requested.connect(self.move_student)
+        grid.type_change_requested.connect(self.change_cell_type)
+        grid.teacher_place_requested.connect(self.place_teacher)
+        grid.return_to_pending_requested.connect(self.return_to_pending)
+        view.pending_list.move_requested.connect(self.move_student)
+
+    def _section_changed(self, section: str) -> None:
+        """Carrega els grups disponibles la primera vegada que s'obre la secció.
+
+        A diferència de `StatisticsController` (una vista de només lectura
+        que es refresca cada cop que s'hi torna), aquí NO es recarrega en
+        cada visita: la secció pot tenir canvis sense desar a la graella en
+        memòria, i recarregar-los des de la base de dades els perdria en
+        silenci.
+        """
+        if section != "classroom" or self._started:
+            return
+        self._started = True
+        groups = self.students.get_groups()
+        self.window.classroom_layout_view.set_groups(groups)
+        if groups:
+            self.select_group(groups[0])
+
+    def select_group(self, group_name: str) -> None:
+        """Carrega les distribucions del grup indicat i n'activa una."""
+        if not self._confirm_discard():
+            self.window.classroom_layout_view.set_current_group(self.group_name)
+            return
+        self.group_name = group_name
+        self._students_by_id = {student.id: student for student in self.students.get_all()}
+        layouts = self._refresh_layouts_list()
+        if layouts:
+            active = next((layout for layout in layouts if layout.is_active), layouts[0])
+            self.select_layout(active.id)
+        else:
+            self.layout = self.grid = None
+            self.pending = []
+            self.dirty = False
+
+    def _refresh_layouts_list(self) -> list:
+        layouts = self.service.get_layouts(self.group_name) if self.group_name else []
+        current_id = self.layout.id if self.layout else None
+        self.window.classroom_layout_view.set_layouts(
+            [(layout.id, layout.name, layout.is_active) for layout in layouts], current_id,
+        )
+        return layouts
+
+    def select_layout(self, layout_id: int) -> None:
+        """Carrega una distribució existent i en refresca la vista."""
+        if not self._confirm_discard():
+            self._refresh_layouts_list()
+            return
+        try:
+            self.layout, self.grid, self.pending = self.service.load(layout_id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self.teacher_mode = self.layout.teacher_mode
+        self.teacher_position = self.layout.teacher_position
+        self.show_photos = self.layout.show_photos
+        self.dirty = False
+        self._refresh_all()
+
+    def new_layout(self) -> None:
+        """Obre el diàleg de nova distribució: mateixes opcions que "Plantilla".
+
+        A diferència d'aplicar una plantilla sobre una distribució ja
+        existent, aquí no hi ha res a conservar: la graella es construeix i
+        s'omple directament amb les opcions triades, amb tots els alumnes
+        del grup.
+        """
+        if not self.group_name:
+            self.error_handler("Selecciona primer un grup.")
+            return
+        if not self._confirm_discard():
+            return
+        other_layouts = self.service.get_layouts(self.group_name)
+        group_students = [
+            student for student in self._students_by_id.values()
+            if student.group_name == self.group_name
+        ]
+        dialog = self.dialog_factory(
+            self.group_name, len(group_students), other_layouts,
+            self._template_defaults(), self.window,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        values = dialog.values()
+        try:
+            grid = self._build_template_grid(values, len(group_students))
+        except (DomainError, ValueError) as error:
+            self.error_handler(str(error))
+            return
+        try:
+            layout = self.service.create_layout(ClassroomLayoutNew(
+                group_name=values["group_name"], name=values["name"],
+                rows=grid.rows, columns=grid.columns,
+                teacher_mode=values["teacher_mode"],
+                teacher_position=values["teacher_position"],
+            ))
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+
+        self.layout, self.grid, self.pending = layout, grid, group_students
+        self.teacher_mode = values["teacher_mode"]
+        self.teacher_position = values["teacher_position"]
+        all_ids = {student.id for student in group_students}
+        self._fill_template(all_ids, values)
+        self._mark_dirty()
+        self._refresh_layouts_list()
+        self._refresh_all()
+
+    def apply_template(self) -> None:
+        """Obre el diàleg de plantilla i aplica la disposició i l'ompliment triats.
+
+        Substitueix sempre la forma i l'ocupació de la graella actual amb
+        tots els alumnes del grup (assignats i pendents), ordenats segons
+        les opcions triades: no demana si cal "mantenir l'ordre" ni oferir
+        "buidar" aquí — per buidar la graella sense canviar de plantilla hi
+        ha el botó "Buidar" de la barra d'eines.
+        """
+        if self.grid is None:
+            self.error_handler("Selecciona o crea primer una distribució.")
+            return
+        other_layouts = [
+            layout for layout in self.service.get_layouts(self.group_name)
+            if layout.id != self.layout.id
+        ]
+        student_count = len(self.grid.assigned()) + len(self.pending)
+        dialog = self.template_dialog_factory(
+            student_count, other_layouts, self._template_defaults(), self.window,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        values = dialog.values()
+        try:
+            new_grid = self._build_template_grid(values, student_count)
+        except (DomainError, ValueError) as error:
+            self.error_handler(str(error))
+            return
+
+        all_ids = set(self.grid.assigned()) | {student.id for student in self.pending}
+        self.grid = new_grid
+        self.teacher_mode = values["teacher_mode"]
+        self.teacher_position = values["teacher_position"]
+        self._fill_template(all_ids, values)
+        self._mark_dirty()
+        self._refresh_all()
+
+    def clear_layout(self) -> None:
+        """Buida la graella actual: tots els alumnes assignats tornen a pendents."""
+        if self.grid is None:
+            self.error_handler("Selecciona o crea primer una distribució.")
+            return
+        assigned_ids = list(self.grid.assigned())
+        if not assigned_ids:
+            return
+        for student_id in assigned_ids:
+            self.grid.remove(student_id)
+        freed_students = [
+            student for student in (self._student_by_id(sid) for sid in assigned_ids)
+            if student is not None
+        ]
+        self.pending = self.pending + freed_students
+        self._mark_dirty()
+        self._refresh_all()
+
+    def _build_template_grid(self, values: dict, student_count: int):
+        disposition = values["disposition"]
+        parameters = values["parameters"]
+        if disposition == FREE:
+            return generate_free_grid(parameters["rows"], parameters["columns"])
+        if disposition == COLUMNS:
+            return generate_columns(
+                parameters["pattern"], student_count, aisle_width=parameters["aisle_width"],
+                block_rows=parameters.get("block_rows"),
+            )
+        if disposition == ISLANDS:
+            return generate_islands(
+                parameters["island_size"], parameters["islands_per_row"], student_count,
+            )
+        if disposition == U_SHAPE:
+            return generate_u_shape(parameters["seats_per_side"], student_count)
+        if disposition == EXAM:
+            return generate_exam(parameters["rows"], parameters["columns"])
+        if disposition == DUPLICATE:
+            return self.service.get_shape(parameters["source_layout_id"])
+        return None
+
+    def _fill_template(self, all_ids: set, values: dict) -> None:
+        """Omple `self.grid` (ja construïda) amb els alumnes de `all_ids`."""
+        ordered_ids = sorted(
+            all_ids,
+            key=lambda student_id: self._student_by_id(student_id).filing_name
+            if self._student_by_id(student_id) else "",
+        )
+        if values["fill_random"]:
+            ordered_ids = shuffled(ordered_ids)
+
+        leftover = LeftoverCriterion(values["leftover_criterion"])
+        order_by = OrderBy(values["fill_order"])
+        direction = Direction(values.get("fill_direction", "left"))
+        seats = select_seats(self.grid, len(ordered_ids), leftover)
+        ordered_seats = order_seats(seats, self.grid, order_by, direction)
+        assign_in_order(self.grid, ordered_seats, ordered_ids)
+
+        placed_ids = set(self.grid.assigned())
+        self.pending = [
+            student for student in (
+                self._student_by_id(sid) for sid in ordered_ids if sid not in placed_ids
+            )
+            if student is not None
+        ]
+
+    def _template_defaults(self) -> dict:
+        if self.preferences is None:
+            return {}
+        return {
+            "column_pattern": self.preferences.default_column_pattern(),
+            "teacher_mode": self.preferences.default_teacher_mode(),
+            "teacher_position": self.preferences.default_teacher_position(),
+            "leftover_criterion": self.preferences.default_leftover_criterion(),
+            "fill_order": self.preferences.default_fill_order(),
+            "fill_random": self.preferences.default_fill_random(),
+            "fill_direction": self.preferences.default_fill_direction(),
+        }
+
+    def _sync_preferences_panel(self) -> None:
+        panel = self.window.classroom_layout_view.preferences_panel
+        defaults = self._template_defaults()
+        panel.set_values(
+            defaults["column_pattern"], defaults["teacher_mode"],
+            defaults["teacher_position"], defaults["leftover_criterion"],
+            defaults["fill_order"], defaults["fill_random"], defaults["fill_direction"],
+        )
+
+    def _connect_preferences_signals(self) -> None:
+        panel = self.window.classroom_layout_view.preferences_panel
+        panel.column_pattern_changed.connect(self.preferences.set_default_column_pattern)
+        panel.teacher_mode_changed.connect(self.preferences.set_default_teacher_mode)
+        panel.teacher_position_changed.connect(self.preferences.set_default_teacher_position)
+        panel.leftover_criterion_changed.connect(
+            self.preferences.set_default_leftover_criterion
+        )
+        panel.fill_order_changed.connect(self.preferences.set_default_fill_order)
+        panel.fill_random_changed.connect(self.preferences.set_default_fill_random)
+        panel.fill_direction_changed.connect(self.preferences.set_default_fill_direction)
+
+    def move_student(self, student_id: int, origin: str, row: int, column: int) -> None:
+        """Assigna un alumne a `(row, column)`, intercanviant-lo o traient-lo de pendents."""
+        if self.grid is None:
+            return
+        displaced = self.grid.assign(student_id, row, column)
+        origin_cell = mime.parse_cell_origin(origin)
+        if origin_cell is not None:
+            if displaced is not None:
+                self.grid.assign(displaced, *origin_cell)
+                self._update_cell(*origin_cell)
+        else:
+            self.pending = [student for student in self.pending if student.id != student_id]
+            if displaced is not None:
+                displaced_student = self._student_by_id(displaced)
+                if displaced_student is not None:
+                    self.pending.append(displaced_student)
+        self._mark_dirty()
+        self._update_cell(row, column)
+        self._refresh_pending()
+
+    def return_to_pending(self, student_id: int) -> None:
+        """Treu un alumne de la seva cel·la i el torna a la llista de pendents."""
+        if self.grid is None:
+            return
+        cell = self.grid.remove(student_id)
+        if cell is None:
+            return
+        student = self._student_by_id(student_id)
+        if student is not None:
+            self.pending.append(student)
+        self._mark_dirty()
+        self._update_cell(cell.row, cell.column)
+        self._refresh_pending()
+
+    def change_cell_type(self, row: int, column: int, cell_type_value: str) -> None:
+        """Canvia el tipus d'una cel·la, tornant a pendents l'alumne desplaçat."""
+        if self.grid is None:
+            return
+        displaced = self.grid.set_cell_type(row, column, CellType(cell_type_value))
+        if displaced is not None:
+            student = self._student_by_id(displaced)
+            if student is not None:
+                self.pending.append(student)
+        self._mark_dirty()
+        self._update_cell(row, column)
+        self._refresh_pending()
+
+    def resize(self, rows: int, columns: int) -> None:
+        """Redimensiona la graella, tornant a pendents els alumnes que en queden fora."""
+        if self.grid is None:
+            return
+        displaced = self.grid.resize(rows, columns)
+        for student_id in displaced:
+            student = self._student_by_id(student_id)
+            if student is not None:
+                self.pending.append(student)
+        self._mark_dirty()
+        self._refresh_all()
+
+    def place_teacher(self, row: int, column: int) -> None:
+        """Col·loca la taula del professor dins la graella, a `(row, column)`."""
+        if self.grid is None:
+            return
+        self.teacher_mode = "grid"
+        displaced = self.grid.place_teacher(row, column, TEACHER_WIDTH)
+        for student_id in displaced:
+            student = self._student_by_id(student_id)
+            if student is not None:
+                self.pending.append(student)
+        self._mark_dirty()
+        self._refresh_all()
+
+    def change_teacher_mode(self, mode: str) -> None:
+        """Canvia entre taula en franja o dins la graella."""
+        if self.grid is None or mode == self.teacher_mode:
+            return
+        self.teacher_mode = mode
+        if mode == "strip":
+            for (row, column), cell in self.grid.cells.items():
+                if cell.cell_type == CellType.TEACHER:
+                    self.grid.set_cell_type(row, column, CellType.SEAT)
+        self._mark_dirty()
+        self._refresh_all()
+
+    def change_teacher_position(self, position: str) -> None:
+        """Canvia l'alineació de la franja del professor."""
+        self.teacher_position = position
+        self._mark_dirty()
+        self.window.classroom_layout_view.set_teacher_strip(
+            self.teacher_mode == "strip", position,
+        )
+
+    def toggle_show_photos(self, enabled: bool) -> None:
+        """Activa o desactiva mostrar la foto de l'alumne en lloc de les inicials."""
+        self.show_photos = enabled
+        self._mark_dirty()
+        self._refresh_all()
+
+    def save(self) -> None:
+        """Desa la distribució actual."""
+        if self.layout is None or self.grid is None:
+            return
+        updated = dataclasses.replace(
+            self.layout, teacher_mode=self.teacher_mode,
+            teacher_position=self.teacher_position, show_photos=self.show_photos,
+        )
+        try:
+            self.layout = self.service.save(updated, self.grid)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self.dirty = False
+        self.window.classroom_layout_view.set_dirty(False)
+        self.window.show_status("Distribució desada")
+
+    def export_layout(self) -> None:
+        """Exporta la distribució actual a PDF, amb el mateix aspecte que la pantalla.
+
+        Exporta l'estat en memòria (`self.grid`), no l'últim desat: si hi ha
+        canvis sense desar, el PDF ha de reflectir el que es veu a la
+        pantalla en aquest moment.
+        """
+        if self.layout is None or self.grid is None:
+            self.error_handler("Selecciona o crea primer una distribució.")
+            return
+        if self.reports is None:
+            self.error_handler("L’exportació no està disponible.")
+            return
+        default_name = f"{safe_filename(self.layout.name, 'distribucio')}.pdf"
+        filename, _ = QFileDialog.getSaveFileName(
+            self.window, "Exportar distribució", default_name, "Document PDF (*.pdf)",
+        )
+        if not filename:
+            return
+        try:
+            path = self.reports.export_pdf(
+                self.layout, self.grid, self._students_by_id, filename,
+            )
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self.window.show_status(f"Distribució exportada a {path}", 5000)
+
+    def set_active(self) -> None:
+        """Marca la distribució actual com l'activa del seu grup."""
+        if self.layout is None:
+            return
+        try:
+            self.service.set_active(self.layout.id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self.select_group(self.group_name)
+        self.window.show_status("Distribució marcada com a activa")
+
+    def _mark_dirty(self) -> None:
+        self.dirty = True
+        self.window.classroom_layout_view.set_dirty(True)
+
+    def _student_by_id(self, student_id: int) -> Student | None:
+        return self._students_by_id.get(student_id)
+
+    def _photo_paths(self, student_ids) -> dict:
+        if not self.photos or not self.show_photos or not student_ids:
+            return {}
+        paths = self.photos.get_readable_paths(list(student_ids))
+        return {student_id: str(path) if path else None for student_id, path in paths.items()}
+
+    def _refresh_all(self) -> None:
+        view = self.window.classroom_layout_view
+        if self.layout is None or self.grid is None:
+            return
+        view.set_layout_fields(
+            self.grid.rows, self.grid.columns, self.teacher_mode,
+            self.teacher_position, self.show_photos,
+        )
+        assigned = self.grid.assigned()
+        students_by_id = {
+            student_id: self._student_by_id(student_id) for student_id in assigned
+        }
+        photo_paths = self._photo_paths(assigned.keys())
+        view.grid_widget.rebuild(self.grid, students_by_id, self.show_photos, photo_paths)
+        view.set_dirty(self.dirty)
+        self._refresh_pending()
+
+    def _refresh_pending(self) -> None:
+        view = self.window.classroom_layout_view
+        self.pending.sort(key=lambda student: student.filing_name)
+        photo_paths = self._photo_paths([student.id for student in self.pending])
+        view.pending_list.set_students(self.pending, self.show_photos, photo_paths)
+
+    def _update_cell(self, row: int, column: int) -> None:
+        if self.grid is None:
+            return
+        cell = self.grid.cells.get((row, column))
+        if cell is None:
+            return
+        student = self._student_by_id(cell.student_id) if cell.student_id else None
+        photo_path = self._photo_paths([cell.student_id]).get(cell.student_id) \
+            if cell.student_id else None
+        self.window.classroom_layout_view.grid_widget.update_cell(
+            row, column, cell.cell_type, student, photo_path, self.show_photos,
+        )
+
+    def _confirm_discard(self) -> bool:
+        if not self.dirty:
+            return True
+        box = QMessageBox(self.window)
+        box.setWindowTitle("Canvis sense desar")
+        box.setText("Hi ha canvis sense desar en aquesta distribució. Què vols fer-ne?")
+        save_button = box.addButton("Desar", QMessageBox.ButtonRole.AcceptRole)
+        discard_button = box.addButton("Descartar", QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton("Cancel·lar", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is save_button:
+            self.save()
+            return True
+        if clicked is discard_button:
+            self.dirty = False
+            return True
+        return False

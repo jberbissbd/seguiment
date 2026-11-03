@@ -1,3 +1,5 @@
+"""Tests de la creació, edició i eliminació d'alumnes."""
+
 from datetime import date, timedelta
 
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox
@@ -12,20 +14,26 @@ from tutopy.ui.main_window import MainWindow
 
 
 class AcceptedDialog:
+    """Simula el diàleg d'alumne sempre acceptat."""
+
     values_to_return = {}
 
     def __init__(self, **kwargs):
+        """Desa els arguments rebuts del controlador."""
         self.kwargs = kwargs
 
     def exec(self):
+        """Simula l'acceptació del diàleg."""
         return QDialog.DialogCode.Accepted
 
     def values(self):
+        """Retorna els valors configurats per la prova."""
         return dict(self.values_to_return)
 
 
 def build_controller(qtbot, tmp_path, dialog_factory=AcceptedDialog,
     confirm_delete=lambda _name: True):
+    """Construeix l'escenari d'UI compartit per les proves de CRUD d'alumnes."""
     database = Database(str(tmp_path / "crud.db")).connect()
     services = create_services(database)
     window = MainWindow()
@@ -43,6 +51,7 @@ def build_controller(qtbot, tmp_path, dialog_factory=AcceptedDialog,
 
 
 def test_student_dialog_valida_i_retorna_valors(qtbot):
+    """Student dialog vàlida i retorna valors."""
     dialog = StudentDialog(groups=["1r A", "2n B"])
     qtbot.addWidget(dialog)
     dialog.name_input.setText("  Jordi ")
@@ -61,6 +70,7 @@ def test_student_dialog_valida_i_retorna_valors(qtbot):
 
 
 def test_student_dialog_no_accepta_camps_obligatoris_buits(qtbot):
+    """Student dialog no accepta camps obligatoris buits."""
     dialog = StudentDialog()
     qtbot.addWidget(dialog)
 
@@ -71,6 +81,7 @@ def test_student_dialog_no_accepta_camps_obligatoris_buits(qtbot):
 
 
 def test_controller_crea_i_selecciona_alumne(qtbot, tmp_path, monkeypatch):
+    """Controller crea i selecciona alumne."""
     monkeypatch.setattr(AcceptedDialog, "values_to_return", {
         "name": "Jordi", "surnames": "Garcia", "group_name": "4t A"
     })
@@ -90,6 +101,7 @@ def test_controller_crea_i_selecciona_alumne(qtbot, tmp_path, monkeypatch):
 
 
 def test_controller_edita_alumne_i_grup(qtbot, tmp_path, monkeypatch):
+    """Controller edita alumne i grup."""
     database, services, window, controller, errors = build_controller(qtbot, tmp_path)
     try:
         student = services.students.create(StudentNew("Jordi", "Garcia", "3r A"))
@@ -148,6 +160,7 @@ def test_canvi_de_grup_apareix_a_l_historial_de_l_alumne_ja_seleccionat(
 
 
 def test_controller_elimina_amb_confirmacio(qtbot, tmp_path):
+    """Controller elimina amb confirmació."""
     database, services, window, controller, errors = build_controller(qtbot, tmp_path)
     try:
         student = services.students.create(StudentNew("Jordi", "Garcia", "4t A"))
@@ -163,6 +176,7 @@ def test_controller_elimina_amb_confirmacio(qtbot, tmp_path):
 
 
 def test_controller_respecta_cancel_lacio_eliminacio(qtbot, tmp_path):
+    """Controller respecta cancel·lació eliminació."""
     database, services, window, controller, errors = build_controller(
         qtbot, tmp_path, confirm_delete=lambda _name: False
     )
@@ -179,6 +193,7 @@ def test_controller_respecta_cancel_lacio_eliminacio(qtbot, tmp_path):
 def test_controller_aplica_edicio_massiva_en_segon_pla(
     qtbot, tmp_path, monkeypatch
 ):
+    """Controller aplica edició massiva en segon pla."""
     database, services, window, controller, errors = build_controller(qtbot, tmp_path)
     try:
         first = services.students.create(StudentNew("Anna", "Serra", "1A"))

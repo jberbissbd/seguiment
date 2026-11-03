@@ -1,3 +1,5 @@
+"""Tests de l'exportació d'informes en format XLSX."""
+
 from openpyxl import load_workbook
 from datetime import date
 from types import SimpleNamespace
@@ -46,6 +48,7 @@ def _report_scenario(db, tmp_path):
 
 
 def test_exporta_full_per_curs_amb_categories_i_grup_historic(db, tmp_path):
+    """Exporta full per curs amb categories i grup històric."""
     services, student, _categories, destination = _report_scenario(db, tmp_path)
     path = services.spreadsheet_reports.export_student(
         student.id, destination, include_terms=True
@@ -84,6 +87,7 @@ def test_exporta_full_per_curs_amb_categories_i_grup_historic(db, tmp_path):
 
 
 def test_exportacio_sense_trimestres_no_crea_la_columna(db, tmp_path):
+    """Exportació sense trimestres no crea la columna."""
     services, student, _categories, _destination = _report_scenario(db, tmp_path)
     path = services.spreadsheet_reports.export_student(
         student.id, tmp_path / "sense-trimestres", include_terms=False
@@ -108,10 +112,12 @@ def test_exportacio_sense_trimestres_no_crea_la_columna(db, tmp_path):
 
 
 def test_canvi_de_trimestre_sense_canvi_de_grup_no_deixa_buits_inicials(db, tmp_path):
-    """Reprodueix l'exemple reportat: un canvi de trimestre sense canvi de
-    grup ha d'obrir un tram nou perquè cada categoria hi pugui començar de
-    nou sense deixar la primera cel·la buida, i el grup s'ha de fusionar
-    entre trams perquè es manté constant."""
+    """Reprodueix l'exemple reportat d'un canvi de trimestre sense canvi de grup.
+
+    Un canvi de trimestre sense canvi de grup ha d'obrir un tram nou perquè
+    cada categoria hi pugui començar de nou sense deixar la primera cel·la
+    buida, i el grup s'ha de fusionar entre trams perquè es manté constant.
+    """
     services = create_services(db)
     student = db.students.create(StudentNew("Marc", "Soler", "1r D"))
     contacts = services.categories.create(CategoryNew("Contactes families"))
@@ -154,6 +160,7 @@ def test_canvi_de_trimestre_sense_canvi_de_grup_no_deixa_buits_inicials(db, tmp_
 
 
 def test_crea_un_full_per_curs_en_ordre_ascendent(db, tmp_path):
+    """Crea un full per curs en ordre ascendent."""
     services, student, categories, destination = _report_scenario(db, tmp_path)
     services.notes.create(NoteNew(
         student.id, categories[0].id, "2024-10-01", 0, "Curs anterior"
@@ -165,6 +172,7 @@ def test_crea_un_full_per_curs_en_ordre_ascendent(db, tmp_path):
 
 
 def test_rebutja_alumne_inexistent_o_sense_notes(db, tmp_path):
+    """Rebutja alumne inexistent o sense notes."""
     services = create_services(db)
     with pytest.raises(EntityNotFoundError):
         services.spreadsheet_reports.export_student(999, tmp_path / "x.xlsx")
@@ -174,6 +182,7 @@ def test_rebutja_alumne_inexistent_o_sense_notes(db, tmp_path):
 
 
 def test_saneja_unicode_controls_formules_i_longitud(db, tmp_path):
+    """Saneja unicode controls formules i longitud."""
     services = create_services(db)
     decomposed_name = unicodedata.normalize("NFD", "Júlia")
     student = services.students.create(StudentNew(decomposed_name, "Nuñez 😊", "4t\x00 A"))
@@ -207,6 +216,7 @@ def _history(history_id, group_name, start_date, end_date=None):
 
 
 def test_group_for_notes_gestiona_buits_i_solapaments():
+    """Group for notes gestiona buits i solapaments."""
     notes = [
         _note(1, "2025-08-01"),  # abans de qualsevol tram: usa el fallback
         _note(2, "2025-09-15"),  # dins del primer tram

@@ -1,3 +1,5 @@
+"""Tests de la navegació principal i de la llista d'alumnes."""
+
 from dataclasses import replace
 
 from PySide6.QtCore import Qt
@@ -15,6 +17,7 @@ from tutopy.ui.widgets.student_list import StudentList
 
 
 def test_sidebar_emet_la_seccio_seleccionada(qtbot):
+    """Sidebar emet la secció seleccionada."""
     sidebar = Sidebar()
     qtbot.addWidget(sidebar)
 
@@ -26,6 +29,7 @@ def test_sidebar_emet_la_seccio_seleccionada(qtbot):
 
 
 def test_sidebar_assigna_icones_diferents_a_estadistiques_i_configuracio(qtbot):
+    """Sidebar assigna icones diferents a estadístiques i configuració."""
     sidebar = Sidebar()
     qtbot.addWidget(sidebar)
 
@@ -37,6 +41,7 @@ def test_sidebar_assigna_icones_diferents_a_estadistiques_i_configuracio(qtbot):
 
 
 def test_student_list_preserva_ids_dels_homonims(qtbot):
+    """Student list preserva ids dels homonims."""
     database = Database(":memory:").connect()
     try:
         first = database.students.create(StudentNew("Alex", "Garcia", "2n A"))
@@ -87,6 +92,7 @@ def test_student_list_preserva_ids_dels_homonims(qtbot):
 
 
 def test_cerca_coalesceix_pulsacions_consecutives(qtbot):
+    """Cerca coalesceix pulsacions consecutives."""
     widget = StudentList()
     qtbot.addWidget(widget)
 
@@ -99,6 +105,7 @@ def test_cerca_coalesceix_pulsacions_consecutives(qtbot):
 
 
 def test_main_window_conte_la_navegacio_i_el_detall_de_l_alumne(qtbot):
+    """Main window conte la navegació i el detall de l'alumne."""
     window = MainWindow()
     qtbot.addWidget(window)
 
@@ -113,6 +120,7 @@ def test_main_window_conte_la_navegacio_i_el_detall_de_l_alumne(qtbot):
 
 
 def test_amplada_minima_preserva_els_botons_de_documents(qtbot):
+    """Amplada mínima preserva els botons de documents."""
     window = MainWindow()
     qtbot.addWidget(window)
     window.student_detail.show_student(
@@ -136,6 +144,7 @@ def test_amplada_minima_preserva_els_botons_de_documents(qtbot):
 
 
 def test_main_controller_carrega_cerca_i_selecciona_alumnes(qtbot, tmp_path):
+    """Main controller càrrega cerca i selecciona alumnes."""
     database = Database(str(tmp_path / "ui.db")).connect()
     try:
         services = create_services(database)

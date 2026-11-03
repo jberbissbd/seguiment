@@ -1,10 +1,13 @@
-from PySide6.QtWidgets import QDialogButtonBox, QScrollArea
+"""Tests de la vista de gestió de dades."""
+
+from PySide6.QtWidgets import QScrollArea
 
 from tutopy.ui.dialogs.clear_data_dialog import ClearDataDialog
 from tutopy.ui.main_window import MainWindow
 
 
 def test_confirmacio_exigeix_paraula_exacta(qtbot):
+    """Confirmació exigeix paraula exacta."""
     dialog = ClearDataDialog()
     qtbot.addWidget(dialog)
     assert not dialog.ok_button.isEnabled()
@@ -15,6 +18,7 @@ def test_confirmacio_exigeix_paraula_exacta(qtbot):
 
 
 def test_finestra_inclou_gestio_de_dades(qtbot):
+    """Finestra inclou gestió de dades."""
     window = MainWindow()
     qtbot.addWidget(window)
     assert "data" in window.sidebar.buttons
@@ -31,6 +35,7 @@ def test_finestra_inclou_gestio_de_dades(qtbot):
 
 
 def test_casella_de_comprovacio_de_versio_emet_senyal(qtbot):
+    """Casella de comprovació de versió emet senyal."""
     window = MainWindow()
     qtbot.addWidget(window)
     received = []
@@ -42,6 +47,7 @@ def test_casella_de_comprovacio_de_versio_emet_senyal(qtbot):
 
 
 def test_set_update_check_enabled_no_reemet_el_senyal(qtbot):
+    """Set update check enabled no reemet el senyal."""
     window = MainWindow()
     qtbot.addWidget(window)
     window.data_tools.set_update_check_enabled(True)

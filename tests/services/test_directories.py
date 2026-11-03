@@ -1,6 +1,7 @@
+"""Tests de la resolució de directoris de dades de l'aplicació."""
+
 import os
 from pathlib import Path
-import pytest
 from tutopy.services.directories import (
     _is_writable,
     get_project_root,
@@ -110,6 +111,19 @@ class TestGetAppDataDir:
             path_str = str(result)
             # En Linux hauria de contenir .local/share o XDG_DATA_HOME
             assert ".local/share" in path_str or "XDG_DATA_HOME" in os.environ
+
+    def test_tutopy_data_dir_te_prioritat_i_s_usa_verbatim(self, tmp_path, monkeypatch):
+        """TUTOPY_DATA_DIR, si està definida, és el directori final tal qual."""
+        override = tmp_path / "dev-data"
+        monkeypatch.setenv("TUTOPY_DATA_DIR", str(override))
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "altre"))
+        assert get_app_data_dir() == override
+
+    def test_sense_tutopy_data_dir_es_manté_el_comportament_previ(self, tmp_path, monkeypatch):
+        """Sense TUTOPY_DATA_DIR, es manté la resolució habitual per plataforma."""
+        monkeypatch.delenv("TUTOPY_DATA_DIR", raising=False)
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+        assert get_app_data_dir() == tmp_path / "Tutopy"
 
 
 class TestGetDbPath:

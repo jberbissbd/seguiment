@@ -1,6 +1,8 @@
-import uuid
-import pytest
-from tutopy.models.messaging import StudentGroupHistory, StudentGroupHistoryNew, AcademicCourseNew, StudentNew
+"""Tests del DAO de l'historial de grups."""
+
+from dataclasses import replace
+
+from tutopy.models.messaging import StudentGroupHistoryNew, AcademicCourseNew, StudentNew
 from tutopy.database.daos.student_group_history_dao import StudentGroupHistoryDAO
 
 
@@ -280,4 +282,4 @@ class TestStudentGroupHistoryDAO:
         # Verificar
         assert len(results) == 1
         assert results[0].group_name == "4t B"
-from dataclasses import replace
+

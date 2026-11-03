@@ -1,3 +1,5 @@
+"""Tests de l'execució d'operacions en segon pla amb diàleg de progrés."""
+
 from threading import get_ident
 
 from PySide6.QtCore import QThreadPool
@@ -6,6 +8,7 @@ from tutopy.ui.background_task import BackgroundTask
 
 
 def test_tasca_s_executa_fora_del_fil_principal(qtbot):
+    """Tasca s executa fora del fil principal."""
     main_thread = get_ident()
     task = BackgroundTask(lambda _progress, _cancelled: get_ident())
 
@@ -16,6 +19,7 @@ def test_tasca_s_executa_fora_del_fil_principal(qtbot):
 
 
 def test_tasca_propaga_errors_al_fil_principal(qtbot):
+    """Tasca propaga errors al fil principal."""
     def fail(_progress, _cancelled):
         raise RuntimeError("error simulat")
 

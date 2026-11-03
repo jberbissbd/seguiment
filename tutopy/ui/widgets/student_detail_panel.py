@@ -9,9 +9,10 @@ accions de l'usuari.
 from collections.abc import Sequence
 
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
+    QFrame, QHBoxLayout, QLabel, QMenu, QPushButton, QSizePolicy, QToolButton,
+    QTabWidget, QVBoxLayout, QWidget,
 )
 
 from tutopy.models.messaging import Student, StudentAnnotation
@@ -20,7 +21,7 @@ from tutopy.ui.tabs.contact_tab import ContactTab
 from tutopy.ui.tabs.document_tab import DocumentTab
 from tutopy.ui.tabs.history_tab import HistoryTab
 from tutopy.ui.tabs.notes_tab import NotesTab
-from tutopy.ui.widgets.avatar import avatar_stylesheet, initials
+from tutopy.ui.widgets.avatar import avatar_stylesheet, circular_pixmap, initials
 from tutopy.ui.widgets.flow_layout import FlowLayout
 from tutopy.ui.resources import icon
 
@@ -33,13 +34,18 @@ class StudentDetailPanel(QFrame):
     """
 
     TAB_NAMES = ("Notes", "Descriptors", "Contactes", "Documents", "Històric")
+    AVATAR_SIZE = 46
     export_requested = Signal(int)
+    photo_change_requested = Signal(int)
+    photo_remove_requested = Signal(int)
 
     def __init__(self, parent=None):
         """Construeix la capçalera d'identitat (oculta) i les cinc pestanyes."""
         super().__init__(parent)
         self.setObjectName("panel")
         self.current_student_id = None
+        self._current_student: Student | None = None
+        self._has_photo = False
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
 
@@ -54,10 +60,16 @@ class StudentDetailPanel(QFrame):
         info_layout.setContentsMargins(18, 14, 18, 14)
         info_layout.setSpacing(14)
 
-        self.avatar_value = QLabel()
+        self.avatar_value = QToolButton()
         self.avatar_value.setObjectName("studentAvatar")
-        self.avatar_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.avatar_value.setFixedSize(46, 46)
+        self.avatar_value.setFixedSize(self.AVATAR_SIZE, self.AVATAR_SIZE)
+        self.avatar_value.setAutoRaise(True)
+        self.avatar_value.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.avatar_value.setToolTip("Canviar la foto de l'alumne")
+        self.avatar_value.setAccessibleName("Canviar la foto de l'alumne")
+        self.avatar_value.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.avatar_value.clicked.connect(self._request_photo_change)
+        self.avatar_value.customContextMenuRequested.connect(self._show_avatar_menu)
         info_layout.addWidget(self.avatar_value)
 
         identity_layout = QVBoxLayout()
@@ -123,8 +135,8 @@ class StudentDetailPanel(QFrame):
             self.clear()
             return
         self.current_student_id = student.id
-        self.avatar_value.setText(initials(student.name, student.surnames))
-        self.avatar_value.setStyleSheet(avatar_stylesheet(student.id, 23))
+        self._current_student = student
+        self._set_initials_avatar()
         self.name_value.setText(student.full_name)
         self.group_value.setText(student.group_name or "Sense grup assignat")
         self.placeholder.hide()
@@ -134,14 +146,57 @@ class StudentDetailPanel(QFrame):
     def clear(self) -> None:
         """Amaga el detall i torna a mostrar el missatge de selecció."""
         self.current_student_id = None
+        self._current_student = None
+        self._set_initials_avatar()
         self.set_descriptors([])
         self.student_summary.hide()
         self.tabs.hide()
         self.placeholder.show()
 
+    def set_photo(self, photo_path: str | None) -> None:
+        """Mostra la foto de l'alumne actual, o les inicials si no en té.
+
+        Args:
+            photo_path: Ruta de la imatge ja resolta pel servei de fotos, o
+                `None` si l'alumne no en té cap (o encara no s'ha resolt).
+        """
+        pixmap = circular_pixmap(photo_path, self.AVATAR_SIZE) if photo_path else None
+        if pixmap is None:
+            self._set_initials_avatar()
+            return
+        self._has_photo = True
+        self.avatar_value.setIcon(QIcon(pixmap))
+        self.avatar_value.setIconSize(QSize(self.AVATAR_SIZE, self.AVATAR_SIZE))
+        self.avatar_value.setText("")
+        self.avatar_value.setStyleSheet("border: none; background: transparent;")
+
+    def _set_initials_avatar(self) -> None:
+        self._has_photo = False
+        self.avatar_value.setIcon(QIcon())
+        student = self._current_student
+        if student is None:
+            return
+        self.avatar_value.setText(initials(student.name, student.surnames))
+        self.avatar_value.setStyleSheet(avatar_stylesheet(student.id, 23))
+
     def _request_export(self) -> None:
         if self.current_student_id is not None:
             self.export_requested.emit(self.current_student_id)
+
+    def _request_photo_change(self) -> None:
+        if self.current_student_id is not None:
+            self.photo_change_requested.emit(self.current_student_id)
+
+    def _show_avatar_menu(self, position) -> None:
+        if self.current_student_id is None or not self._has_photo:
+            return
+        menu = QMenu(self.avatar_value)
+        menu.addAction("Eliminar foto", self._request_photo_remove)
+        menu.exec(self.avatar_value.mapToGlobal(position))
+
+    def _request_photo_remove(self) -> None:
+        if self.current_student_id is not None:
+            self.photo_remove_requested.emit(self.current_student_id)
 
     def set_descriptors(self, descriptors: Sequence[StudentAnnotation]) -> None:
         """Refà les etiquetes de descriptors de la capçalera.

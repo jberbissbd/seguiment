@@ -13,6 +13,8 @@ from .daos import (
     ContactDAO,
     AnnotationDAO,
     DocumentDAO,
+    PhotoDAO,
+    ClassroomLayoutDAO,
     StudentGroupHistoryDAO,
     DataManagementDAO,
     ReportConfigurationDAO,
@@ -112,7 +114,7 @@ class Database:
     ``.notes``, ``.contacts``, ``.annotations``, ``.documents``).
     """
 
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 4
 
     def __init__(self, path: str = None):
         """Prepara el gestor amb la ruta indicada, sense obrir encara la connexió."""
@@ -125,6 +127,8 @@ class Database:
         self.contacts: ContactDAO = None
         self.annotations: AnnotationDAO = None
         self.documents: DocumentDAO = None
+        self.photos: PhotoDAO = None
+        self.classroom_layouts: ClassroomLayoutDAO = None
         self.student_group_history: StudentGroupHistoryDAO = None
         self.data_management: DataManagementDAO = None
         self.report_configuration: ReportConfigurationDAO = None
@@ -175,6 +179,8 @@ class Database:
         self.contacts = ContactDAO(self.conn)
         self.annotations = AnnotationDAO(self.conn)
         self.documents = DocumentDAO(self.conn)
+        self.photos = PhotoDAO(self.conn)
+        self.classroom_layouts = ClassroomLayoutDAO(self.conn)
         self.student_group_history = StudentGroupHistoryDAO(self.conn)
         self.data_management = DataManagementDAO(self.conn)
         self.report_configuration = ReportConfigurationDAO(self.conn)
@@ -193,6 +199,10 @@ class Database:
             self._create_schema_v1()
         if current_version < 2:
             self._create_schema_v2()
+        if current_version < 3:
+            self._create_schema_v3()
+        if current_version < 4:
+            self._create_schema_v4()
 
     def _create_schema_v1(self) -> None:
         """Crea atòmicament la versió inicial de l'esquema."""
@@ -322,5 +332,58 @@ class Database:
                 value TEXT NOT NULL
             );
             PRAGMA user_version = 2;
+            COMMIT;
+        """)
+
+    def _create_schema_v3(self) -> None:
+        """Afegeix la taula de la foto de perfil (una per alumne, opcional)."""
+        self.conn.executescript("""
+            BEGIN IMMEDIATE;
+            CREATE TABLE IF NOT EXISTS student_photos (
+                student_id INTEGER PRIMARY KEY,
+                uuid_filename TEXT NOT NULL,
+                original_filename TEXT NOT NULL DEFAULT '',
+                file_path TEXT NOT NULL,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+            );
+            PRAGMA user_version = 3;
+            COMMIT;
+        """)
+
+    def _create_schema_v4(self) -> None:
+        """Afegeix les taules de distribució de taules d'aula."""
+        self.conn.executescript("""
+            BEGIN IMMEDIATE;
+            CREATE TABLE IF NOT EXISTS classroom_layouts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_name TEXT NOT NULL,
+                name TEXT NOT NULL,
+                rows INTEGER NOT NULL,
+                columns INTEGER NOT NULL,
+                teacher_mode TEXT NOT NULL DEFAULT 'strip',
+                teacher_position TEXT NOT NULL DEFAULT 'center',
+                show_photos INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS classroom_layout_cells (
+                layout_id INTEGER NOT NULL REFERENCES classroom_layouts(id) ON DELETE CASCADE,
+                cell_row INTEGER NOT NULL,
+                cell_column INTEGER NOT NULL,
+                cell_type TEXT NOT NULL,
+                block INTEGER,
+                student_id INTEGER REFERENCES students(id) ON DELETE SET NULL,
+                PRIMARY KEY (layout_id, cell_row, cell_column)
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_layout_cell_student
+                ON classroom_layout_cells(layout_id, student_id) WHERE student_id IS NOT NULL;
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_layout_active_group
+                ON classroom_layouts(group_name) WHERE is_active = 1;
+            CREATE INDEX IF NOT EXISTS idx_layout_cells_layout
+                ON classroom_layout_cells(layout_id);
+            CREATE INDEX IF NOT EXISTS idx_layouts_group
+                ON classroom_layouts(group_name);
+            PRAGMA user_version = 4;
             COMMIT;
         """)

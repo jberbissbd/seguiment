@@ -122,6 +122,10 @@ class StudentList(QFrame):
         self.edit_button.setEnabled(has_selection)
         self.delete_button.setEnabled(has_selection)
 
+    def set_photos(self, photos: dict[int, str | None]) -> None:
+        """Actualitza les rutes de foto conegudes i repinta les files afectades."""
+        self.list_widget.model().set_photos(photos)
+
     def current_student_id(self) -> int | None:
         """Retorna l'ID de l'alumne seleccionat, o None si no n'hi ha cap."""
         return self.list_widget.currentIndex().data(Qt.ItemDataRole.UserRole)

@@ -1,4 +1,7 @@
+"""Tests del servei de transferència entre instàncies."""
+
 import json
+from dataclasses import replace
 from datetime import date
 from threading import Thread
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -23,6 +26,7 @@ PASSWORD = "contrasenya-segura"
 
 @pytest.fixture
 def instances(tmp_path):
+    """Connecta dues instàncies de Tutopy (origen i destinació) amb bases de dades separades."""
     source_db = Database(str(tmp_path / "source.db")).connect()
     target_db = Database(str(tmp_path / "target.db")).connect()
     source = create_services(source_db)
@@ -60,6 +64,7 @@ def _complete_student(services, tmp_path, name="Laia"):
 
 
 def test_round_trip_conserva_agregat_i_documents(instances, tmp_path):
+    """Round trip conserva agregat i documents."""
     source, target = instances
     original = _complete_student(source, tmp_path)
     package = source.transfers.export_student(
@@ -87,6 +92,7 @@ def test_round_trip_conserva_agregat_i_documents(instances, tmp_path):
 
 
 def test_exporta_i_importa_tots_els_alumnes(instances, tmp_path):
+    """Exporta i importa tots els alumnes."""
     source, target = instances
     first = _complete_student(source, tmp_path, "Laia")
     second = source.students.create(StudentNew("Pau", "Puig", "3r B"))
@@ -113,6 +119,7 @@ def test_exporta_i_importa_tots_els_alumnes(instances, tmp_path):
 def test_conflictes_apliquen_les_tres_decisions(
     instances, tmp_path, action, expected_count, same_uuid
 ):
+    """Conflictes apliquen les tres decisions."""
     source, target = instances
     original = _complete_student(source, tmp_path)
     package = source.transfers.export_student(
@@ -144,6 +151,7 @@ def test_conflictes_apliquen_les_tres_decisions(
 
 
 def test_conflicte_exigeix_decisio(instances, tmp_path):
+    """Conflicte exigeix decisió."""
     source, target = instances
     student = _complete_student(source, tmp_path)
     package = source.transfers.export_student(
@@ -159,6 +167,7 @@ def test_conflicte_exigeix_decisio(instances, tmp_path):
 
 
 def test_rebutja_versio_incompatible_i_rutes_insegures(instances, tmp_path):
+    """Rebutja versió incompatible i rutes insegures."""
     _source, target = instances
     plain = tmp_path / "invalid.zip"
     package = tmp_path / "invalid.tpy"
@@ -176,6 +185,7 @@ def test_rebutja_versio_incompatible_i_rutes_insegures(instances, tmp_path):
 
 
 def test_rebutja_document_manipulat(instances, tmp_path):
+    """Rebutja document manipulat."""
     source, target = instances
     student = _complete_student(source, tmp_path)
     original = source.transfers.export_student(
@@ -193,6 +203,7 @@ def test_rebutja_document_manipulat(instances, tmp_path):
 def test_xifra_tot_el_contingut_i_rebutja_contrasenya_incorrecta(
     instances, tmp_path
 ):
+    """Xifra tot el contingut i rebutja contrasenya incorrecta."""
     source, target = instances
     student = _complete_student(source, tmp_path)
     package = source.transfers.export_student(
@@ -210,6 +221,7 @@ def test_xifra_tot_el_contingut_i_rebutja_contrasenya_incorrecta(
 def test_rebutja_paquets_en_clar_i_contrasenyes_massa_curtes(
     instances, tmp_path
 ):
+    """Rebutja paquets en clar i contrasenyes massa curtes."""
     source, target = instances
     plain = tmp_path / "antic.tpy"
     with ZipFile(plain, "w") as archive:
@@ -224,6 +236,7 @@ def test_rebutja_paquets_en_clar_i_contrasenyes_massa_curtes(
 def test_error_durant_documents_fa_rollback_i_neteja_fitxers(
     instances, tmp_path, monkeypatch
 ):
+    """Error durant documents fa rollback i neteja fitxers."""
     source, target = instances
     student = _complete_student(source, tmp_path)
     second_file = tmp_path / "segon.pdf"
@@ -258,6 +271,7 @@ def test_error_durant_documents_fa_rollback_i_neteja_fitxers(
 def test_exportacio_preparada_es_pot_cancel_lar_abans_de_xifrar(
     instances, tmp_path, monkeypatch
 ):
+    """Exportació preparada es pot cancel·lar abans de xifrar."""
     source, _target = instances
     first = source.students.create(StudentNew("Laia", "Martí", "4t A"))
     second = source.students.create(StudentNew("Pau", "Puig", "4t B"))
@@ -286,6 +300,7 @@ def test_exportacio_preparada_es_pot_cancel_lar_abans_de_xifrar(
 def test_importacio_cancel_lada_fa_rollback_i_neteja_documents(
     instances, tmp_path
 ):
+    """Importació cancel·lada fa rollback i neteja documents."""
     source, target = instances
     first = _complete_student(source, tmp_path, "Laia")
     second = source.students.create(StudentNew("Pau", "Puig", "3r B"))
@@ -312,6 +327,7 @@ def test_importacio_cancel_lada_fa_rollback_i_neteja_documents(
 def test_importacio_utilitza_una_connexio_sqlite_del_treballador(
     instances, tmp_path
 ):
+    """Importació utilitza una connexió sqlite del treballador."""
     source, target = instances
     original = _complete_student(source, tmp_path)
     package = source.transfers.export_student(
@@ -336,4 +352,4 @@ def test_importacio_utilitza_una_connexio_sqlite_del_treballador(
     assert "error" not in outcome
     assert outcome["result"].created == 1
     assert target.students.get_by_uuid(original.uuid) is not None
-from dataclasses import replace
+

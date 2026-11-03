@@ -4,6 +4,7 @@ Crea els serveis, els controladors i la finestra principal, i arrenca el
 bucle d'esdeveniments de Qt.
 """
 
+import os
 import sys
 from dataclasses import dataclass
 
@@ -18,6 +19,7 @@ from tutopy.controllers.note_controller import NoteController
 from tutopy.controllers.catalog_controller import CategoryController
 from tutopy.controllers.student_related_controller import StudentRelatedController
 from tutopy.controllers.data_management_controller import DataManagementController
+from tutopy.controllers.classroom_layout_controller import ClassroomLayoutController
 from tutopy.controllers.report_controller import ReportController
 from tutopy.controllers.statistics_controller import StatisticsController
 from tutopy.controllers.update_controller import UpdateController
@@ -38,6 +40,7 @@ class ControllerContainer:
     categories: CategoryController
     student_related: StudentRelatedController
     data_management: DataManagementController
+    classroom_layout: ClassroomLayoutController
     reports: ReportController
     statistics: StatisticsController
     updates: UpdateController
@@ -68,7 +71,7 @@ def create_controllers(
 ) -> ControllerContainer:
     """Connecta controladors, serveis i callbacks de refresc de la UI."""
     main_controller = MainController(window)
-    student_controller = StudentController(window, services.students)
+    student_controller = StudentController(window, services.students, services.photos)
     note_controller = NoteController(
         window,
         services.notes,
@@ -115,7 +118,13 @@ def create_controllers(
         services.data_management,
         services.transfers,
         services.students,
+        services.photos,
+        services.pdf_photo_import,
         on_changed=refresh_after_data_change,
+    )
+    classroom_layout_controller = ClassroomLayoutController(
+        window, services.classroom_layouts, services.students, services.photos,
+        services.preferences, services.classroom_layout_reports,
     )
     statistics_controller = StatisticsController(
         window,
@@ -136,6 +145,7 @@ def create_controllers(
         categories=category_controller,
         student_related=related_controller,
         data_management=data_controller,
+        classroom_layout=classroom_layout_controller,
         reports=report_controller,
         statistics=statistics_controller,
         updates=update_controller,
@@ -151,7 +161,13 @@ def main() -> int:
     )
     app = QApplication(sys.argv)
     app.setApplicationName("Tutopy")
-    app.setDesktopFileName(DESKTOP_ID)
+    if not os.environ.get("TUTOPY_DATA_DIR"):
+        # Registrar el mateix ID de desktop que una instància real ja oberta
+        # (p. ex. una còpia de desenvolupament en paral·lel) fa fallar el
+        # registre amb el portal de l'escriptori; s'omet quan s'executa amb
+        # dades aïllades (TUTOPY_DATA_DIR), ja que aleshores no es tracta de
+        # la instal·lació principal de l'usuari.
+        app.setDesktopFileName(DESKTOP_ID)
     app.setWindowIcon(application_icon())
     database = Database(str(get_db_path())).connect()
     services = create_services(database)

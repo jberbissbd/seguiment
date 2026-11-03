@@ -1,3 +1,5 @@
+"""Tests del servei de categories."""
+
 import pytest
 from tutopy.services.category_service import CategoryService
 from tutopy.services.validation_service import ValidationService
@@ -18,8 +20,8 @@ class TestCategoryService:
         service = CategoryService(category_dao, ValidationService(category_dao))
         
         # Crear categories directament a la BD
-        cat1 = db.categories.create(CategoryNew(name="Conducta"))
-        cat2 = db.categories.create(CategoryNew(name="Acadèmic"))
+        db.categories.create(CategoryNew(name="Conducta"))
+        db.categories.create(CategoryNew(name="Acadèmic"))
         
         result = service.get_all()
         

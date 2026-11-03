@@ -1,3 +1,5 @@
+"""Tests de l'edició massiva d'alumnes."""
+
 from datetime import date, timedelta
 
 import pytest
@@ -14,6 +16,7 @@ CHANGE_DATE = (date.today() + timedelta(days=1)).isoformat()
 
 
 def test_edicio_massiva_actualitza_noms_i_historials(db):
+    """Edició massiva actualitza noms i historials."""
     services = create_services(db)
     first = services.students.create(StudentNew("Anna", "Serra", "1A"))
     second = services.students.create(StudentNew("Biel", "Puig", "1A"))
@@ -33,6 +36,7 @@ def test_edicio_massiva_actualitza_noms_i_historials(db):
 
 
 def test_edicio_massiva_valida_tot_el_lot_abans_d_escriure(db):
+    """Edició massiva vàlida tot el lot abans d'escriure."""
     services = create_services(db)
     first = services.students.create(StudentNew("Anna", "Serra", "1A"))
     second = services.students.create(StudentNew("Biel", "Puig", "1A"))
@@ -49,6 +53,7 @@ def test_edicio_massiva_valida_tot_el_lot_abans_d_escriure(db):
 
 
 def test_edicio_massiva_resol_el_curs_academic_una_sola_vegada(db):
+    """Edició massiva resol el curs acadèmic una sola vegada."""
     services = create_services(db)
     students = [
         services.students.create(StudentNew(f"Nom {index}", "Cognom", "1A"))
@@ -75,6 +80,7 @@ def test_edicio_massiva_resol_el_curs_academic_una_sola_vegada(db):
 
 
 def test_cancel_lacio_de_l_edicio_massiva_fa_rollback(db):
+    """Cancel·lació de l'edició massiva fa rollback."""
     services = create_services(db)
     students = [
         services.students.create(StudentNew(f"Nom {index}", "Cognom", "1A"))

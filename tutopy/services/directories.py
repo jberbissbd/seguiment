@@ -45,10 +45,18 @@ def get_executable_dir() -> Path:
 def get_app_data_dir(app_name: str = APP_NAME) -> Path:
     """Retorna el directori estàndard del SO per dades d'aplicació.
 
+    Si la variable d'entorn ``TUTOPY_DATA_DIR`` està definida, es fa servir
+    tal qual (sense combinar-la amb `app_name`) com a directori final. Pensat
+    per aïllar completament una instància de desenvolupament amb dades
+    fictícies de la instal·lació real, sense risc d'alterar-la per error.
+
     Windows: %LOCALAPPDATA%/%app_name% o %APPDATA%/%app_name%
     macOS: ~/Library/Application Support/%app_name%
     Linux/Unix: ~/.local/share/%app_name% (o $XDG_DATA_HOME/%app_name%)
     """
+    override = os.environ.get("TUTOPY_DATA_DIR")
+    if override:
+        return Path(override)
     if sys.platform == "win32":
         # Windows: prioritzar LOCALAPPDATA sobre APPDATA
         local_app_data = os.environ.get("LOCALAPPDATA")

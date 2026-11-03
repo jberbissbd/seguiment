@@ -1,3 +1,5 @@
+"""Tests del diàleg d'exportació de diversos informes."""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
 
@@ -6,6 +8,7 @@ from tutopy.ui.dialogs.batch_export_dialog import BatchExportDialog
 
 
 def test_selecciona_alumnes_visibles_i_conserva_els_ocults(qtbot):
+    """Selecciona alumnes visibles i conserva els ocults."""
     students = [
         Student(1, "u1", "Laia", "Martí", "4t A"),
         Student(2, "u2", "Pau", "Puig", "3r B"),
@@ -21,6 +24,7 @@ def test_selecciona_alumnes_visibles_i_conserva_els_ocults(qtbot):
 
 
 def test_requereix_seleccio_i_retorna_opcions(qtbot):
+    """Requereix selecció i retorna opcions."""
     student = Student(1, "u1", "Laia", "Martí", "4t A")
     dialog = BatchExportDialog([student], [Category(3, "Família")])
     qtbot.addWidget(dialog)

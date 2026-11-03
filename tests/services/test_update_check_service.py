@@ -1,3 +1,5 @@
+"""Tests del servei de comprovació de versió."""
+
 import json
 import urllib.error
 from contextlib import contextmanager
@@ -37,6 +39,7 @@ def _service(monkeypatch, current_version="1.3.2", payload=None, raises=None):
 
 
 def test_detecta_una_versio_mes_recent(monkeypatch):
+    """Detecta una versió més recent."""
     service = _service(monkeypatch, current_version="1.3.2", payload={
         "tag_name": "v1.4.0", "html_url": "https://example.test/releases/v1.4.0",
     })
@@ -49,6 +52,7 @@ def test_detecta_una_versio_mes_recent(monkeypatch):
 
 
 def test_no_avisa_si_la_versio_es_igual_o_anterior(monkeypatch):
+    """No avisa si la versió és igual o anterior."""
     service = _service(monkeypatch, current_version="1.4.0", payload={
         "tag_name": "v1.4.0", "html_url": "https://example.test/releases/v1.4.0",
     })
@@ -60,6 +64,7 @@ def test_no_avisa_si_la_versio_es_igual_o_anterior(monkeypatch):
 
 
 def test_resposta_sense_tag_name_no_avisa_ni_falla(monkeypatch):
+    """Resposta sense tag name no avisa ni falla."""
     service = _service(monkeypatch, current_version="1.3.2", payload={
         "html_url": "https://example.test/releases/latest",
     })
@@ -72,6 +77,7 @@ def test_resposta_sense_tag_name_no_avisa_ni_falla(monkeypatch):
 
 
 def test_error_de_xarxa_no_llenca_i_no_avisa(monkeypatch):
+    """Error de xarxa no llenca i no avisa."""
     service = _service(
         monkeypatch, raises=urllib.error.URLError("sense connexió")
     )
@@ -84,6 +90,7 @@ def test_error_de_xarxa_no_llenca_i_no_avisa(monkeypatch):
 
 
 def test_timeout_no_llenca_i_no_avisa(monkeypatch):
+    """Timeout no llenca i no avisa."""
     service = _service(monkeypatch, raises=TimeoutError("massa lent"))
 
     result = service.check_for_update()
@@ -92,6 +99,7 @@ def test_timeout_no_llenca_i_no_avisa(monkeypatch):
 
 
 def test_resposta_amb_json_invalid_no_llenca(monkeypatch):
+    """Resposta amb json invàlid no llenca."""
     def urlopen(_request, timeout=None):
         class Response:
             def read(self):
@@ -124,4 +132,5 @@ def test_resposta_amb_json_invalid_no_llenca(monkeypatch):
     ("1.3.beta", "1.3.2", False),
 ])
 def test_is_newer_compara_versions_per_components_numerics(remote, local, expected):
+    """Is newer compara versions per components numerics."""
     assert _is_newer(remote, local) is expected

@@ -1,3 +1,5 @@
+"""Tests de l'empaquetament de l'executable."""
+
 import os
 import stat
 import subprocess
@@ -35,17 +37,20 @@ def _run_stage_release_script(tmp_path, source_name, output_name):
 
 
 def test_release_tag_ha_de_coincidir_amb_pyproject(capsys):
+    """Release tag ha de coincidir amb pyproject."""
     assert check_release_version(f"v{read_project_version()}") == 0
     assert check_release_version("v9.9.9") == 1
     assert "no coincideix" in capsys.readouterr().err
 
 
 def test_versio_del_projecte_es_llegida_des_del_pyproject():
+    """Versió del projecte es llegida des del pyproject."""
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert read_project_version() == project["project"]["version"]
 
 
 def test_release_workflow_construeix_els_tres_sistemes_i_dues_arquitectures_macos():
+    """Release workflow construeix els tres sistemes i dues arquitectures macos."""
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "windows-latest" in workflow
     assert "ubuntu-22.04" in workflow
@@ -60,6 +65,7 @@ def test_release_workflow_construeix_els_tres_sistemes_i_dues_arquitectures_maco
 
 
 def test_accions_del_release_utilitzen_node_24():
+    """Accions del release utilitzen node 24."""
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "actions/checkout@v5" in workflow
     assert "actions/setup-python@v6" in workflow
@@ -68,6 +74,7 @@ def test_accions_del_release_utilitzen_node_24():
 
 
 def test_spec_es_onefile_i_no_inclou_base_de_dades():
+    """Spec és onefile i no inclou base de dades."""
     spec = (ROOT / "tutopy.spec").read_text(encoding="utf-8")
     assert "COLLECT(" not in spec
     assert 'name="Tutopy"' in spec
@@ -76,6 +83,7 @@ def test_spec_es_onefile_i_no_inclou_base_de_dades():
 
 
 def test_spec_genera_un_bundle_app_a_macos():
+    """Spec genera un bundle app a macos."""
     spec = (ROOT / "tutopy.spec").read_text(encoding="utf-8")
     assert 'sys.platform == "darwin"' in spec
     assert "BUNDLE(" in spec
@@ -83,11 +91,13 @@ def test_spec_genera_un_bundle_app_a_macos():
 
 
 def test_release_workflow_empaqueta_el_bundle_app_a_macos():
+    """Release workflow empaqueta el bundle app a macos."""
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "source: dist/Tutopy.app" in workflow
 
 
 def test_spec_inclou_icona_i_recursos_visuals():
+    """Spec inclou icona i recursos visuals."""
     spec = (ROOT / "tutopy.spec").read_text(encoding="utf-8")
     assert '("tutopy/ui/assets", "tutopy/ui/assets")' in spec
     assert '"tutopy/ui/assets/tutopy.ico"' in spec
@@ -96,17 +106,20 @@ def test_spec_inclou_icona_i_recursos_visuals():
 
 
 def test_icones_d_empaquetatge_existeixen():
+    """Icones d'empaquetatge existeixen."""
     assert (ROOT / "tutopy/ui/assets/tutopy.ico").is_file()
     assert (ROOT / "tutopy/ui/assets/tutopy.png").is_file()
 
 
 def test_versio_de_pyinstaller_esta_fixada():
+    """Versió de pyinstaller esta fixada."""
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     dependencies = project["project"]["optional-dependencies"]["build"]
     assert "pyinstaller==6.21.0" in dependencies
 
 
 def test_dependencies_de_build_especifiques_de_cada_sistema_estan_fixades():
+    """Dependencies de build especifiques de cada sistema estan fixades."""
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     dependencies = project["project"]["optional-dependencies"]["build"]
     assert "macholib==1.16.4; sys_platform == 'darwin'" in dependencies
@@ -120,6 +133,7 @@ def test_dependencies_de_build_especifiques_de_cada_sistema_estan_fixades():
 
 
 def test_exportacio_docx_forma_part_de_les_dependencies_i_del_build():
+    """Exportació docx forma part de les dependencies i del build."""
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert "python-docx==1.2.0" in project["project"]["dependencies"]
     assert "python-docx==1.2.0" in (
@@ -128,6 +142,7 @@ def test_exportacio_docx_forma_part_de_les_dependencies_i_del_build():
 
 
 def test_cryptography_50_esta_fixada_a_tots_els_entorns():
+    """Cryptography 50 esta fixada a tots els entorns."""
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert "cryptography==50.0.0" in project["project"]["dependencies"]
 
@@ -143,6 +158,7 @@ def test_cryptography_50_esta_fixada_a_tots_els_entorns():
 
 
 def test_workflows_i_lock_utilitzen_python_312():
+    """Workflows i lock utilitzen python 312."""
     for workflow_name in ("ci.yml", "release.yml"):
         workflow = (ROOT / ".github/workflows" / workflow_name).read_text(
             encoding="utf-8"
@@ -154,6 +170,7 @@ def test_workflows_i_lock_utilitzen_python_312():
 
 
 def test_ci_genera_cobertura_i_executa_sonarcloud():
+    """Ci genera cobertura i executa sonarcloud."""
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "fetch-depth: 0" in workflow
     assert "--cov-report=xml:coverage.xml" in workflow
@@ -162,6 +179,7 @@ def test_ci_genera_cobertura_i_executa_sonarcloud():
 
 
 def test_ci_instal_la_dependencies_bloquejades_i_verifica_l_entorn():
+    """Ci instal la dependencies bloquejades i verifica l'entorn."""
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "cache-dependency-path: requirements-dev.lock" in workflow
     assert (
@@ -174,6 +192,7 @@ def test_ci_instal_la_dependencies_bloquejades_i_verifica_l_entorn():
 
 
 def test_stage_release_comprimeix_binaris_unix_amb_bit_execucio(tmp_path):
+    """Stage release comprimeix binaris unix amb bit execució."""
     destination = _run_stage_release_artifact(
         tmp_path, "Tutopy", "Tutopy-Linux-x86_64.tar.gz"
     )
@@ -184,6 +203,7 @@ def test_stage_release_comprimeix_binaris_unix_amb_bit_execucio(tmp_path):
 
 
 def test_stage_release_copia_l_executable_windows_sense_modificar(tmp_path):
+    """Stage release copia l'executable windows sense modificar."""
     destination = _run_stage_release_artifact(
         tmp_path, "Tutopy.exe", "Tutopy-Windows-x86_64.exe"
     )
@@ -191,6 +211,7 @@ def test_stage_release_copia_l_executable_windows_sense_modificar(tmp_path):
 
 
 def test_stage_release_comprimeix_el_bundle_app_de_macos(tmp_path):
+    """Stage release comprimeix el bundle app de macos."""
     bundle = tmp_path / "Tutopy.app"
     binary = bundle / "Contents/MacOS/Tutopy"
     binary.parent.mkdir(parents=True)
@@ -209,6 +230,7 @@ def test_stage_release_comprimeix_el_bundle_app_de_macos(tmp_path):
 
 
 def test_configuracio_sonar_separa_fonts_tests_i_importa_cobertura():
+    """Configuració sonar separa fonts tests i importa cobertura."""
     configuration = (ROOT / "sonar-project.properties").read_text(encoding="utf-8")
     assert "sonar.sources=tutopy" in configuration
     assert "sonar.tests=tests" in configuration

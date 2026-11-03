@@ -7,6 +7,8 @@ from .note_dao import NoteDAO
 from .contact_dao import ContactDAO
 from .annotation_dao import AnnotationDAO
 from .document_dao import DocumentDAO
+from .student_photo_dao import PhotoDAO
+from .classroom_layout_dao import ClassroomLayoutDAO
 from .student_group_history_dao import StudentGroupHistoryDAO
 from .data_management_dao import DataManagementDAO
 from .report_configuration_dao import ReportConfigurationDAO
@@ -21,6 +23,8 @@ __all__ = [
     "ContactDAO",
     "AnnotationDAO",
     "DocumentDAO",
+    "PhotoDAO",
+    "ClassroomLayoutDAO",
     "StudentGroupHistoryDAO",
     "DataManagementDAO",
     "ReportConfigurationDAO",

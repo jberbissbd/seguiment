@@ -13,6 +13,7 @@ class Sidebar(QFrame):
 
     SECTIONS = (
         ("students", "Alumnes", "students.svg"),
+        ("classroom", "Distribució d'aula", "classroom.svg"),
         ("statistics", "Estadístiques", "statistics.svg"),
         ("configuration", "Configuració", "configuration.svg"),
         ("data", "Gestió de dades", "data.svg"),

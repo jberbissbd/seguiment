@@ -1,10 +1,11 @@
 """Controlador del CRUD d'alumnes, incloent l'edició massiva en segon pla."""
 
-from PySide6.QtWidgets import QDialog, QMessageBox, QProgressDialog
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QProgressDialog
 
 from tutopy.models.messaging import Student, StudentNew
 from tutopy.models.student_bulk import StudentBulkUpdate
 from tutopy.services.exceptions import DomainError
+from tutopy.services.photo_service import PhotoService
 from tutopy.services.student_service import StudentService
 from tutopy.ui.dialogs.student_dialog import StudentDialog
 from tutopy.ui.dialogs.bulk_student_edit_dialog import BulkStudentEditDialog
@@ -16,12 +17,14 @@ class StudentController:
     """Gestiona el CRUD d'alumnes entre la vista i `StudentService`."""
 
     def __init__(self, window: MainWindow, service: StudentService,
+        photos: PhotoService = None,
         dialog_factory=StudentDialog, confirm_delete=None, error_handler=None,
         bulk_dialog_factory=BulkStudentEditDialog, task_runner=None,
         progress_dialog=QProgressDialog):
         """Desa les dependències i connecta les accions d'alumnes de la vista."""
         self.window = window
         self.service = service
+        self.photos = photos
         self.dialog_factory = dialog_factory
         self.confirm_delete = confirm_delete or window.confirm_student_deletion
         self.error_handler = error_handler or window.show_error
@@ -45,12 +48,23 @@ class StudentController:
         view.edit_requested.connect(self.edit)
         view.delete_requested.connect(self.delete)
         view.bulk_edit_requested.connect(self.bulk_edit)
+        self.window.student_detail.photo_change_requested.connect(self.configure_photo)
+        self.window.student_detail.photo_remove_requested.connect(self.remove_photo)
 
     def refresh(self) -> None:
         """Recarrega tots els alumnes a la llista i n'actualitza el comptador."""
         students = self.service.get_all()
         self.window.student_list.set_students(students)
+        self._refresh_list_photos(students)
         self.window.show_status(f"{len(students)} alumnes")
+
+    def _refresh_list_photos(self, students: list[Student]) -> None:
+        if self.photos is None or not students:
+            return
+        paths = self.photos.get_readable_paths([student.id for student in students])
+        self.window.student_list.set_photos(
+            {student_id: str(path) if path else None for student_id, path in paths.items()}
+        )
 
     def search(self, query: str) -> None:
         """Filtra la llista d'alumnes segons el text de cerca.
@@ -67,6 +81,45 @@ class StudentController:
             student_id: Identificador de l'alumne a mostrar.
         """
         self.window.student_detail.show_student(self.service.get_by_id(student_id))
+        self._refresh_detail_photo(student_id)
+
+    def _refresh_detail_photo(self, student_id: int) -> None:
+        if self.photos is None:
+            return
+        path = self.photos.get_readable_path(student_id)
+        self.window.student_detail.set_photo(str(path) if path else None)
+
+    def configure_photo(self, student_id: int) -> None:
+        """Selecciona i desa una imatge com a foto de perfil de l'alumne."""
+        if self.photos is None:
+            return
+        filename, _ = QFileDialog.getOpenFileName(
+            self.window, "Seleccionar foto de l'alumne", "",
+            "Imatges (*.png *.jpg *.jpeg *.bmp *.gif *.tif *.tiff)",
+        )
+        if not filename:
+            return
+        try:
+            self.photos.set_photo(student_id, filename)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self._refresh_detail_photo(student_id)
+        self._refresh_list_photos(self.service.get_all())
+        self.window.show_status("Foto de l'alumne desada")
+
+    def remove_photo(self, student_id: int) -> None:
+        """Elimina la foto de perfil de l'alumne."""
+        if self.photos is None:
+            return
+        try:
+            self.photos.remove_photo(student_id)
+        except DomainError as error:
+            self.error_handler(str(error))
+            return
+        self._refresh_detail_photo(student_id)
+        self._refresh_list_photos(self.service.get_all())
+        self.window.show_status("Foto de l'alumne eliminada")
 
     def create(self) -> None:
         """Obre el diàleg de creació d'alumne i el desa si s'accepta."""

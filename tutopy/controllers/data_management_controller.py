@@ -7,6 +7,7 @@ la interfície.
 """
 
 import logging
+from dataclasses import dataclass
 
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QInputDialog, QLineEdit, QMessageBox, QProgressDialog,
@@ -15,8 +16,11 @@ from PySide6.QtWidgets import (
 from tutopy.services.bulk_import_service import BulkImportService
 from tutopy.services.data_management_service import DataManagementService
 from tutopy.services.exceptions import DomainError
+from tutopy.services.pdf_photo_import_service import PdfPhotoImportService
+from tutopy.services.photo_service import PhotoService
 from tutopy.ui.dialogs.clear_data_dialog import ClearDataDialog
 from tutopy.ui.dialogs.import_conflicts_dialog import ImportConflictsDialog
+from tutopy.ui.dialogs.pdf_photo_import_dialog import PdfPhotoImportDialog
 from tutopy.ui.dialogs.transfer_conflicts_dialog import TransferConflictsDialog
 from tutopy.ui.dialogs.transfer_student_selection_dialog import (
     TransferStudentSelectionDialog,
@@ -28,31 +32,46 @@ from tutopy.ui.background_task import BackgroundOperationPresenter, BackgroundTa
 LOGGER = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True, slots=True)
+class DataManagementDialogs:
+    """Classes de diàleg injectables per als tests del controlador de dades."""
+
+    conflict: type = ImportConflictsDialog
+    clear: type = ClearDataDialog
+    transfer_conflict: type = TransferConflictsDialog
+    transfer_selection: type = TransferStudentSelectionDialog
+    pdf_photo: type = PdfPhotoImportDialog
+    progress: type = QProgressDialog
+
+
 class DataManagementController:
     """Gestiona plantilles, importació, transferències i esborrat de dades."""
 
     def __init__(self, window: MainWindow, importer: BulkImportService,
                  data_service: DataManagementService, transfer_service=None,
                  student_service=None,
+                 photos: PhotoService = None,
+                 pdf_photo_import: PdfPhotoImportService = None,
                  on_changed=None,
-                 conflict_dialog=ImportConflictsDialog,
-                 clear_dialog=ClearDataDialog,
-                 transfer_conflict_dialog=TransferConflictsDialog,
-                 transfer_selection_dialog=TransferStudentSelectionDialog,
-                 task_runner=None, progress_dialog=QProgressDialog):
+                 dialogs: DataManagementDialogs | None = None,
+                 task_runner=None):
         """Desa les dependències i connecta les accions de la vista d'eines de dades."""
+        dialogs = dialogs or DataManagementDialogs()
         self.window = window
         self.importer = importer
         self.data_service = data_service
         self.transfer_service = transfer_service
         self.student_service = student_service
+        self.photos = photos
+        self.pdf_photo_import = pdf_photo_import
         self.on_changed = on_changed or (lambda: None)
-        self.conflict_dialog = conflict_dialog
-        self.clear_dialog = clear_dialog
-        self.transfer_conflict_dialog = transfer_conflict_dialog
-        self.transfer_selection_dialog = transfer_selection_dialog
+        self.conflict_dialog = dialogs.conflict
+        self.clear_dialog = dialogs.clear
+        self.transfer_conflict_dialog = dialogs.transfer_conflict
+        self.transfer_selection_dialog = dialogs.transfer_selection
+        self.pdf_photo_dialog = dialogs.pdf_photo
         self.task_runner = task_runner or BackgroundTaskRunner()
-        self.progress_dialog = progress_dialog
+        self.progress_dialog = dialogs.progress
         self._transfer_export = BackgroundOperationPresenter(
             self.window, self.task_runner, self.progress_dialog
         )
@@ -65,6 +84,7 @@ class DataManagementController:
         view = window.data_tools
         view.template_requested.connect(self.export_template)
         view.import_requested.connect(self.import_spreadsheet)
+        view.photo_import_requested.connect(self.import_photos_from_pdf)
         view.clear_requested.connect(self.clear_all)
         view.transfer_student_requested.connect(self.export_selected_student)
         view.transfer_all_requested.connect(self.export_all_students)
@@ -326,6 +346,56 @@ class DataManagementController:
             f"Categories creades: {result.categories_created}\n"
             f"Categories reutilitzades: {result.categories_reused}",
         )
+
+    def import_photos_from_pdf(self) -> None:
+        """Analitza un PDF "orla", en revisa l'aparellament i desa les fotos triades."""
+        if self.pdf_photo_import is None or self.photos is None:
+            self.window.show_error("La importació de fotos no està disponible.")
+            return
+        filename, _ = QFileDialog.getOpenFileName(
+            self.window, "Importar fotos des d’un PDF", "",
+            "Documents PDF (*.pdf)",
+        )
+        if not filename:
+            return
+        try:
+            preview = self.pdf_photo_import.parse(filename)
+        except (DomainError, OSError) as error:
+            self.window.show_error(str(error))
+            return
+        if not preview.entries:
+            self.pdf_photo_import.cleanup(preview)
+            self.window.show_error("No s’ha trobat cap fotografia al PDF.")
+            return
+        try:
+            students = self.student_service.get_all() if self.student_service else []
+            dialog = self.pdf_photo_dialog(preview, students, self.window)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            self._apply_pdf_photo_assignments(preview, dialog.assignments())
+        finally:
+            self.pdf_photo_import.cleanup(preview)
+
+    def _apply_pdf_photo_assignments(self, preview, assignments: dict) -> None:
+        applied = skipped = 0
+        failures = []
+        for entry in preview.entries:
+            student_id = assignments.get(entry.caption.num)
+            if not student_id:
+                skipped += 1
+                continue
+            try:
+                self.photos.set_photo(student_id, entry.image_path)
+                applied += 1
+            except DomainError as error:
+                failures.append(f"{entry.caption.full_name}: {error}")
+        self.on_changed()
+        message = f"Fotos assignades: {applied}\nFiles omeses: {skipped}"
+        if preview.missing_photos:
+            message += f"\nAlumnes sense fotografia al PDF: {len(preview.missing_photos)}"
+        if failures:
+            message += "\n\nErrors:\n" + "\n".join(failures)
+        QMessageBox.information(self.window, "Importació de fotos completada", message)
 
     def clear_all(self) -> None:
         """Demana confirmació i elimina totes les dades de la instància."""

@@ -1,3 +1,5 @@
+"""Tests del controlador d'informes."""
+
 from types import SimpleNamespace
 
 import pytest
@@ -13,51 +15,66 @@ from tutopy.database.database import Database
 
 @pytest.fixture
 def db(tmp_path):
+    """Connecta una base de dades SQLite temporal per a la prova."""
     database = Database(str(tmp_path / "reports-controller.db")).connect()
     yield database
     database.close()
 
 
 class AcceptedTermDialog:
+    """Simula un diàleg de trimestres sempre acceptat."""
+
     values_to_return = {}
 
     def __init__(self, *args, **kwargs):
-        pass
+        """Ignora els arguments rebuts del controlador."""
 
     def exec(self):
+        """Simula l'acceptació del diàleg."""
         return QDialog.DialogCode.Accepted
 
     def values(self):
+        """Retorna els valors configurats per la prova."""
         return dict(self.values_to_return)
 
 
 class AcceptedExportDialog:
+    """Simula un diàleg d'exportació d'informe sempre acceptat."""
+
     order = []
     include = True
     format = "xlsx"
 
     def __init__(self, *args, **kwargs):
+        """Prepara els controls simulats de les caselles d'exportació."""
         self.include_terms = SimpleNamespace(isChecked=lambda: self.include)
         self.include_documents = SimpleNamespace(isChecked=lambda: False)
 
     def exec(self):
+        """Simula l'acceptació del diàleg."""
         return QDialog.DialogCode.Accepted
 
     def category_order(self):
+        """Retorna l'ordre de categories configurat per la prova."""
         return list(self.order)
 
     def export_format(self):
+        """Retorna el format d'exportació configurat per la prova."""
         return self.format
 
 
 class AcceptedBatchExportDialog(AcceptedExportDialog):
+    """Simula un diàleg d'exportació de diversos informes sempre acceptat."""
+
     ids = []
 
     def __init__(self, *args, **kwargs):
+        """Prepara els controls simulats, sense incloure documents per defecte."""
         super().__init__(*args, **kwargs)
         self.include_documents = SimpleNamespace(isChecked=lambda: False)
 
     def student_ids(self):
+        """Retorna els identificadors d'alumnes configurats per la prova."""
         return list(self.ids)
 
 
@@ -87,6 +104,7 @@ def _controller(db, qtbot, tmp_path, monkeypatch):
 
 
 def test_controlador_crea_edita_i_elimina_configuracio(db, qtbot, tmp_path, monkeypatch):
+    """Controlador crea edita i elimina configuració."""
     services, _student, _category, course, window, controller, _path, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
@@ -109,6 +127,7 @@ def test_controlador_crea_edita_i_elimina_configuracio(db, qtbot, tmp_path, monk
 
 
 def test_controlador_exporta_i_recorda_ordre(db, qtbot, tmp_path, monkeypatch):
+    """Controlador exporta i recorda ordre."""
     services, student, academic, _course, _window, controller, destination, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
@@ -124,6 +143,7 @@ def test_controlador_exporta_i_recorda_ordre(db, qtbot, tmp_path, monkeypatch):
 
 
 def test_controlador_exporta_document_de_text(db, qtbot, tmp_path, monkeypatch):
+    """Controlador exporta document de text."""
     services, student, academic, _course, _window, controller, _destination, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
@@ -141,6 +161,7 @@ def test_controlador_exporta_document_de_text(db, qtbot, tmp_path, monkeypatch):
 def test_controlador_exporta_formats_oberts(
     db, qtbot, tmp_path, monkeypatch, report_format
 ):
+    """Controlador exporta formats oberts."""
     services, student, academic, _course, _window, controller, _destination, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
@@ -159,6 +180,7 @@ def test_controlador_exporta_formats_oberts(
 def test_controlador_configura_i_elimina_logotip_global(
     db, qtbot, tmp_path, monkeypatch
 ):
+    """Controlador configura i elimina logotip global."""
     services, _student, _academic, _course, window, controller, _destination, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
@@ -183,6 +205,7 @@ def test_controlador_configura_i_elimina_logotip_global(
 def test_controlador_respecta_cancel_lacions_i_ids_inexistents(
     db, qtbot, tmp_path, monkeypatch
 ):
+    """Controlador respecta cancel·lacions i ids inexistents."""
     _services, student, _category, _course, _window, controller, _path, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
@@ -216,6 +239,7 @@ def test_controlador_respecta_cancel_lacions_i_ids_inexistents(
 def test_controlador_mostra_errors_de_configuracio_i_exportacio(
     db, qtbot, tmp_path, monkeypatch
 ):
+    """Controlador mostra errors de configuració i exportació."""
     services, student, category, course, _window, controller, _path, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )
@@ -254,6 +278,7 @@ def test_controlador_mostra_errors_de_configuracio_i_exportacio(
 
 
 def test_controlador_exporta_diversos_alumnes(db, qtbot, tmp_path, monkeypatch):
+    """Controlador exporta diversos alumnes."""
     services, student, academic, _course, _window, controller, _destination, errors = (
         _controller(db, qtbot, tmp_path, monkeypatch)
     )

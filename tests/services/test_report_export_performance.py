@@ -1,3 +1,5 @@
+"""Tests de rendiment de l'exportació d'informes."""
+
 import pytest
 
 from tutopy.application import create_services
@@ -9,6 +11,7 @@ from tutopy.models.messaging import CategoryNew, NoteNew, StudentNew
 def test_exportacio_massiva_d_informes_te_lectures_constants(
     db, tmp_path, report_format, student_count
 ):
+    """Exportació massiva d'informes té lectures constants."""
     services = create_services(db)
     category = services.categories.create(CategoryNew("Seguiment"))
     student_ids = []
@@ -41,6 +44,7 @@ def test_exportacio_massiva_d_informes_te_lectures_constants(
 def test_exportacio_amb_documents_te_lectures_constants(
     db, tmp_path, student_count
 ):
+    """Exportació amb documents té lectures constants."""
     services = create_services(db)
     services.documents.storage_dir = tmp_path / "managed"
     category = services.categories.create(CategoryNew("Seguiment"))

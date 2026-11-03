@@ -1,3 +1,5 @@
+"""Tests del servei de descriptors de l'alumnat."""
+
 import pytest
 from tutopy.services.annotation_service import AnnotationService
 from tutopy.models.messaging import StudentAnnotation, StudentAnnotationNew, StudentNew
